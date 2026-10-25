@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>سجل منسوبي بنيان العالمية · الموارد البشرية</title>
+<meta name="description" content="Bonyan HR · Global Staff Registry — نموذج موحّد لبيانات منسوبي مجموعة بنيان العالمية في جميع الدول.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0B2742">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230B2742'/%3E%3Cpath d='M9 22V10h7.5a3.5 3.5 0 0 1 0 7H9m7.5 0a3 3 0 0 1 0 6H9' fill='none' stroke='%23E8C480' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Readex+Pro:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <div id="logoBox" class="logo-box"></div>
+      <div class="brand-txt">
+        <p id="brandDept" class="eyebrow"></p>
+        <p id="brandTitle" class="brand-title"></p>
+      </div>
+    </div>
+    <div id="langSwitch" class="lang" role="group"></div>
+  </div>
+</header>
+
+<div id="stripTop" class="strip strip-top"></div>
+
+<main class="main">
+  <div id="welcome" class="welcome" hidden></div>
+
+  <section id="wizard" class="wrap wizard" hidden>
+    <aside class="side">
+      <div class="card-slot">
+        <p class="card-cap" id="cardCap"></p>
+        <div class="idcard-wrap" id="cardWrap"></div>
+        <p class="card-hint" id="cardHint"></p>
+      </div>
+      <ol id="stepper" class="stepper"></ol>
+    </aside>
+    <div class="panel">
+      <div class="journey" aria-hidden="true">
+        <div class="journey-track"><div class="journey-fill" id="journeyFill"></div></div>
+        <div class="journey-plane" id="journeyPlane"><svg viewBox="0 0 24 24"><path d="M21 15.5v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V8.5l-8 5v2l8-2.5V18l-2 1.5V21l3.5-1 3.5 1v-1.5L13 18v-5z" fill="currentColor"/></svg></div>
+        <span class="journey-pct" id="progLabel"></span>
+      </div>
+      <form id="form" novalidate autocomplete="on">
+        <input type="text" id="hp" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div id="stepBody"></div>
+        <div class="nav">
+          <button type="button" id="btnPrev" class="btn ghost"></button>
+          <button type="button" id="btnNext" class="btn primary"><span id="btnNextLbl"></span><svg class="arr" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section id="success" class="wrap success" hidden></section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <p id="footPrivacy"></p>
+    <div class="foot-row">
+      <span id="footOrg"></span>
+      <span class="sig"><span class="sig-mark" aria-hidden="true">OJ</span><span id="footSig"></span></span>
+    </div>
+  </div>
+</footer>
+
+<div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-live="polite" hidden>
+  <div class="ov-card">
+    <div class="ov-orbit" aria-hidden="true"><span></span><span></span><span></span></div>
+    <p id="ovText"></p>
+    <div class="ov-track"><div id="ovBar"></div></div>
+    <p id="ovErr" class="err" hidden></p>
+    <div id="ovActions" class="ov-actions" hidden>
+      <button type="button" id="ovClose" class="btn ghost"></button>
+      <button type="button" id="ovRetry" class="btn primary"></button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="i18n.js"></script>
+<script src="countries.js"></script>
+<script src="land.js"></script>
+<script src="globe.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
