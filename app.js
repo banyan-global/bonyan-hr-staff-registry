@@ -502,6 +502,7 @@
   var openCombo = null;
   function closeCombo() {
     if (!openCombo) return;
+    $$('.has-open').forEach(function (e) { e.classList.remove('has-open'); });
     var p = $('.combo-panel', openCombo);
     if (p) p.remove();
     $('.combo-btn', openCombo).setAttribute('aria-expanded', 'false');
@@ -517,6 +518,9 @@
     panel.className = 'combo-panel';
     panel.innerHTML = '<input class="inp combo-search" type="search" placeholder="' + esc(t('ph.search')) + '" aria-label="' + esc(t('ph.search')) + '" autocomplete="off"><ul class="combo-list" role="listbox"></ul>';
     el.appendChild(panel);
+    ['.field', '.sec', '.rep-item', '.file-field'].forEach(function (sel) { var a = el.closest(sel); if (a) a.classList.add('has-open'); });
+    var rb = btn.getBoundingClientRect(), below = window.innerHeight - rb.bottom, above = rb.top;
+    if (below < 360 && above > below) panel.classList.add('up');
     var input = $('.combo-search', panel);
     var list = $('.combo-list', panel);
     var cur = getVal(el.getAttribute('data-combo'));
@@ -561,7 +565,7 @@
       var li = e.target.closest('li[data-cc]');
       if (li) pickCountry(el, li.getAttribute('data-cc'));
     });
-    setTimeout(function () { input.focus(); }, 10);
+    setTimeout(function () { input.focus({ preventScroll: true }); }, 10);
   }
   function pickCountry(el, cc) {
     var path = el.getAttribute('data-combo');
@@ -700,6 +704,7 @@
     $('#brandDept').textContent = t('app.dept') + ' · ' + CFG.ORG[L];
     $('#mainLogo').setAttribute('alt', CFG.MAIN_LOGO.name[L]);
     $$('#langSwitch button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === L)); });
+    requestAnimationFrame(movePill);
     $('#langSwitch').setAttribute('aria-label', t('m.lang'));
     $('#footPrivacy').textContent = t('m.privacy');
     $('#footOrg').textContent = '© ' + new Date().getFullYear() + ' ' + CFG.ORG[L];
@@ -711,6 +716,22 @@
   }
 
   var LOGO_STATE = {};
+  function movePill() {
+    var sw = $('#langSwitch'), on = $('#langSwitch button[aria-pressed="true"]');
+    if (!sw || !on) return;
+    var pill = $('.lang-pill', sw);
+    if (!pill) { pill = document.createElement('span'); pill.className = 'lang-pill'; sw.insertBefore(pill, sw.firstChild); }
+    pill.style.left = on.offsetLeft + 'px'; pill.style.width = on.offsetWidth + 'px';
+  }
+  var revealIO = null;
+  function reveal(root) {
+    var els = $$('[data-reveal]:not(.in)', root || document);
+    if (!('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('in'); }); return; }
+    if (!revealIO) revealIO = new IntersectionObserver(function (en) {
+      en.forEach(function (x) { if (x.isIntersecting) { x.target.classList.add('in'); revealIO.unobserve(x.target); } });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    els.forEach(function (e) { revealIO.observe(e); });
+  }
   function logoImg(l, cls, alt, white) {
     var LG = window.BONYAN_LOGOS || {};
     var d = LG[white && l.white ? l.white : l.logo];
@@ -719,7 +740,8 @@
   }
   function renderStrip() {
     var L = state.lang;
-    var items = CFG.STRIP_LOGOS.map(function (l) {
+    var HS = CFG.HEADER_SIDES || {}, skip = [HS.left && HS.left.logo, HS.right && HS.right.logo];
+    var items = CFG.STRIP_LOGOS.filter(function (l) { return skip.indexOf(l.logo) < 0; }).map(function (l) {
       return '<li class="logo-item" title="' + esc(l.name[L]) + '">' + logoImg(l, 'logo-img', l.name[L]) + '</li>';
     }).join('');
     var html = '<ul class="strip-track">' + items + items.replace(/<li /g, '<li aria-hidden="true" ') + items.replace(/<li /g, '<li aria-hidden="true" ') + items.replace(/<li /g, '<li aria-hidden="true" ') + '</ul>';
@@ -847,6 +869,10 @@
   function renderMainLogo() {
     var box = $('#logoBox');
     box.innerHTML = logoImg(CFG.MAIN_LOGO, 'main-logo', CFG.MAIN_LOGO.name[state.lang]).replace('<img ', '<img id="mainLogo" ');
+    var HS = CFG.HEADER_SIDES || {};
+    if (HS.left) $('#brandLeft').innerHTML = logoImg(HS.left, 'logo-img', HS.left.name[state.lang]);
+    if (HS.right) $('#brandRight').innerHTML = logoImg(HS.right, 'logo-img', HS.right.name[state.lang]);
+    $('#footLogo').innerHTML = logoImg(CFG.MAIN_LOGO, 'foot-logo', CFG.MAIN_LOGO.name[state.lang], true);
   }
 
   function renderStepper() {
@@ -1008,25 +1034,44 @@
   function renderWelcome() {
     var prep = ['photo', 'passport', 'id', 'permit', 'contract', 'bank'];
     var stats = [[CFG.LANGS.length, 'stat.langs'], [STEPS.length, 'stat.steps'], [CFG.STRIP_LOGOS.length + 1, 'stat.entities'], [10, 'stat.minutes']];
+    var arrow = '<svg class="arr" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var num = function (n) { return state.lang === 'ar' ? arDigits(n) : String(n); };
     $('#welcome').innerHTML =
-      '<section class="hero"><div class="hero-blocks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><div class="wrap hero-in">' +
-        '<div class="hero-text">' +
-          '<p class="eyebrow rise" style="--d:0">' + esc(t('app.dept')) + ' · Bonyan HR</p>' +
-          '<h1 class="rise" style="--d:1"><span>' + esc(t('hero.l1')) + '</span><span class="hl">' + esc(t('hero.l2')) + '</span></h1>' +
-          '<p class="lead rise" style="--d:2">' + esc(t('app.lead')) + '</p>' +
-          (state.restored ? '<p class="restored rise" style="--d:3"><span class="dot" aria-hidden="true"></span>' + esc(t('m.draftRestored')) + ' <button type="button" class="link light" id="btnClear">' + esc(t('b.clearDraft')) + '</button></p>' : '') +
-          '<div class="hero-cta rise" style="--d:3"><button type="button" class="btn gold big" id="btnStart"><span>' + esc(t('b.start')) + '</span><svg class="arr" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+      '<section class="wrap hero-sec"><div class="hero">' +
+        '<span class="hero-orb o1" aria-hidden="true"></span><span class="hero-orb o2" aria-hidden="true"></span>' +
+        '<div class="hero-blocks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>' +
+        '<div class="hero-in">' +
+          '<div class="hero-text">' +
+            '<p class="badge rise" style="--d:0"><span class="live" aria-hidden="true"></span>' + esc(t('hero.badge')) + '</p>' +
+            '<h1 class="rise" style="--d:1"><span>' + esc(t('hero.l1')) + '</span><span class="hl">' + esc(t('hero.l2')) + '</span></h1>' +
+            '<p class="lead rise" style="--d:2">' + esc(t('app.lead')) + '</p>' +
+            (state.restored ? '<p class="restored rise" style="--d:3"><span class="dot" aria-hidden="true"></span>' + esc(t('m.draftRestored')) + ' <button type="button" class="link light" id="btnClear">' + esc(t('b.clearDraft')) + '</button></p>' : '') +
+            '<ul class="stats rise" style="--d:3">' + stats.map(function (s) { return '<li><b data-count="' + s[0] + '">0</b><span>' + esc(t(s[1])) + '</span></li>'; }).join('') + '</ul>' +
+            '<div class="hero-cta rise" style="--d:4"><button type="button" class="btn gold big js-start"><span>' + esc(t('b.start')) + '</span>' + arrow + '</button>' +
+            '<a class="btn glass big" href="#prep">' + esc(t('b.prepare')) + '</a></div>' +
           '</div>' +
-          '<ul class="stats rise" style="--d:4">' + stats.map(function (s) { return '<li><b data-count="' + s[0] + '">0</b><span>' + esc(t(s[1])) + '</span></li>'; }).join('') + '</ul>' +
-        '</div>' +
-        '<div class="hero-globe"><canvas id="globe" aria-label="' + esc(t('globe.hint')) + '" role="img"></canvas><div class="globe-tip" id="globeTip" hidden></div><p class="globe-cap">' + esc(t('globe.hint')) + '</p></div>' +
-      '</div></section>' +
-      '<section class="wrap prep-sec"><div class="prep-head"><h2>' + esc(t('app.prepare')) + '</h2><p class="hint">' + esc(t('m.draftNote')) + '</p></div>' +
-      '<ol class="prep-grid">' + prep.map(function (p, i) {
-        return '<li class="prep-card" style="--i:' + i + '"><span class="prep-ic"><svg viewBox="0 0 24 24" aria-hidden="true">' + PREP_ICONS[p] + '</svg></span><span>' + esc(t('prep.' + p)) + '</span></li>';
-      }).join('') + '</ol></section>';
+          '<div class="hero-glass rise" style="--d:3">' +
+            '<span class="globe-chip"><i aria-hidden="true"></i>' + esc(CFG.HQ.name[state.lang]) + '</span>' +
+            '<div class="hero-globe"><canvas id="globe" aria-label="' + esc(t('globe.hint')) + '" role="img"></canvas><div class="globe-tip" id="globeTip" hidden></div></div>' +
+            '<div class="globe-foot"><span>' + esc(t('globe.hint')) + '</span><b>' + esc(t('globe.offices', { n: CFG.OFFICES.length + 1 })) + '</b></div>' +
+          '</div>' +
+        '</div></div></section>' +
+      '<section class="wrap block-sec" id="prep">' +
+        '<div class="sec-head" data-reveal><div class="k"><p class="eyebrow">' + esc(t('prep.eyebrow')) + '</p><h2>' + esc(t('app.prepare')) + '</h2></div><p class="hint">' + esc(t('m.draftNote')) + '</p></div>' +
+        '<ol class="prep-grid">' + prep.map(function (p, i) {
+          return '<li class="prep-card" data-reveal style="--i:' + i + '"><span class="prep-ic"><svg viewBox="0 0 24 24" aria-hidden="true">' + PREP_ICONS[p] + '</svg></span><b>' + esc(t('prep.' + p)) + '</b><span class="s">' + esc(t('prep.' + p + '.s')) + '</span></li>';
+        }).join('') + '</ol>' +
+      '</section>' +
+      '<section class="wrap block-sec">' +
+        '<div class="sec-head" data-reveal><div class="k"><p class="eyebrow">' + esc(t('how.eyebrow')) + '</p><h2>' + esc(t('how.title')) + '</h2></div></div>' +
+        '<ol class="how-grid">' + [1, 2, 3, 4].map(function (i) {
+          return '<li class="how-card" data-reveal style="--i:' + (i - 1) + '"><span class="n" aria-hidden="true">' + num('0' + i) + '</span><b>' + esc(t('how.' + i + '.t')) + '</b><p>' + esc(t('how.' + i + '.d')) + '</p></li>';
+        }).join('') + '</ol>' +
+        '<div class="cta-band" data-reveal><div><h3>' + esc(t('cta.title')) + '</h3><p>' + esc(t('cta.desc')) + '</p></div><button type="button" class="btn gold big js-start"><span>' + esc(t('b.start')) + '</span>' + arrow + '</button></div>' +
+      '</section>';
     renderStrip();
     countUp($('#welcome'));
+    reveal($('#welcome'));
     if (globe) globe.destroy();
     if (window.BonyanGlobe && window.LAND_MASK) {
       globe = window.BonyanGlobe($('#globe'), {
@@ -1151,7 +1196,7 @@
       var tgt = e.target;
       var lb = tgt.closest('#langSwitch button');
       if (lb) { setLang(lb.getAttribute('data-lang')); return; }
-      if (tgt.closest('#btnStart')) { state.view = 'wizard'; renderView(); goTo(state.step, true); return; }
+      if (tgt.closest('#btnStart, .js-start')) { state.view = 'wizard'; renderView(); goTo(state.step, true); return; }
       if (tgt.closest('#btnClear')) { clearDraft(); return; }
       if (tgt.closest('#btnNew')) { clearDraft(); return; }
       if (tgt.closest('#btnPrint')) { window.print(); return; }
@@ -1457,6 +1502,10 @@
     renderView();
     bind();
     $('#form').addEventListener('submit', function (e) { e.preventDefault(); });
+    var onScroll = function () { $('#top').classList.toggle('scrolled', window.scrollY > 8); };
+    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+    window.addEventListener('resize', movePill);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(movePill);
     $('#ovRetry').addEventListener('click', function () { $('#overlay').hidden = true; submit(); });
     $('#ovClose').addEventListener('click', function () { $('#overlay').hidden = true; });
   }

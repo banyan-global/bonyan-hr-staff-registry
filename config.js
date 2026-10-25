@@ -20,7 +20,13 @@ window.APP_CONFIG = {
   },
 
   /* ٤) الشعار الرئيسي — الصور مضمّنة في logos.js (مأخوذة من مجلد الشعارات في Drive، نسخة مفرغة لكل جهة) */
-  MAIN_LOGO: { logo: 'main', white: 'mainWhite', name: { ar: 'شركة بنيان', en: 'Bonyan', id: 'Bonyan' } },
+  MAIN_LOGO: { logo: 'mark', white: 'markWhite', name: { ar: 'بنيان', en: 'Bonyan', id: 'Bonyan' } },
+
+  /* شعارا جانبي الرأس: وقف بنيان يمينًا، وجامعة بنيان العالمية يسارًا */
+  HEADER_SIDES: {
+    right: { logo: 'waqf', name: { ar: 'وقف بنيان', en: 'Bonyan Endowment', id: 'Wakaf Bonyan' } },
+    left: { logo: 'university', name: { ar: 'جامعة بنيان العالمية', en: 'Bonyan International University', id: 'Universitas Internasional Bonyan' } }
+  },
 
   /* ٥) شعارات الشريط المتحرك (بألوانها الأصلية) — المفتاح logo يشير إلى اسم الصورة في logos.js */
   STRIP_LOGOS: [
