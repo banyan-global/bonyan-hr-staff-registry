@@ -50,7 +50,8 @@ var MAIN_COLS = [
   ['walletProvider', 'مزوّد المحفظة', 't'], ['walletNo', 'رقم المحفظة', 't'], ['payOther', 'طريقة أخرى', 't'], ['currency', 'العملة', 't'],
   ['photo', 'الصورة الشخصية', 'f'], ['passportScan', 'صورة الجواز', 'f'], ['nationalIdScan', 'صورة الهوية', 'f'], ['permitScan', 'صورة الإقامة', 'f'],
   ['contractFile', 'ملف العقد', 'f'], ['degreeFile', 'الشهادة', 'f'], ['bankProof', 'إثبات الحساب', 'f'],
-  ['lang', 'لغة التعبئة', 's'], ['tz', 'المنطقة الزمنية', 's'], ['folderId', 'معرّف المجلد', 's']
+  ['lang', 'لغة التعبئة', 's'], ['tz', 'المنطقة الزمنية', 's'], ['folderId', 'معرّف المجلد', 's'],
+  ['workCountryCode', 'رمز دولة العمل', 's']
 ];
 var EXPIRY_KEYS = ['passportExpiry', 'nationalIdExpiry', 'permitExpiry', 'contractEnd'];
 var DEGREE_RANK = { 'دكتوراه': 6, 'ماجستير': 5, 'بكالوريوس': 4, 'دبلوم': 3, 'ثانوي': 2, 'أخرى': 1 };
@@ -90,6 +91,12 @@ function getRoot_(create) {
 function ensureSheets_(ss) {
   var S = CONFIG.SHEETS;
   var main = prepSheet_(ss, S.main, MAIN_COLS.map(function (c) { return c[1]; }), 160);
+  var have = main.getLastColumn();
+  if (have < MAIN_COLS.length) {
+    if (main.getMaxColumns() < MAIN_COLS.length) main.insertColumnsAfter(main.getMaxColumns(), MAIN_COLS.length - main.getMaxColumns());
+    var add = MAIN_COLS.slice(have).map(function (c) { return c[1]; });
+    main.getRange(1, have + 1, 1, add.length).setValues([add]).setFontWeight('bold').setFontColor(CONFIG.COLORS.white).setBackground('#3B5878');
+  }
   if (!main.getRange(1, 1).getNote()) {
     MAIN_COLS.forEach(function (c, i) {
       var col = i + 1, body = main.getRange(2, col, main.getMaxRows() - 1, 1);
@@ -149,8 +156,28 @@ function addExpiryRules_(sh) {
 }
 
 /* ============================================================ نقاط الدخول */
-function doGet() {
+function doGet(e) {
+  var action = e && e.parameter && e.parameter.action;
+  if (action === 'countries') return json_(countries_());
   return json_({ ok: true, service: 'Bonyan HR · Global Staff Registry' });
+}
+
+/* عدد المنسوبين في كل دولة — أرقام مجمّعة فقط، بلا أي بيانات شخصية، لعرضها نقاطًا على الكرة الأرضية */
+function countries_() {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('countries');
+  if (hit) return { ok: true, countries: JSON.parse(hit) };
+  var out = {};
+  try {
+    var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.main);
+    var last = sh.getLastRow();
+    if (last >= 2) {
+      var codes = sh.getRange(2, col_('workCountryCode'), last - 1, 1).getValues();
+      codes.forEach(function (r) { var c = String(r[0] || '').toUpperCase(); if (/^[A-Z]{2}$/.test(c)) out[c] = (out[c] || 0) + 1; });
+    }
+  } catch (err) { }
+  cache.put('countries', JSON.stringify(out), 300);
+  return { ok: true, countries: out };
 }
 
 function doPost(e) {
@@ -213,6 +240,7 @@ function submit_(p) {
         case 'topDegree': return topDegree_(ar.qualifications);
         case 'lang': return (p.meta && p.meta.lang) || '';
         case 'tz': return (p.meta && p.meta.tz) || '';
+        case 'workCountryCode': return String(ar.workCountryCode || raw.workCountry || '').toUpperCase();
       }
       if (c[2] === 'f') return updated ? sh.getRange(rowIdx, col_(k)).getValue() : '';
       if (c[2] === 'd') return raw[k] ? new Date(raw[k] + 'T12:00:00') : '';
@@ -301,6 +329,7 @@ function finalize_(b) {
   var cache = CacheService.getScriptCache();
   var updated = cache.get('upd_' + b.ref) === '1';
   sh.getRange(row, col_('status')).setValue(updated ? 'محدَّث' : 'مكتمل');
+  cache.remove('countries');
   cache.remove('tok_' + b.ref);
   log_(b.ref, 'اكتمل الرفع', '');
   notify_(sh, row, b.ref, updated);

@@ -673,7 +673,7 @@
       state.errors[k] = '';
     }, function (e) {
       state.errors[k] = e && e.k ? e : 'e.fileType';
-    }).then(function () { rerenderField(k); updateNav(); renderCard(); });
+    }).then(function () { rerenderField(k); updateNav(); });
   }
 
   /* ---------- الحقول المتكررة */
@@ -711,21 +711,18 @@
   }
 
   var LOGO_STATE = {};
-  function logoImg(l, cls, alt) {
-    var srcs = [];
-    if (l.drive) { srcs.push('https://lh3.googleusercontent.com/d/' + l.drive + '=w600'); srcs.push('https://drive.google.com/thumbnail?id=' + l.drive + '&sz=w600'); }
-    if (l.local) srcs.push(l.local);
-    var key = srcs[0], st = LOGO_STATE[key];
-    if (st === 'fail') return '<span class="' + cls + ' logo-fallback">' + esc(alt) + '</span>';
-    if (st) return '<img class="' + cls + '" src="' + esc(st) + '" alt="' + esc(alt) + '" referrerpolicy="no-referrer">';
-    return '<img class="' + cls + '" src="' + srcs[0] + '" data-key="' + esc(key) + '" data-srcs="' + esc(srcs.slice(1).join('|')) + '" data-alt="' + esc(alt) + '" alt="' + esc(alt) + '" loading="lazy" referrerpolicy="no-referrer">';
+  function logoImg(l, cls, alt, white) {
+    var LG = window.BONYAN_LOGOS || {};
+    var d = LG[white && l.white ? l.white : l.logo];
+    if (!d) return '<span class="' + cls + ' logo-fallback">' + esc(alt) + '</span>';
+    return '<img class="' + cls + '" src="' + d.src + '" width="' + d.w + '" height="' + d.h + '" alt="' + esc(alt) + '" decoding="async">';
   }
   function renderStrip() {
     var L = state.lang;
     var items = CFG.STRIP_LOGOS.map(function (l) {
-      return '<li class="logo-tile" title="' + esc(l.name[L]) + '">' + logoImg(l, 'logo-img', l.name[L]) + '</li>';
+      return '<li class="logo-item" title="' + esc(l.name[L]) + '">' + logoImg(l, 'logo-img', l.name[L]) + '</li>';
     }).join('');
-    var html = '<ul class="strip-track">' + items + items.replace(/<li /g, '<li aria-hidden="true" ') + '</ul>';
+    var html = '<ul class="strip-track">' + items + items.replace(/<li /g, '<li aria-hidden="true" ') + items.replace(/<li /g, '<li aria-hidden="true" ') + items.replace(/<li /g, '<li aria-hidden="true" ') + '</ul>';
     $$('#stripTop, .strip-fill').forEach(function (el) { el.innerHTML = html; });
   }
 
@@ -742,7 +739,7 @@
     var l1 = pad('P<' + mrzClean(d.nationality || '') + mrzClean(d.lastName || '') + '<<' + mrzClean([d.firstName, d.middleName].filter(Boolean).join(' ')), 36);
     var l2 = pad(mrzClean(d.passportNo || '') + '<' + mrzClean(d.nationality || '') + yymmdd(d.birthDate) + (d.gender === 'female' ? 'F' : (d.gender === 'male' ? 'M' : '<')) + yymmdd(d.passportExpiry) + '<BONYANHR', 36);
     var em = d.em1Name ? d.em1Name + (d.em1Phone ? ' · +' + dialOf(d.em1PhoneDial) + ' ' + d.em1Phone : '') : '—';
-    var mainLogo = logoImg(CFG.MAIN_LOGO, 'ic-logo-img', CFG.MAIN_LOGO.name[L]).replace(' loading="lazy"', '');
+    var mainLogo = logoImg(CFG.MAIN_LOGO, 'ic-logo-img', CFG.MAIN_LOGO.name[L], true);
     return '<div class="idcard" tabindex="0" role="button" aria-label="' + esc(t('card.flip')) + '"><div class="idcard-in">' +
       '<div class="face front"><div class="ic-guil" aria-hidden="true"></div>' +
         '<div class="ic-top"><span class="ic-logo">' + mainLogo + '</span><span class="ic-kind">' + esc(t('card.kind')) + '<b>STAFF · HR</b></span><span class="ic-holo" aria-hidden="true"></span></div>' +
@@ -849,7 +846,7 @@
   }
   function renderMainLogo() {
     var box = $('#logoBox');
-    box.innerHTML = logoImg(CFG.MAIN_LOGO, 'main-logo', CFG.MAIN_LOGO.name[state.lang]).replace('<img ', '<img id="mainLogo" ').replace(' loading="lazy"', '');
+    box.innerHTML = logoImg(CFG.MAIN_LOGO, 'main-logo', CFG.MAIN_LOGO.name[state.lang]).replace('<img ', '<img id="mainLogo" ');
   }
 
   function renderStepper() {
@@ -866,9 +863,10 @@
         (done ? '<span class="stamp" aria-hidden="true">' + esc(t('m.stamp')) + '</span>' : '') + '</button></li>';
     }).join('');
     state.justDone = null;
-    var pct = (state.step) / (n - 1) * 100;
-    $('#journeyFill').style.width = pct + '%';
-    $('#journeyPlane').style.insetInlineStart = 'calc((100% - 72px) * ' + (pct / 100).toFixed(4) + ')';
+    $('#blocks').innerHTML = STEPS.map(function (st, i) {
+      var c = i === state.step ? 'cur' : (state.checked[i] ? 'done' : '');
+      return '<i class="' + c + '" style="--i:' + i + '" title="' + esc(t('st.' + st.id)) + '"></i>';
+    }).join('');
     $('#progLabel').textContent = t('m.stepOf', { i: state.step + 1, n: n });
   }
 
@@ -969,18 +967,35 @@
     $('#welcome').hidden = state.view !== 'welcome';
     $('#wizard').hidden = state.view !== 'wizard';
     $('#success').hidden = state.view !== 'success';
-    $('#stripTop').hidden = state.view === 'welcome';
     document.body.setAttribute('data-view', state.view);
     if (globe && state.view !== 'welcome') { globe.destroy(); globe = null; }
+    if (miniGlobe && state.view !== 'wizard') { miniGlobe.destroy(); miniGlobe = null; }
     if (state.view === 'welcome') renderWelcome();
     if (state.view === 'wizard') {
-      $('#cardCap').textContent = t('card.live');
-      $('#cardHint').textContent = t('card.flip');
-      renderCard(); renderStepper(); renderStep();
+      $('#globeCap').textContent = t('globe.side');
+      if (!miniGlobe && window.BonyanGlobe && window.LAND_MASK) {
+        miniGlobe = window.BonyanGlobe($('#miniGlobe'), { hq: CFG.HQ, offices: CFG.OFFICES, centerLon: 50, tilt: 18, compact: true, label: globeLabel });
+        if (staffMap) miniGlobe.setPoints(staffMap, function (cc) { return cname(cc); });
+      }
+      syncUserPoint();
+      renderStepper(); renderStep();
     }
     if (state.view === 'success') renderSuccess();
   }
-  var globe = null;
+  var globe = null, miniGlobe = null, staffMap = null;
+  function globeLabel(o) { return o.name ? o.name[state.lang] : cname(o.cc); }
+  function syncUserPoint() {
+    var cc = state.data.workCountry;
+    [globe, miniGlobe].forEach(function (g) { if (g) g.setUser(cc, cc ? cname(cc) : ''); });
+  }
+  function loadStaffMap() {
+    if (DEMO || staffMap) return;
+    fetch(CFG.GAS_URL + '?action=countries').then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.ok) return;
+      staffMap = j.countries || {};
+      [globe, miniGlobe].forEach(function (g) { if (g) g.setPoints(staffMap, function (cc) { return cname(cc); }); });
+    }).catch(function () { });
+  }
 
   var PREP_ICONS = {
     photo: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3.2"/><path d="M6.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5"/>',
@@ -994,7 +1009,7 @@
     var prep = ['photo', 'passport', 'id', 'permit', 'contract', 'bank'];
     var stats = [[CFG.LANGS.length, 'stat.langs'], [STEPS.length, 'stat.steps'], [CFG.STRIP_LOGOS.length + 1, 'stat.entities'], [10, 'stat.minutes']];
     $('#welcome').innerHTML =
-      '<section class="hero"><div class="hero-glow" aria-hidden="true"></div><div class="wrap hero-in">' +
+      '<section class="hero"><div class="hero-blocks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><div class="wrap hero-in">' +
         '<div class="hero-text">' +
           '<p class="eyebrow rise" style="--d:0">' + esc(t('app.dept')) + ' · Bonyan HR</p>' +
           '<h1 class="rise" style="--d:1"><span>' + esc(t('hero.l1')) + '</span><span class="hl">' + esc(t('hero.l2')) + '</span></h1>' +
@@ -1005,7 +1020,7 @@
           '<ul class="stats rise" style="--d:4">' + stats.map(function (s) { return '<li><b data-count="' + s[0] + '">0</b><span>' + esc(t(s[1])) + '</span></li>'; }).join('') + '</ul>' +
         '</div>' +
         '<div class="hero-globe"><canvas id="globe" aria-label="' + esc(t('globe.hint')) + '" role="img"></canvas><div class="globe-tip" id="globeTip" hidden></div><p class="globe-cap">' + esc(t('globe.hint')) + '</p></div>' +
-      '</div><div class="strip strip-hero strip-fill"></div></section>' +
+      '</div></section>' +
       '<section class="wrap prep-sec"><div class="prep-head"><h2>' + esc(t('app.prepare')) + '</h2><p class="hint">' + esc(t('m.draftNote')) + '</p></div>' +
       '<ol class="prep-grid">' + prep.map(function (p, i) {
         return '<li class="prep-card" style="--i:' + i + '"><span class="prep-ic"><svg viewBox="0 0 24 24" aria-hidden="true">' + PREP_ICONS[p] + '</svg></span><span>' + esc(t('prep.' + p)) + '</span></li>';
@@ -1016,9 +1031,12 @@
     if (window.BonyanGlobe && window.LAND_MASK) {
       globe = window.BonyanGlobe($('#globe'), {
         hq: CFG.HQ, offices: CFG.OFFICES, centerLon: 50, tilt: 16, tip: $('#globeTip'),
-        label: function (o) { return o.name ? o.name[state.lang] : cname(o.cc); }
+        label: globeLabel
       });
+      if (staffMap) globe.setPoints(staffMap, function (cc) { return cname(cc); });
+      syncUserPoint();
     }
+    loadStaffMap();
   }
 
   function renderSuccess() {
@@ -1040,7 +1058,7 @@
   }
 
   /* ---------------------------------------------------------- الأحداث */
-  var cardSoon = debounce(function () { if (state.view === 'wizard') renderCard(); }, 140);
+  var cardSoon = debounce(function () { if (state.view === 'wizard' && $('#cardWrapReview')) renderCard('#cardWrapReview'); }, 140);
   function validFmt(path) {
     var f = FIELD[path];
     if (!f) { var p = path.split(':'); var rf = FIELD[p[1]]; f = rf && rf.fields.filter(function (x) { return x.k === p[3]; })[0]; }
@@ -1060,6 +1078,7 @@
       } else state.errors[path] = '';
     }
     cardSoon();
+    if (path === 'workCountry') syncUserPoint();
     if (DRIVERS.indexOf(path) > -1) {
       applyDefaults(path);
       Object.keys(state.errors).forEach(function (ek) {

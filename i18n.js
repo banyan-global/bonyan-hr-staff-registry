@@ -7,17 +7,18 @@ window.I18N = {
 
 /* ---------------------------------------------------------------- العربية */
 ar: {
+  'globe.side': 'تظهر دولتك على الكرة بمجرد اختيارها، دون أي بيانات شخصية.',
   'lang.name': 'العربية', 'dir': 'rtl',
-  'hero.l1': 'سجل منسوبي', 'hero.l2': 'بنيان العالمية',
+  'hero.l1': 'استبانة بيانات', 'hero.l2': 'منسوبي بنيان العالمية',
   'stat.langs': 'لغات للواجهة', 'stat.steps': 'خطوات قصيرة', 'stat.entities': 'جهة في المجموعة', 'stat.minutes': 'دقيقة تقريبًا',
-  'globe.hint': 'اسحب الكرة لتدويرها، ومرّر على النقاط لمعرفة الدول',
+  'globe.hint': 'اسحب الكرة لتدويرها · المربعات الذهبية مكاتبنا · النقاط دول منسوبينا',
   'card.kind': 'بطاقة منسوب', 'card.live': 'بطاقتك تتكوّن مع كل إجابة', 'card.flip': 'اضغط لقلب البطاقة',
   'card.name': 'YOUR NAME', 'card.nameAr': 'اسمك بالعربية', 'card.role': 'المسمى الوظيفي', 'card.entity': 'الجهة',
   'card.emergency': 'للطوارئ', 'card.blood': 'فصيلة الدم', 'card.passport': 'انتهاء الجواز', 'card.ref': 'الرقم المرجعي', 'card.since': 'منذ',
   'm.stamp': 'تم', 'm.registered': 'مُسجَّل',
-  'app.title': 'سجل منسوبي بنيان العالمية',
+  'app.title': 'استبانة بيانات المنسوبين',
   'app.dept': 'الموارد البشرية',
-  'app.lead': 'نموذج موحّد لتحديث بيانات منسوبي المجموعة في جميع الدول. تُحفظ بياناتك في سجل الموارد البشرية، وتُحفظ مرفقاتك في ملف خاص بك.',
+  'app.lead': 'استبانة موحّدة لتحديث بيانات منسوبي مجموعة بنيان العالمية في كل الدول. تُحفظ إجاباتك في سجل الموارد البشرية، ومرفقاتك في ملف خاص بك.',
   'app.time': 'المدة التقريبية: ١٠ إلى ١٢ دقيقة',
   'app.prepare': 'جهّز هذه المستندات قبل البدء',
   'prep.photo': 'صورة شخصية حديثة بخلفية بيضاء',
@@ -167,15 +168,16 @@ ar: {
 
 /* ---------------------------------------------------------------- English */
 en: {
+  'globe.side': 'Your country lights up on the globe as soon as you choose it. No personal details are shown.',
   'lang.name': 'English', 'dir': 'ltr',
-  'hero.l1': 'Bonyan Global', 'hero.l2': 'Staff Registry',
+  'hero.l1': 'Bonyan Global', 'hero.l2': 'Staff Survey',
   'stat.langs': 'interface languages', 'stat.steps': 'short steps', 'stat.entities': 'group entities', 'stat.minutes': 'minutes or so',
-  'globe.hint': 'Drag the globe to spin it. Hover the dots to see countries.',
+  'globe.hint': 'Drag to spin · gold squares are our offices · dots are where our staff work',
   'card.kind': 'Staff card', 'card.live': 'Your card builds as you answer', 'card.flip': 'Tap to flip the card',
   'card.name': 'YOUR NAME', 'card.nameAr': 'Name in Arabic', 'card.role': 'Job title', 'card.entity': 'Entity',
   'card.emergency': 'Emergency', 'card.blood': 'Blood type', 'card.passport': 'Passport expiry', 'card.ref': 'Reference', 'card.since': 'Since',
   'm.stamp': 'Done', 'm.registered': 'Registered',
-  'app.title': 'Bonyan Global Staff Registry',
+  'app.title': 'Staff Information Survey',
   'app.dept': 'Human Resources',
   'app.lead': 'One form for every member of the group, in every country. Your details go to the HR registry and your documents are kept in a folder of your own.',
   'app.time': 'Takes about 10 to 12 minutes',
@@ -327,15 +329,16 @@ en: {
 
 /* ---------------------------------------------------------------- Bahasa Indonesia */
 id: {
+  'globe.side': 'Negara Anda langsung muncul di bola dunia begitu dipilih, tanpa data pribadi.',
   'lang.name': 'Indonesia', 'dir': 'ltr',
-  'hero.l1': 'Registri Staf', 'hero.l2': 'Global Bonyan',
+  'hero.l1': 'Survei Data', 'hero.l2': 'Staf Global Bonyan',
   'stat.langs': 'bahasa antarmuka', 'stat.steps': 'langkah singkat', 'stat.entities': 'lembaga dalam grup', 'stat.minutes': 'menit kira-kira',
-  'globe.hint': 'Seret bola dunia untuk memutarnya. Arahkan ke titik untuk melihat negara.',
+  'globe.hint': 'Seret untuk memutar · kotak emas adalah kantor kami · titik adalah negara staf kami',
   'card.kind': 'Kartu staf', 'card.live': 'Kartu Anda terbentuk setiap kali menjawab', 'card.flip': 'Ketuk untuk membalik kartu',
   'card.name': 'NAMA ANDA', 'card.nameAr': 'Nama dalam bahasa Arab', 'card.role': 'Jabatan', 'card.entity': 'Lembaga',
   'card.emergency': 'Darurat', 'card.blood': 'Golongan darah', 'card.passport': 'Paspor berlaku s.d.', 'card.ref': 'Referensi', 'card.since': 'Sejak',
   'm.stamp': 'Selesai', 'm.registered': 'Terdaftar',
-  'app.title': 'Registri Staf Global Bonyan',
+  'app.title': 'Survei Data Staf',
   'app.dept': 'Sumber Daya Manusia',
   'app.lead': 'Satu formulir untuk seluruh staf grup di semua negara. Data Anda masuk ke registri SDM dan dokumen Anda disimpan dalam folder khusus milik Anda.',
   'app.time': 'Sekitar 10 sampai 12 menit',

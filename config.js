@@ -19,37 +19,31 @@ window.APP_CONFIG = {
     id: 'Bonyan International Group'
   },
 
-  /* ٤) الشعار الرئيسي
-        local: مسار نسخة محلية داخل المستودع (اختياري)
-        drive: معرّف الملف في Google Drive (يُستخدم تلقائيًا إن لم توجد النسخة المحلية) */
-  MAIN_LOGO: {
-    name: { ar: 'شركة بنيان', en: 'Bonyan', id: 'Bonyan' },
-    local: 'assets/img/logos/bonyan.png',
-    drive: '15coxCS7UqEDjD4TYBf9w0nmvkF4JSShI'
-  },
+  /* ٤) الشعار الرئيسي — الصور مضمّنة في logos.js (مأخوذة من مجلد الشعارات في Drive، نسخة مفرغة لكل جهة) */
+  MAIN_LOGO: { logo: 'main', white: 'mainWhite', name: { ar: 'شركة بنيان', en: 'Bonyan', id: 'Bonyan' } },
 
-  /* ٥) شعارات الشريط المتحرك (بألوانها الأصلية) */
+  /* ٥) شعارات الشريط المتحرك (بألوانها الأصلية) — المفتاح logo يشير إلى اسم الصورة في logos.js */
   STRIP_LOGOS: [
-    { name: { ar: 'جامعة بنيان', en: 'Bonyan University', id: 'Universitas Bonyan' }, local: 'assets/img/logos/bonyan-university.png', drive: '1FbmJFRqTY_2Ql1XCI-K8fQ6xkMp6W-AX' },
-    { name: { ar: 'بنيان الإنسانية', en: 'Bonyan Humanitarian', id: 'Bonyan Kemanusiaan' }, local: 'assets/img/logos/bonyan-humanitarian.png', drive: '1-w7IvRiTgs793YEyZE-KKDBZsRgKhUXE' },
-    { name: { ar: 'دار التمكين', en: 'Dar Al-Tamkeen', id: 'Dar Al-Tamkeen' }, local: 'assets/img/logos/dar-altamkeen.png', drive: '1-MBCgpk3jo8eYzKqz9MFxMbWumk9lWL6' },
-    { name: { ar: 'وقف بنيان', en: 'Bonyan Endowment', id: 'Wakaf Bonyan' }, local: 'assets/img/logos/bonyan-waqf.png', drive: '19dP8gD5W74gpW9Gg6KG6nMx5C_NtEu8s' },
-    { name: { ar: 'آفاق', en: 'Afaq', id: 'Afaq' }, local: 'assets/img/logos/afaq.png', drive: '1M65eWMon9PaqdG7bx6_lUDjw1lKSMvL5' },
-    { name: { ar: 'بنيان للتعليم عن بعد', en: 'Bonyan Distance Learning', id: 'Bonyan Pendidikan Jarak Jauh' }, local: 'assets/img/logos/bonyan-distance.png', drive: '1hjo-eTArMHWfZNAx36YI4GQ280m_HLS7' },
-    { name: { ar: 'أكاديمية بنيان', en: 'Bonyan Academy', id: 'Akademi Bonyan' }, local: 'assets/img/logos/bonyan-academy.png', drive: '1kwRsFhK9Kb3M_AKgoJpgf-PTKYl1fgZl' },
-    { name: { ar: 'مركز بنيان للأبحاث', en: 'Bonyan Research Center', id: 'Pusat Riset Bonyan' }, local: 'assets/img/logos/bonyan-research.png', drive: '1uKM7ralWqzLHBST_pGEEVnnDEtzm_i0s' },
-    { name: { ar: 'طاقات', en: 'Taqat', id: 'Taqat' }, local: 'assets/img/logos/taqat.png', drive: '1v8gK4VSmKEZDFxSDaOh9LcZC4bRG7s2G' },
-    { name: { ar: 'مقرأة بنيان', en: 'Bonyan Maqraa', id: 'Maqraa Bonyan' }, local: 'assets/img/logos/bonyan-maqraa.png', drive: '1P0s-7h8kktyvXx_pIdDhQjRG3pmujj1Z' },
-    { name: { ar: 'كلية المعارف', en: 'Al-Maarif College', id: 'Kolese Al-Maarif' }, local: 'assets/img/logos/almaarif.png', drive: '1TvrHUUdrk-BSSKIR69xXDzPFGA24_uHz' },
-    { name: { ar: 'كفاءة تقنية', en: 'Kafaa Tech', id: 'Kafaa Tech' }, local: 'assets/img/logos/kafaa-tech.png', drive: '15ow0Jq3kGcPagKCcHYQoKHDdOxDYQLG4' },
-    { name: { ar: 'تمكين التعليم', en: 'Tamkeen Education', id: 'Tamkeen Pendidikan' }, local: 'assets/img/logos/tamkeen-education.png', drive: '1xlhfUeMlUO-Jqg3kX3WJk6eRUP9bLMmb' },
-    { name: { ar: 'رقيم', en: 'Raqeem', id: 'Raqeem' }, local: 'assets/img/logos/raqeem.jpg', drive: '18fjExF6djDb71BRDz_RPKvuiLQlp3C5B' }
+    { logo: 'university', name: { ar: 'جامعة بنيان العالمية', en: 'Bonyan International University', id: 'Universitas Internasional Bonyan' } },
+    { logo: 'humanitarian', name: { ar: 'بنيان الإنسانية', en: 'Bonyan Humanitarian', id: 'Bonyan Kemanusiaan' } },
+    { logo: 'darAltamkeen', name: { ar: 'دار التمكين', en: 'Dar Al-Tamkeen', id: 'Dar Al-Tamkeen' } },
+    { logo: 'waqf', name: { ar: 'وقف بنيان', en: 'Bonyan Endowment', id: 'Wakaf Bonyan' } },
+    { logo: 'afaq', name: { ar: 'آفاق', en: 'Afaq', id: 'Afaq' } },
+    { logo: 'distance', name: { ar: 'بنيان للتعليم عن بعد', en: 'Bonyan Online Education', id: 'Bonyan Pendidikan Daring' } },
+    { logo: 'academy', name: { ar: 'أكاديمية بنيان', en: 'Bonyan Academy', id: 'Akademi Bonyan' } },
+    { logo: 'research', name: { ar: 'مركز بنيان للأبحاث', en: 'Bonyan Research Center', id: 'Pusat Riset Bonyan' } },
+    { logo: 'taqat', name: { ar: 'طاقات', en: 'Taqat', id: 'Taqat' } },
+    { logo: 'maqraa', name: { ar: 'مقرأة بنيان', en: 'Bonyan Quranic Desk', id: 'Maqraa Bonyan' } },
+    { logo: 'maarif', name: { ar: 'كلية المعارف', en: 'Al-Maarif College', id: 'Kolese Al-Maarif' } },
+    { logo: 'kafaa', name: { ar: 'كفاءة تقنية', en: 'Kafaa Tech', id: 'Kafaa Tech' } },
+    { logo: 'tamkeenEducation', name: { ar: 'تمكين التعليم', en: 'Tamkeen Education', id: 'Tamkeen Pendidikan' } },
+    { logo: 'raqeem', name: { ar: 'رقيم', en: 'Raqeem', id: 'Raqeem' } }
   ],
 
   /* ٦) الجهات التي تظهر في سؤال "الجهة" داخل النموذج */
   ENTITIES: [
     { v: 'bonyan', ar: 'شركة بنيان', en: 'Bonyan Company', id: 'Perusahaan Bonyan' },
-    { v: 'bonyan-university', ar: 'جامعة بنيان', en: 'Bonyan University', id: 'Universitas Bonyan' },
+    { v: 'bonyan-university', ar: 'جامعة بنيان العالمية', en: 'Bonyan International University', id: 'Universitas Internasional Bonyan' },
     { v: 'bonyan-university-eg', ar: 'جامعة بنيان مصر', en: 'Bonyan University Egypt', id: 'Universitas Bonyan Mesir' },
     { v: 'bonyan-humanitarian', ar: 'بنيان الإنسانية', en: 'Bonyan Humanitarian', id: 'Bonyan Kemanusiaan' },
     { v: 'dar-altamkeen', ar: 'دار التمكين', en: 'Dar Al-Tamkeen', id: 'Dar Al-Tamkeen' },
