@@ -2127,6 +2127,12 @@
   }
 
   /* ---------------------------------------------------------- الإرسال */
+  /* اسم واضح لكل مرفق عند حفظه في Drive: «نوع المستند - اسم المنسوب» */
+  var FILE_AR = { photo: 'صورة شخصية', passportScan: 'جواز السفر', certFiles: 'شهادة دورة' };
+  function fileLabelAr(f) {
+    var lb = FILE_AR[f.k] || tl('ar', f.labelKey ? f.labelKey(state.data) : 'f.' + f.k);
+    return String(lb).replace(/[\\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
+  }
   function buildPayload() {
     var raw = {}, ar = {}, d = state.data;
     STEPS.forEach(function (st) {
@@ -2200,7 +2206,7 @@
       st.sections.forEach(function (sec) {
         sec.fields.forEach(function (f) {
           if (f.type !== 'file' || !visible(f)) return;
-          (state.files[f.k] || []).forEach(function (fl, i, arr) { queue.push({ kind: f.k, label: tl('ar', 'f.' + f.k), labelUi: lblText(f), idx: i + 1, total: arr.length, file: fl }); });
+          (state.files[f.k] || []).forEach(function (fl, i, arr) { queue.push({ kind: f.k, label: fileLabelAr(f), labelUi: lblText(f), idx: i + 1, total: arr.length, file: fl }); });
         });
       });
     });

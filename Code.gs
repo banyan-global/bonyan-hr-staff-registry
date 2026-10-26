@@ -414,7 +414,11 @@ function upload_(b) {
   if (!col || MAIN_COLS[col - 1][2] !== 'f') throw new Error('نوع مرفق غير معروف');
 
   var ext = b.mime === 'application/pdf' ? 'pdf' : 'jpg';
-  var fname = b.ref + '_' + b.label + (b.total > 1 ? '_' + b.idx : '') + '.' + ext;
+  /* اسم الملف: «نوع المستند - اسم المنسوب» مثل: صورة شخصية - أسامة محمد جنيدي.jpg */
+  var who = String(sh.getRange(row, col_('fullNameAr')).getDisplayValue() || sh.getRange(row, col_('fullNameLatin')).getDisplayValue() || b.ref).trim();
+  var clean = function (v) { return String(v || '').replace(/[\\\/:*?"<>|\n\r]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 80); };
+  var base = clean(b.label) + ' - ' + clean(who);
+  var fname = base + (b.total > 1 ? ' (' + b.idx + ')' : '') + '.' + ext;
   var cache = CacheService.getScriptCache();
   var listKey = 'f_' + b.ref + '_' + b.kind;
 
@@ -422,7 +426,8 @@ function upload_(b) {
     var old = folder.getFiles();
     while (old.hasNext()) {
       var f0 = old.next();
-      if (f0.getName().indexOf(b.ref + '_' + b.label) === 0) f0.setTrashed(true);
+      var n0 = f0.getName();
+      if (n0.indexOf(base + '.') === 0 || n0.indexOf(base + ' (') === 0 || n0.indexOf(b.ref + '_' + b.label) === 0) f0.setTrashed(true);
     }
     cache.remove(listKey);
   }
