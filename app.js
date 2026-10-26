@@ -129,7 +129,8 @@
     return s.replace(/^0+/, '');
   }
   function startOf(d) { return C.startDiff(d) ? d.startDate : (d.hasContract === 'yes' ? d.contractStart : d.startDate); }
-  function svcLen(iso, lang) {
+  /* مدة الخدمة. gen = بعد «منذ» (سنتين/شهرين)، وإلا بالرفع (سنتان/شهران) */
+  function svcLen(iso, lang, gen) {
     lang = lang || state.lang;
     if (!iso) return '';
     var b = new Date(iso + 'T00:00:00'), now = today();
@@ -137,14 +138,19 @@
     if (mo < 0) return '';
     var y = Math.floor(mo / 12), m = mo % 12, out = [];
     if (lang === 'ar') {
-      var Y = function (n) { return n === 1 ? 'سنة' : n === 2 ? 'سنتان' : (n <= 10 ? arDigits(n) + ' سنوات' : arDigits(n) + ' سنة'); };
-      var M = function (n) { return n === 1 ? 'شهر' : n === 2 ? 'شهران' : (n <= 10 ? arDigits(n) + ' أشهر' : arDigits(n) + ' شهرًا'); };
+      var Y = function (n) { return n === 1 ? 'سنة' : n === 2 ? (gen ? 'سنتين' : 'سنتان') : (n <= 10 ? arDigits(n) + ' سنوات' : arDigits(n) + ' سنة'); };
+      var M = function (n) { return n === 1 ? 'شهر' : n === 2 ? (gen ? 'شهرين' : 'شهران') : (n <= 10 ? arDigits(n) + ' أشهر' : arDigits(n) + ' شهرًا'); };
       if (y) out.push(Y(y)); if (m) out.push(M(m));
-      return out.length ? out.join(' و') : 'انضم حديثًا';
+      return out.length ? out.join(' و') : (gen ? '' : 'انضم حديثًا');
     }
     if (lang === 'id') { if (y) out.push(y + ' thn'); if (m) out.push(m + ' bln'); return out.length ? out.join(' ') : 'Baru bergabung'; }
     if (y) out.push(y + (y === 1 ? ' yr' : ' yrs')); if (m) out.push(m + (m === 1 ? ' mo' : ' mos'));
-    return out.length ? out.join(' ') : 'Just joined';
+    return out.length ? out.join(' ') : (gen ? '' : 'Just joined');
+  }
+  function svcLine(iso, lang) {
+    if (!iso) return '';
+    var g = svcLen(iso, lang, true);
+    return g ? tl(lang || state.lang, 'card.svc', { d: g }) : tl(lang || state.lang, 'card.svcNew');
   }
 
   /* ---------------------------------------------------------- مخطط النموذج */
@@ -1152,7 +1158,7 @@
             : '<p class="ic-name-ar ic-latin" dir="ltr"' + fit(latin, 20, .98, .6) + '>' + esc(latin) + '</p>') +
           '<p class="ic-role' + (d.jobTitle ? '' : ' ph') + '">' + esc(d.jobTitle || t('card.role')) + '</p>' +
           '<p class="ic-ent' + (ent ? '' : ' ph') + '">' + esc(ent ? entName : t('card.entity')) + '</p>' +
-          (svc ? '<p class="ic-svc"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8.5" r="6"/><path d="M8 5v3.6l2.2 1.4M6.5 1.5h3"/></svg><span>' + esc(t('card.svc', { d: svc })) + '</span></p>' : '') +
+          (svc ? '<p class="ic-svc"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8.5" r="6"/><path d="M8 5v3.6l2.2 1.4M6.5 1.5h3"/></svg><span>' + esc(svcLine(st0)) + '</span></p>' : '') +
           (d.workCountry ? '<p class="ic-loc">' + flag(d.workCountry) + '<span>' + esc(cname(d.workCountry)) + '</span>' + (d.nationality && d.nationality !== d.workCountry ? '<span class="ic-nat">' + flag(d.nationality) + '</span>' : '') + '</p>' : '') + '</div></div>' +
         '<div class="ic-mrz" dir="ltr" aria-hidden="true"><span>' + esc(l1) + '</span><span>' + esc(l2) + '</span></div>' +
       '</div>' +
@@ -1664,7 +1670,7 @@
       if (c.d.jobTitle) { txt(c.d.jobTitle, ix, iy, { size: 32, w: 800, color: ca, align: ia, max: iw }); iy += 46; }
       if (c.entName) { txt(c.entName, ix, iy, { size: 28, w: 500, color: 'rgba(255,255,255,.75)', align: ia, max: iw }); iy += 54; }
       if (c.svc) {
-        var sv = t('card.svc', { d: c.svc }); x.font = F(800, 26); var chw = x.measureText(sv).width + 70, chx = rtl ? ix - chw : ix;
+        var sv = svcLine(c.st0); x.font = F(800, 26); var chw = x.measureText(sv).width + 70, chx = rtl ? ix - chw : ix;
         rr(chx, iy - 36, chw, 50, 25); var cg = x.createLinearGradient(chx, 0, chx + chw, 0); cg.addColorStop(0, mix(ca, '#ffffff', .5)); cg.addColorStop(1, ca); x.fillStyle = cg; x.fill();
         txt(sv, rtl ? chx + chw - 24 : chx + 24, iy - 2, { size: 26, w: 800, color: c2, align: ia }); iy += 56;
       }
