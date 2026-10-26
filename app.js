@@ -561,7 +561,7 @@
         ctrl = '<textarea class="inp" rows="3" id="' + id + '" data-path="' + esc(path) + '"' + dirA + desc + '>' + esc(v || '') + '</textarea>';
         break;
       case 'date':
-        ctrl = '<input class="inp" type="date" id="' + id + '" data-path="' + esc(path) + '" value="' + esc(v || '') + '"' + desc + (err ? ' aria-invalid="true"' : '') + '><p class="meta" data-meta="' + esc(path) + '">' + dateMeta(f, v) + '</p>';
+        ctrl = dateHTML(f, path, id, v, err, desc);
         break;
       case 'select':
         var opts = f.entity ? CFG.ENTITIES.map(function (e) { return [e.v, e[state.lang]]; })
@@ -618,8 +618,112 @@
       var months = (now.getFullYear() - b.getFullYear()) * 12 + now.getMonth() - b.getMonth() - (now.getDate() < b.getDate() ? 1 : 0);
       if (months >= 0) out.push('<span class="chip">' + esc(t('card.svcT') + ': ' + svcLen(v)) + '</span>');
     }
-    if (state.data.workCountry === 'SA') { var hj = hijri(v); if (hj) out.push('<span class="hj">' + esc(t('m.hijri', { d: hj })) + '</span>'); }
+    if (calPref() === 'h') out.push('<span class="hj">' + esc(t('dp.gIs', { d: fmtDate(v) })) + '</span>');
+    else { var hj = hijri(v); if (hj) out.push('<span class="hj">' + esc(t('m.hijri', { d: hj })) + '</span>'); }
     return out.join('');
+  }
+
+  /* ---------- التاريخ: ميلادي أو هجري (أم القرى) بثلاث قوائم: اليوم والشهر والسنة. يُحفظ دائمًا بالميلادي ISO */
+  var DPP = {};
+  var HMONTHS = {
+    ar: ['محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'],
+    en: ['Muharram', 'Safar', 'Rabi I', 'Rabi II', 'Jumada I', 'Jumada II', 'Rajab', 'Shaban', 'Ramadan', 'Shawwal', 'Dhu al-Qadah', 'Dhu al-Hijjah'],
+    id: ['Muharram', 'Safar', 'Rabiul Awal', 'Rabiul Akhir', 'Jumadil Awal', 'Jumadil Akhir', 'Rajab', 'Syaban', 'Ramadan', 'Syawal', 'Zulkaidah', 'Zulhijah']
+  };
+  var GMONTHS = { ar: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'] };
+  function gMonthName(i, L) {
+    if (GMONTHS[L]) return GMONTHS[L][i];
+    try { return new Intl.DateTimeFormat(L === 'id' ? 'id-ID' : 'en-GB', { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2020, i, 1))); } catch (e) { return String(i + 1); }
+  }
+  function calPref() { return state.data.calPref === 'h' ? 'h' : 'g'; }
+  var HFMT = null;
+  function hParts(iso) {
+    try {
+      HFMT = HFMT || new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'UTC' });
+      var o = {}; HFMT.formatToParts(new Date(iso + 'T00:00:00Z')).forEach(function (p) { if (p.type === 'year' || p.type === 'month' || p.type === 'day') o[p.type[0]] = parseInt(p.value, 10); });
+      return o.y ? o : null;
+    } catch (e) { return null; }
+  }
+  function isoOf(dt) { return dt.toISOString().slice(0, 10); }
+  function fromHijri(y, m, d) {
+    var approx = Date.UTC(622, 6, 16) + ((y - 1) * 354.36667 + (m - 1) * 29.5306 + (d - 1)) * 864e5;
+    for (var k = -6; k <= 6; k++) {
+      var iso = isoOf(new Date(approx + k * 864e5)), h = hParts(iso);
+      if (h && h.y === y && h.m === m && h.d === d) return iso;
+    }
+    return null;
+  }
+  function gDays(y, m) { return y && m ? new Date(Date.UTC(y, m, 0)).getUTCDate() : 31; }
+  function hDays(y, m) { return y && m && fromHijri(y, m, 30) ? 30 : (y && m ? 29 : 30); }
+  function yearSpan(f) {
+    var Y = new Date().getFullYear();
+    if (f.v === 'birth') return [Y - 15, Y - 90];
+    if (/Expiry|End$|^to$/.test(f.k)) return [Y - 15, Y + 20];
+    if (/Issue$|^from$/.test(f.k) || f.v === 'past') return [Y, Y - 45];
+    return [Y + 1, Y - 45];
+  }
+  function dpParts(path, v) {
+    var cal = calPref(), p = DPP[path];
+    if (p && p.cal === cal && !v) return p;
+    if (!v) return { cal: cal };
+    var g = v.split('-').map(Number);
+    if (cal === 'h') { var h = hParts(v); return h ? { cal: 'h', y: h.y, m: h.m, d: h.d } : { cal: 'h' }; }
+    return { cal: 'g', y: g[0], m: g[1], d: g[2] };
+  }
+  function dateHTML(f, path, id, v, err, desc) {
+    var L = state.lang, p = dpParts(path, v), cal = p.cal, span = yearSpan(f);
+    var y0 = span[0], y1 = span[1];
+    if (cal === 'h') { var ha = hParts(y0 + '-06-30'), hb = hParts(y1 + '-06-30'); y0 = ha ? ha.y : y0; y1 = hb ? hb.y : y1; }
+    var step = y0 > y1 ? -1 : 1, years = [];
+    for (var yy = y0; step > 0 ? yy <= y1 : yy >= y1; yy += step) years.push(yy);
+    if (p.y && years.indexOf(p.y) < 0) years.push(p.y);
+    var nd = cal === 'h' ? hDays(p.y, p.m) : gDays(p.y, p.m);
+    var inv = err ? ' aria-invalid="true"' : '';
+    var opt = function (val, lbl, sel) { return '<option value="' + val + '"' + (sel ? ' selected' : '') + '>' + esc(lbl) + '</option>'; };
+    var dd = '<select class="inp dp-s" data-dpk="d" aria-label="' + esc(t('dp.day')) + '"' + inv + '>' + opt('', t('dp.day')) + Array.apply(null, Array(nd)).map(function (_, i) { return opt(i + 1, dispNum(i + 1), p.d === i + 1); }).join('') + '</select>';
+    var mm = '<select class="inp dp-s dp-m" data-dpk="m" aria-label="' + esc(t('dp.month')) + '"' + inv + '>' + opt('', t('dp.month')) + Array.apply(null, Array(12)).map(function (_, i) {
+      return opt(i + 1, dispNum(('0' + (i + 1)).slice(-2)) + ' · ' + (cal === 'h' ? (HMONTHS[L] || HMONTHS.en)[i] : gMonthName(i, L)), p.m === i + 1);
+    }).join('') + '</select>';
+    var yr = '<select class="inp dp-s" data-dpk="y" aria-label="' + esc(t('dp.year')) + '"' + inv + '>' + opt('', t('dp.year')) + years.map(function (y) { return opt(y, dispNum(y) + (cal === 'h' ? (L === 'ar' ? ' هـ' : ' AH') : ''), p.y === y); }).join('') + '</select>';
+    return '<div class="dp' + (cal === 'h' ? ' is-h' : '') + '" data-dp="' + esc(path) + '" id="' + id + '" role="group"' + desc + '>' +
+      '<div class="dp-row">' + dd + mm + yr + '</div>' +
+      '<div class="dp-cal" role="radiogroup" aria-label="' + esc(t('dp.cal')) + '"><button type="button" role="radio" data-dpcal="g" aria-checked="' + (cal === 'g') + '">' + esc(t('dp.g')) + '</button><button type="button" role="radio" data-dpcal="h" aria-checked="' + (cal === 'h') + '">' + esc(t('dp.h')) + '</button></div></div>' +
+      '<p class="meta" data-meta="' + esc(path) + '">' + dateMeta(f, v) + '</p>';
+  }
+  function dpRefresh(path, focusKey) {
+    var host = $('.dp[data-dp="' + path + '"]'); if (!host) return;
+    var f = fieldOf(path), fe = host.closest('.field');
+    var tmp = document.createElement('div');
+    tmp.innerHTML = dateHTML(f, path, host.id, getVal(path), state.errors[path], host.getAttribute('aria-describedby') ? ' aria-describedby="' + host.getAttribute('aria-describedby') + '"' : '');
+    var meta = $('[data-meta="' + path + '"]', fe);
+    host.replaceWith(tmp.firstChild);
+    if (meta) meta.replaceWith(tmp.lastChild);
+    if (focusKey) { var s = $('.dp[data-dp="' + path + '"] [data-dpk="' + focusKey + '"]'); if (s) s.focus(); }
+  }
+  function dpChange(sel) {
+    var host = sel.closest('.dp'), path = host.getAttribute('data-dp'), cal = calPref();
+    var p = DPP[path] = DPP[path] && DPP[path].cal === cal ? DPP[path] : dpParts(path, getVal(path));
+    p.cal = cal; p[sel.getAttribute('data-dpk')] = sel.value ? +sel.value : undefined;
+    var iso = '';
+    if (p.y && p.m && p.d) {
+      if (cal === 'h') { iso = fromHijri(p.y, p.m, p.d) || (p.d === 30 ? fromHijri(p.y, p.m, 29) : ''); }
+      else { var dmax = gDays(p.y, p.m); if (p.d > dmax) p.d = dmax; iso = p.y + '-' + ('0' + p.m).slice(-2) + '-' + ('0' + p.d).slice(-2); }
+    }
+    if (iso) { delete DPP[path]; onValue(path, iso, false); }
+    else if (getVal(path)) onValue(path, '', false);
+    var fe = host.closest('.field');
+    if (fe && iso && state.errors[path] === '') { fe.classList.remove('has-err'); var er = $('.err', fe); if (er) er.textContent = ''; }
+    dpRefresh(path, sel.getAttribute('data-dpk'));
+  }
+  function dpSetCal(cal) {
+    if (calPref() === cal) return;
+    state.data.calPref = cal; DPP = {};
+    saveDraft();
+    var y = window.scrollY, fid = document.activeElement && document.activeElement.closest && document.activeElement.closest('.dp');
+    var fpath = fid && fid.getAttribute('data-dp');
+    $$('.dp[data-dp]').forEach(function (h) { dpRefresh(h.getAttribute('data-dp')); });
+    window.scrollTo(0, y);
+    if (fpath) { var b = $('.dp[data-dp="' + fpath + '"] [data-dpcal="' + cal + '"]'); if (b) b.focus(); }
   }
 
   /* ---------- قائمة الدول القابلة للبحث */
@@ -1800,6 +1904,8 @@
       if (exb) { if (exb.getAttribute('data-ex') === 'open') openExport(); else { var eb = $('#cardExport'); if (eb) { eb.hidden = true; eb.innerHTML = ''; } document.body.classList.remove('no-scroll'); } return; }
       if (tgt.closest('.ex-ov') && !tgt.closest('.ex-card')) { var eb2 = $('#cardExport'); eb2.hidden = true; eb2.innerHTML = ''; document.body.classList.remove('no-scroll'); return; }
       if (tgt.closest('#logoBox, #btnHome')) { e.preventDefault(); if (state.view === 'success') { clearDraft(); return; } saveDraft(); if (location.hash) history.replaceState(null, '', location.pathname + location.search); closeCombo(); state.view = 'welcome'; renderView(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      var dpc = tgt.closest('[data-dpcal]');
+      if (dpc) { dpSetCal(dpc.getAttribute('data-dpcal')); return; }
       var gz = tgt.closest('[data-gz]');
       if (gz && globe) {
         var act = gz.getAttribute('data-gz'), box = gz.closest('.hero-glass');
@@ -1910,6 +2016,7 @@
     });
     document.addEventListener('change', function (e) {
       var el = e.target;
+      if (el.matches && el.matches('.dp-s')) { dpChange(el); return; }
       if (el.id === 'pvAll') { state.showAll = el.checked; renderStep(); var pv = $('#pvAll'); if (pv) pv.focus(); return; }
       if (el.matches('input[type="file"][data-file]')) { onFiles(el.getAttribute('data-file'), el.files); return; }
       if (el.matches('input[type="checkbox"][data-path]')) {

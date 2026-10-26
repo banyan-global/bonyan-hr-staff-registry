@@ -573,6 +573,7 @@ id: {
 /* ---------- إضافات: الأسماء الأربعة، الجنسية الأخرى، مسميات الوثائق حسب الدولة، المهارات، الشهادات */
 (function (D) {
   Object.assign(D.ar, {
+    'dp.day': 'اليوم', 'dp.month': 'الشهر', 'dp.year': 'السنة', 'dp.cal': 'نوع التقويم', 'dp.g': 'ميلادي', 'dp.h': 'هجري', 'dp.gIs': 'يوافق {d} م',
     'stat.minutes': 'دقيقة تقريبًا',
     's.nameAr': 'الاسم بالعربية', 'h.nameAr': 'الاسم الرباعي بالحروف العربية (اختياري لمن لا يكتب بالعربية)',
     's.nameEn': 'الاسم بالإنجليزية', 'h.nameEn': 'الاسم الرباعي بالحروف اللاتينية كما في جواز السفر تمامًا',
@@ -642,6 +643,7 @@ id: {
     'card.svc': 'معنا {d}', 'card.svcPh': 'مدة العمل معنا', 'card.svcT': 'مدة الخدمة', 'card.empNo': 'الرقم الوظيفي'
   });
   Object.assign(D.en, {
+    'dp.day': 'Day', 'dp.month': 'Month', 'dp.year': 'Year', 'dp.cal': 'Calendar', 'dp.g': 'Gregorian', 'dp.h': 'Hijri', 'dp.gIs': 'Equals {d}',
     's.nameAr': 'Name in Arabic', 'h.nameAr': 'Four-part name in Arabic letters (optional if you do not write Arabic)',
     's.nameEn': 'Name in English', 'h.nameEn': 'Four-part name in Latin letters, exactly as in your passport',
     's.identity': 'Birth',
@@ -710,6 +712,7 @@ id: {
     'card.svc': 'With us {d}', 'card.svcPh': 'Time with us', 'card.svcT': 'Service', 'card.empNo': 'Employee no.'
   });
   Object.assign(D.id, {
+    'dp.day': 'Hari', 'dp.month': 'Bulan', 'dp.year': 'Tahun', 'dp.cal': 'Kalender', 'dp.g': 'Masehi', 'dp.h': 'Hijriah', 'dp.gIs': 'Setara {d}',
     's.nameAr': 'Nama dalam bahasa Arab', 'h.nameAr': 'Nama empat bagian dalam huruf Arab (opsional jika tidak menulis Arab)',
     's.nameEn': 'Nama dalam bahasa Inggris', 'h.nameEn': 'Nama empat bagian dalam huruf Latin, persis seperti di paspor',
     's.identity': 'Kelahiran',
