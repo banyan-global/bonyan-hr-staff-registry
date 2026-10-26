@@ -6,7 +6,7 @@ window.APP_CONFIG = {
 
   /* ١) رابط تطبيق الويب من Google Apps Script (ينتهي بـ /exec)
         اتركه فارغًا ليعمل الموقع في "وضع المعاينة" دون إرسال بيانات. */
-  GAS_URL: '',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwqtt2vgZQunssdK0YF56Htxm26WH412omMM2tjW23ag23Xuqph5z0pqa8ehPS_W4_6/exec',
 
   /* ٢) اللغات المتاحة واللغة الافتراضية */
   LANGS: ['ar', 'en', 'id'],
