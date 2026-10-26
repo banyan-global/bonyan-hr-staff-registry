@@ -150,7 +150,7 @@
   function svcLine(iso, lang) {
     if (!iso) return '';
     var g = svcLen(iso, lang, true);
-    return g ? tl(lang || state.lang, 'card.svc', { d: g }) : tl(lang || state.lang, 'card.svcNew');
+    return g ? tl(lang || state.lang, 'card.svc', { d: svcLen(iso, lang) }) : tl(lang || state.lang, 'card.svcNew');
   }
 
   /* ---------------------------------------------------------- مخطط النموذج */

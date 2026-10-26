@@ -640,7 +640,7 @@ id: {
     'ex.btn': 'تصدير البطاقة', 'ex.title': 'بطاقة المنسوب', 'ex.making': 'جارٍ تجهيز البطاقة بجودة عالية…', 'ex.download': 'تحميل البطاقة (PNG)', 'ex.hint': 'صورة عالية الدقة {w}×{h} بكسل، بوجهي البطاقة، جاهزة للطباعة والمشاركة.', 'ex.fail': 'تعذّر تجهيز البطاقة، حاول مرة أخرى.', 'ex.front': 'الوجه الأمامي', 'ex.back': 'الوجه الخلفي', 'ex.foot': 'الموارد البشرية · مجموعة بنيان العالمية · صدرت في {d}',
     'globe.tStaff': 'المنسوبون', 'globe.tReg': 'المناطق', 'globe.tNat': 'الجنسيات', 'f.workRegion.sa': 'المنطقة الإدارية', 'f.workRegion.eg': 'المحافظة', 'f.workRegion.id': 'المقاطعة (Provinsi)', 'f.workRegion.ke': 'المقاطعة (County)', 'f.workRegion.et': 'الإقليم (Region)', 'f.workRegion.gen': 'المنطقة أو الولاية', 'f.workRegion': 'منطقة العمل', 'f.workOffice': 'المدينة أو المكتب',
     'm.sugName': 'مقترح تلقائيًا، عدّله إن لزم', 'f.entityOther': 'اكتب اسم الجهة',
-    'card.svc': 'معنا منذ {d}', 'card.svcNew': 'انضم إلينا حديثًا', 'card.svcPh': 'مدة العمل معنا', 'card.svcT': 'مدة الخدمة', 'card.empNo': 'الرقم الوظيفي'
+    'card.svc': '{d} من العطاء', 'card.svcNew': 'انضم إلينا حديثًا', 'card.svcPh': 'مدة العمل معنا', 'card.svcT': 'مدة الخدمة', 'card.empNo': 'الرقم الوظيفي'
   });
   Object.assign(D.en, {
     'dp.day': 'Day', 'dp.month': 'Month', 'dp.year': 'Year', 'dp.cal': 'Calendar', 'dp.g': 'Gregorian', 'dp.h': 'Hijri', 'dp.gIs': 'Equals {d}',
@@ -709,7 +709,7 @@ id: {
     'ex.btn': 'Export card', 'ex.title': 'Staff card', 'ex.making': 'Preparing a high-quality card…', 'ex.download': 'Download card (PNG)', 'ex.hint': 'High-resolution image {w}×{h} px with both sides, ready to print and share.', 'ex.fail': 'Could not prepare the card, please try again.', 'ex.front': 'Front', 'ex.back': 'Back', 'ex.foot': 'Human Resources · Bonyan International Group · Issued {d}',
     'globe.tStaff': 'Staff', 'globe.tReg': 'Regions', 'globe.tNat': 'Nationalities', 'f.workRegion.sa': 'Region', 'f.workRegion.eg': 'Governorate', 'f.workRegion.id': 'Province', 'f.workRegion.ke': 'County', 'f.workRegion.et': 'Region', 'f.workRegion.gen': 'Region or state', 'f.workRegion': 'Work region', 'f.workOffice': 'City or office',
     'm.sugName': 'Suggested automatically, edit if needed', 'f.entityOther': 'Name of the entity',
-    'card.svc': 'With us for {d}', 'card.svcNew': 'Recently joined', 'card.svcPh': 'Time with us', 'card.svcT': 'Service', 'card.empNo': 'Employee no.'
+    'card.svc': '{d} of dedication', 'card.svcNew': 'Recently joined', 'card.svcPh': 'Time with us', 'card.svcT': 'Service', 'card.empNo': 'Employee no.'
   });
   Object.assign(D.id, {
     'dp.day': 'Hari', 'dp.month': 'Bulan', 'dp.year': 'Tahun', 'dp.cal': 'Kalender', 'dp.g': 'Masehi', 'dp.h': 'Hijriah', 'dp.gIs': 'Setara {d}',
@@ -778,6 +778,6 @@ id: {
     'ex.btn': 'Ekspor kartu', 'ex.title': 'Kartu staf', 'ex.making': 'Menyiapkan kartu berkualitas tinggi…', 'ex.download': 'Unduh kartu (PNG)', 'ex.hint': 'Gambar resolusi tinggi {w}×{h} px dengan dua sisi, siap dicetak dan dibagikan.', 'ex.fail': 'Gagal menyiapkan kartu, coba lagi.', 'ex.front': 'Depan', 'ex.back': 'Belakang', 'ex.foot': 'SDM · Bonyan International Group · Diterbitkan {d}',
     'globe.tStaff': 'Staf', 'globe.tReg': 'Wilayah', 'globe.tNat': 'Kewarganegaraan', 'f.workRegion.sa': 'Wilayah', 'f.workRegion.eg': 'Kegubernuran', 'f.workRegion.id': 'Provinsi', 'f.workRegion.ke': 'County', 'f.workRegion.et': 'Region', 'f.workRegion.gen': 'Wilayah atau negara bagian', 'f.workRegion': 'Wilayah kerja', 'f.workOffice': 'Kota atau kantor',
     'm.sugName': 'Saran otomatis, ubah bila perlu', 'f.entityOther': 'Nama lembaga',
-    'card.svc': 'Bersama kami {d}', 'card.svcNew': 'Baru bergabung', 'card.svcPh': 'Masa kerja bersama kami', 'card.svcT': 'Masa kerja', 'card.empNo': 'No. pegawai'
+    'card.svc': '{d} pengabdian', 'card.svcNew': 'Baru bergabung', 'card.svcPh': 'Masa kerja bersama kami', 'card.svcT': 'Masa kerja', 'card.empNo': 'No. pegawai'
   });
 })(window.I18N);
