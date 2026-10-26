@@ -187,7 +187,7 @@
         { k: 'passportIssue', type: 'date', req: 1, v: 'past' },
         { k: 'passportExpiry', type: 'date', req: 1, after: 'passportIssue', meta: 'expiry' }
       ] },
-      { t: 's.nationalId', fields: [
+      { t: 's.nationalId', titleKey: function (d) { return C.abroad(d) ? 's.nationalId.home' : 's.nationalId'; }, hintKey: function (d) { return C.abroad(d) ? 'h.nationalId.home' : ''; }, fields: [
         { k: 'nationalIdNo', type: 'text', req: 1, v: 'nationalId', dir: 'ltr', mono: 1, labelKey: function (d) { return 'f.nationalIdNo.' + idKind(d); }, hintKey: function (d) { return 'h.nationalIdNo.' + idKind(d); } },
         { k: 'nationalIdExpiry', type: 'date', meta: 'expiry' }
       ] },
@@ -428,6 +428,8 @@
       case 'kra': if (!/^[A-Z]\d{9}[A-Z]$/i.test(v.replace(/\s/g, ''))) return 'e.kra'; break;
       case 'nationalId':
         var nv = toLatinDigits(v).replace(/[\s-]/g, ''), rule = ID_RULES[idKind(d)];
+        /* خلط شائع: كتابة رقم الإقامة (هوية مقيم) مكان الهوية الوطنية لبلد الجنسية */
+        if (C.abroad(d) && ((d.workCountry === 'SA' && d.nationality !== 'SA' && /^2\d{9}$/.test(nv)) || (d.permitNo && toLatinDigits(d.permitNo).replace(/[\s-]/g, '') === nv))) return 'e.nationalId.isPermit';
         if (rule ? !rule.test(nv) : !/^[A-Za-z0-9]{4,24}$/.test(nv)) return 'e.nationalId.' + (rule ? idKind(d) : 'gen');
         break;
       case 'permit':
