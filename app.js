@@ -166,7 +166,7 @@
         { k: 'gender', type: 'seg', opts: ['male', 'female'], req: 1 },
         { k: 'birthDate', type: 'date', req: 1, v: 'birth', meta: 'age' },
         { k: 'birthCountry', type: 'country', req: 1 },
-        { k: 'birthCity', type: 'text' }
+        { k: 'birthCity', type: 'text', listFn: function (d) { return 'city|' + (d.birthCountry || '') + '|'; } }
       ] },
       { t: 's.nationality', fields: [
         { k: 'nationality', type: 'country', req: 1 },
@@ -220,19 +220,12 @@
       ] },
       { t: 's.currentAddress', fields: [
         { k: 'addrCountry', type: 'country', req: 1 },
-        { k: 'addrRegion', type: 'text' },
-        { k: 'addrCity', type: 'text', req: 1 },
-        { k: 'addrDistrict', type: 'text' },
-        { k: 'addrStreet', type: 'text' },
-        { k: 'addrPostal', type: 'text', dir: 'ltr' },
-        { k: 'addrBuilding', type: 'text', dir: 'ltr', show: C.addrSA },
-        { k: 'addrAdditional', type: 'text', dir: 'ltr', show: C.addrSA },
-        { k: 'addrShort', type: 'text', dir: 'ltr', show: C.addrSA, upper: 1 }
+        { k: 'addrRegion', type: 'text', listFn: function (d) { return 'reg|' + (d.addrCountry || ''); } },
+        { k: 'addrCity', type: 'text', req: 1, listFn: function (d) { return 'city|' + (d.addrCountry || '') + '|' + (d.addrRegion || ''); } }
       ] },
       { t: 's.homeAddress', show: C.abroad, fields: [
         { k: 'homeCountry', type: 'country', req: 1 },
-        { k: 'homeCity', type: 'text', req: 1 },
-        { k: 'homeAddress', type: 'textarea', w: 'full' }
+        { k: 'homeCity', type: 'text', req: 1, listFn: function (d) { return 'city|' + (d.homeCountry || '') + '|'; } }
       ] }
     ] },
     { id: 'emergency', sections: [
@@ -253,8 +246,8 @@
         { k: 'entityOther', type: 'text', req: 1, w: 'full', show: function (d) { return d.entity === 'other'; } },
         { k: 'jobTitle', type: 'text', req: 1 },
         { k: 'department', type: 'text', req: 1 },
-        { k: 'workRegion', type: 'text', req: 1, listFn: function (d) { return CFG.REGIONS && CFG.REGIONS[d.workCountry] ? 'reg-' + d.workCountry : ''; }, labelKey: function (d) { return 'f.workRegion.' + ({ SA: 'sa', EG: 'eg', ID: 'id', KE: 'ke', ET: 'et' }[d.workCountry] || 'gen'); } },
-        { k: 'workOffice', type: 'text', req: 1 },
+        { k: 'workRegion', type: 'text', req: 1, listFn: function (d) { return 'reg|' + (d.workCountry || ''); }, labelKey: function (d) { return 'f.workRegion.' + ({ SA: 'sa', EG: 'eg', ID: 'id', KE: 'ke', ET: 'et' }[d.workCountry] || 'gen'); } },
+        { k: 'workOffice', type: 'text', req: 1, listFn: function (d) { return 'city|' + (d.workCountry || '') + '|' + (d.workRegion || ''); } },
         { k: 'manager', type: 'text' },
         { k: 'employeeNo', type: 'text', dir: 'ltr' },
         { k: 'employmentType', type: 'seg', req: 1, opts: ['fullTime', 'partTime', 'remote', 'field', 'contractor', 'volunteer'], w: 'full', hint: 'h.employmentType' }
@@ -555,7 +548,7 @@
       case 'text': case 'email': case 'number':
         var it = f.type === 'number' ? 'number' : (f.type === 'email' ? 'email' : 'text');
         var extra = f.type === 'number' ? ' inputmode="numeric" min="' + (f.min || 0) + '" max="' + (f.max || 9999) + '" step="1"' : '';
-        var sugKey = f.list ? 'langs' : (f.listFn ? f.listFn(state.data) : '');
+        var sugKey = f.list ? 'langs' : (f.listFn ? f.listFn(state.data) || '-' : '');
         var list = sugKey ? ' data-sug="' + esc(sugKey) + '" role="combobox" aria-autocomplete="list" aria-expanded="false"' : '';
         var auto = f.type === 'email' ? ' autocomplete="email"' : ' autocomplete="off"';
         if (f.inputmode) extra += ' inputmode="' + f.inputmode + '"';
@@ -739,11 +732,29 @@
   }
 
   /* ---------- اقتراحات الكتابة (قائمة تظهر أسفل الحقل أثناء الكتابة، مع السماح بأي قيمة أخرى) */
+  /* المناطق والمدن: من places.js حسب الدولة المختارة (والمدن حسب المنطقة إن عُرفت) */
+  function placeOf(cc) { var P = window.PLACES || {}; return P[cc] || (CFG.REGIONS && CFG.REGIONS[cc] ? { r: CFG.REGIONS[cc].map(function (n) { return [n, []]; }) } : null); }
+  function regionMatch(pl, name) {
+    var q = sugNorm(name); if (!pl || !q) return null;
+    return pl.r.filter(function (r) { return sugNorm(r[0]) === q; })[0] || null;
+  }
+  function allCities(pl) {
+    var seen = {}, out = [];
+    pl.r.forEach(function (r) { r[1].forEach(function (c) { if (!seen[c]) { seen[c] = 1; out.push(c); } }); });
+    (pl.c || []).forEach(function (c) { if (!seen[c]) { seen[c] = 1; out.push(c); } });
+    return out.sort(function (a, b) { return a.localeCompare(b, 'ar'); });
+  }
   function sugItems(key) {
     if (key === 'langs') return t('langs.list').split('|');
-    var m = /^reg-([A-Z]{2})$/.exec(key || '');
-    return m && CFG.REGIONS && CFG.REGIONS[m[1]] ? CFG.REGIONS[m[1]].slice() : [];
+    var p = String(key || '').split('|'), pl = placeOf(p[1]);
+    if (!pl) return [];
+    if (p[0] === 'reg') return pl.r.map(function (r) { return r[0]; });
+    if (p[0] === 'city') { var rg = regionMatch(pl, p[2]); return rg && rg[1].length ? rg[1].concat(pl.c || []) : allCities(pl); }
+    return [];
   }
+  var REGION_OF = { workOffice: ['workRegion', 'workCountry'], addrCity: ['addrRegion', 'addrCountry'] };
+  var DEP_OF = { workCountry: ['workRegion', 'workOffice'], addrCountry: ['addrRegion', 'addrCity'], homeCountry: ['homeCity'], birthCountry: ['birthCity'] };
+  function sugKeyOf(inp) { var f = FIELD[inp.getAttribute('data-path')]; return f && f.list ? 'langs' : (f && f.listFn ? f.listFn(state.data) : inp.getAttribute('data-sug')); }
   function sugNorm(x) {
     return String(x || '').toLowerCase().replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
       .replace(/^(منطقه|محافظه|المنطقه)\s+/, '').replace(/[\s'’`-]+/g, ' ').trim();
@@ -759,13 +770,15 @@
     sugOpen = null;
   }
   function showSug(inp) {
-    var items = sugItems(inp.getAttribute('data-sug'));
+    var items = sugItems(sugKeyOf(inp));
     if (!items.length) { closeSug(); return; }
     var q = sugNorm(inp.value);
     var hit = items.filter(function (x) { var n = sugNorm(x); return !q || n.indexOf(q) > -1; });
     hit.sort(function (a, b) { var na = sugNorm(a), nb = sugNorm(b); return (q ? (na.indexOf(q) === 0 ? 0 : 1) - (nb.indexOf(q) === 0 ? 0 : 1) : 0); });
+    if (hit.length > 150) hit = hit.slice(0, 150);
     var exact = hit.length === 1 && sugNorm(hit[0]) === q;
     var w = inp.parentNode, panel = $('.sug-panel', w);
+    if (exact) autoRegion(inp.getAttribute('data-path'), hit[0]);
     if (!hit.length || exact) { if (panel) panel.remove(); inp.setAttribute('aria-expanded', 'false'); return; }
     if (sugOpen && sugOpen !== inp) closeSug();
     if (!panel) {
@@ -782,9 +795,23 @@
     ['.field', '.sec', '.rep-item'].forEach(function (sel) { var a = inp.closest(sel); if (a) a.classList.add('has-open'); });
     sugOpen = inp;
   }
+  /* اختيار مدينة دون منطقة: تُملأ المنطقة تلقائيًا إن كانت المدينة تتبع منطقة واحدة */
+  function autoRegion(path, v) {
+    var ro = REGION_OF[path];
+    if (ro && !String(state.data[ro[0]] || '').trim()) {
+      var pl = placeOf(state.data[ro[1]]);
+      var hits = pl ? pl.r.filter(function (r) { return r[1].indexOf(v) > -1; }) : [];
+      if (hits.length === 1) {
+        onValue(ro[0], hits[0][0], false);
+        var ri = document.getElementById('f-' + ro[0]); if (ri) ri.value = hits[0][0];
+      }
+    }
+  }
   function pickSug(inp, v) {
     inp.value = v;
-    onValue(inp.getAttribute('data-path'), v, false);
+    var path = inp.getAttribute('data-path');
+    onValue(path, v, false);
+    autoRegion(path, v);
     var fe = inp.closest('.field');
     if (fe && fe.classList.contains('has-err')) { fe.classList.remove('has-err'); inp.removeAttribute('aria-invalid'); var er = $('.err', fe); if (er) er.textContent = ''; }
     closeSug();
@@ -917,7 +944,7 @@
     var L = state.lang;
     document.documentElement.lang = L;
     document.documentElement.dir = t('dir');
-    document.title = t('app.title') + ' · ' + t('app.dept');
+    document.title = t('app.title') + ' · ' + CFG.ORG[L];
     $('#brandTitle').textContent = t('app.title');
     $('#brandDept').textContent = t('app.dept') + ' · ' + CFG.ORG[L];
     $('#mainLogo').setAttribute('alt', CFG.MAIN_LOGO.name[L]);
@@ -1647,6 +1674,17 @@
     }
   }
   function onValue(path, v, rerenderStep) {
+    if (DEP_OF[path] && state.data[path] && state.data[path] !== v) {
+      /* تغيّرت الدولة: تُمسح المنطقة والمدينة إن كانتا من قائمة الدولة السابقة */
+      var oldPl = placeOf(state.data[path]), stash = state.placeStash = state.placeStash || {};
+      if (oldPl) DEP_OF[path].forEach(function (k) {
+        var cur = state.data[k]; if (!cur) return;
+        var inOld = oldPl.r.some(function (r) { return sugNorm(r[0]) === sugNorm(cur) || r[1].indexOf(cur) > -1; }) || (oldPl.c || []).indexOf(cur) > -1;
+        if (inOld) { stash[path + '|' + state.data[path] + '|' + k] = cur; delete state.data[k]; delete state.errors[k]; }
+      });
+      /* الرجوع إلى دولة سابقة يعيد منطقتها ومدينتها */
+      DEP_OF[path].forEach(function (k) { var sv = stash[path + '|' + v + '|' + k]; if (sv && !state.data[k]) state.data[k] = sv; });
+    }
     var nf = fieldOf(path);
     if (nf && nf.num && typeof v === 'string') v = toLatinDigits(v);
     setVal(path, v);
