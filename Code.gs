@@ -3,7 +3,7 @@
  *  Bonyan HR · Global Staff Registry — خادم Google Apps Script
  * ============================================================
  *  يستقبل بيانات النموذج من الموقع (GitHub Pages) ويحفظها في:
- *   - جدول Google Sheets: «Bonyan HR · سجل المنسوبين 2026»
+ *   - جدول Google Sheets: «Bonyan HR · سجل المنسوبين»
  *   - مجلد Drive: «Bonyan HR · ملفات المنسوبين / الدولة / الرقم المرجعي · الاسم»
  *
  *  خطوات التشغيل مذكورة في README.md
@@ -13,7 +13,7 @@
  */
 
 var CONFIG = {
-  SS_TITLE: 'Bonyan HR · سجل المنسوبين 2026',
+  SS_TITLE: 'Bonyan HR · سجل المنسوبين',
   ROOT_FOLDER: 'Bonyan HR · ملفات المنسوبين',
   REF_PREFIX: 'BNY-HR',
   SHEETS: { main: 'المنسوبون', quals: 'المؤهلات', exp: 'الخبرات', langs: 'اللغات', log: 'السجل' },
@@ -23,37 +23,42 @@ var CONFIG = {
 };
 
 /* أعمدة الورقة الرئيسية: [المفتاح، العنوان، النوع]
-   النوع: t نص، d تاريخ، f ملف، s نظام */
+   النوع: t نص، d تاريخ، n رقم، f ملف، s نظام */
 var MAIN_COLS = [
   ['ref', 'الرقم المرجعي', 's'], ['status', 'الحالة', 's'], ['createdAt', 'تاريخ التسجيل', 's'], ['updatedAt', 'آخر تحديث', 's'],
   ['folder', 'مجلد المرفقات', 's'],
-  ['fullNameLatin', 'الاسم كما في الجواز', 't'], ['fullNameAr', 'الاسم بالعربية', 't'], ['gender', 'الجنس', 't'],
-  ['birthDate', 'تاريخ الميلاد', 'd'], ['birthCountry', 'دولة الميلاد', 't'], ['birthCity', 'مدينة الميلاد', 't'],
-  ['nationality', 'الجنسية', 't'], ['secondNationality', 'جنسية ثانية', 't'], ['workCountry', 'دولة العمل', 't'],
+  ['fullNameLatin', 'الاسم كما في الجواز', 't'], ['fullNameAr', 'الاسم بالعربية', 't'],
+  ['firstNameAr', 'الاسم الأول', 't'], ['fatherNameAr', 'اسم الأب', 't'], ['grandNameAr', 'اسم الجد', 't'], ['lastNameAr', 'اسم العائلة', 't'],
+  ['firstName', 'First name', 't'], ['fatherName', 'Father name', 't'], ['grandName', 'Grandfather name', 't'], ['lastName', 'Family name', 't'],
+  ['gender', 'الجنس', 't'], ['birthDate', 'تاريخ الميلاد', 'd'], ['birthCountry', 'دولة الميلاد', 't'], ['birthCity', 'مدينة الميلاد', 't'],
+  ['nationality', 'الجنسية', 't'], ['otherNationality', 'جنسية أخرى', 't'], ['workCountry', 'دولة العمل', 't'],
   ['maritalStatus', 'الحالة الاجتماعية', 't'], ['dependents', 'عدد المعالين', 't'], ['bloodType', 'فصيلة الدم', 't'],
   ['passportNo', 'رقم الجواز', 't'], ['passportCountry', 'بلد إصدار الجواز', 't'], ['passportIssue', 'إصدار الجواز', 'd'], ['passportExpiry', 'انتهاء الجواز', 'd'],
-  ['nationalIdNo', 'رقم الهوية الوطنية', 't'], ['nationalIdExpiry', 'انتهاء الهوية', 'd'],
-  ['permitType', 'نوع الإقامة/التصريح', 't'], ['permitNo', 'رقم الإقامة/التصريح', 't'], ['permitOccupation', 'المهنة في الإقامة', 't'],
-  ['permitIssue', 'إصدار الإقامة', 'd'], ['permitExpiry', 'انتهاء الإقامة', 'd'],
+  ['nationalIdNo', 'رقم الهوية الوطنية (ID)', 't'], ['nationalIdExpiry', 'انتهاء الهوية', 'd'],
+  ['permitNo', 'رقم الإقامة', 't'], ['permitOccupation', 'المهنة في الإقامة', 't'], ['permitIssue', 'إصدار الإقامة', 'd'], ['permitExpiry', 'انتهاء الإقامة', 'd'],
+  ['workPermitNo', 'رقم تصريح العمل', 't'], ['workPermitExpiry', 'انتهاء تصريح العمل', 'd'],
+  ['insuranceNo', 'الرقم التأميني (مصر)', 't'], ['npwp', 'NPWP (إندونيسيا)', 't'], ['bpjsTk', 'BPJS Ketenagakerjaan', 't'], ['bpjsKes', 'BPJS Kesehatan', 't'],
+  ['kraPin', 'KRA PIN (كينيا)', 't'], ['nssfNo', 'NSSF (كينيا)', 't'], ['shaNo', 'SHA (كينيا)', 't'], ['tin', 'TIN (إثيوبيا)', 't'],
   ['officialEmail', 'البريد الرسمي', 't'], ['personalEmail', 'البريد الشخصي', 't'], ['mobile', 'الجوال', 't'], ['whatsapp', 'الواتساب', 't'],
   ['addrCountry', 'دولة السكن', 't'], ['addrRegion', 'المنطقة', 't'], ['addrCity', 'المدينة', 't'], ['addrDistrict', 'الحي', 't'],
   ['addrStreet', 'الشارع', 't'], ['addrPostal', 'الرمز البريدي', 't'], ['addrBuilding', 'رقم المبنى', 't'], ['addrAdditional', 'الرقم الإضافي', 't'], ['addrShort', 'العنوان المختصر', 't'],
   ['homeCountry', 'دولة العنوان الدائم', 't'], ['homeCity', 'مدينة العنوان الدائم', 't'], ['homeAddress', 'العنوان الدائم', 't'],
   ['em1Name', 'طوارئ ١: الاسم', 't'], ['em1Relation', 'طوارئ ١: الصلة', 't'], ['em1Phone', 'طوارئ ١: الجوال', 't'],
   ['em2Name', 'طوارئ ٢: الاسم', 't'], ['em2Relation', 'طوارئ ٢: الصلة', 't'], ['em2Phone', 'طوارئ ٢: الجوال', 't'],
-  ['entity', 'الجهة', 't'], ['workOffice', 'المكتب/المدينة', 't'], ['department', 'الإدارة/القسم', 't'], ['jobTitle', 'المسمى الوظيفي', 't'],
-  ['manager', 'المدير المباشر', 't'], ['employeeNo', 'الرقم الوظيفي', 't'], ['startDate', 'تاريخ المباشرة', 'd'], ['employmentType', 'نوع الارتباط', 't'],
+  ['entity', 'الجهة', 't'], ['workRegion', 'منطقة العمل', 't'], ['workOffice', 'المدينة/المكتب', 't'], ['department', 'الإدارة/القسم', 't'], ['jobTitle', 'المسمى الوظيفي', 't'],
+  ['manager', 'المدير المباشر', 't'], ['employeeNo', 'الرقم الوظيفي', 't'], ['startDate', 'تاريخ مباشرة العمل', 'd'], ['employmentType', 'نوع الارتباط', 't'],
   ['contractStatus', 'عقد العمل', 't'], ['contractType', 'نوع العقد', 't'], ['contractNo', 'رقم العقد', 't'], ['contractStart', 'بداية العقد', 'd'], ['contractEnd', 'نهاية العقد', 'd'],
-  ['topDegree', 'أعلى مؤهل', 't'], ['techSkills', 'المهارات التقنية', 't'], ['certifications', 'الدورات والشهادات', 't'], ['quran', 'الحفظ من القرآن', 't'],
+  ['topDegree', 'أعلى مؤهل', 't'], ['techLevel', 'المستوى التقني العام', 't'], ['techSkills', 'البرامج والمهارات التقنية', 't'],
+  ['hasCerts', 'دورات وشهادات مهنية', 't'], ['certifications', 'تفاصيل الدورات والشهادات', 't'], ['quran', 'الحفظ من القرآن', 't'],
   ['payMethod', 'طريقة استلام الراتب', 't'], ['bankCountry', 'دولة البنك', 't'], ['bankName', 'البنك', 't'], ['accountHolder', 'صاحب الحساب', 't'],
-  ['iban', 'الآيبان', 't'], ['accountNo', 'رقم الحساب', 't'], ['swift', 'SWIFT', 't'], ['bankBranch', 'الفرع', 't'],
-  ['walletProvider', 'مزوّد المحفظة', 't'], ['walletNo', 'رقم المحفظة', 't'], ['payOther', 'طريقة أخرى', 't'], ['currency', 'العملة', 't'],
+  ['iban', 'الآيبان', 't'], ['accountNo', 'رقم الحساب', 't'], ['swift', 'SWIFT', 't'], ['bankBranch', 'الفرع', 't'], ['payOther', 'طريقة أخرى', 't'],
+  ['salary', 'الراتب الشهري', 'n'], ['currency', 'العملة', 't'],
   ['photo', 'الصورة الشخصية', 'f'], ['passportScan', 'صورة الجواز', 'f'], ['nationalIdScan', 'صورة الهوية', 'f'], ['permitScan', 'صورة الإقامة', 'f'],
-  ['contractFile', 'ملف العقد', 'f'], ['degreeFile', 'الشهادة', 'f'], ['bankProof', 'إثبات الحساب', 'f'],
+  ['workPermitScan', 'صورة تصريح العمل', 'f'], ['contractFile', 'ملف العقد', 'f'], ['degreeFile', 'الشهادة', 'f'], ['certFiles', 'الدورات والشهادات', 'f'], ['bankProof', 'إثبات الحساب', 'f'],
   ['lang', 'لغة التعبئة', 's'], ['tz', 'المنطقة الزمنية', 's'], ['folderId', 'معرّف المجلد', 's'],
-  ['workCountryCode', 'رمز دولة العمل', 's']
+  ['workCountryCode', 'رمز دولة العمل', 's'], ['nationalityCode', 'رمز الجنسية', 's']
 ];
-var EXPIRY_KEYS = ['passportExpiry', 'nationalIdExpiry', 'permitExpiry', 'contractEnd'];
+var EXPIRY_KEYS = ['passportExpiry', 'nationalIdExpiry', 'permitExpiry', 'workPermitExpiry', 'contractEnd'];
 var DEGREE_RANK = { 'دكتوراه': 6, 'ماجستير': 5, 'بكالوريوس': 4, 'دبلوم': 3, 'ثانوي': 2, 'أخرى': 1 };
 
 /* ============================================================ الإعداد */
@@ -66,6 +71,9 @@ function setup() {
   Logger.log('الجدول: ' + ss.getUrl());
   Logger.log('مجلد المرفقات: ' + root.getUrl());
   Logger.log('الخطوة التالية: نشر ← نشر جديد ← تطبيق ويب، ثم انسخ الرابط إلى config.js');
+  if (!props.getProperty('ADMIN_CODE')) props.setProperty('ADMIN_CODE', String(Math.floor(100000 + Math.random() * 900000)));
+  Logger.log('🔐 رمز صفحة عرض البيانات: ' + props.getProperty('ADMIN_CODE') + '  (لتغييره: إعدادات المشروع ← خصائص النص البرمجي ← ADMIN_CODE)');
+  Logger.log('👥 لرموز مستقلة لكل موظف في الموارد البشرية: أضف خاصية ADMIN_CODES بالشكل  أسامة=482913, سارة=771204  (كل دخول يُسجَّل باسم صاحبه)');
   if (!props.getProperty('HR_EMAIL')) Logger.log('اختياري: أضف خاصية HR_EMAIL في إعدادات المشروع لتصلك رسالة عند كل تسجيل.');
 }
 
@@ -101,6 +109,7 @@ function ensureSheets_(ss) {
     MAIN_COLS.forEach(function (c, i) {
       var col = i + 1, body = main.getRange(2, col, main.getMaxRows() - 1, 1);
       if (c[2] === 'd') body.setNumberFormat('yyyy-mm-dd');
+      else if (c[2] === 'n') body.setNumberFormat('#,##0');
       else body.setNumberFormat('@');
       if (c[2] === 'f') main.getRange(1, col).setBackground(CONFIG.COLORS.brass);
       if (c[2] === 's' && c[0] !== 'ref' && c[0] !== 'status') main.getRange(1, col).setBackground('#3B5878');
@@ -162,22 +171,117 @@ function doGet(e) {
   return json_({ ok: true, service: 'Bonyan HR · Global Staff Registry' });
 }
 
-/* عدد المنسوبين في كل دولة — أرقام مجمّعة فقط، بلا أي بيانات شخصية، لعرضها نقاطًا على الكرة الأرضية */
+/* أرقام مجمّعة فقط لكل دولة عمل: عدد المنسوبين ومناطقهم وجنسياتهم — بلا أي بيانات شخصية.
+   تُحتسب الاستمارات المكتملة فقط، وتظهر نقاطًا على الكرة الأرضية في الصفحة الأولى. */
 function countries_() {
   var cache = CacheService.getScriptCache();
   var hit = cache.get('countries');
-  if (hit) return { ok: true, countries: JSON.parse(hit) };
-  var out = {};
+  if (hit) return JSON.parse(hit);
+  var out = {}, nats = {}, allNat = {}, total = 0;
   try {
     var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.main);
     var last = sh.getLastRow();
     if (last >= 2) {
-      var codes = sh.getRange(2, col_('workCountryCode'), last - 1, 1).getValues();
-      codes.forEach(function (r) { var c = String(r[0] || '').toUpperCase(); if (/^[A-Z]{2}$/.test(c)) out[c] = (out[c] || 0) + 1; });
+      var st = sh.getRange(2, col_('status'), last - 1, 1).getValues();
+      var wc = sh.getRange(2, col_('workCountryCode'), last - 1, 1).getValues();
+      var nc = sh.getRange(2, col_('nationalityCode'), last - 1, 1).getValues();
+      var rg = sh.getRange(2, col_('workRegion'), last - 1, 1).getValues(), regs = {};
+      for (var i = 0; i < wc.length; i++) {
+        if (String(st[i][0]).indexOf('بانتظار') === 0) continue;
+        var c = String(wc[i][0] || '').toUpperCase(), n = String(nc[i][0] || '').toUpperCase();
+        if (!/^[A-Z]{2}$/.test(c)) continue;
+        out[c] = out[c] || { n: 0, nat: 0, reg: 0 }; out[c].n++; total++;
+        var rk = String(rg[i][0] || '').trim().toLowerCase().replace(/^(منطقة|محافظة|provinsi|county)\s+/, '').replace(/\s+/g, ' ');
+        regs[c] = regs[c] || {};
+        if (rk && !regs[c][rk]) { regs[c][rk] = 1; out[c].reg++; }
+        nats[c] = nats[c] || {};
+        if (n && !nats[c][n]) { nats[c][n] = 1; out[c].nat++; }
+        if (n) allNat[n] = 1;
+      }
     }
   } catch (err) { }
-  cache.put('countries', JSON.stringify(out), 300);
-  return { ok: true, countries: out };
+  var res = { ok: true, countries: out, total: total, nationalities: Object.keys(allNat).length };
+  cache.put('countries', JSON.stringify(res), 300);
+  return res;
+}
+
+/* ============================================================ صفحة عرض البيانات (برمز) */
+/* رموز الدخول: ADMIN_CODE (المشرف العام) + ADMIN_CODES اختياريًا لكل مستخدم باسمه
+   مثال قيمة ADMIN_CODES:  أسامة=482913, سارة=771204   — كل دخول يُسجَّل باسم صاحبه في ورقة السجل */
+function adminCodes_() {
+  var props = PropertiesService.getScriptProperties(), out = {};
+  var main = props.getProperty('ADMIN_CODE');
+  if (main) out[String(main).trim()] = 'المشرف العام';
+  String(props.getProperty('ADMIN_CODES') || '').split(/[,،;\n]+/).forEach(function (pair) {
+    var m = /^\s*(.+?)\s*[=:]\s*(\S+)\s*$/.exec(pair);
+    if (m && m[2].length >= 6) out[m[2]] = m[1];
+  });
+  return out;
+}
+function checkAdmin_(code) {
+  var cache = CacheService.getScriptCache();
+  var codes = adminCodes_();
+  if (!Object.keys(codes).length) throw new Error('not_setup');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  var who = null;
+  try {
+    var fails = +(cache.get('admin_fail') || 0);
+    if (fails >= 8) throw new Error('locked');
+    who = codes[String(code || '').trim()] || null;
+    if (!who) cache.put('admin_fail', String(fails + 1), 900);
+    else cache.remove('admin_fail');
+  } finally { lock.releaseLock(); }
+  if (!who) { Utilities.sleep(700); log_('', 'محاولة دخول خاطئة', ''); throw new Error('bad_code'); }
+  return who;
+}
+function audit_() {
+  try {
+    var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.log), n = sh ? sh.getLastRow() : 0;
+    if (n < 2) return [];
+    var from = Math.max(2, n - 400), vals = sh.getRange(from, 1, n - from + 1, 4).getDisplayValues();
+    return vals.filter(function (r) { return /دخول لوحة البيانات|محاولة دخول خاطئة/.test(r[2]); }).reverse().slice(0, 80)
+      .map(function (r) { return [r[0], r[2], r[3]]; });
+  } catch (e) { return []; }
+}
+function linksOf_(rt) {
+  if (!rt) return [];
+  var out = [];
+  rt.getRuns().forEach(function (r) { var u = r.getLinkUrl(); if (u && out.indexOf(u) < 0) out.push(u); });
+  var u0 = rt.getLinkUrl(); if (u0 && out.indexOf(u0) < 0) out.push(u0);
+  return out;
+}
+function list_(code) {
+  var who = checkAdmin_(code);
+  var ss = getSS_(false), sh = ss.getSheetByName(CONFIG.SHEETS.main);
+  var last = sh.getLastRow(), rows = [];
+  if (last >= 2) {
+    var disp = sh.getRange(2, 1, last - 1, MAIN_COLS.length).getDisplayValues();
+    var files = {};
+    MAIN_COLS.forEach(function (c, j) { if (c[2] === 'f') files[c[0]] = sh.getRange(2, j + 1, last - 1, 1).getRichTextValues(); });
+    rows = disp.map(function (r, i) {
+      var o = {};
+      MAIN_COLS.forEach(function (c, j) {
+        if (c[2] === 'f') { var u = linksOf_(files[c[0]][i][0]); o[c[0]] = u.length ? u : r[j]; }
+        else o[c[0]] = r[j];
+      });
+      o.folder = o.folderId ? 'https://drive.google.com/drive/folders/' + o.folderId : '';
+      delete o.folderId;
+      return o;
+    }).filter(function (o) { return o.ref; });
+  }
+  function child(name) {
+    var c = ss.getSheetByName(name), n = c ? c.getLastRow() : 0;
+    if (n < 2) return [];
+    return c.getRange(1, 1, n, c.getLastColumn()).getDisplayValues();
+  }
+  log_('', 'دخول لوحة البيانات', who);
+  return {
+    ok: true, at: fmtNow_(new Date()), who: who, audit: audit_(),
+    cols: MAIN_COLS.filter(function (c) { return c[0] !== 'folderId'; }),
+    rows: rows, quals: child(CONFIG.SHEETS.quals), exp: child(CONFIG.SHEETS.exp), langs: child(CONFIG.SHEETS.langs),
+    sheetUrl: ss.getUrl()
+  };
 }
 
 function doPost(e) {
@@ -186,6 +290,7 @@ function doPost(e) {
     if (body.action === 'submit') return json_(submit_(body.payload));
     if (body.action === 'upload') return json_(upload_(body));
     if (body.action === 'finalize') return json_(finalize_(body));
+    if (body.action === 'list') return json_(list_(body.code));
     return json_({ ok: false, error: 'unknown action' });
   } catch (err) {
     log_('', 'خطأ', String(err && err.stack || err));
@@ -214,6 +319,16 @@ function submit_(p) {
     var passport = normalize_(raw.passportNo);
     var rowIdx = findRow_(sh, 'passportNo', function (v) { return normalize_(v) === passport; });
     var now = new Date();
+    var dup = false;
+    if (rowIdx > 0) {
+      /* لا يُسمح بتحديث سجل موجود إلا إذا طابق البريد الشخصي أو رقم الجوال المسجّلين مسبقًا */
+      var oldMail = String(sh.getRange(rowIdx, col_('personalEmail')).getValue() || '').trim().toLowerCase();
+      var oldMob = digits_(sh.getRange(rowIdx, col_('mobile')).getDisplayValue()).slice(-8);
+      var newMail = String(raw.personalEmail || '').trim().toLowerCase();
+      var newMob = digits_(ar.mobile || raw.mobile).slice(-8);
+      var same = (oldMail && oldMail === newMail) || (oldMob.length === 8 && oldMob === newMob);
+      if (!same) { dup = true; rowIdx = 0; }
+    }
     var updated = rowIdx > 0;
     var ref, folder;
 
@@ -240,26 +355,38 @@ function submit_(p) {
         case 'topDegree': return topDegree_(ar.qualifications);
         case 'lang': return (p.meta && p.meta.lang) || '';
         case 'tz': return (p.meta && p.meta.tz) || '';
-        case 'workCountryCode': return String(ar.workCountryCode || raw.workCountry || '').toUpperCase();
+        case 'workCountryCode': return cc_(ar.workCountryCode || raw.workCountry);
+        case 'nationalityCode': return cc_(ar.nationalityCode || raw.nationality);
       }
+      if (c[2] === 'n') { var num = Number(String(raw[k] == null ? '' : raw[k]).replace(/[,\s]/g, '')); return raw[k] === '' || raw[k] == null || isNaN(num) ? '' : num; }
       if (c[2] === 'f') return updated ? sh.getRange(rowIdx, col_(k)).getValue() : '';
       if (c[2] === 'd') return raw[k] ? new Date(raw[k] + 'T12:00:00') : '';
       var v = ar[k] != null ? ar[k] : (raw[k] != null ? raw[k] : '');
-      return Array.isArray(v) ? '' : String(v);
+      return Array.isArray(v) ? '' : safeText_(v);
     });
 
-    if (!updated) {
+    /* روابط المرفقات الحالية تُحفظ قبل الكتابة ثم تُعاد كما هي */
+    var keepFiles = [];
+    if (updated) {
+      MAIN_COLS.forEach(function (c, j) { if (c[2] === 'f') keepFiles.push([j + 1, sh.getRange(rowIdx, j + 1).getRichTextValue()]); });
+    } else {
       rowIdx = sh.getLastRow() + 1;
+      ensureRows_(sh, rowIdx);
     }
-    sh.getRange(rowIdx, 1, 1, vals.length).setValues([vals]);
+    var rowRange = sh.getRange(rowIdx, 1, 1, vals.length);
+    rowRange.setNumberFormats([rowFormats_()]);
+    rowRange.setValues([vals]);
+    keepFiles.forEach(function (f) { if (f[1] && f[1].getText()) sh.getRange(rowIdx, f[0]).setRichTextValue(f[1]); });
     sh.getRange(rowIdx, col_('folder')).setFormula('=HYPERLINK("' + folder.getUrl() + '","فتح المجلد")');
 
     var name = ar.fullNameLatin || '';
-    replaceChildRows_(ss.getSheetByName(CONFIG.SHEETS.quals), ref, (ar.qualifications || []).map(function (q) {
-      return [ref, name, q.degree || '', q.major || '', q.institution || '', q.country || '', q.gradYear || '', q.grade || ''];
+    replaceChildRows_(ss.getSheetByName(CONFIG.SHEETS.quals), ref, (ar.qualifications || []).map(function (q, i) {
+      var rq = (raw.qualifications || [])[i] || {};
+      return [ref, name, q.degree || '', q.major || '', q.institution || '', q.country || '', String(rq.gradYear || q.gradYear || ''), q.grade || ''];
     }));
-    replaceChildRows_(ss.getSheetByName(CONFIG.SHEETS.exp), ref, (ar.experience || []).map(function (x) {
-      return [ref, name, x.org || '', x.title || '', x.country || '', x.from || '', x.to || ''];
+    replaceChildRows_(ss.getSheetByName(CONFIG.SHEETS.exp), ref, (ar.experience || []).map(function (x, i) {
+      var rx = (raw.experience || [])[i] || {};
+      return [ref, name, x.org || '', x.title || '', x.country || '', rx.from || x.from || '', rx.to || x.to || ''];
     }));
     replaceChildRows_(ss.getSheetByName(CONFIG.SHEETS.langs), ref, (ar.languages || []).map(function (l) {
       return [ref, name, l.language || '', l.level || ''];
@@ -270,7 +397,7 @@ function submit_(p) {
     cache.put('tok_' + ref, token, CONFIG.TOKEN_TTL);
     cache.put('row_' + ref, String(rowIdx), CONFIG.TOKEN_TTL);
     cache.put('upd_' + ref, updated ? '1' : '', CONFIG.TOKEN_TTL);
-    log_(ref, updated ? 'تحديث بيانات' : 'تسجيل جديد', name + ' · ' + (ar.workCountry || ''));
+    log_(ref, updated ? 'تحديث بيانات' : (dup ? 'تسجيل جديد · رقم جواز مكرر يحتاج مراجعة' : 'تسجيل جديد'), name + ' · ' + (ar.workCountry || ''));
     return { ok: true, ref: ref, token: token, updated: updated };
   } finally {
     lock.releaseLock();
@@ -323,6 +450,8 @@ function upload_(b) {
 }
 
 function finalize_(b) {
+  var cache0 = CacheService.getScriptCache();
+  if (b.ref && b.token && cache0.get('done_' + b.ref) === b.token) return { ok: true };
   checkToken_(b.ref, b.token);
   var ss = getSS_(false), sh = ss.getSheetByName(CONFIG.SHEETS.main);
   var row = rowOf_(sh, b.ref);
@@ -331,6 +460,7 @@ function finalize_(b) {
   sh.getRange(row, col_('status')).setValue(updated ? 'محدَّث' : 'مكتمل');
   cache.remove('countries');
   cache.remove('tok_' + b.ref);
+  cache.put('done_' + b.ref, b.token, 3600);
   log_(b.ref, 'اكتمل الرفع', '');
   notify_(sh, row, b.ref, updated);
   return { ok: true };
@@ -347,6 +477,20 @@ function colLetter_(n) {
   return s;
 }
 function normalize_(v) { return String(v || '').replace(/\s/g, '').toUpperCase(); }
+function cc_(v) { v = String(v || '').trim().toUpperCase(); return /^[A-Z]{2}$/.test(v) ? v : ''; }
+function safeText_(v) { v = String(v == null ? '' : v); return /^[=+\-@]/.test(v) ? "'" + v : v; }
+function digits_(v) { return String(v || '').replace(/\D/g, ''); }
+function escHtml_(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+/* يضمن وجود صفوف كافية؛ الإدراج داخل النطاق يوسّع التنسيقات والقواعد الشرطية تلقائيًا */
+function ensureRows_(sh, upto) {
+  var max = sh.getMaxRows();
+  if (upto <= max) return;
+  var add = Math.max(200, upto - max);
+  if (max >= 3) sh.insertRowsAfter(max - 1, add); else sh.insertRowsAfter(max, add);
+}
+function rowFormats_() {
+  return MAIN_COLS.map(function (c) { return c[2] === 'd' ? 'yyyy-mm-dd' : (c[2] === 'n' ? '#,##0' : '@'); });
+}
 function fmtNow_(d) { return Utilities.formatDate(d, 'Asia/Riyadh', 'yyyy-MM-dd HH:mm'); }
 
 function findRow_(sh, key, test) {
@@ -391,7 +535,11 @@ function replaceChildRows_(sh, ref, rows) {
     var refs = sh.getRange(2, 1, last - 1, 1).getValues();
     for (var i = refs.length - 1; i >= 0; i--) if (refs[i][0] === ref) sh.deleteRow(i + 2);
   }
-  if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setNumberFormat('@').setValues(rows);
+  if (rows.length) {
+    var start = sh.getLastRow() + 1;
+    ensureRows_(sh, start + rows.length - 1);
+    sh.getRange(start, 1, rows.length, rows[0].length).setNumberFormat('@').setValues(rows.map(function (r) { return r.map(safeText_); }));
+  }
 }
 
 function topDegree_(quals) {
@@ -414,11 +562,12 @@ function notify_(sh, row, ref, updated) {
   var to = PropertiesService.getScriptProperties().getProperty('HR_EMAIL');
   if (!to) return;
   try {
-    var get = function (k) { return sh.getRange(row, col_(k)).getDisplayValue(); };
-    var subject = (updated ? 'تحديث بيانات: ' : 'تسجيل جديد: ') + get('fullNameLatin') + ' · ' + ref;
+    var get = function (k) { return escHtml_(sh.getRange(row, col_(k)).getDisplayValue()); };
+    var plainName = sh.getRange(row, col_('fullNameLatin')).getDisplayValue();
+    var subject = (updated ? 'تحديث بيانات: ' : 'تسجيل جديد: ') + plainName + ' · ' + ref;
     var html = '<div dir="rtl" style="font-family:Tahoma,Arial;font-size:14px;color:#0F2238">' +
       '<p style="color:#9C7432;margin:0">Bonyan HR · سجل المنسوبين</p>' +
-      '<h2 style="margin:6px 0 14px;color:#143D66">' + subject + '</h2><table cellpadding="6" style="border-collapse:collapse">' +
+      '<h2 style="margin:6px 0 14px;color:#143D66">' + escHtml_(subject) + '</h2><table cellpadding="6" style="border-collapse:collapse">' +
       [['الرقم المرجعي', ref], ['الاسم', get('fullNameLatin')], ['الجهة', get('entity')], ['دولة العمل', get('workCountry')],
        ['المسمى', get('jobTitle')], ['الجوال', get('mobile')], ['انتهاء الجواز', get('passportExpiry')]].map(function (r) {
         return '<tr><td style="color:#4B5B6E">' + r[0] + '</td><td><b>' + r[1] + '</b></td></tr>';

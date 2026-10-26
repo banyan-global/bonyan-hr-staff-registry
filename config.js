@@ -19,77 +19,50 @@ window.APP_CONFIG = {
     id: 'Bonyan International Group'
   },
 
-  /* ٤) الشعار الرئيسي — الصور مضمّنة في logos.js (مأخوذة من مجلد الشعارات في Drive، نسخة مفرغة لكل جهة) */
-  MAIN_LOGO: { logo: 'mark', white: 'markWhite', name: { ar: 'بنيان', en: 'Bonyan', id: 'Bonyan' } },
+  /* ٤) الشعار — شعار بنيان الأبيض فقط (مضمّن في logos.js) */
+  MAIN_LOGO: { logo: 'markWhite', white: 'markWhite', name: { ar: 'بنيان', en: 'Bonyan', id: 'Bonyan' } },
 
-  /* شعارا جانبي الرأس: وقف بنيان يمينًا، وجامعة بنيان العالمية يسارًا */
-  HEADER_SIDES: {
-    right: { logo: 'waqf', name: { ar: 'وقف بنيان', en: 'Bonyan Endowment', id: 'Wakaf Bonyan' } },
-    left: { logo: 'university', name: { ar: 'جامعة بنيان العالمية', en: 'Bonyan International University', id: 'Universitas Internasional Bonyan' } }
-  },
-
-  /* ٥) شعارات الشريط المتحرك (بألوانها الأصلية) — المفتاح logo يشير إلى اسم الصورة في logos.js */
-  STRIP_LOGOS: [
-    { logo: 'university', name: { ar: 'جامعة بنيان العالمية', en: 'Bonyan International University', id: 'Universitas Internasional Bonyan' } },
-    { logo: 'humanitarian', name: { ar: 'بنيان الإنسانية', en: 'Bonyan Humanitarian', id: 'Bonyan Kemanusiaan' } },
-    { logo: 'darAltamkeen', name: { ar: 'دار التمكين', en: 'Dar Al-Tamkeen', id: 'Dar Al-Tamkeen' } },
-    { logo: 'waqf', name: { ar: 'وقف بنيان', en: 'Bonyan Endowment', id: 'Wakaf Bonyan' } },
-    { logo: 'afaq', name: { ar: 'آفاق', en: 'Afaq', id: 'Afaq' } },
-    { logo: 'distance', name: { ar: 'بنيان للتعليم عن بعد', en: 'Bonyan Online Education', id: 'Bonyan Pendidikan Daring' } },
-    { logo: 'academy', name: { ar: 'أكاديمية بنيان', en: 'Bonyan Academy', id: 'Akademi Bonyan' } },
-    { logo: 'research', name: { ar: 'مركز بنيان للأبحاث', en: 'Bonyan Research Center', id: 'Pusat Riset Bonyan' } },
-    { logo: 'taqat', name: { ar: 'طاقات', en: 'Taqat', id: 'Taqat' } },
-    { logo: 'maqraa', name: { ar: 'مقرأة بنيان', en: 'Bonyan Quranic Desk', id: 'Maqraa Bonyan' } },
-    { logo: 'maarif', name: { ar: 'كلية المعارف', en: 'Al-Maarif College', id: 'Kolese Al-Maarif' } },
-    { logo: 'kafaa', name: { ar: 'كفاءة تقنية', en: 'Kafaa Tech', id: 'Kafaa Tech' } },
-    { logo: 'tamkeenEducation', name: { ar: 'تمكين التعليم', en: 'Tamkeen Education', id: 'Tamkeen Pendidikan' } },
-    { logo: 'raqeem', name: { ar: 'رقيم', en: 'Raqeem', id: 'Raqeem' } }
-  ],
-
-  /* ٦) الجهات التي تظهر في سؤال "الجهة" داخل النموذج */
+  /* ٦) الجهات التي تظهر في سؤال "الجهة" داخل النموذج
+        logo: اسم الشعار في entity-logos.js — يظهر على بطاقة المنسوب
+        colors: [لون البطاقة الأساسي، اللون الداكن، لون الإبراز] من هوية الجهة */
   ENTITIES: [
-    { v: 'bonyan', ar: 'شركة بنيان', en: 'Bonyan Company', id: 'Perusahaan Bonyan' },
-    { v: 'bonyan-university', ar: 'جامعة بنيان العالمية', en: 'Bonyan International University', id: 'Universitas Internasional Bonyan' },
-    { v: 'bonyan-university-eg', ar: 'جامعة بنيان مصر', en: 'Bonyan University Egypt', id: 'Universitas Bonyan Mesir' },
-    { v: 'bonyan-humanitarian', ar: 'بنيان الإنسانية', en: 'Bonyan Humanitarian', id: 'Bonyan Kemanusiaan' },
-    { v: 'dar-altamkeen', ar: 'دار التمكين', en: 'Dar Al-Tamkeen', id: 'Dar Al-Tamkeen' },
-    { v: 'bonyan-waqf', ar: 'وقف بنيان', en: 'Bonyan Endowment', id: 'Wakaf Bonyan' },
-    { v: 'afaq', ar: 'آفاق', en: 'Afaq', id: 'Afaq' },
-    { v: 'bonyan-distance', ar: 'بنيان للتعليم عن بعد', en: 'Bonyan Distance Learning', id: 'Bonyan Pendidikan Jarak Jauh' },
-    { v: 'bonyan-academy', ar: 'أكاديمية بنيان', en: 'Bonyan Academy', id: 'Akademi Bonyan' },
-    { v: 'bonyan-research', ar: 'مركز بنيان للأبحاث', en: 'Bonyan Research Center', id: 'Pusat Riset Bonyan' },
-    { v: 'altibyan', ar: 'معهد التبيان', en: 'Al-Tibyan Institute', id: 'Institut Al-Tibyan' },
-    { v: 'chinese-center', ar: 'المركز الصيني الثقافي', en: 'Chinese Cultural Center', id: 'Pusat Budaya Tiongkok' },
-    { v: 'taqat', ar: 'طاقات', en: 'Taqat', id: 'Taqat' },
-    { v: 'bonyan-maqraa', ar: 'مقرأة بنيان', en: 'Bonyan Maqraa', id: 'Maqraa Bonyan' },
-    { v: 'almaarif', ar: 'كلية المعارف', en: 'Al-Maarif College', id: 'Kolese Al-Maarif' },
-    { v: 'kafaa-tech', ar: 'كفاءة تقنية', en: 'Kafaa Tech', id: 'Kafaa Tech' },
-    { v: 'tamkeen-education', ar: 'تمكين التعليم', en: 'Tamkeen Education', id: 'Tamkeen Pendidikan' },
-    { v: 'third-sector', ar: 'تأهيل قيادات القطاع الثالث', en: 'Third Sector Leadership Program', id: 'Program Kepemimpinan Sektor Ketiga' },
-    { v: 'raqeem', ar: 'رقيم', en: 'Raqeem', id: 'Raqeem' },
+    { v: 'bonyan', ar: 'شركة بنيان للتدريب المحدودة', en: 'Bonyan Training Company Ltd.', id: 'Bonyan Training Company Ltd.', logo: 'main', colors: ['#2B3155', '#191D38', '#D9B67F'] },
+    { v: 'bonyan-university', ar: 'جامعة بنيان العالمية', en: 'Bonyan International University', id: 'Universitas Internasional Bonyan', logo: 'university', colors: ['#6b3624', '#1f2f4d', '#E7B08F'] },
+    { v: 'bonyan-humanitarian', ar: 'بنيان الإنسانية', en: 'Bonyan Humanitarian', id: 'Bonyan Kemanusiaan', logo: 'humanitarian', mark: 'humanitarianMark', colors: ['#7d2a2f', '#2c1215', '#EDB9B6'] },
+    { v: 'dar-altamkeen', ar: 'دار التمكين', en: 'Dar Al-Tamkeen', id: 'Dar Al-Tamkeen', logo: 'darAltamkeen', colors: ['#163061', '#0a1630', '#D2C4B1'] },
+    { v: 'bonyan-waqf', ar: 'وقف بنيان', en: 'Bonyan Endowment', id: 'Wakaf Bonyan', logo: 'waqf', colors: ['#05603a', '#022417', '#E2BE8A'] },
+    { v: 'afaq', ar: 'آفاق للتعريف بالإسلام', en: 'Afaq for Introducing Islam', id: 'Afaq Pengenalan Islam', logo: 'afaq', colors: ['#6a2531', '#25101a', '#CDD4E3'] },
+    { v: 'bonyan-distance', ar: 'بنيان للتعليم عن بعد', en: 'Bonyan Distance Learning', id: 'Bonyan Pendidikan Jarak Jauh', logo: 'distance', mark: 'distanceMark', colors: ['#33568a', '#172540', '#E8AC82'] },
+    { v: 'bonyan-academy', ar: 'أكاديمية بنيان', en: 'Bonyan Academy', id: 'Akademi Bonyan', logo: 'academy', mark: 'academyMark', colors: ['#465679', '#1d2438', '#E6B193'] },
+    { v: 'bonyan-research', ar: 'مركز بنيان للأبحاث', en: 'Bonyan Research Center', id: 'Pusat Riset Bonyan', logo: 'research', mark: 'researchMark', colors: ['#265746', '#0f241d', '#E0C290'] },
+    { v: 'taqat', ar: 'طاقات', en: 'Taqat', id: 'Taqat', logo: 'taqat', colors: ['#1c6340', '#0b2a1a', '#DCD08A'] },
+    { v: 'bonyan-maqraa', ar: 'مقرأة بنيان', en: 'Bonyan Maqraa', id: 'Maqraa Bonyan', logo: 'maqraa', mark: 'maqraaMark', colors: ['#5a3a2a', '#232b3d', '#C2CFE6'] },
+    { v: 'almaarif', ar: 'كلية المعارف', en: 'Al-Maarif College', id: 'Kolese Al-Maarif', logo: 'maarif', mark: 'maarifMark', colors: ['#2f339a', '#141647', '#F9B84A'] },
+    { v: 'kafaa-tech', ar: 'كفاءة تقنية', en: 'Kafaa Tech', id: 'Kafaa Tech', logo: 'kafaa', mark: 'kafaaMark', colors: ['#4b3cc0', '#1d1856', '#CCC5FF'] },
+    { v: 'tamkeen-education', ar: 'تمكين التعليم', en: 'Tamkeen Education', id: 'Tamkeen Pendidikan', logo: 'tamkeenEducation', mark: 'tamkeenEducationMark', colors: ['#5b3d76', '#24173a', '#5CD8DB'] },
     { v: 'other', ar: 'جهة أخرى', en: 'Other', id: 'Lainnya' }
   ],
 
   /* ٧) الدول التي تظهر أعلى قوائم الدول (الأكثر استخدامًا) */
   PRIORITY_COUNTRIES: ['SA', 'EG', 'ID', 'KE', 'ET', 'SD', 'SO', 'TZ', 'UG', 'NG', 'PK', 'IN', 'BD', 'MY', 'CN', 'YE', 'JO', 'SY', 'TR', 'MA'],
 
-  /* ٧-ب) نقاط الكرة الأرضية في الواجهة: المقر والدول التي يعمل فيها المنسوبون
-          (أضف أو احذف دولًا بإحداثيات المدينة) */
-  HQ: { cc: 'SA', lat: 21.54, lon: 39.17, name: { ar: 'المقر الرئيسي · جدة', en: 'Headquarters · Jeddah', id: 'Kantor pusat · Jeddah' } },
-  OFFICES: [
-    { cc: 'EG', lat: 30.04, lon: 31.24 },
-    { cc: 'KE', lat: -1.29, lon: 36.82 },
-    { cc: 'ET', lat: 9.03, lon: 38.74 },
-    { cc: 'ID', lat: -6.2, lon: 106.85 }
+  /* ٧-ب) المقر الرئيسي على الكرة الأرضية (جدة). دول المنسوبين وأعدادهم تأتي تلقائيًا من السجل بعد كل تعبئة */
+  HQ: { cc: 'SA', lat: 21.54, lon: 39.17, name: { ar: 'المقر الرئيسي · جدة', en: 'Headquarters · Jeddah', id: 'Kantor pusat · Jeddah' }, short: { ar: 'جدة · مكة', en: 'Jeddah · Makkah', id: 'Jeddah · Makkah' },
+    label: { ar: 'المقر الرئيسي جدة · مقر مكة', en: 'HQ Jeddah · Makkah office', id: 'Pusat Jeddah · Kantor Makkah' } },
+  /* مقرات أخرى تظهر بجانب المقر الرئيسي */
+  SITES: [
+    { cc: 'SA', lat: 21.39, lon: 39.86, name: { ar: 'مقر مكة المكرمة', en: 'Makkah office', id: 'Kantor Makkah' } }
   ],
 
-  /* ٨) حدود الملفات */
-  MAX_FILE_MB: 5,
+  /* ٧-ج) مناطق العمل المقترحة لكل دولة (تظهر اقتراحاتٍ عند الكتابة، وتُحتسب «عدد المناطق» على الخريطة) */
+  REGIONS: {
+    SA: ['منطقة مكة المكرمة', 'منطقة الرياض', 'المنطقة الشرقية', 'منطقة المدينة المنورة', 'منطقة القصيم', 'منطقة عسير', 'منطقة تبوك', 'منطقة حائل', 'منطقة الحدود الشمالية', 'منطقة جازان', 'منطقة نجران', 'منطقة الباحة', 'منطقة الجوف'],
+    EG: ['القاهرة', 'الجيزة', 'الإسكندرية', 'القليوبية', 'الدقهلية', 'الشرقية', 'الغربية', 'المنوفية', 'البحيرة', 'كفر الشيخ', 'دمياط', 'بورسعيد', 'الإسماعيلية', 'السويس', 'الفيوم', 'بني سويف', 'المنيا', 'أسيوط', 'سوهاج', 'قنا', 'الأقصر', 'أسوان', 'البحر الأحمر', 'الوادي الجديد', 'مطروح', 'شمال سيناء', 'جنوب سيناء'],
+    ID: ['DKI Jakarta', 'Jawa Barat', 'Jawa Tengah', 'Jawa Timur', 'DI Yogyakarta', 'Banten', 'Aceh', 'Sumatera Utara', 'Sumatera Barat', 'Riau', 'Kepulauan Riau', 'Jambi', 'Sumatera Selatan', 'Bengkulu', 'Lampung', 'Bangka Belitung', 'Kalimantan Barat', 'Kalimantan Tengah', 'Kalimantan Selatan', 'Kalimantan Timur', 'Kalimantan Utara', 'Sulawesi Utara', 'Sulawesi Tengah', 'Sulawesi Selatan', 'Sulawesi Tenggara', 'Sulawesi Barat', 'Gorontalo', 'Bali', 'Nusa Tenggara Barat', 'Nusa Tenggara Timur', 'Maluku', 'Maluku Utara', 'Papua', 'Papua Barat', 'Papua Barat Daya', 'Papua Tengah', 'Papua Pegunungan', 'Papua Selatan'],
+    KE: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Kiambu', 'Machakos', 'Kajiado', 'Garissa', 'Wajir', 'Mandera', 'Isiolo', 'Marsabit', 'Lamu', 'Kilifi', 'Kwale', 'Tana River', 'Uasin Gishu', 'Kakamega', 'Bungoma', 'Meru', 'Nyeri', 'Murang\'a', 'Kirinyaga', 'Embu', 'Kitui', 'Makueni', 'Turkana', 'Kericho', 'Narok', 'Kisii', 'Taita-Taveta', 'Elgeyo-Marakwet', 'Nandi', 'Baringo', 'Laikipia', 'Samburu', 'Trans Nzoia', 'West Pokot', 'Bomet', 'Nyamira', 'Migori', 'Homa Bay', 'Siaya', 'Busia', 'Vihiga', 'Nyandarua', 'Tharaka-Nithi'],
+    ET: ['Addis Ababa', 'Dire Dawa', 'Oromia', 'Amhara', 'Tigray', 'Somali', 'Afar', 'Harari', 'Benishangul-Gumuz', 'Gambela', 'Sidama', 'South Ethiopia', 'Central Ethiopia', 'South West Ethiopia']
+  },
 
-  /* ٩) التوقيع في أسفل الصفحة */
-  SIGNATURE: {
-    ar: 'تصميم وتطوير م. أسامة جنيدي',
-    en: 'Designed and developed by Eng. Osama Junaydi',
-    id: 'Dirancang dan dikembangkan oleh Eng. Osama Junaydi'
-  }
+  /* ٨) حدود الملفات */
+  MAX_FILE_MB: 5
 };
