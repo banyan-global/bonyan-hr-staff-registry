@@ -40,9 +40,8 @@ var MAIN_COLS = [
   ['insuranceNo', 'الرقم التأميني (مصر)', 't'], ['npwp', 'NPWP (إندونيسيا)', 't'], ['bpjsTk', 'BPJS Ketenagakerjaan', 't'], ['bpjsKes', 'BPJS Kesehatan', 't'],
   ['kraPin', 'KRA PIN (كينيا)', 't'], ['nssfNo', 'NSSF (كينيا)', 't'], ['shaNo', 'SHA (كينيا)', 't'], ['tin', 'TIN (إثيوبيا)', 't'],
   ['officialEmail', 'البريد الرسمي', 't'], ['personalEmail', 'البريد الشخصي', 't'], ['mobile', 'الجوال', 't'], ['whatsapp', 'الواتساب', 't'],
-  ['addrCountry', 'دولة السكن', 't'], ['addrRegion', 'المنطقة', 't'], ['addrCity', 'المدينة', 't'], ['addrDistrict', 'الحي', 't'],
-  ['addrStreet', 'الشارع', 't'], ['addrPostal', 'الرمز البريدي', 't'], ['addrBuilding', 'رقم المبنى', 't'], ['addrAdditional', 'الرقم الإضافي', 't'], ['addrShort', 'العنوان المختصر', 't'],
-  ['homeCountry', 'دولة العنوان الدائم', 't'], ['homeCity', 'مدينة العنوان الدائم', 't'], ['homeAddress', 'العنوان الدائم', 't'],
+  ['addrCountry', 'دولة السكن', 't'], ['addrRegion', 'المنطقة', 't'], ['addrCity', 'المدينة', 't'],
+  ['homeCountry', 'دولة العنوان الدائم', 't'], ['homeCity', 'مدينة العنوان الدائم', 't'],
   ['em1Name', 'طوارئ ١: الاسم', 't'], ['em1Relation', 'طوارئ ١: الصلة', 't'], ['em1Phone', 'طوارئ ١: الجوال', 't'],
   ['em2Name', 'طوارئ ٢: الاسم', 't'], ['em2Relation', 'طوارئ ٢: الصلة', 't'], ['em2Phone', 'طوارئ ٢: الجوال', 't'],
   ['entity', 'الجهة', 't'], ['workRegion', 'منطقة العمل', 't'], ['workOffice', 'المدينة/المكتب', 't'], ['department', 'الإدارة/القسم', 't'], ['jobTitle', 'المسمى الوظيفي', 't'],
@@ -96,32 +95,52 @@ function getRoot_(create) {
   return f;
 }
 
+/* إعادة ضبط ورقة «المنسوبون»: العناوين، عدد الأعمدة، التنسيقات، الألوان، الأعمدة المخفية، وقواعد تنبيه الانتهاء */
+function layoutMain_(main) {
+  var n = MAIN_COLS.length, want = MAIN_COLS.map(function (c) { return c[1]; });
+  if (main.getMaxColumns() < n) main.insertColumnsAfter(main.getMaxColumns(), n - main.getMaxColumns());
+  if (main.getMaxColumns() > n) {
+    var extra = main.getRange(1, n + 1, Math.max(1, main.getLastRow()), main.getMaxColumns() - n).getValues();
+    var blank = extra.slice(1).every(function (r) { return r.every(function (v) { return v === '' || v === null; }); });
+    if (blank) main.deleteColumns(n + 1, main.getMaxColumns() - n);
+  }
+  main.showColumns(1, n);
+  var hr = main.getRange(1, 1, 1, n);
+  hr.setValues([want]).setFontWeight('bold').setFontColor(CONFIG.COLORS.white).setBackground(CONFIG.COLORS.navy)
+    .setVerticalAlignment('middle').setHorizontalAlignment('center').setWrap(true);
+  var rows = Math.max(1, main.getMaxRows() - 1);
+  MAIN_COLS.forEach(function (c, i) {
+    var col = i + 1, body = main.getRange(2, col, rows, 1);
+    body.setNumberFormat(c[2] === 'd' ? 'yyyy-mm-dd' : (c[2] === 'n' ? '#,##0' : '@'));
+    if (c[2] === 'f') main.getRange(1, col).setBackground(CONFIG.COLORS.brass);
+    if (c[2] === 's' && c[0] !== 'ref' && c[0] !== 'status') main.getRange(1, col).setBackground('#3B5878');
+  });
+  main.setColumnWidths(1, n, 160);
+  main.setColumnWidth(col_('ref'), 190);
+  main.setColumnWidth(col_('fullNameLatin'), 230);
+  main.setColumnWidth(col_('folder'), 110);
+  main.hideColumns(col_('folderId'));
+  main.setFrozenRows(1);
+  main.setFrozenColumns(col_('fullNameLatin'));
+  main.getBandings().forEach(function (b) { b.remove(); });
+  main.getRange(1, 1, main.getMaxRows(), n).applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, true, false)
+    .setHeaderRowColor(CONFIG.COLORS.navy).setFirstRowColor(CONFIG.COLORS.white).setSecondRowColor(CONFIG.COLORS.band);
+  main.setConditionalFormatRules([]);
+  addExpiryRules_(main);
+  main.getRange(1, 1).setNote('Bonyan HR · Global Staff Registry · ' + n + ' عمودًا');
+}
+/* تشغيل يدوي عند الحاجة: يصلح ترتيب أعمدة الجدول دون المساس بالبيانات */
+function repairSheet() { layoutMain_(getSS_(false).getSheetByName(CONFIG.SHEETS.main)); Logger.log('✅ تم ضبط أعمدة الجدول'); }
+
 function ensureSheets_(ss) {
   var S = CONFIG.SHEETS;
   var main = prepSheet_(ss, S.main, MAIN_COLS.map(function (c) { return c[1]; }), 160);
-  var have = main.getLastColumn();
-  if (have < MAIN_COLS.length) {
-    if (main.getMaxColumns() < MAIN_COLS.length) main.insertColumnsAfter(main.getMaxColumns(), MAIN_COLS.length - main.getMaxColumns());
-    var add = MAIN_COLS.slice(have).map(function (c) { return c[1]; });
-    main.getRange(1, have + 1, 1, add.length).setValues([add]).setFontWeight('bold').setFontColor(CONFIG.COLORS.white).setBackground('#3B5878');
-  }
-  if (!main.getRange(1, 1).getNote()) {
-    MAIN_COLS.forEach(function (c, i) {
-      var col = i + 1, body = main.getRange(2, col, main.getMaxRows() - 1, 1);
-      if (c[2] === 'd') body.setNumberFormat('yyyy-mm-dd');
-      else if (c[2] === 'n') body.setNumberFormat('#,##0');
-      else body.setNumberFormat('@');
-      if (c[2] === 'f') main.getRange(1, col).setBackground(CONFIG.COLORS.brass);
-      if (c[2] === 's' && c[0] !== 'ref' && c[0] !== 'status') main.getRange(1, col).setBackground('#3B5878');
-    });
-    main.setColumnWidth(col_('ref'), 190);
-    main.setColumnWidth(col_('fullNameLatin'), 230);
-    main.setColumnWidth(col_('folder'), 110);
-    main.hideColumns(col_('folderId'));
-    main.setFrozenColumns(col_('fullNameLatin'));
-    addExpiryRules_(main);
-    main.getRange(1, 1).setNote('Bonyan HR · Global Staff Registry');
-  }
+  /* تتحقق في كل مرة من أن عناوين الأعمدة تطابق MAIN_COLS تمامًا؛ وإن اختلفت (جدول أُنشئ بنسخة سابقة)
+     يُعاد ترتيب العناوين والتنسيقات وقواعد التلوين على الترتيب الحالي الذي تُكتب به البيانات */
+  var want = MAIN_COLS.map(function (c) { return c[1]; });
+  var head = main.getRange(1, 1, 1, Math.max(1, main.getLastColumn())).getValues()[0];
+  var same = head.length === want.length && want.every(function (h, i) { return head[i] === h; });
+  if (!same) layoutMain_(main);
   prepSheet_(ss, S.quals, ['الرقم المرجعي', 'الاسم', 'الدرجة', 'التخصص', 'الجهة', 'الدولة', 'سنة التخرج', 'التقدير'], 170);
   prepSheet_(ss, S.exp, ['الرقم المرجعي', 'الاسم', 'جهة العمل', 'المسمى', 'الدولة', 'من', 'إلى'], 170);
   prepSheet_(ss, S.langs, ['الرقم المرجعي', 'الاسم', 'اللغة', 'المستوى'], 170);

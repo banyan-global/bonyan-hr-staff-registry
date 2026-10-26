@@ -2161,6 +2161,7 @@
         });
       });
     });
+    if (d.currency && d.currency !== 'other') ar.currency = d.currency;
     if (d.currency === 'other' && d.currencyOther) { raw.currency = d.currencyOther; ar.currency = d.currencyOther; }
     if (raw.salary != null) { raw.salary = moneyNum(d.salary); ar.salary = raw.salary; }
     if (d.hasContract === 'no') ar.contractStatus = tl('ar', 'm.noContract');
