@@ -188,7 +188,7 @@
         { k: 'passportExpiry', type: 'date', req: 1, after: 'passportIssue', meta: 'expiry' }
       ] },
       { t: 's.nationalId', titleKey: function (d) { return C.abroad(d) ? 's.nationalId.home' : 's.nationalId'; }, hintKey: function (d) { return C.abroad(d) ? 'h.nationalId.home' : ''; }, fields: [
-        { k: 'nationalIdNo', type: 'text', req: 1, v: 'nationalId', dir: 'ltr', mono: 1, labelKey: function (d) { return 'f.nationalIdNo.' + idKind(d); }, hintKey: function (d) { return 'h.nationalIdNo.' + idKind(d); } },
+        { k: 'nationalIdNo', type: 'text', reqFn: function (d) { return !C.abroad(d); }, v: 'nationalId', dir: 'ltr', mono: 1, labelKey: function (d) { return 'f.nationalIdNo.' + idKind(d); }, hintKey: function (d) { return 'h.nationalIdNo.' + idKind(d); } },
         { k: 'nationalIdExpiry', type: 'date', meta: 'expiry' }
       ] },
       { t: 's.permit', titleKey: function (d) { return 's.permit.' + permitKind(d); }, hint: 'h.permit', hintKey: function (d) { return 'h.permit.' + permitKind(d); }, show: C.needPermit, fields: [
@@ -333,7 +333,7 @@
       { t: 's.files', fields: [
         { k: 'photo', type: 'file', reqFn: C.notFemale, photo: 1, max: 1, hint: 'h.photo', hintKey: function (d) { return d.gender === 'female' ? 'h.photoFemale' : 'h.photo'; }, w: 'full' },
         { k: 'passportScan', type: 'file', req: 1, max: 2 },
-        { k: 'nationalIdScan', type: 'file', req: 1, max: 2, hint: 'h.nationalIdScan', labelKey: function (d) { return 'f.nationalIdScan.' + idKind(d); } },
+        { k: 'nationalIdScan', type: 'file', reqFn: function (d) { return !C.abroad(d); }, max: 2, hint: 'h.nationalIdScan', labelKey: function (d) { return 'f.nationalIdScan.' + idKind(d); } },
         { k: 'permitScan', type: 'file', req: 1, max: 2, hint: 'h.permitScan', show: C.needPermit, labelKey: function (d) { return 'f.permitScan.' + permitKind(d); } },
         { k: 'workPermitScan', type: 'file', max: 2, show: C.abroadNotSA, labelKey: function (d) { return 'f.workPermitScan.' + permitKind(d); } },
         { k: 'contractFile', type: 'file', req: 1, max: 3, hint: 'h.contractFile', show: C.contract },
