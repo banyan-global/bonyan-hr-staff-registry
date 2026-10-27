@@ -1104,6 +1104,23 @@ html[dir="rtl"] .hb-t i { border-radius: 999px 4px 4px 999px; margin-inline-star
 .fchip:hover i { background: var(--bad); color: #fff; }
 .th-sort { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; white-space: nowrap; }
 .th-sort i { font-style: normal; font-size: .7rem; opacity: .45; }
+/* كشف الرواتب التفصيلي */
+.pay-list { margin-bottom: 18px; }
+.pay-list-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.pay-list-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.pay-list-tools .muted { font-size: .82rem; color: var(--txt-3); font-weight: 700; }
+.pay-list-tools .chip.on { background: rgb(var(--gold-rgb) / .16); border-color: rgb(var(--gold-rgb) / .45); color: var(--gold-2); cursor: pointer; font-family: inherit; }
+.pay-table { min-width: 980px; }
+.pay-table .money { color: var(--gold-2); font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pay-table .money small { font-size: .72rem; color: var(--txt-3); font-weight: 800; }
+.pay-table tfoot td { padding: 12px 14px; border-top: 2px solid rgb(var(--gold-rgb) / .35); background: rgb(var(--gold-rgb) / .07); color: var(--txt); }
+.pay-table tbody tr:hover, .pay-table tbody tr:focus-visible { background: rgb(var(--gold-rgb) / .07); outline: none; }
+.pay-miss h3 em { font-style: normal; display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; margin-inline-start: 6px; border-radius: 999px; font-size: .78rem; background: rgb(var(--gold-rgb) / .16); color: var(--gold-2); }
+.miss-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.miss-list .pay-row { display: grid; gap: 2px; text-align: start; padding: 10px 14px; border-radius: 14px; border: 1px dashed var(--line); background: rgb(var(--well-rgb) / .35); color: var(--txt); font: inherit; cursor: pointer; transition: border-color .2s, transform .2s; }
+.miss-list .pay-row:hover { border-color: var(--gold); transform: translateY(-1px); }
+.miss-list .pay-row b { font-weight: 800; }
+.miss-list .pay-row small { font-size: .76rem; color: var(--txt-3); }
 .th-sort.on i { opacity: 1; }
 .adm-table tr.static { cursor: default; animation: none; }
 .adm-empty { padding: 40px 20px; text-align: center; color: var(--txt-3); font-weight: 700; border-radius: 20px; border: 1px dashed var(--line); background: var(--card); }

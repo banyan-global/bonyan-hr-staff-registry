@@ -110,6 +110,7 @@
     pNone: 'لا توجد رواتب مسجّلة بعد.', pNote: 'تُحسب الأرقام لكل عملة على حدة، ولا تُجمع العملات المختلفة معًا.',
     aTime: 'الوقت', aAct: 'العملية', aWho: 'المستخدم', aEmpty: 'لا توجد عمليات دخول مسجّلة.', aLogin: 'دخول', aFail: 'محاولة خاطئة',
     print: 'طباعة الملف', backForm: 'رجوع إلى النموذج',
+    pList: 'كشف الرواتب', pAllEnt: 'كل الجهات', pSal: 'الراتب الشهري', pMeth: 'طريقة الاستلام', pBank: 'البنك', pAcc: 'الآيبان / رقم الحساب', pHolder: 'صاحب الحساب', pTotal: 'الإجمالي', pMissing: 'منسوبون لم يُسجَّل راتبهم', pCsv: 'تصدير كشف الرواتب', pEntHint: 'اضغط على جهة لعرض رواتبها فقط في الكشف', pShown: '{n} منسوبًا', pRowHint: 'اضغط على أي منسوب لعرض ملفه كاملًا',
     cardT: 'بطاقة المنسوب', cardFlip: 'اقلب البطاقة', cardPng: 'تنزيل البطاقة بوجهيها', cardMaking: 'جارٍ تجهيز البطاقة…', cardFail: 'تعذّر تجهيز البطاقة', cardHint: 'اضغط على البطاقة لقلبها', cardRow: 'عرض البطاقة'
   });
   Object.assign(TX.en, {
@@ -128,6 +129,7 @@
     pNone: 'No salaries recorded yet.', pNote: 'Figures are calculated per currency; different currencies are never added together.',
     aTime: 'Time', aAct: 'Action', aWho: 'User', aEmpty: 'No sign-ins recorded.', aLogin: 'Sign-in', aFail: 'Wrong code',
     print: 'Print record', backForm: 'Back to the form',
+    pList: 'Payroll list', pAllEnt: 'All entities', pSal: 'Monthly salary', pMeth: 'Payment method', pBank: 'Bank', pAcc: 'IBAN / account no.', pHolder: 'Account holder', pTotal: 'Total', pMissing: 'Staff with no salary recorded', pCsv: 'Export payroll', pEntHint: 'Tap an entity to list its salaries only', pShown: '{n} staff', pRowHint: 'Tap any staff member to open the full record',
     cardT: 'Staff card', cardFlip: 'Flip card', cardPng: 'Download both sides', cardMaking: 'Preparing the card…', cardFail: 'Could not prepare the card', cardHint: 'Tap the card to flip it', cardRow: 'View card'
   });
   Object.assign(TX.id, {
@@ -146,6 +148,7 @@
     pNone: 'Belum ada gaji yang tercatat.', pNote: 'Angka dihitung per mata uang; mata uang berbeda tidak dijumlahkan.',
     aTime: 'Waktu', aAct: 'Aksi', aWho: 'Pengguna', aEmpty: 'Belum ada catatan masuk.', aLogin: 'Masuk', aFail: 'Kode salah',
     print: 'Cetak data', backForm: 'Kembali ke formulir',
+    pList: 'Daftar gaji', pAllEnt: 'Semua lembaga', pSal: 'Gaji bulanan', pMeth: 'Cara pembayaran', pBank: 'Bank', pAcc: 'IBAN / No. rekening', pHolder: 'Pemilik rekening', pTotal: 'Total', pMissing: 'Staf tanpa gaji tercatat', pCsv: 'Ekspor daftar gaji', pEntHint: 'Ketuk lembaga untuk melihat gajinya saja', pShown: '{n} staf', pRowHint: 'Ketuk staf untuk membuka data lengkapnya',
     cardT: 'Kartu staf', cardFlip: 'Balik kartu', cardPng: 'Unduh kedua sisi', cardMaking: 'Menyiapkan kartu…', cardFail: 'Kartu tidak dapat disiapkan', cardHint: 'Ketuk kartu untuk membaliknya', cardRow: 'Lihat kartu'
   });
   function x(k, v) {
@@ -202,7 +205,7 @@
   var EXPIRY = ['passportExpiry', 'nationalIdExpiry', 'permitExpiry', 'workPermitExpiry', 'contractEnd'];
 
   var S = { data: null, loading: false, err: '', f: { q: '', country: '', nat: '', entity: '', status: '', emp: '', gender: '', doc: '' }, shown: PAGE, open: null, globe: null, el: null,
-    tab: 'overview', view: 'table', sort: { k: 'createdAt', dir: -1 }, opts: {}, cur: '', docKind: '' };
+    tab: 'overview', view: 'table', sort: { k: 'createdAt', dir: -1 }, opts: {}, cur: '', docKind: '', payEnt: '', paySort: { k: 'salary', dir: -1 } };
 
   /* ---------------------------------------------------------- أدوات */
   function today() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
@@ -648,14 +651,66 @@
         return '<li class="rise" style="--d:' + i + '"><span>' + esc(x(s[0])) + '</span><b dir="ltr">' + s[1] + '</b>' + (i ? '<small>' + esc(S.cur) + '</small>' : '') + '</li>';
       }).join('') + '</ul>' +
       '<div class="adm-cards">' +
-        card(x('pByEnt'), hbars(entAvg, { val: fmtN })) +
+        card(x('pByEnt'), hbars(entAvg, { val: fmtN, filter: 'payEnt' }) + '<p class="hint">' + esc(x('pEntHint')) + '</p>') +
         card(x('pDist'), '<div class="cols hist" role="img">' + bins.map(function (b, i) {
           return '<div class="col" title="' + esc(fmtN(b[0]) + ' – ' + fmtN(b[0] + step) + ' · ' + b[1]) + '"><span class="col-v">' + (b[1] ? A.num(b[1]) : '') + '</span><i style="height:' + Math.max(b[1] ? 6 : 2, b[1] / maxB * 100) + '%;--i:' + i + '"></i><small dir="ltr">' + (i % 2 === 0 ? fmtN(b[0]) : '') + '</small></div>';
         }).join('') + '</div>') +
         card(x('pMethod'), hbars(pm, { label: function (v) { return esc(loc('payMethod', v)); } })) +
       '</div>' +
+      payListHTML(mine) + missingHTML() +
       '<p class="hint pay-note">' + esc(x('pNote')) + '</p>' +
       '</section>';
+  }
+  /* كشف الرواتب التفصيلي للعملة المختارة (ويمكن تصفيته بالجهة من مخطط «متوسط الراتب حسب الجهة») */
+  function payRows(mine) {
+    var k = S.paySort.k, dir = S.paySort.dir;
+    var nm = function (r) { return r.fullNameAr || r.fullNameLatin || ''; };
+    return mine.filter(function (r) { return !S.payEnt || (r.entity || x('unknown')) === S.payEnt; }).slice().sort(function (a, b) {
+      if (k === 'salary') return (moneyOf(a.salary) - moneyOf(b.salary)) * dir;
+      var va = k === 'name' ? nm(a) : String(a[k] || ''), vb = k === 'name' ? nm(b) : String(b[k] || '');
+      return va.localeCompare(vb, A.state.lang) * dir;
+    });
+  }
+  function payListHTML(mine) {
+    var list = payRows(mine), tot = list.reduce(function (s, r) { return s + moneyOf(r.salary); }, 0);
+    var th = function (k, l) { var on = S.paySort.k === k; return '<th><button type="button" class="th-sort' + (on ? ' on' : '') + '" data-psort="' + k + '">' + esc(l) + (on ? '<i aria-hidden="true">' + (S.paySort.dir > 0 ? '▲' : '▼') + '</i>' : '') + '</button></th>'; };
+    var acc = function (r) { return r.iban || r.accountNo || ''; };
+    return '<section class="adm-card pay-list"><div class="pay-list-h"><h3>' + esc(x('pList')) + ' · ' + esc(S.cur) + '</h3>' +
+      '<div class="pay-list-tools">' + (S.payEnt ? '<button type="button" class="chip on" data-payent="">' + esc(S.payEnt) + ' ✕</button>' : '<span class="chip">' + esc(x('pAllEnt')) + '</span>') +
+      '<span class="muted">' + esc(x('pShown', { n: list.length })) + '</span>' +
+      '<button type="button" class="btn ghost sm" data-adm="payCsv">' + esc(x('pCsv')) + '</button></div></div>' +
+      '<p class="hint">' + esc(x('pRowHint')) + '</p>' +
+      '<div class="adm-table-wrap"><table class="adm-table pay-table"><thead><tr><th>#</th>' + th('name', x('cName')) + th('entity', x('cEnt')) + th('jobTitle', x('cJob')) + '<th>' + esc(x('cWork')) + '</th>' + th('salary', x('pSal')) +
+      '<th>' + esc(x('pMeth')) + '</th><th>' + esc(x('pBank')) + '</th><th>' + esc(x('pAcc')) + '</th></tr></thead><tbody>' +
+      list.map(function (r, i) {
+        return '<tr class="pay-row" data-ref="' + esc(r.ref) + '" tabindex="0" style="--i:' + Math.min(i, 30) + '"><td class="mono">' + A.num(i + 1) + '</td>' +
+          '<td><span class="who-t"><b>' + esc(r.fullNameAr || r.fullNameLatin) + '</b><small dir="ltr">' + esc(r.fullNameAr ? r.fullNameLatin : r.ref) + '</small></span></td>' +
+          '<td>' + esc(r.entity || '—') + '</td><td>' + esc(r.jobTitle || '—') + '</td>' +
+          '<td><span class="cty">' + A.flag(r.workCountryCode) + esc(cc2name(r.workCountryCode, r.workCountry)) + '</span></td>' +
+          '<td><b class="money" dir="ltr">' + fmtN(moneyOf(r.salary)) + ' <small>' + esc(r.currency) + '</small></b></td>' +
+          '<td>' + esc(loc('payMethod', r.payMethod) || '—') + '</td><td dir="auto">' + esc(r.bankName || '—') + '</td>' +
+          '<td dir="ltr" class="mono">' + esc(acc(r) || '—') + '</td></tr>';
+      }).join('') + '</tbody><tfoot><tr><td></td><td colspan="4"><b>' + esc(x('pTotal')) + '</b></td><td><b class="money" dir="ltr">' + fmtN(tot) + ' <small>' + esc(S.cur) + '</small></b></td><td colspan="3"></td></tr></tfoot></table></div></section>';
+  }
+  function missingHTML() {
+    var miss = (S.data.rows || []).filter(function (r) { return moneyOf(r.salary) === null || !r.currency; });
+    if (!miss.length) return '';
+    return '<section class="adm-card pay-miss"><h3>' + esc(x('pMissing')) + ' <em>' + A.num(miss.length) + '</em></h3><div class="miss-list">' +
+      miss.map(function (r) { return '<button type="button" class="pay-row miss" data-ref="' + esc(r.ref) + '"><b>' + esc(r.fullNameAr || r.fullNameLatin) + '</b><small>' + esc(r.entity || '') + (r.payMethod ? ' · ' + esc(loc('payMethod', r.payMethod)) : '') + '</small></button>'; }).join('') +
+      '</div></section>';
+  }
+  function payCsv() {
+    var q = function (v) { v = String(v == null ? '' : v); if (/^[=+\-@]/.test(v)) v = "'" + v; else if (/^\d{12,}$/.test(v.replace(/\s/g, ''))) return '"=""' + v + '"""'; return '"' + v.replace(/"/g, '""') + '"'; };
+    var rows = (S.data.rows || []).filter(function (r) { return moneyOf(r.salary) !== null && r.currency === S.cur; });
+    var list = payRows(rows);
+    var head = [x('cName'), 'Name', x('cRef'), x('cEnt'), x('cJob'), x('cWork'), x('pSal'), 'Currency', x('pMeth'), x('pBank'), x('pHolder'), 'IBAN', 'Account', 'SWIFT'];
+    var lines = [head.map(q).join(',')].concat(list.map(function (r) {
+      return [r.fullNameAr, r.fullNameLatin, r.ref, r.entity, r.jobTitle, cc2name(r.workCountryCode, r.workCountry), moneyOf(r.salary), r.currency, loc('payMethod', r.payMethod), r.bankName, r.accountHolder, r.iban, r.accountNo, r.swift].map(q).join(',');
+    }));
+    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'Bonyan-HR-Payroll-' + S.cur + (S.payEnt ? '-' + S.payEnt.replace(/\s+/g, '-') : '') + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
 
   /* ---------- سجل الدخول */
@@ -823,6 +878,7 @@
         if (a === 'refresh') { act.classList.add('busy'); load(readCode(), true).then(function (ok) { if (ok) A.toast(x('updated', { d: '' }) + (S.data && S.data.at || '')); }); }
         else if (a === 'csv') csv();
         else if (a === 'docsCsv') docsCsv();
+        else if (a === 'payCsv') payCsv();
         else if (a === 'lock') { dropCode(); S.data = null; S.err = ''; closeDrawer(); draw(); }
         else if (a === 'more') { S.shown += PAGE; drawTable(); }
         else if (a === 'clear') { S.f = { q: '', country: '', nat: '', entity: '', status: '', emp: '', gender: '', doc: '' }; redrawPanel(); }
@@ -844,6 +900,10 @@
         var pn = $('.adm-tabs'); if (pn) pn.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
       }
+      var ps = tg.closest('[data-psort]');
+      if (ps) { var pk = ps.getAttribute('data-psort'); S.paySort = S.paySort.k === pk ? { k: pk, dir: -S.paySort.dir } : { k: pk, dir: pk === 'salary' ? -1 : 1 }; redrawPanel(); return; }
+      var pe = tg.closest('[data-payent], [data-go="payEnt"]');
+      if (pe) { var ev = pe.hasAttribute('data-payent') ? pe.getAttribute('data-payent') : pe.getAttribute('data-v'); S.payEnt = S.payEnt === ev ? '' : ev; redrawPanel(); var pl = $('.pay-list'); if (pl && S.payEnt) pl.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
       var go = tg.closest('[data-go]');
       if (go) { S.f[go.getAttribute('data-go')] = go.getAttribute('data-v'); S.shown = PAGE; setTab('staff'); return; }
       var vw = tg.closest('.adm-view [data-view]');
@@ -855,7 +915,7 @@
       var dk = tg.closest('[data-dkind]');
       if (dk) { S.docKind = dk.getAttribute('data-dkind'); redrawPanel(); return; }
       var cu = tg.closest('[data-cur]');
-      if (cu) { S.cur = cu.getAttribute('data-cur'); redrawPanel(); return; }
+      if (cu) { S.cur = cu.getAttribute('data-cur'); S.payEnt = ''; redrawPanel(); return; }
       var rk = tg.closest('.rank-item');
       if (rk) { var c = rk.getAttribute('data-country'); S.f.country = S.f.country === c ? '' : c; $$('.rank-item').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-country') === S.f.country); }); if (S.f.country && S.globe) S.globe.focusOn(S.f.country); return; }
       var db = tg.closest('.adm-dd-btn');
@@ -867,14 +927,14 @@
       var li = tg.closest('.adm-dd li[data-cc]');
       if (li) { var k = li.closest('.adm-dd').getAttribute('data-dd'); closeDDs(); setFilter(k, li.getAttribute('data-cc')); return; }
       if (!tg.closest('.adm-dd')) closeDDs();
-      var tr = tg.closest('#admRows tr[data-ref], .p-card[data-ref], .d-row[data-ref]');
+      var tr = tg.closest('#admRows tr[data-ref], .p-card[data-ref], .d-row[data-ref], .pay-row[data-ref]');
       if (tr) openDrawer(tr.getAttribute('data-ref'));
     });
     document.addEventListener('keydown', function (e) {
       if (A.state.view !== 'admin') return;
       if (e.key === 'Escape') { if (S.open) closeDrawer(); else closeDDs(); }
       if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('#drCard .idcard')) { e.preventDefault(); e.target.classList.toggle('flipped'); }
-      if (e.key === 'Enter' && e.target.matches && e.target.matches('#admRows tr[data-ref]')) openDrawer(e.target.getAttribute('data-ref'));
+      if (e.key === 'Enter' && e.target.matches && e.target.matches('#admRows tr[data-ref], .pay-row[data-ref]')) openDrawer(e.target.getAttribute('data-ref'));
     });
     var qT = 0;
     document.addEventListener('input', function (e) {
