@@ -804,6 +804,29 @@ html[dir="rtl"] .dr-t h2 { text-align: right; }
 .dr-cardsec h3::before { content: ""; width: 4px; height: 16px; border-radius: 4px; background: var(--gold); }
 .dr-card-box { display: flex; justify-content: center; padding: 6px 0 4px; }
 .dr-card-box .idcard-wrap { max-width: 380px; }
+/* وضع التعديل داخل تفاصيل المنسوب */
+.drawer .dr-foot { display: flex; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--line); background: var(--pop); box-shadow: 0 -10px 30px rgb(var(--shade-rgb) / .12); }
+.drawer .dr-foot .btn { display: inline-flex; align-items: center; gap: 8px; }
+.drawer .dr-foot .btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.drawer .dr-foot .btn:disabled { opacity: .65; cursor: progress; }
+.dr-edit svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ed-banner { padding: 12px 14px; border-radius: 14px; font-size: .85rem; font-weight: 700; line-height: 1.7; color: var(--gold-2); background: rgb(var(--gold-rgb) / .1); border: 1px solid rgb(var(--gold-rgb) / .35); }
+.ed-dl .ed-dd { display: block; }
+.ed-dl .inp { width: 100%; min-height: 42px; padding: 8px 12px; font-size: .9rem; border-radius: 12px; }
+.ed-dl textarea.inp { min-height: 76px; }
+.ed-dl .inp:focus { border-color: var(--gold); }
+.ed-dl .inp.dirty, .ed-child .inp.dirty { border-color: var(--gold); background: rgb(var(--gold-rgb) / .07); }
+.ed-note { display: block; font-size: .72rem; color: var(--txt-3); margin-top: 2px; }
+.ed-file dd { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ed-up { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; }
+.ed-up svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ed-picked { font-size: .78rem; font-weight: 700; color: var(--gold-2); flex-basis: 100%; }
+.ed-picked:empty { display: none; }
+.ed-child table { width: 100%; }
+.ed-child td { padding: 4px !important; }
+.ed-child .inp { min-height: 38px; padding: 6px 10px; font-size: .85rem; border-radius: 10px; min-width: 110px; }
+.ed-del { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--bad, #c0392b); font-size: 1.2rem; cursor: pointer; }
+.ed-add { margin-top: 10px; }
 .dr-card-hint { text-align: center; font-size: .78rem; color: var(--txt-3); margin-top: 12px; }
 .dr-card-act { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
 .dr-card-act .btn { display: inline-flex; align-items: center; gap: 6px; }
@@ -1298,3 +1321,11 @@ html[dir="ltr"] .dp-s { background-position: right 10px center; }
   .success-card, .print-summary { border: 0; padding: 0; box-shadow: none; background: #fff; color: #000; }
   .rv dd, .success-card h1 { color: #000; }
 }
+.drawer .dr-body { overflow-x: hidden; }
+.ed-child .dr-tbl { overflow-x: auto; max-width: 100%; }
+.ed-dl > div { min-width: 0; }
+.drawer .dr-body > * { min-width: 0; }
+.dr-tools { display: flex; flex-wrap: wrap; gap: 10px; }
+.dr-tools .dr-folder { margin: 0; }
+.dr-editbtn { display: inline-flex; align-items: center; gap: 6px; }
+.dr-editbtn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

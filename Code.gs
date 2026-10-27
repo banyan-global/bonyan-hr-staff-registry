@@ -341,6 +341,8 @@ function doPost(e) {
     if (body.action === 'finalize') return json_(finalize_(body));
     if (body.action === 'list') return json_(list_(body.code));
     if (body.action === 'photo') return json_(photo_(body));
+    if (body.action === 'adminUpdate') return json_(adminUpdate_(body));
+    if (body.action === 'adminUpload') return json_(adminUpload_(body));
     return json_({ ok: false, error: 'unknown action' });
   } catch (err) {
     log_('', 'خطأ', String(err && err.stack || err));
@@ -520,6 +522,118 @@ function finalize_(b) {
   log_(b.ref, 'اكتمل الرفع', '');
   notify_(sh, row, b.ref, updated);
   return { ok: true };
+}
+
+/* ============================================================ التعديل من لوحة الموارد البشرية
+   كل عملية تتطلب رمز الدخول، وتُسجَّل في ورقة «السجل» باسم صاحب الرمز مع القيم قبل التعديل وبعده */
+var ADMIN_LOCKED_ = ['ref', 'createdAt', 'updatedAt', 'folder', 'folderId', 'fullNameAr', 'fullNameLatin', 'lang', 'tz'];
+var NAME_PARTS_ = ['firstNameAr', 'fatherNameAr', 'grandNameAr', 'lastNameAr', 'firstName', 'fatherName', 'grandName', 'lastName'];
+
+function adminUpdate_(b) {
+  var who = checkAdmin_(b.code);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var ss = getSS_(false), sh = ss.getSheetByName(CONFIG.SHEETS.main);
+    var row = findRow_(sh, 'ref', function (v) { return v === b.ref; });
+    if (!row) throw new Error('الرقم المرجعي غير موجود');
+    var ch = b.changes || {}, done = [], nameChanged = false, statusSet = false;
+    Object.keys(ch).forEach(function (k) {
+      var ci = col_(k);
+      if (!ci || ADMIN_LOCKED_.indexOf(k) > -1) return;
+      var c = MAIN_COLS[ci - 1];
+      if (c[2] === 'f') return;
+      var cell = sh.getRange(row, ci), old = cell.getDisplayValue(), v = ch[k] == null ? '' : String(ch[k]).trim();
+      if (c[2] === 'd') {
+        if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error('تاريخ غير صالح في «' + c[1] + '»');
+        cell.setValue(v ? new Date(v + 'T12:00:00') : '');
+      } else if (c[2] === 'n') {
+        var num = Number(v.replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); }).replace(/[,\s٬]/g, '').replace('٫', '.'));
+        if (v && isNaN(num)) throw new Error('رقم غير صالح في «' + c[1] + '»');
+        cell.setValue(v === '' ? '' : num);
+      } else {
+        cell.setValue(k === 'workCountryCode' || k === 'nationalityCode' ? cc_(v) : safeText_(v));
+      }
+      if (NAME_PARTS_.indexOf(k) > -1) nameChanged = true;
+      if (k === 'status') statusSet = true;
+      done.push(c[1] + ': «' + (old || '—') + '» ← «' + (cell.getDisplayValue() || '—') + '»');
+    });
+    var get = function (k) { return String(sh.getRange(row, col_(k)).getDisplayValue() || '').trim(); };
+    var nameAr = get('fullNameAr');
+    if (nameChanged) {
+      var join = function (ks) { return ks.map(get).filter(String).join(' ').replace(/\s+/g, ' ').trim(); };
+      nameAr = join(['firstNameAr', 'fatherNameAr', 'grandNameAr', 'lastNameAr']);
+      sh.getRange(row, col_('fullNameAr')).setValue(safeText_(nameAr));
+      sh.getRange(row, col_('fullNameLatin')).setValue(safeText_(join(['firstName', 'fatherName', 'grandName', 'lastName']).toUpperCase()));
+      try { var fd = DriveApp.getFolderById(sh.getRange(row, col_('folderId')).getValue()); var fn = folderName_(b.ref, { fullNameAr: nameAr, fullNameLatin: get('fullNameLatin') }); if (fd.getName() !== fn) fd.setName(fn); } catch (e1) { }
+    }
+    var childName = nameAr || get('fullNameLatin');
+    [['quals', CONFIG.SHEETS.quals, 6], ['exp', CONFIG.SHEETS.exp, 5], ['langs', CONFIG.SHEETS.langs, 2]].forEach(function (t) {
+      var csh = ss.getSheetByName(t[1]); if (!csh) return;
+      if (Array.isArray(b[t[0]])) {
+        var rows = b[t[0]].filter(function (r) { return Array.isArray(r) && r.some(function (v) { return String(v || '').trim(); }); })
+          .map(function (r) { var o = [b.ref, childName]; for (var i = 0; i < t[2]; i++) o.push(String(r[i] == null ? '' : r[i]).trim()); return o; });
+        replaceChildRows_(csh, b.ref, rows);
+        done.push(t[1] + ': ' + rows.length + ' صف');
+      } else if (nameChanged) {
+        var n = csh.getLastRow(); if (n < 2) return;
+        var refs = csh.getRange(2, 1, n - 1, 1).getValues();
+        refs.forEach(function (r, i) { if (r[0] === b.ref) csh.getRange(i + 2, 2).setValue(safeText_(childName)); });
+      }
+    });
+    if (!done.length) return { ok: true, changed: 0 };
+    sh.getRange(row, col_('updatedAt')).setValue(fmtNow_(new Date()));
+    if (!statusSet) sh.getRange(row, col_('status')).setValue('محدَّث');
+    CacheService.getScriptCache().remove('countries');
+    log_(b.ref, 'تعديل من لوحة الموارد البشرية', who + ' · ' + done.join(' | '));
+    return { ok: true, changed: done.length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* استبدال مرفق من لوحة الموارد البشرية: الملف الأول من الدفعة ينقل الملفات المرتبطة حاليًا بالخانة إلى سلة المحذوفات (قابلة للاسترجاع) */
+function adminUpload_(b) {
+  var who = checkAdmin_(b.code);
+  var ss = getSS_(false), sh = ss.getSheetByName(CONFIG.SHEETS.main);
+  var row = findRow_(sh, 'ref', function (v) { return v === b.ref; });
+  if (!row) throw new Error('الرقم المرجعي غير موجود');
+  var ci = col_(b.kind);
+  if (!ci || MAIN_COLS[ci - 1][2] !== 'f') throw new Error('نوع مرفق غير معروف');
+  var folder = DriveApp.getFolderById(sh.getRange(row, col_('folderId')).getValue());
+  var bytes = Utilities.base64Decode(b.data);
+  if (bytes.length > 12 * 1024 * 1024) throw new Error('الملف كبير جدًا');
+  var mime = String(b.mime || '');
+  var ext = mime === 'application/pdf' ? 'pdf' : (mime === 'image/png' ? 'png' : (mime === 'image/webp' ? 'webp' : 'jpg'));
+  var name = String(sh.getRange(row, col_('fullNameAr')).getDisplayValue() || sh.getRange(row, col_('fullNameLatin')).getDisplayValue() || b.ref).trim();
+  var clean = function (v) { return String(v || '').replace(/[\\\/:*?"<>|\n\r]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 80); };
+  var fname = clean(MAIN_COLS[ci - 1][1]) + ' - ' + clean(name) + (b.total > 1 ? ' (' + b.idx + ')' : '') + '.' + ext;
+  var cell = sh.getRange(row, ci), cache = CacheService.getScriptCache(), listKey = 'adm_' + b.ref + '_' + b.kind;
+  if (b.idx === 1) {
+    linksOf_(cell.getRichTextValue()).forEach(function (u) {
+      var m = /\/d\/([\w-]+)|[?&]id=([\w-]+)/.exec(u); if (!m) return;
+      try {
+        var f = DriveApp.getFileById(m[1] || m[2]), ps = f.getParents(), inside = false;
+        while (ps.hasNext()) if (ps.next().getId() === folder.getId()) inside = true;
+        if (inside) f.setTrashed(true);
+      } catch (e) { }
+    });
+    cache.remove(listKey);
+  }
+  var file = folder.createFile(Utilities.newBlob(bytes, mime || 'application/octet-stream', fname));
+  var list = JSON.parse(cache.get(listKey) || '[]');
+  list.push(file.getUrl());
+  cache.put(listKey, JSON.stringify(list), 3600);
+  var label = list.length === 1 ? 'عرض الملف' : list.map(function (_, i) { return 'ملف ' + (i + 1); }).join('  ·  ');
+  var rt = SpreadsheetApp.newRichTextValue().setText(label);
+  if (list.length === 1) rt.setLinkUrl(list[0]);
+  else { var pos = 0; list.forEach(function (u, i) { var seg = 'ملف ' + (i + 1); rt.setLinkUrl(pos, pos + seg.length, u); pos += seg.length + 5; }); }
+  cell.setRichTextValue(rt.build());
+  if (b.idx >= (b.total || 1)) {
+    sh.getRange(row, col_('updatedAt')).setValue(fmtNow_(new Date()));
+    log_(b.ref, 'استبدال مرفق من لوحة الموارد البشرية', who + ' · ' + MAIN_COLS[ci - 1][1] + ' · ' + list.length + ' ملف');
+  }
+  return { ok: true, url: file.getUrl() };
 }
 
 /* ============================================================ أدوات */

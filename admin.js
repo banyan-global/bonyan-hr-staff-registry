@@ -110,6 +110,7 @@
     pNone: 'لا توجد رواتب مسجّلة بعد.', pNote: 'تُحسب الأرقام لكل عملة على حدة، ولا تُجمع العملات المختلفة معًا.',
     aTime: 'الوقت', aAct: 'العملية', aWho: 'المستخدم', aEmpty: 'لا توجد عمليات دخول مسجّلة.', aLogin: 'دخول', aFail: 'محاولة خاطئة',
     print: 'طباعة الملف', backForm: 'رجوع إلى النموذج',
+    edOpen: 'تعديل البيانات والمرفقات', edit: 'تعديل', edSave: 'حفظ التعديلات', edCancel: 'إلغاء', edBanner: 'وضع التعديل: غيّر ما تريد ثم اضغط «حفظ التعديلات». تُحفظ في الجدول مباشرة وتُسجَّل باسمك في ورقة «السجل».', edAuto: 'يُبنى تلقائيًا من أجزاء الاسم', edReplace: 'استبدال الملف', edUpload: 'رفع ملف', edAdd: 'إضافة صف', edDel: 'حذف الصف', edNone: 'لا توجد تعديلات لحفظها', edSaving: 'جارٍ الحفظ…', edUploading: 'رفع الملفات {i} من {n}…', edSaved: 'تم حفظ التعديلات في الجدول', edFail: 'تعذّر الحفظ', edBig: 'ملف أكبر من ١٠ ميغابايت:', edPicked: 'سيُرفع:', edDirty: 'لديك تعديلات غير محفوظة: احفظها أو اضغط «إلغاء»',
     pList: 'كشف الرواتب', pAllEnt: 'كل الجهات', pSal: 'الراتب الشهري', pMeth: 'طريقة الاستلام', pBank: 'البنك', pAcc: 'الآيبان / رقم الحساب', pHolder: 'صاحب الحساب', pTotal: 'الإجمالي', pMissing: 'منسوبون لم يُسجَّل راتبهم', pCsv: 'تصدير كشف الرواتب', pEntHint: 'اضغط على جهة لعرض رواتبها فقط في الكشف', pShown: '{n} منسوبًا', pRowHint: 'اضغط على أي منسوب لعرض ملفه كاملًا',
     cardT: 'بطاقة المنسوب', cardFlip: 'اقلب البطاقة', cardPng: 'تنزيل البطاقة بوجهيها', cardMaking: 'جارٍ تجهيز البطاقة…', cardFail: 'تعذّر تجهيز البطاقة', cardHint: 'اضغط على البطاقة لقلبها', cardRow: 'عرض البطاقة'
   });
@@ -129,6 +130,7 @@
     pNone: 'No salaries recorded yet.', pNote: 'Figures are calculated per currency; different currencies are never added together.',
     aTime: 'Time', aAct: 'Action', aWho: 'User', aEmpty: 'No sign-ins recorded.', aLogin: 'Sign-in', aFail: 'Wrong code',
     print: 'Print record', backForm: 'Back to the form',
+    edOpen: 'Edit data & documents', edit: 'Edit', edSave: 'Save changes', edCancel: 'Cancel', edBanner: 'Edit mode: change what you need, then tap “Save changes”. Changes go straight to the sheet and are logged under your name.', edAuto: 'Built automatically from the name parts', edReplace: 'Replace file', edUpload: 'Upload file', edAdd: 'Add row', edDel: 'Delete row', edNone: 'Nothing to save', edSaving: 'Saving…', edUploading: 'Uploading files {i} of {n}…', edSaved: 'Changes saved to the sheet', edFail: 'Could not save', edBig: 'File larger than 10 MB:', edPicked: 'Will upload:', edDirty: 'You have unsaved changes: save them or tap Cancel',
     pList: 'Payroll list', pAllEnt: 'All entities', pSal: 'Monthly salary', pMeth: 'Payment method', pBank: 'Bank', pAcc: 'IBAN / account no.', pHolder: 'Account holder', pTotal: 'Total', pMissing: 'Staff with no salary recorded', pCsv: 'Export payroll', pEntHint: 'Tap an entity to list its salaries only', pShown: '{n} staff', pRowHint: 'Tap any staff member to open the full record',
     cardT: 'Staff card', cardFlip: 'Flip card', cardPng: 'Download both sides', cardMaking: 'Preparing the card…', cardFail: 'Could not prepare the card', cardHint: 'Tap the card to flip it', cardRow: 'View card'
   });
@@ -148,6 +150,7 @@
     pNone: 'Belum ada gaji yang tercatat.', pNote: 'Angka dihitung per mata uang; mata uang berbeda tidak dijumlahkan.',
     aTime: 'Waktu', aAct: 'Aksi', aWho: 'Pengguna', aEmpty: 'Belum ada catatan masuk.', aLogin: 'Masuk', aFail: 'Kode salah',
     print: 'Cetak data', backForm: 'Kembali ke formulir',
+    edOpen: 'Ubah data & dokumen', edit: 'Ubah', edSave: 'Simpan perubahan', edCancel: 'Batal', edBanner: 'Mode ubah: ubah yang perlu lalu ketuk “Simpan perubahan”. Perubahan langsung masuk ke tabel dan dicatat atas nama Anda.', edAuto: 'Dibentuk otomatis dari bagian nama', edReplace: 'Ganti berkas', edUpload: 'Unggah berkas', edAdd: 'Tambah baris', edDel: 'Hapus baris', edNone: 'Tidak ada perubahan', edSaving: 'Menyimpan…', edUploading: 'Mengunggah berkas {i} dari {n}…', edSaved: 'Perubahan tersimpan di tabel', edFail: 'Gagal menyimpan', edBig: 'Berkas lebih dari 10 MB:', edPicked: 'Akan diunggah:', edDirty: 'Ada perubahan yang belum disimpan: simpan atau ketuk Batal',
     pList: 'Daftar gaji', pAllEnt: 'Semua lembaga', pSal: 'Gaji bulanan', pMeth: 'Cara pembayaran', pBank: 'Bank', pAcc: 'IBAN / No. rekening', pHolder: 'Pemilik rekening', pTotal: 'Total', pMissing: 'Staf tanpa gaji tercatat', pCsv: 'Ekspor daftar gaji', pEntHint: 'Ketuk lembaga untuk melihat gajinya saja', pShown: '{n} staf', pRowHint: 'Ketuk staf untuk membuka data lengkapnya',
     cardT: 'Kartu staf', cardFlip: 'Balik kartu', cardPng: 'Unduh kedua sisi', cardMaking: 'Menyiapkan kartu…', cardFail: 'Kartu tidak dapat disiapkan', cardHint: 'Ketuk kartu untuk membaliknya', cardRow: 'Lihat kartu'
   });
@@ -749,13 +752,16 @@
       '<header class="dr-head"><span class="av big">' + (th ? '<img src="' + esc(th) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<i>' + esc(initials(r.fullNameLatin)) + '</i></span>' +
         '<div class="dr-t"><h2 id="drName" dir="ltr">' + esc(r.fullNameLatin) + '</h2><p>' + esc(r.fullNameAr || '') + '</p>' +
         '<div class="dr-chips"><code dir="ltr">' + esc(r.ref) + '</code>' + statusChip(r.status) + '<span class="chip">' + A.flag(r.workCountryCode) + esc(cc2name(r.workCountryCode, r.workCountry)) + '</span></div></div>' +
+        (S.edit === ref ? '' : '<button type="button" class="dr-x dr-edit" data-adm="edit" aria-label="' + esc(x('edit')) + '" title="' + esc(x('edit')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg></button>') +
         '<button type="button" class="dr-x dr-print" data-adm="print" aria-label="' + esc(x('print')) + '" title="' + esc(x('print')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9M7 17H4.5V9h15v8H17M7 14h10v6.5H7z"/></svg></button>' +
         '<button type="button" class="dr-x" data-adm="close" aria-label="' + esc(x('close')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>' +
-      '<div class="dr-body">' + (A.card ? '<section class="dr-cardsec"><h3>' + esc(x('cardT')) + '</h3><div class="dr-card-box"><div class="idcard-wrap" id="drCard"></div></div>' +
+      '<div class="dr-body">' + (S.edit === ref ? editBodyHTML(r, cols) + '</div><footer class="dr-foot"><button type="button" class="btn gold" data-adm="edSave"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>' + esc(x('edSave')) + '</span></button><button type="button" class="btn ghost" data-adm="edCancel">' + esc(x('edCancel')) + '</button></footer></aside>' : '') +
+      (S.edit === ref ? '' : (A.card ? '<section class="dr-cardsec"><h3>' + esc(x('cardT')) + '</h3><div class="dr-card-box"><div class="idcard-wrap" id="drCard"></div></div>' +
         '<p class="dr-card-hint">' + esc(x('cardHint')) + '</p><div class="dr-card-act"><button type="button" class="btn ghost sm" data-adm="cardFlip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7"/></svg>' + esc(x('cardFlip')) + '</button>' +
         '<button type="button" class="btn gold sm" data-adm="cardPng"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19.5h14"/></svg><span>' + esc(x('cardPng')) + '</span></button></div></section>' : '') +
-      (r.folder ? '<a class="btn gold sm dr-folder" href="' + esc(r.folder) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' + esc(x('folder')) + '</a>' : '');
-    GROUPS.forEach(function (g) {
+      '<div class="dr-tools"><button type="button" class="btn ghost sm dr-editbtn" data-adm="edit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg>' + esc(x('edOpen')) + '</button>' +
+      (r.folder ? '<a class="btn gold sm dr-folder" href="' + esc(r.folder) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' + esc(x('folder')) + '</a>' : '') + '</div>');
+    if (S.edit !== ref) GROUPS.forEach(function (g) {
       var items = g[1].filter(function (k) { var v = r[k]; return cols[k] && v != null && v !== '' && !(Array.isArray(v) && !v.length) || (g[0] === 'files' && cols[k]); });
       if (!items.length) return;
       h += '<section class="dr-sec"><h3>' + esc(x('g.' + g[0])) + '</h3><dl>' + items.map(function (k) {
@@ -770,14 +776,14 @@
         return '<div' + (c[2] === 'f' || String(v).length > 40 ? ' class="wide"' : '') + '><dt>' + esc(colLbl(c)) + '</dt><dd>' + val + '</dd></div>';
       }).join('') + '</dl></section>';
     });
-    [['quals', S.data.quals], ['exp', S.data.exp], ['langs', S.data.langs]].forEach(function (p) {
+    if (S.edit !== ref) [['quals', S.data.quals], ['exp', S.data.exp], ['langs', S.data.langs]].forEach(function (p) {
       var tb = p[1] || []; if (tb.length < 2) return;
       var mine = tb.slice(1).filter(function (row) { return row[0] === r.ref; });
       if (!mine.length) return;
       h += '<section class="dr-sec"><h3>' + esc(x(p[0])) + '</h3><div class="dr-tbl"><table><thead><tr>' + tb[0].slice(2).map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
         mine.map(function (row) { return '<tr>' + row.slice(2).map(function (c) { return '<td dir="auto">' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></section>';
     });
-    h += '</div></aside>';
+    if (S.edit !== ref) h += '</div></aside>';
     var host = $('#admDrawer');
     if (!host) { host = document.createElement('div'); host.id = 'admDrawer'; document.body.appendChild(host); }
     host.innerHTML = h; host.hidden = false;
@@ -787,11 +793,134 @@
   }
   function closeDrawer() {
     var host = $('#admDrawer'); if (!host || host.hidden) return;
+    S.edit = null; ED.files = {};
     host.classList.remove('in');
     document.body.classList.remove('no-scroll');
     setTimeout(function () { host.hidden = true; host.innerHTML = ''; }, 320);
     var tr = S.open && $('tr[data-ref="' + S.open + '"]'); S.open = null;
     if (tr) tr.focus();
+  }
+
+  /* ---------------------------------------------------------- التعديل من اللوحة
+     كل الحقول قابلة للتعديل ما عدا ما يولّده النظام (الرقم المرجعي، التواريخ الآلية، المجلد، الاسم الكامل الذي يُبنى من أجزائه).
+     تُرسل الحقول التي تغيّرت فقط، وتُستبدل المرفقات المختارة، ثم يُعاد تحميل البيانات من الجدول */
+  var ED_LOCK = ['ref', 'createdAt', 'updatedAt', 'folder', 'folderId', 'fullNameAr', 'fullNameLatin', 'lang', 'tz', 'workCountryCode', 'nationalityCode'];
+  var ED_COUNTRY = ['workCountry', 'nationality', 'otherNationality', 'birthCountry', 'passportCountry', 'addrCountry', 'homeCountry', 'bankCountry'];
+  var ED_LONG = ['techSkills', 'certifications', 'payOther'];
+  var ED = { files: {} };
+  var CHILD = { quals: 6, exp: 5, langs: 2 };
+  function edOpts(k) {
+    var D = (window.I18N || {}).ar || {}, out = [];
+    if (ED_COUNTRY.indexOf(k) > -1) return (window.COUNTRIES || []).map(function (c) { return c[1]; });
+    if (k === 'status') return ['مكتمل', 'محدَّث', 'بانتظار المرفقات'];
+    if (k === 'entity') return (A.CFG.ENTITIES || []).map(function (e) { return e.ar; });
+    if (k === 'currency') { Object.keys(D).forEach(function (kk) { var m = /^cur\.([A-Z]{3})$/.exec(kk); if (m) out.push(m[1]); }); return out; }
+    var f = k === 'em2Relation' ? 'em1Relation' : k;
+    Object.keys(D).forEach(function (kk) { var m = /^o\.(\w+)\.\w+$/.exec(kk); if (m && (m[1] === f || m[1] === k)) out.push(D[kk]); });
+    return out;
+  }
+  function edVal(c, v) {
+    if (c[2] === 'n') { var n = moneyOf(v); return n === null ? '' : String(n); }
+    if (c[2] === 'd') return /^\d{4}-\d{2}-\d{2}/.test(v || '') ? String(v).slice(0, 10) : '';
+    return v == null ? '' : String(v);
+  }
+  function edField(k, c, r) {
+    var v = r[k], lbl = '<dt>' + esc(colLbl(c)) + '</dt>';
+    if (c[2] === 'f') {
+      var fl = files(v);
+      return '<div class="wide ed-file"><dt>' + esc(colLbl(c)) + '</dt><dd>' + (fl.length ? fl.map(function (u, i) { return '<a class="file-btn" href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(fl.length > 1 ? x('file', { n: i + 1 }) : x('openFile')) + '</a>'; }).join('') : '<span class="muted">' + esc(v || x('noFile')) + '</span>') +
+        '<label class="btn ghost sm ed-up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0-4 4m4-4 4 4M5 19.5h14"/></svg><span>' + esc(x(fl.length ? 'edReplace' : 'edUpload')) + '</span><input type="file" data-fk="' + k + '" accept="image/*,application/pdf"' + (k === 'photo' ? '' : ' multiple') + ' hidden></label>' +
+        '<span class="ed-picked" data-picked="' + k + '"></span></dd></div>';
+    }
+    var val = edVal(c, v), lock = ED_LOCK.indexOf(k) > -1;
+    if (lock) return '<div' + (String(val).length > 40 ? ' class="wide"' : '') + '>' + lbl + '<dd><span class="muted" dir="auto">' + esc(val || '—') + '</span>' + (k === 'fullNameAr' || k === 'fullNameLatin' ? '<small class="ed-note">' + esc(x('edAuto')) + '</small>' : '') + '</dd></div>';
+    var common = ' class="inp ed" data-ek="' + k + '" data-orig="' + esc(val) + '"';
+    var input;
+    if (c[2] === 'd') input = '<input type="date"' + common + ' value="' + esc(val) + '">';
+    else if (c[2] === 'n') input = '<input type="text" inputmode="decimal" dir="ltr"' + common + ' value="' + esc(val) + '">';
+    else if (ED_LONG.indexOf(k) > -1 || val.length > 60 || /\n/.test(val)) input = '<textarea rows="3" dir="auto"' + common + '>' + esc(val) + '</textarea>';
+    else {
+      var op = edOpts(k), ltr = /Email|^iban$|^swift$|^accountNo$|^passportNo$|Phone$|^mobile$|^whatsapp$|No$|^npwp$|^bpjs|^kraPin$|^tin$/.test(k);
+      input = '<input type="text"' + (ltr ? ' dir="ltr"' : ' dir="auto"') + common + ' value="' + esc(val) + '"' + (op.length ? ' list="dl_' + k + '"' : '') + ' autocomplete="off">' +
+        (op.length ? '<datalist id="dl_' + k + '">' + op.map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>' : '');
+    }
+    return '<div' + (ED_LONG.indexOf(k) > -1 || val.length > 40 ? ' class="wide"' : '') + '>' + lbl + '<dd class="ed-dd">' + input + '</dd></div>';
+  }
+  function edChildHTML(p, tb, ref) {
+    var n = CHILD[p], head = (tb && tb[0] ? tb[0].slice(2) : []).slice(0, n);
+    while (head.length < n) head.push('');
+    var mine = (tb || []).slice(1).filter(function (row) { return row[0] === ref; }).map(function (row) { return row.slice(2, 2 + n); });
+    var rowHTML = function (cells) { return '<tr>' + head.map(function (_, i) { return '<td><input class="inp ed-c" dir="auto" value="' + esc(cells[i] || '') + '"></td>'; }).join('') + '<td><button type="button" class="ed-del" data-adm="edDelRow" aria-label="' + esc(x('edDel')) + '" title="' + esc(x('edDel')) + '">×</button></td></tr>'; };
+    return '<section class="dr-sec ed-child" data-child="' + p + '" data-orig="' + esc(JSON.stringify(mine)) + '"><h3>' + esc(x(p)) + '</h3><div class="dr-tbl"><table><thead><tr>' + head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
+      mine.map(rowHTML).join('') + '</tbody></table></div><button type="button" class="btn ghost sm ed-add" data-adm="edAddRow" data-tpl="' + esc(rowHTML([])) + '">+ ' + esc(x('edAdd')) + '</button></section>';
+  }
+  function editBodyHTML(r, cols) {
+    var h = '<p class="ed-banner">' + esc(x('edBanner')) + '</p>';
+    GROUPS.forEach(function (g) {
+      var items = g[1].filter(function (k) { return cols[k]; });
+      if (!items.length) return;
+      h += '<section class="dr-sec"><h3>' + esc(x('g.' + g[0])) + '</h3><dl class="ed-dl">' + items.map(function (k) { return edField(k, cols[k], r); }).join('') + '</dl></section>';
+    });
+    ['quals', 'exp', 'langs'].forEach(function (p) { h += edChildHTML(p, S.data[p], r.ref); });
+    return h;
+  }
+  function edCollect() {
+    var ch = {}, n = 0;
+    $$('#admDrawer [data-ek]').forEach(function (el) {
+      var k = el.getAttribute('data-ek'), v = el.value.replace(/\s+$/, '');
+      if (v.trim() !== (el.getAttribute('data-orig') || '').trim()) { ch[k] = v.trim(); n++; }
+    });
+    var CC = {}; (window.COUNTRIES || []).forEach(function (c) { CC[c[1]] = c[0]; });
+    if ('workCountry' in ch) ch.workCountryCode = CC[ch.workCountry] || '';
+    if ('nationality' in ch) ch.nationalityCode = CC[ch.nationality] || '';
+    var kids = {};
+    $$('#admDrawer [data-child]').forEach(function (sec) {
+      var rows = $$('tbody tr', sec).map(function (tr) { return $$('.ed-c', tr).map(function (i) { return i.value.trim(); }); }).filter(function (r) { return r.some(String); });
+      if (JSON.stringify(rows) !== sec.getAttribute('data-orig')) { kids[sec.getAttribute('data-child')] = rows; n++; }
+    });
+    var nf = Object.keys(ED.files).filter(function (k) { return ED.files[k] && ED.files[k].length; }).length;
+    return { changes: ch, kids: kids, n: n + nf };
+  }
+  function readB64(file) {
+    return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(',')[1]); }; fr.onerror = rej; fr.readAsDataURL(file); });
+  }
+  function edSave(btn) {
+    var ref = S.open, r = (S.data.rows || []).filter(function (v) { return v.ref === ref; })[0];
+    if (!r || btn.disabled) return;
+    var c = edCollect();
+    if (!c.n) { A.toast(x('edNone')); return; }
+    var big = []; Object.keys(ED.files).forEach(function (k) { Array.prototype.forEach.call(ED.files[k] || [], function (f) { if (f.size > 10 * 1024 * 1024) big.push(f.name); }); });
+    if (big.length) { A.toast(x('edBig') + ' ' + big.join('، ')); return; }
+    var lbl = $('span', btn), old = lbl.textContent;
+    btn.disabled = true; lbl.textContent = x('edSaving');
+    var code = readCode();
+    var p;
+    if (A.DEMO) {
+      Object.keys(c.changes).forEach(function (k) { r[k] = c.changes[k]; });
+      p = new Promise(function (res) { setTimeout(res, 500); });
+    } else {
+      var body = { action: 'adminUpdate', code: code, ref: ref, changes: c.changes };
+      Object.keys(c.kids).forEach(function (k) { body[k] = c.kids[k]; });
+      p = (Object.keys(c.changes).length || Object.keys(c.kids).length ? A.api(body) : Promise.resolve()).then(function () {
+        var jobs = [];
+        Object.keys(ED.files).forEach(function (k) { var fl = Array.prototype.slice.call(ED.files[k] || []); fl.forEach(function (f, i) { jobs.push({ k: k, f: f, idx: i + 1, total: fl.length }); }); });
+        return jobs.reduce(function (pp, j, i) {
+          return pp.then(function () {
+            lbl.textContent = x('edUploading', { i: i + 1, n: jobs.length });
+            return readB64(j.f).then(function (b64) { return A.api({ action: 'adminUpload', code: code, ref: ref, kind: j.k, idx: j.idx, total: j.total, mime: j.f.type || 'application/octet-stream', data: b64 }); });
+          });
+        }, Promise.resolve()).then(function () { if (ED.files.photo) delete PHOTOS[ref]; });
+      }).then(function () { return load(code, true); });
+    }
+    p.then(function () {
+      S.edit = null; ED.files = {};
+      if (A.DEMO) draw();
+      if ((S.data.rows || []).some(function (v) { return v.ref === ref; })) openDrawer(ref);
+      A.toast(x('edSaved'));
+    }).catch(function (e) {
+      btn.disabled = false; lbl.textContent = old;
+      A.toast(x('edFail') + ((e && e.message) ? ' · ' + e.message : ''));
+    });
   }
 
   /* ---------------------------------------------------------- بطاقة المنسوب داخل التفاصيل
@@ -882,8 +1011,13 @@
         else if (a === 'lock') { dropCode(); S.data = null; S.err = ''; closeDrawer(); draw(); }
         else if (a === 'more') { S.shown += PAGE; drawTable(); }
         else if (a === 'clear') { S.f = { q: '', country: '', nat: '', entity: '', status: '', emp: '', gender: '', doc: '' }; redrawPanel(); }
-        else if (a === 'close') closeDrawer();
+        else if (a === 'close') { if (S.edit && edCollect().n) { A.toast(x('edDirty')); return; } closeDrawer(); }
         else if (a === 'print') window.print();
+        else if (a === 'edit') { S.edit = S.open; ED.files = {}; openDrawer(S.open); var db = $('#admDrawer .dr-body'); if (db) db.scrollTop = 0; }
+        else if (a === 'edCancel') { S.edit = null; ED.files = {}; openDrawer(S.open); }
+        else if (a === 'edSave') edSave(act);
+        else if (a === 'edAddRow') { var tb = act.closest('[data-child]'); var tmp = document.createElement('tbody'); tmp.innerHTML = act.getAttribute('data-tpl'); $('tbody', tb).appendChild(tmp.firstChild); var fi = $('tbody tr:last-child .ed-c', tb); if (fi) fi.focus(); }
+        else if (a === 'edDelRow') { var trr = act.closest('tr'); if (trr) trr.remove(); }
         else if (a === 'cardFlip') { var ic = $('#drCard .idcard'); if (ic) ic.classList.toggle('flipped'); }
         else if (a === 'cardPng') cardPng(act);
         return;
@@ -932,12 +1066,21 @@
     });
     document.addEventListener('keydown', function (e) {
       if (A.state.view !== 'admin') return;
-      if (e.key === 'Escape') { if (S.open) closeDrawer(); else closeDDs(); }
+      if (e.key === 'Escape') { if (S.open && S.edit && edCollect().n) { A.toast(x('edDirty')); return; } if (S.open) closeDrawer(); else closeDDs(); }
       if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('#drCard .idcard')) { e.preventDefault(); e.target.classList.toggle('flipped'); }
       if (e.key === 'Enter' && e.target.matches && e.target.matches('#admRows tr[data-ref], .pay-row[data-ref]')) openDrawer(e.target.getAttribute('data-ref'));
     });
+    document.addEventListener('change', function (e) {
+      var fk = e.target && e.target.getAttribute && e.target.getAttribute('data-fk');
+      if (!fk) return;
+      ED.files[fk] = e.target.files && e.target.files.length ? Array.prototype.slice.call(e.target.files) : null;
+      var pk = $('[data-picked="' + fk + '"]');
+      if (pk) pk.textContent = ED.files[fk] ? x('edPicked') + ' ' + ED.files[fk].map(function (f) { return f.name; }).join('، ') : '';
+    });
     var qT = 0;
     document.addEventListener('input', function (e) {
+      var ek = e.target.getAttribute && e.target.getAttribute('data-ek');
+      if (ek) { e.target.classList.toggle('dirty', e.target.value.trim() !== (e.target.getAttribute('data-orig') || '').trim()); return; }
       if (e.target.id !== 'admQ') return;
       clearTimeout(qT); var v = e.target.value;
       qT = setTimeout(function () { S.f.q = v; S.shown = PAGE; drawTable(); }, 160);
