@@ -1594,10 +1594,13 @@
 
   /* ---------------------------------------------------------- تصدير البطاقة صورةً عالية الجودة */
   function loadImg2(src) { return new Promise(function (res) { if (!src) return res(null); var im = new Image(); im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = src; }); }
-  function exportCard() {
+  /* opt.mail: الوجهان فقط فوق بعضهما على خلفية بيضاء (لصورة البطاقة في رسالة البريد) */
+  function exportCard(opt) {
+    opt = opt || {}; var MAIL = !!opt.mail;
     var c = cardData(), L = c.L, rtl = L === 'ar';
-    var CW = 1012, CH = 638, M = 110, GAP = 90, HEAD = 250, FOOT = 120;
+    var CW = 1012, CH = 638, M = 110, GAP = 90, HEAD = 250, FOOT = 120, MP = 44, MG = 56;
     var SW = M * 2 + CW * 2 + GAP, SH = HEAD + 80 + CH + 70 + FOOT, Q = 1.35;
+    if (MAIL) { SW = CW + MP * 2; SH = CH * 2 + MG + MP * 2; Q = opt.q || 1; }
     var cv = document.createElement('canvas'); cv.width = Math.round(SW * Q); cv.height = Math.round(SH * Q);
     var x = cv.getContext('2d'); x.scale(Q, Q);
     var F = function (w, px, mono) { return w + ' ' + px + 'px ' + (mono ? '"IBM Plex Mono", monospace' : '"Tajawal", sans-serif'); };
@@ -1624,6 +1627,8 @@
       loadImg2(bnyW && bnyW.src), loadImg2(c.photo && c.photo.thumb), loadImg2((c.em || c.el || {}).src), loadImg2(c.showEnt && c.el ? c.el.src : null)
     ]).then(function (r) {
       var bny = r[1], photo = r[2], elogo = r[3], efull = r[4], c1 = c.th[0], c2 = c.th[1], ca = c.th[2];
+      if (MAIL) { x.fillStyle = opt.bg || '#ffffff'; x.fillRect(0, 0, SW, SH); }
+      else {
       /* الخلفية */
       var bg = x.createLinearGradient(0, 0, 0, SH); bg.addColorStop(0, '#f4f6fb'); bg.addColorStop(1, '#e7ecf4');
       x.fillStyle = bg; x.fillRect(0, 0, SW, SH);
@@ -1641,11 +1646,14 @@
       txt(c.nameAr ? c.nameAr + (c.latin ? '  ·  ' + c.latin : '') : (c.latin || '—'), tx0, 170, { size: 34, w: 700, color: '#f3dca6', align: al, dir: rtl ? 'rtl' : 'ltr', max: SW - M * 2 - 600 });
       txt(c.ref, rtl ? M : SW - M, 108, { size: 34, w: 500, mono: 1, color: '#e3c485', align: rtl ? 'left' : 'right', dir: 'ltr', ls: 2 });
       txt(t('m.ref'), rtl ? M : SW - M, 160, { size: 24, w: 700, color: 'rgba(255,255,255,.6)', align: rtl ? 'left' : 'right' });
+      }
       /* مواضع الوجهين */
-      var yC = HEAD + 80, xF = rtl ? M + CW + GAP : M, xB = rtl ? M : M + CW + GAP;
-      [xF, xB].forEach(function (px, i) {
-        txt(i ? t('ex.back') : t('ex.front'), rtl ? px + CW : px, yC - 22, { size: 24, w: 800, color: '#6f561f', align: rtl ? 'right' : 'left' });
-        x.save(); x.shadowColor = 'rgba(22,41,74,.28)'; x.shadowBlur = 50; x.shadowOffsetY = 22; rr(px, yC, CW, CH, 46); x.fillStyle = '#000'; x.fill(); x.restore();
+      var yC = HEAD + 80, xF = rtl ? M + CW + GAP : M, xB = rtl ? M : M + CW + GAP, yB = yC;
+      if (MAIL) { yC = MP; yB = MP + CH + MG; xF = xB = MP; }
+      [[xF, yC], [xB, yB]].forEach(function (pp, i) {
+        var px = pp[0], py = pp[1];
+        if (!MAIL) txt(i ? t('ex.back') : t('ex.front'), rtl ? px + CW : px, py - 22, { size: 24, w: 800, color: '#6f561f', align: rtl ? 'right' : 'left' });
+        x.save(); x.shadowColor = MAIL ? 'rgba(22,41,74,.22)' : 'rgba(22,41,74,.28)'; x.shadowBlur = MAIL ? 34 : 50; x.shadowOffsetY = MAIL ? 14 : 22; rr(px, py, CW, CH, 46); x.fillStyle = '#000'; x.fill(); x.restore();
       });
       /* ===== الوجه الأمامي */
       var X0 = xF, Y0 = yC, pad = 38;
@@ -1695,7 +1703,7 @@
       txt(c.l2, X0 + pad, Y0 + CH - 28, { size: 25, w: 500, mono: 1, color: 'rgba(255,255,255,.78)', dir: 'ltr', align: 'left', ls: 5 });
       x.restore();
       /* ===== الوجه الخلفي */
-      X0 = xB;
+      X0 = xB; Y0 = yB;
       x.save(); rr(X0, Y0, CW, CH, 46); x.clip();
       var bk = x.createLinearGradient(X0, Y0, X0 + CW * .4, Y0 + CH); bk.addColorStop(0, '#ffffff'); bk.addColorStop(1, mix('#ffffff', c1, .06));
       x.fillStyle = bk; x.fillRect(X0, Y0, CW, CH);
@@ -1735,6 +1743,7 @@
       while (bx < 640) { seed = (seed * 1103515245 + 12345) >>> 0; var bw3 = (1 + (seed >> 16) % 3) * 2.66; x.fillRect((rtl ? X0 + CW - pad - bx - bw3 : X0 + pad + bx), BY, bw3, 70); bx += bw3 + 2.66 * (1 + ((seed >> 8) % 3)); }
       x.restore();
       /* التذييل */
+      if (MAIL) return cv;
       var today2 = new Date(), iso = today2.getFullYear() + '-' + ('0' + (today2.getMonth() + 1)).slice(-2) + '-' + ('0' + today2.getDate()).slice(-2);
       txt(t('ex.foot', { d: fmtDate(iso) }), SW / 2, SH - 52, { size: 24, w: 600, color: '#5f7286', align: 'center', dir: rtl ? 'rtl' : 'ltr' });
       return cv;
@@ -2304,7 +2313,8 @@
     api: api, toast: toast, $: $, $$: $$, globeLabel: globeLabel, hqText: hqText, hqTip: hqTip, pointFmt: pointFmt,
     num: function (n) { return state.lang === 'ar' ? arDigits(n) : String(n); },
     card: { render: function (sel, rec, photo) { withRec(rec, photo, function () { renderCard(sel); }); },
-      png: function (rec, photo) { return withRec(rec, photo, function () { return exportCard(); }).then(function (cv) { return cv.toDataURL('image/png'); }); } }
+      png: function (rec, photo) { return withRec(rec, photo, function () { return exportCard(); }).then(function (cv) { return cv.toDataURL('image/png'); }); },
+      mailJpg: function (rec, photo) { return withRec(rec, photo, function () { return exportCard({ mail: true }); }).then(function (cv) { return cv.toDataURL('image/jpeg', 0.9); }); } }
   };
   /* بطاقة منسوب من سجل الجدول (كما تعيده لوحة الموارد البشرية): تُحوَّل قيمه إلى صيغة النموذج مؤقتًا ثم تُعاد الحالة كما كانت */
   function recToData(r) {
