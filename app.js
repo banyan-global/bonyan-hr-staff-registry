@@ -1104,8 +1104,10 @@
   function mrzClean(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '<'); }
   function yymmdd(iso) { return iso ? iso.slice(2, 4) + iso.slice(5, 7) + iso.slice(8, 10) : '<<<<<<'; }
   function pad(s, n) { s = s.slice(0, n); while (s.length < n) s += '<'; return s; }
-  function latinName(d) { return [d.firstName, d.fatherName, d.grandName, d.lastName].filter(Boolean).join(' ').toUpperCase(); }
-  function arabicName(d) { return [d.firstNameAr, d.fatherNameAr, d.grandNameAr, d.lastNameAr].filter(Boolean).join(' '); }
+  /* تُزال المسافات الزائدة في أول الاسم وآخره وبين أجزائه */
+  function joinName(a) { return a.map(function (v) { return String(v || '').replace(/\s+/g, ' ').trim(); }).filter(Boolean).join(' '); }
+  function latinName(d) { return joinName([d.firstName, d.fatherName, d.grandName, d.lastName]).toUpperCase(); }
+  function arabicName(d) { return joinName([d.firstNameAr, d.fatherNameAr, d.grandNameAr, d.lastNameAr]); }
   var EX_ICON = '<svg class="ex-ic" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4.5" width="15" height="10" rx="2"/><path d="M6 17.5h8M10 7v4.5m0 0-2-2m2 2 2-2"/></svg>';
   function cardData() {
     var d = state.data, L = state.lang;

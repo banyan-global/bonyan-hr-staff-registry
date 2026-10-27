@@ -519,7 +519,7 @@ function colLetter_(n) {
 }
 function normalize_(v) { return String(v || '').replace(/\s/g, '').toUpperCase(); }
 function cc_(v) { v = String(v || '').trim().toUpperCase(); return /^[A-Z]{2}$/.test(v) ? v : ''; }
-function safeText_(v) { v = String(v == null ? '' : v); return /^[=+\-@]/.test(v) ? "'" + v : v; }
+function safeText_(v) { v = String(v == null ? '' : v).replace(/[ \t\u00a0]+/g, ' ').replace(/ ?\n ?/g, '\n').trim(); return /^[=+\-@]/.test(v) ? "'" + v : v; }
 function digits_(v) { return String(v || '').replace(/\D/g, ''); }
 function escHtml_(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 /* يضمن وجود صفوف كافية؛ الإدراج داخل النطاق يوسّع التنسيقات والقواعد الشرطية تلقائيًا */
