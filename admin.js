@@ -219,7 +219,7 @@
     var cls = n < 0 ? 'bad' : (n <= 90 ? 'warn' : 'ok');
     return '<span class="chip ' + cls + '" dir="ltr">' + esc(v) + '</span>' + (n < 0 ? ' <small class="exp-note bad">' + esc(x('expired')) + '</small>' : (n <= 90 ? ' <small class="exp-note warn">' + esc(x('soon', { n: n })) + '</small>' : ''));
   }
-  function stKey(v) { return /بانتظار/.test(v || '') ? 'stPend' : (/محد/.test(v || '') ? 'stUpd' : (v ? 'stDone' : '')); }
+  function stKey(v) { return /بانتظار/.test(v || '') ? 'stPend' : (v ? 'stDone' : ''); } /* «محدَّث» القديمة تُعامل «مكتمل» */
   function stText(v) { var k = stKey(v); return k ? x(k) : '—'; }
   function statusChip(v) {
     var cls = /بانتظار/.test(v) ? 'warn' : (/محد/.test(v) ? 'info' : 'ok');
@@ -263,7 +263,7 @@
     var rows = people.map(function (p, i) {
       var pl = place[i % place.length], wc = pl[0], nc = pl[1], abroad = wc !== nc, created = dt(-Math.floor(rnd() * 60));
       var r = {
-        ref: 'BNY-HR-' + wc + '-' + new Date().getFullYear() + '-' + ('000' + (i + 1)).slice(-4), status: i % 9 === 4 ? 'بانتظار المرفقات' : (i % 7 === 2 ? 'محدَّث' : 'مكتمل'),
+        ref: 'BNY-HR-' + wc + '-' + new Date().getFullYear() + '-' + ('000' + (i + 1)).slice(-4), status: i % 9 === 4 ? 'بانتظار المرفقات' : 'مكتمل',
         createdAt: created + ' ' + (8 + i % 10) + ':' + (10 + i * 7 % 50), updatedAt: created + ' ' + (9 + i % 10) + ':05', folder: '',
         fullNameLatin: p[0], fullNameAr: p[1], firstNameAr: p[1].split(' ')[0], lastNameAr: p[1].split(' ')[1], firstName: p[0].split(' ')[0], lastName: p[0].split(' ')[1], gender: p[2], birthDate: dt(-365 * (24 + Math.floor(rnd() * 25))), birthCountry: cc2name(nc), birthCity: '',
         nationality: A.cname(nc, 'ar'), otherNationality: '', workCountry: A.cname(wc, 'ar'), maritalStatus: pick(['متزوج', 'أعزب', 'متزوج']), dependents: String(Math.floor(rnd() * 5)), bloodType: pick(['O+', 'A+', 'B+', 'AB+', 'O-']),
@@ -485,7 +485,7 @@
         card(x('cEntT'), hbars(ents, { filter: 'entity' }), 'span2') +
         card(x('cNatT'), hbars(nats, { filter: 'nat', label: function (cc) { return cc === '__other' ? esc(x('other')) : A.flag(cc) + esc(cc2name(cc)); } })) +
         card(x('cGenT'), split([[x('male'), g.male || 0, 'c1'], [x('female'), g.female || 0, 'c2']].concat(g.unknown ? [[x('unknown'), g.unknown, 'c0']] : []))) +
-        card(x('cStT'), split([[x('stDone'), st.stDone || 0, 's-ok'], [x('stUpd'), st.stUpd || 0, 's-info'], [x('stPend'), st.stPend || 0, 's-warn']])) +
+        card(x('cStT'), split([[x('stDone'), st.stDone || 0, 's-ok'], [x('stPend'), st.stPend || 0, 's-warn']])) +
         card(x('cEmpT'), hbars(emps, { filter: 'emp', label: function (v) { return esc(loc('employmentType', v)); } })) +
         card(x('cWeekT'), '<div class="cols" role="img">' + wk.map(function (w, i) {
           var h = maxW ? w.n / maxW * 100 : 0, lb = w.from.getDate() + '/' + (w.from.getMonth() + 1);
@@ -812,7 +812,7 @@
   function edOpts(k) {
     var D = (window.I18N || {}).ar || {}, out = [];
     if (ED_COUNTRY.indexOf(k) > -1) return (window.COUNTRIES || []).map(function (c) { return c[1]; });
-    if (k === 'status') return ['مكتمل', 'محدَّث', 'بانتظار المرفقات'];
+    if (k === 'status') return ['مكتمل', 'بانتظار المرفقات'];
     if (k === 'entity') return (A.CFG.ENTITIES || []).map(function (e) { return e.ar; });
     if (k === 'currency') { Object.keys(D).forEach(function (kk) { var m = /^cur\.([A-Z]{3})$/.exec(kk); if (m) out.push(m[1]); }); return out; }
     var f = k === 'em2Relation' ? 'em1Relation' : k;

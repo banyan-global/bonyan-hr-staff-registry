@@ -515,7 +515,7 @@ function finalize_(b) {
   var row = rowOf_(sh, b.ref);
   var cache = CacheService.getScriptCache();
   var updated = cache.get('upd_' + b.ref) === '1';
-  sh.getRange(row, col_('status')).setValue(updated ? 'محدَّث' : 'مكتمل');
+  sh.getRange(row, col_('status')).setValue('مكتمل'); /* السجل المكتمل أو المحدَّث كلاهما «مكتمل» */
   cache.remove('countries');
   cache.remove('tok_' + b.ref);
   cache.put('done_' + b.ref, b.token, 3600);
@@ -583,7 +583,7 @@ function adminUpdate_(b) {
     });
     if (!done.length) return { ok: true, changed: 0 };
     sh.getRange(row, col_('updatedAt')).setValue(fmtNow_(new Date()));
-    if (!statusSet) sh.getRange(row, col_('status')).setValue('محدَّث');
+    if (!statusSet && sh.getRange(row, col_('status')).getValue() === 'محدَّث') sh.getRange(row, col_('status')).setValue('مكتمل');
     CacheService.getScriptCache().remove('countries');
     log_(b.ref, 'تعديل من لوحة الموارد البشرية', who + ' · ' + done.join(' | '));
     return { ok: true, changed: done.length };
