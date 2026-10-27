@@ -27,7 +27,7 @@ var CONFIG = {
 var MAIN_COLS = [
   ['ref', 'الرقم المرجعي', 's'], ['status', 'الحالة', 's'], ['createdAt', 'تاريخ التسجيل', 's'], ['updatedAt', 'آخر تحديث', 's'],
   ['folder', 'مجلد المرفقات', 's'],
-  ['fullNameLatin', 'الاسم كما في الجواز', 't'], ['fullNameAr', 'الاسم بالعربية', 't'],
+  ['fullNameAr', 'الاسم بالعربية', 't'], ['fullNameLatin', 'الاسم كما في الجواز', 't'],
   ['firstNameAr', 'الاسم الأول', 't'], ['fatherNameAr', 'اسم الأب', 't'], ['grandNameAr', 'اسم الجد', 't'], ['lastNameAr', 'اسم العائلة', 't'],
   ['firstName', 'First name', 't'], ['fatherName', 'Father name', 't'], ['grandName', 'Grandfather name', 't'], ['lastName', 'Family name', 't'],
   ['gender', 'الجنس', 't'], ['birthDate', 'تاريخ الميلاد', 'd'], ['birthCountry', 'دولة الميلاد', 't'], ['birthCity', 'مدينة الميلاد', 't'],
@@ -98,6 +98,7 @@ function getRoot_(create) {
 /* إعادة ضبط ورقة «المنسوبون»: العناوين، عدد الأعمدة، التنسيقات، الألوان، الأعمدة المخفية، وقواعد تنبيه الانتهاء */
 function layoutMain_(main) {
   var n = MAIN_COLS.length, want = MAIN_COLS.map(function (c) { return c[1]; });
+  reorderMain_(main, want);
   if (main.getMaxColumns() < n) main.insertColumnsAfter(main.getMaxColumns(), n - main.getMaxColumns());
   if (main.getMaxColumns() > n) {
     var extra = main.getRange(1, n + 1, Math.max(1, main.getLastRow()), main.getMaxColumns() - n).getValues();
@@ -117,17 +118,32 @@ function layoutMain_(main) {
   });
   main.setColumnWidths(1, n, 160);
   main.setColumnWidth(col_('ref'), 190);
+  main.setColumnWidth(col_('fullNameAr'), 230);
   main.setColumnWidth(col_('fullNameLatin'), 230);
   main.setColumnWidth(col_('folder'), 110);
   main.hideColumns(col_('folderId'));
   main.setFrozenRows(1);
-  main.setFrozenColumns(col_('fullNameLatin'));
+  main.setFrozenColumns(col_('fullNameAr')); /* المثبّت هو الاسم بالعربية */
   main.getBandings().forEach(function (b) { b.remove(); });
   main.getRange(1, 1, main.getMaxRows(), n).applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, true, false)
     .setHeaderRowColor(CONFIG.COLORS.navy).setFirstRowColor(CONFIG.COLORS.white).setSecondRowColor(CONFIG.COLORS.band);
   main.setConditionalFormatRules([]);
   addExpiryRules_(main);
   main.getRange(1, 1).setNote('Bonyan HR · Global Staff Registry · ' + n + ' عمودًا');
+}
+/* إذا كانت عناوين الجدول هي نفسها لكن بترتيب مختلف (تغيّر ترتيب MAIN_COLS)، تُنقل الأعمدة كاملة
+   بقيمها وصيغها وروابطها وتنسيقها إلى الترتيب الجديد، فلا تنزاح أي بيانات عن عنوانها */
+function reorderMain_(main, want) {
+  var lc = main.getLastColumn(); if (lc < 1) return;
+  var head = main.getRange(1, 1, 1, lc).getValues()[0].map(String);
+  if (!want.every(function (h) { return head.indexOf(h) > -1; })) return;
+  for (var j = 0; j < want.length; j++) {
+    var cur = head.indexOf(want[j]);
+    if (cur === j) continue;
+    if (main.getFrozenColumns()) main.setFrozenColumns(0);
+    main.moveColumns(main.getRange(1, cur + 1, 1, 1), j + 1);
+    head.splice(j, 0, head.splice(cur, 1)[0]);
+  }
 }
 /* تشغيل يدوي عند الحاجة: يصلح ترتيب أعمدة الجدول دون المساس بالبيانات */
 function repairSheet() { layoutMain_(getSS_(false).getSheetByName(CONFIG.SHEETS.main)); Logger.log('✅ تم ضبط أعمدة الجدول'); }
@@ -355,6 +371,7 @@ function submit_(p) {
       ref = sh.getRange(rowIdx, col_('ref')).getValue();
       var fid = sh.getRange(rowIdx, col_('folderId')).getValue();
       try { folder = DriveApp.getFolderById(fid); } catch (e2) { folder = null; }
+      if (folder) { try { var fnm = folderName_(ref, ar); if (folder.getName() !== fnm) folder.setName(fnm); } catch (e3) { } }
     } else {
       ref = nextRef_(raw.workCountry);
     }
@@ -545,12 +562,21 @@ function nextRef_(cc) {
   return CONFIG.REF_PREFIX + '-' + String(cc || 'XX').toUpperCase() + '-' + year + '-' + ('0000' + n).slice(-4);
 }
 
+/* أسماء المجلدات بالعربية: مجلد الدولة «السعودية»، ومجلد المنسوب «الرقم المرجعي · الاسم بالعربية» */
+function folderName_(ref, ar) {
+  var nm = String(ar.fullNameAr || ar.fullNameLatin || '').replace(/[\\\/:*?"<>|\n\r]+/g, '-').replace(/\s+/g, ' ').trim();
+  return ref + (nm ? ' · ' + nm : '');
+}
 function employeeFolder_(ref, ar) {
   var root = getRoot_(false);
-  var countryName = (ar.workCountry || 'غير محدد') + (ar.workCountryEn ? ' · ' + ar.workCountryEn : '');
-  var it = root.getFoldersByName(countryName);
-  var country = it.hasNext() ? it.next() : root.createFolder(countryName);
-  return country.createFolder(ref + ' · ' + (ar.fullNameLatin || ''));
+  var countryName = ar.workCountry || 'غير محدد';
+  var it = root.getFoldersByName(countryName), country = it.hasNext() ? it.next() : null;
+  if (!country && ar.workCountryEn) {
+    var old = root.getFoldersByName(countryName + ' · ' + ar.workCountryEn);
+    if (old.hasNext()) { country = old.next(); country.setName(countryName); }
+  }
+  if (!country) country = root.createFolder(countryName);
+  return country.createFolder(folderName_(ref, ar));
 }
 
 function replaceChildRows_(sh, ref, rows) {

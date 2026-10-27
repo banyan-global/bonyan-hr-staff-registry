@@ -1166,7 +1166,7 @@
         '<dl class="ic-back">' +
           '<div><dt>' + esc(t('card.ref')) + '</dt><dd dir="ltr" class="mono">' + esc(ref) + '</dd></div>' +
           '<div><dt>' + esc(t('card.emergency')) + '</dt><dd dir="auto">' + esc(em) + '</dd></div>' +
-          '<div><dt>' + esc(t('card.blood')) + '</dt><dd>' + esc(d.bloodType ? optLabel(FIELD.bloodType, d.bloodType) : '—') + '</dd></div>' +
+          '<div><dt>' + esc(t('card.blood')) + '</dt><dd><bdi dir="ltr">' + esc(d.bloodType ? optLabel(FIELD.bloodType, d.bloodType) : '—') + '</bdi></dd></div>' +
           '<div><dt>' + esc(t('card.passport')) + '</dt><dd>' + esc(d.passportExpiry ? fmtDate(d.passportExpiry) : '—') + '</dd></div>' +
           '<div><dt>' + esc(t('card.since')) + '</dt><dd>' + esc(st0 ? fmtDate(st0) : '—') + '</dd></div>' +
           '<div><dt>' + esc(t('card.svcT')) + '</dt><dd class="gold">' + esc(svc || '—') + '</dd></div>' +
@@ -1199,6 +1199,16 @@
     var flipped = $('.idcard.flipped', wrap);
     wrap.innerHTML = cardHTML();
     if (flipped) $('.idcard', wrap).classList.add('flipped');
+    zoomCard(wrap);
+    if (cardRO) cardRO.observe(wrap);
+  }
+  /* البطاقة مصممة على عرض 380px؛ في الشاشات الأضيق تُصغَّر كاملةً بنفس النسب بدل أن تتزاحم عناصرها فوق بعض */
+  var cardRO = window.ResizeObserver ? new ResizeObserver(function (es) { es.forEach(function (e) { zoomCard(e.target); }); }) : null;
+  function zoomCard(wrap) {
+    var c = $('.idcard', wrap), w = wrap.clientWidth;
+    if (!c || !w) return;
+    if (w >= 379 || wrap.closest('.side-card-box')) { c.style.width = ''; c.style.zoom = ''; return; }
+    c.style.width = '380px'; c.style.zoom = (w / 380).toFixed(4);
   }
   function bindCard() {
     document.addEventListener('pointermove', function (e) {
@@ -1657,14 +1667,14 @@
       txt('STAFF · HR', rtl ? sx(used) : sx(used), topY + 92, { size: 22, w: 500, mono: 1, color: ca, align: rtl ? 'right' : 'left', dir: 'ltr', ls: 5 });
       if (bny) { var bh = 74, bw2 = bh * bny.width / bny.height; x.drawImage(bny, rtl ? X0 + pad : X0 + CW - pad - bw2, topY + (plateH - bh) / 2, bw2, bh); }
       /* الصورة */
-      var phW = 238, phH = 306, phY = Y0 + 180, phX = sx(pad, phW);
+      var phW = 238, phH = 306, phY = Y0 + 180, phX = X0 + pad; /* الصورة على اليسار دائمًا */
       rr(phX, phY, phW, phH, 22); x.fillStyle = 'rgba(255,255,255,.1)'; x.fill();
       x.save(); rr(phX, phY, phW, phH, 22); x.clip();
       if (photo) { var kk = Math.max(phW / photo.width, phH / photo.height); x.drawImage(photo, phX + (phW - photo.width * kk) / 2, phY + (phH - photo.height * kk) / 2, photo.width * kk, photo.height * kk); }
       else { x.fillStyle = 'rgba(255,255,255,.3)'; x.beginPath(); x.arc(phX + phW / 2, phY + phH * .4, phW * .22, 0, Math.PI * 2); x.fill(); x.beginPath(); x.ellipse(phX + phW / 2, phY + phH * 1.02, phW * .42, phH * .34, 0, 0, Math.PI * 2); x.fill(); }
       x.restore(); rr(phX, phY, phW, phH, 22); x.lineWidth = 6; x.strokeStyle = ca; x.stroke();
       /* البيانات */
-      var ix = rtl ? phX - 36 : phX + phW + 36, ia = rtl ? 'right' : 'left', iw = CW - pad * 2 - phW - 36, iy = phY + 34;
+      var ix = rtl ? X0 + CW - pad : phX + phW + 36, ia = rtl ? 'right' : 'left', iw = CW - pad * 2 - phW - 36, iy = phY + 34;
       if (c.nameAr) { txt(c.nameAr, ix, iy + 6, { size: 50, w: 900, color: '#fff', align: ia, dir: 'rtl', max: iw }); iy += 50; txt(c.latin || '', ix, iy, { size: 25, w: 700, color: 'rgba(255,255,255,.72)', align: ia, dir: 'ltr', max: iw, ls: 3 }); iy += 54; }
       else { txt(c.latin || 'YOUR NAME', ix, iy, { size: 40, w: 900, color: '#fff', align: ia, dir: 'ltr', max: iw, ls: 1 }); iy += 56; }
       if (c.d.jobTitle) { txt(c.d.jobTitle, ix, iy, { size: 32, w: 800, color: ca, align: ia, max: iw }); iy += 46; }

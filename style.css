@@ -560,8 +560,9 @@ html[dir="rtl"] .btn:hover .arr { transform: scaleX(-1) translateX(4px); }
 .ic-body { position: relative; display: flex; gap: 12px; align-items: center; min-height: 0; }
 .ic-photo { flex: none; width: 23%; aspect-ratio: 35 / 45; border-radius: 8px; overflow: hidden; background: rgba(255, 255, 255, .1); border: 2px solid var(--ca); display: grid; place-items: end center; color: rgba(255, 255, 255, .35); }
 .ic-photo img { width: 100%; height: 100%; object-fit: cover; }
+html[dir="rtl"] .ic-photo { order: 2; } /* الصورة على يسار البطاقة */
 .ic-photo svg { width: 86%; }
-.ic-info { min-width: 0; display: grid; gap: 1px; }
+.ic-info { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .ic-info p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ic-name-ar { font-family: var(--f-display); font-weight: 900; font-size: 1.12rem; line-height: 1.35; color: #fff; text-align: start; letter-spacing: 0; }
 .ic-name-ar.ic-latin { letter-spacing: .03em; }

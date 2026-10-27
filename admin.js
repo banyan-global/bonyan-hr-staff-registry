@@ -155,7 +155,7 @@
   var COLS = [
   ['ref', 'الرقم المرجعي', 's'], ['status', 'الحالة', 's'], ['createdAt', 'تاريخ التسجيل', 's'], ['updatedAt', 'آخر تحديث', 's'],
   ['folder', 'مجلد المرفقات', 's'],
-  ['fullNameLatin', 'الاسم كما في الجواز', 't'], ['fullNameAr', 'الاسم بالعربية', 't'],
+  ['fullNameAr', 'الاسم بالعربية', 't'], ['fullNameLatin', 'الاسم كما في الجواز', 't'],
   ['firstNameAr', 'الاسم الأول', 't'], ['fatherNameAr', 'اسم الأب', 't'], ['grandNameAr', 'اسم الجد', 't'], ['lastNameAr', 'اسم العائلة', 't'],
   ['firstName', 'First name', 't'], ['fatherName', 'Father name', 't'], ['grandName', 'Grandfather name', 't'], ['lastName', 'Family name', 't'],
   ['gender', 'الجنس', 't'], ['birthDate', 'تاريخ الميلاد', 'd'], ['birthCountry', 'دولة الميلاد', 't'], ['birthCity', 'مدينة الميلاد', 't'],
@@ -186,7 +186,7 @@
   ['workCountryCode', 'رمز دولة العمل', 's'], ['nationalityCode', 'رمز الجنسية', 's']
 ];
   var GROUPS = [
-    ['id', ['fullNameLatin', 'fullNameAr', 'firstNameAr', 'fatherNameAr', 'grandNameAr', 'lastNameAr', 'firstName', 'fatherName', 'grandName', 'lastName', 'gender', 'birthDate', 'birthCountry', 'birthCity', 'nationality', 'otherNationality', 'maritalStatus', 'dependents', 'bloodType']],
+    ['id', ['fullNameAr', 'fullNameLatin', 'firstNameAr', 'fatherNameAr', 'grandNameAr', 'lastNameAr', 'firstName', 'fatherName', 'grandName', 'lastName', 'gender', 'birthDate', 'birthCountry', 'birthCity', 'nationality', 'otherNationality', 'maritalStatus', 'dependents', 'bloodType']],
     ['docs', ['passportNo', 'passportCountry', 'passportIssue', 'passportExpiry', 'nationalIdNo', 'nationalIdExpiry', 'permitNo', 'permitOccupation', 'permitIssue', 'permitExpiry', 'workPermitNo', 'workPermitExpiry', 'insuranceNo', 'npwp', 'bpjsTk', 'bpjsKes', 'kraPin', 'nssfNo', 'shaNo', 'tin']],
     ['contact', ['officialEmail', 'personalEmail', 'mobile', 'whatsapp', 'addrCountry', 'addrRegion', 'addrCity', 'homeCountry', 'homeCity']],
     ['em', ['em1Name', 'em1Relation', 'em1Phone', 'em2Name', 'em2Relation', 'em2Phone']],
@@ -580,7 +580,7 @@
       }).join('') + '</tr></thead><tbody id="admRows">' + page.map(function (r, i) {
         var ph = files(r.photo)[0], th = driveThumb(ph);
         return '<tr data-ref="' + esc(r.ref) + '" tabindex="0" style="--i:' + Math.min(i, 20) + '">' +
-          '<td><span class="who"><span class="av">' + (th ? '<img src="' + esc(th) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<i>' + esc(initials(r.fullNameLatin)) + '</i></span><span class="who-t"><b dir="ltr">' + esc(r.fullNameLatin) + '</b><small>' + esc(r.fullNameAr || '') + '</small></span></span></td><td>' + statusChip(r.status) + '</td>' +
+          '<td><span class="who"><span class="av">' + (th ? '<img src="' + esc(th) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<i>' + esc(initials(r.fullNameLatin)) + '</i></span><span class="who-t"><b>' + esc(r.fullNameAr || r.fullNameLatin) + '</b><small dir="ltr">' + esc(r.fullNameAr ? r.fullNameLatin : '') + '</small></span></span></td><td>' + statusChip(r.status) + '</td>' +
           '<td><code dir="ltr">' + esc(r.ref) + '</code></td><td>' + esc(r.entity || '—') + '</td><td>' + esc(r.jobTitle || '—') + '</td>' +
           '<td><span class="cty">' + A.flag(r.workCountryCode) + esc(cc2name(r.workCountryCode, r.workCountry)) + '</span></td>' +
           '<td><span class="cty">' + A.flag(r.nationalityCode) + esc(cc2name(r.nationalityCode, r.nationality)) + '</span></td>' +
