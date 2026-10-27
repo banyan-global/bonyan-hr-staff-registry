@@ -1101,7 +1101,7 @@
     return '<img class="' + cls + '" src="' + d.src + '" width="' + d.w + '" height="' + d.h + '" alt="' + esc(alt) + '" decoding="async">';
   }
   /* ---------------------------------------------------------- بطاقة المنسوب الحيّة */
-  function mrzClean(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '<'); }
+  function mrzClean(s) { return String(s || '').replace(/\s+/g, ' ').trim().toUpperCase().replace(/[^A-Z0-9]/g, '<'); }
   function yymmdd(iso) { return iso ? iso.slice(2, 4) + iso.slice(5, 7) + iso.slice(8, 10) : '<<<<<<'; }
   function pad(s, n) { s = s.slice(0, n); while (s.length < n) s += '<'; return s; }
   /* تُزال المسافات الزائدة في أول الاسم وآخره وبين أجزائه */
