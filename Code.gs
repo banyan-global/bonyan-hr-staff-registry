@@ -270,6 +270,20 @@ function checkAdmin_(code) {
   if (!who) { Utilities.sleep(700); log_('', 'محاولة دخول خاطئة', ''); throw new Error('bad_code'); }
   return who;
 }
+/* الصورة الشخصية لمنسوب واحد (للوحة الموارد البشرية فقط، برمز الدخول) لرسمها في بطاقته */
+function photo_(b) {
+  checkAdmin_(b.code);
+  var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.main);
+  var row = findRow_(sh, 'ref', function (v) { return v === b.ref; });
+  if (!row) throw new Error('not_found');
+  var u = linksOf_(sh.getRange(row, col_('photo')).getRichTextValue())[0] || '';
+  var m = /\/d\/([\w-]+)|[?&]id=([\w-]+)/.exec(u);
+  if (!m) return { ok: true, none: true };
+  var f = DriveApp.getFileById(m[1] || m[2]);
+  var blob = f.getSize() > 2500000 ? f.getThumbnail() : f.getBlob();
+  if (!blob) return { ok: true, none: true };
+  return { ok: true, mime: blob.getContentType() || 'image/jpeg', b64: Utilities.base64Encode(blob.getBytes()) };
+}
 function audit_() {
   try {
     var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.log), n = sh ? sh.getLastRow() : 0;
@@ -326,6 +340,7 @@ function doPost(e) {
     if (body.action === 'upload') return json_(upload_(body));
     if (body.action === 'finalize') return json_(finalize_(body));
     if (body.action === 'list') return json_(list_(body.code));
+    if (body.action === 'photo') return json_(photo_(body));
     return json_({ ok: false, error: 'unknown action' });
   } catch (err) {
     log_('', 'خطأ', String(err && err.stack || err));

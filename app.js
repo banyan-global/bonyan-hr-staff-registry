@@ -1108,6 +1108,8 @@
   function joinName(a) { return a.map(function (v) { return String(v || '').replace(/\s+/g, ' ').trim(); }).filter(Boolean).join(' '); }
   function latinName(d) { return joinName([d.firstName, d.fatherName, d.grandName, d.lastName]).toUpperCase(); }
   function arabicName(d) { return joinName([d.firstNameAr, d.fatherNameAr, d.grandNameAr, d.lastNameAr]); }
+  /* رقم الطوارئ كما يُعرض: من حقلي المقدمة والرقم، أو كما هو مخزّن في الجدول (لوحة الموارد البشرية) */
+  function emPhone(d) { return d.em1Full || (d.em1Phone ? '+' + dialOf(d.em1PhoneDial) + ' ' + d.em1Phone : ''); }
   var EX_ICON = '<svg class="ex-ic" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4.5" width="15" height="10" rx="2"/><path d="M6 17.5h8M10 7v4.5m0 0-2-2m2 2 2-2"/></svg>';
   function cardData() {
     var d = state.data, L = state.lang;
@@ -1123,7 +1125,7 @@
       photo: (state.files.photo || [])[0],
       l1: pad('P<' + mrzClean(d.nationality || '') + mrzClean(d.lastName || '') + '<<' + mrzClean([d.firstName, d.fatherName, d.grandName].filter(Boolean).join(' ')), 36),
       l2: pad(mrzClean(d.passportNo || '') + '<' + mrzClean(d.nationality || '') + yymmdd(d.birthDate) + (d.gender === 'female' ? 'F' : (d.gender === 'male' ? 'M' : '<')) + yymmdd(d.passportExpiry) + '<BONYANHR', 36),
-      emerg: d.em1Name ? d.em1Name + (d.em1Phone ? ' · \u2066+' + dialOf(d.em1PhoneDial) + ' ' + d.em1Phone + '\u2069' : '') : '—',
+      emerg: d.em1Name ? d.em1Name + (emPhone(d) ? ' · \u2066' + emPhone(d) + '\u2069' : '') : '—',
       blood: d.bloodType ? optLabel(FIELD.bloodType, d.bloodType) : '—'
     };
   }
@@ -1135,7 +1137,7 @@
     var ref = (state.result && state.result.ref) || ('BNY-HR-' + (d.workCountry || '••') + '-' + new Date().getFullYear() + '-••••');
     var l1 = pad('P<' + mrzClean(d.nationality || '') + mrzClean(d.lastName || '') + '<<' + mrzClean([d.firstName, d.fatherName, d.grandName].filter(Boolean).join(' ')), 36);
     var l2 = pad(mrzClean(d.passportNo || '') + '<' + mrzClean(d.nationality || '') + yymmdd(d.birthDate) + (d.gender === 'female' ? 'F' : (d.gender === 'male' ? 'M' : '<')) + yymmdd(d.passportExpiry) + '<BONYANHR', 36);
-    var em = d.em1Name ? d.em1Name + (d.em1Phone ? ' · \u2066+' + dialOf(d.em1PhoneDial) + ' ' + d.em1Phone + '\u2069' : '') : '—';
+    var em = d.em1Name ? d.em1Name + (emPhone(d) ? ' · \u2066' + emPhone(d) + '\u2069' : '') : '—';
     var mainLogo = logoImg(CFG.MAIN_LOGO, 'ic-logo-img', CFG.MAIN_LOGO.name[L], true);
     var th = ent && ent.colors ? ent.colors : ['#2B3155', '#191D38', '#D9B67F'];
     var EL = window.ENTITY_LOGOS || {}, el = ent && ent.logo && EL[ent.logo];
@@ -1718,10 +1720,10 @@
         if (i === 0) { col = 0; row = 0; } else { col = (i - 1) % 3; row = 1 + Math.floor((i - 1) / 3); }
         var fx = rtl ? X0 + CW - pad - col * colW : X0 + pad + col * colW, yy = fy + row * 104;
         txt(f[0], fx, yy, { size: 22, w: 700, color: lab, align: rtl ? 'right' : 'left' });
-        if (i === 1 && c.d.em1Name && c.d.em1Phone) {
+        if (i === 1 && c.d.em1Name && emPhone(c.d)) {
           /* الطوارئ في سطرين: الاسم ثم الرقم، حتى لا يصغر الخط */
           txt(c.d.em1Name, fx, yy + 38, { size: 24, w: 800, color: '#1D2140', align: rtl ? 'right' : 'left', max: colW - 16 });
-          txt('+' + dialOf(c.d.em1PhoneDial) + ' ' + c.d.em1Phone, fx, yy + 70, { size: 22, w: 600, color: '#1D2140', align: rtl ? 'right' : 'left', mono: 1, dir: 'ltr', max: colW - 16 });
+          txt(emPhone(c.d), fx, yy + 70, { size: 22, w: 600, color: '#1D2140', align: rtl ? 'right' : 'left', mono: 1, dir: 'ltr', max: colW - 16 });
           return;
         }
         txt(f[1], fx, yy + 40, { size: f[3] ? 30 : 27, w: 800, color: f[4] ? c1 : '#1D2140', align: rtl ? 'right' : 'left', mono: f[2], dir: f[2] ? 'ltr' : undefined, max: f[3] ? CW - pad * 2 : colW - 16, ls: f[2] ? 2 : 0 });
@@ -2300,8 +2302,30 @@
   window.BonyanApp = {
     t: t, tl: tl, esc: esc, cname: cname, flag: flag, arDigits: arDigits, fmtDate: fmtDate, state: state, CFG: CFG, DEMO: DEMO,
     api: api, toast: toast, $: $, $$: $$, globeLabel: globeLabel, hqText: hqText, hqTip: hqTip, pointFmt: pointFmt,
-    num: function (n) { return state.lang === 'ar' ? arDigits(n) : String(n); }
+    num: function (n) { return state.lang === 'ar' ? arDigits(n) : String(n); },
+    card: { render: function (sel, rec, photo) { withRec(rec, photo, function () { renderCard(sel); }); },
+      png: function (rec, photo) { return withRec(rec, photo, function () { return exportCard(); }).then(function (cv) { return cv.toDataURL('image/png'); }); } }
   };
+  /* بطاقة منسوب من سجل الجدول (كما تعيده لوحة الموارد البشرية): تُحوَّل قيمه إلى صيغة النموذج مؤقتًا ثم تُعاد الحالة كما كانت */
+  function recToData(r) {
+    var ent = CFG.ENTITIES.filter(function (e) { return [e.ar, e.en, e.id].indexOf(r.entity) > -1; })[0];
+    var g = /أنثى|female|perempuan/i.test(r.gender || '') ? 'female' : (/ذكر|male|laki/i.test(r.gender || '') ? 'male' : '');
+    return {
+      firstNameAr: r.firstNameAr, fatherNameAr: r.fatherNameAr, grandNameAr: r.grandNameAr, lastNameAr: r.lastNameAr,
+      firstName: r.firstName, fatherName: r.fatherName, grandName: r.grandName, lastName: r.lastName,
+      gender: g, birthDate: r.birthDate, nationality: r.nationalityCode, workCountry: r.workCountryCode,
+      passportNo: r.passportNo, passportExpiry: r.passportExpiry, bloodType: r.bloodType,
+      entity: ent ? ent.v : (r.entity ? 'other' : ''), entityOther: ent ? '' : r.entity,
+      jobTitle: r.jobTitle, employeeNo: r.employeeNo,
+      hasContract: 'no', startDiff: 'no', startDate: r.startDate || r.contractStart,
+      em1Name: r.em1Name, em1Full: r.em1Phone
+    };
+  }
+  function withRec(rec, photo, fn) {
+    var keep = { d: state.data, f: state.files, r: state.result };
+    state.data = recToData(rec); state.files = { photo: photo ? [{ thumb: photo }] : [] }; state.result = { ref: rec.ref };
+    try { return fn(); } finally { state.data = keep.d; state.files = keep.f; state.result = keep.r; }
+  }
 
 
   /* ---------------------------------------------------------- التشغيل */
@@ -2343,5 +2367,12 @@
     $('#ovRetry').addEventListener('click', function () { $('#overlay').hidden = true; submit(); });
     $('#ovClose').addEventListener('click', function () { $('#overlay').hidden = true; });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  /* في صفحة الموارد البشرية (admin.html) يُحمَّل هذا الملف مكتبةً لرسم البطاقات فقط، دون تشغيل النموذج */
+  function libInit() {
+    try { var L = localStorage.getItem(LS_KEY + '-lang'); if (L && DICT[L]) state.lang = L; } catch (e) { }
+    var q = (location.search.match(/[?&]lang=(ar|en|id)/) || [])[1]; if (q) state.lang = q;
+    state.view = 'admin';
+  }
+  if (window.BONYAN_LIB) libInit();
+  else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

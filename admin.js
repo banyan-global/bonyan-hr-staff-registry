@@ -6,7 +6,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  var STANDALONE = !window.BonyanApp;
+  var STANDALONE = !window.BonyanApp || !!window.BONYAN_LIB; /* في admin.html يُحمَّل app.js مكتبةً لرسم البطاقات فقط */
   var A = window.BonyanApp || (function () {
     /* أدوات مستقلة حين تُفتح الصفحة وحدها */
     var CFG = window.APP_CONFIG, DICT = window.I18N, LS = 'bonyan-hr-registry-draft-v1';
@@ -109,7 +109,8 @@
     pByEnt: 'متوسط الراتب حسب الجهة', pDist: 'توزيع الرواتب', pMethod: 'طريقة استلام الراتب (كل المنسوبين)',
     pNone: 'لا توجد رواتب مسجّلة بعد.', pNote: 'تُحسب الأرقام لكل عملة على حدة، ولا تُجمع العملات المختلفة معًا.',
     aTime: 'الوقت', aAct: 'العملية', aWho: 'المستخدم', aEmpty: 'لا توجد عمليات دخول مسجّلة.', aLogin: 'دخول', aFail: 'محاولة خاطئة',
-    print: 'طباعة الملف', backForm: 'رجوع إلى النموذج'
+    print: 'طباعة الملف', backForm: 'رجوع إلى النموذج',
+    cardT: 'بطاقة المنسوب', cardFlip: 'اقلب البطاقة', cardPng: 'تنزيل البطاقة بوجهيها', cardMaking: 'جارٍ تجهيز البطاقة…', cardFail: 'تعذّر تجهيز البطاقة', cardHint: 'اضغط على البطاقة لقلبها', cardRow: 'عرض البطاقة'
   });
   Object.assign(TX.en, {
     tabOv: 'Overview', tabStaff: 'Staff', tabDocs: 'Documents & alerts', tabPay: 'Salaries', tabAudit: 'Access log',
@@ -126,7 +127,8 @@
     pByEnt: 'Average salary by entity', pDist: 'Salary distribution', pMethod: 'Payment method (all staff)',
     pNone: 'No salaries recorded yet.', pNote: 'Figures are calculated per currency; different currencies are never added together.',
     aTime: 'Time', aAct: 'Action', aWho: 'User', aEmpty: 'No sign-ins recorded.', aLogin: 'Sign-in', aFail: 'Wrong code',
-    print: 'Print record', backForm: 'Back to the form'
+    print: 'Print record', backForm: 'Back to the form',
+    cardT: 'Staff card', cardFlip: 'Flip card', cardPng: 'Download both sides', cardMaking: 'Preparing the card…', cardFail: 'Could not prepare the card', cardHint: 'Tap the card to flip it', cardRow: 'View card'
   });
   Object.assign(TX.id, {
     tabOv: 'Ringkasan', tabStaff: 'Staf', tabDocs: 'Dokumen & peringatan', tabPay: 'Gaji', tabAudit: 'Log akses',
@@ -143,7 +145,8 @@
     pByEnt: 'Rata-rata gaji per lembaga', pDist: 'Sebaran gaji', pMethod: 'Cara pembayaran (semua staf)',
     pNone: 'Belum ada gaji yang tercatat.', pNote: 'Angka dihitung per mata uang; mata uang berbeda tidak dijumlahkan.',
     aTime: 'Waktu', aAct: 'Aksi', aWho: 'Pengguna', aEmpty: 'Belum ada catatan masuk.', aLogin: 'Masuk', aFail: 'Kode salah',
-    print: 'Cetak data', backForm: 'Kembali ke formulir'
+    print: 'Cetak data', backForm: 'Kembali ke formulir',
+    cardT: 'Kartu staf', cardFlip: 'Balik kartu', cardPng: 'Unduh kedua sisi', cardMaking: 'Menyiapkan kartu…', cardFail: 'Kartu tidak dapat disiapkan', cardHint: 'Ketuk kartu untuk membaliknya', cardRow: 'Lihat kartu'
   });
   function x(k, v) {
     var d = TX[A.state.lang] || TX.ar, s = k.indexOf('.') > 0 ? d[k.split('.')[0]][k.split('.')[1]] : d[k];
@@ -693,7 +696,10 @@
         '<div class="dr-chips"><code dir="ltr">' + esc(r.ref) + '</code>' + statusChip(r.status) + '<span class="chip">' + A.flag(r.workCountryCode) + esc(cc2name(r.workCountryCode, r.workCountry)) + '</span></div></div>' +
         '<button type="button" class="dr-x dr-print" data-adm="print" aria-label="' + esc(x('print')) + '" title="' + esc(x('print')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9M7 17H4.5V9h15v8H17M7 14h10v6.5H7z"/></svg></button>' +
         '<button type="button" class="dr-x" data-adm="close" aria-label="' + esc(x('close')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>' +
-      '<div class="dr-body">' + (r.folder ? '<a class="btn gold sm dr-folder" href="' + esc(r.folder) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' + esc(x('folder')) + '</a>' : '');
+      '<div class="dr-body">' + (A.card ? '<section class="dr-cardsec"><h3>' + esc(x('cardT')) + '</h3><div class="dr-card-box"><div class="idcard-wrap" id="drCard"></div></div>' +
+        '<p class="dr-card-hint">' + esc(x('cardHint')) + '</p><div class="dr-card-act"><button type="button" class="btn ghost sm" data-adm="cardFlip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7"/></svg>' + esc(x('cardFlip')) + '</button>' +
+        '<button type="button" class="btn gold sm" data-adm="cardPng"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19.5h14"/></svg><span>' + esc(x('cardPng')) + '</span></button></div></section>' : '') +
+      (r.folder ? '<a class="btn gold sm dr-folder" href="' + esc(r.folder) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' + esc(x('folder')) + '</a>' : '');
     GROUPS.forEach(function (g) {
       var items = g[1].filter(function (k) { var v = r[k]; return cols[k] && v != null && v !== '' && !(Array.isArray(v) && !v.length) || (g[0] === 'files' && cols[k]); });
       if (!items.length) return;
@@ -721,6 +727,7 @@
     if (!host) { host = document.createElement('div'); host.id = 'admDrawer'; document.body.appendChild(host); }
     host.innerHTML = h; host.hidden = false;
     document.body.classList.add('no-scroll');
+    drawCard(r);
     requestAnimationFrame(function () { host.classList.add('in'); var b = $('.dr-x', host); if (b) b.focus(); });
   }
   function closeDrawer() {
@@ -730,6 +737,35 @@
     setTimeout(function () { host.hidden = true; host.innerHTML = ''; }, 320);
     var tr = S.open && $('tr[data-ref="' + S.open + '"]'); S.open = null;
     if (tr) tr.focus();
+  }
+
+  /* ---------------------------------------------------------- بطاقة المنسوب داخل التفاصيل
+     الصورة الشخصية تُجلب من الخادم (برمز الدخول نفسه) لتظهر في البطاقة وفي الصورة المنزّلة، وتبقى في الذاكرة فقط */
+  var PHOTOS = {};
+  function drawCard(r) {
+    if (!A.card || !$('#drCard')) return;
+    A.card.render('#drCard', r, PHOTOS[r.ref]);
+    if (PHOTOS[r.ref] !== undefined || A.DEMO || !files(r.photo).length) return;
+    PHOTOS[r.ref] = null;
+    A.api({ action: 'photo', code: readCode(), ref: r.ref }).then(function (j) {
+      PHOTOS[r.ref] = j.b64 ? 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.b64 : null;
+      if (S.open === r.ref && PHOTOS[r.ref]) {
+        var fl = $('#drCard .idcard.flipped');
+        A.card.render('#drCard', r, PHOTOS[r.ref]);
+        if (fl) $('#drCard .idcard').classList.add('flipped');
+      }
+    }).catch(function () { delete PHOTOS[r.ref]; });
+  }
+  function cardPng(btn) {
+    var r = (S.data.rows || []).filter(function (v) { return v.ref === S.open; })[0];
+    if (!r || !A.card || btn.disabled) return;
+    var lbl = $('span', btn), old = lbl.textContent;
+    btn.disabled = true; lbl.textContent = x('cardMaking');
+    A.card.png(r, PHOTOS[r.ref]).then(function (url) {
+      var a = document.createElement('a');
+      a.href = url; a.download = 'Bonyan-Staff-Card-' + r.ref + '.png';
+      document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 500);
+    }).catch(function () { A.toast(x('cardFail')); }).then(function () { btn.disabled = false; lbl.textContent = old; });
   }
 
   /* ---------------------------------------------------------- التصدير */
@@ -792,8 +828,12 @@
         else if (a === 'clear') { S.f = { q: '', country: '', nat: '', entity: '', status: '', emp: '', gender: '', doc: '' }; redrawPanel(); }
         else if (a === 'close') closeDrawer();
         else if (a === 'print') window.print();
+        else if (a === 'cardFlip') { var ic = $('#drCard .idcard'); if (ic) ic.classList.toggle('flipped'); }
+        else if (a === 'cardPng') cardPng(act);
         return;
       }
+      var icd = tg.closest('#drCard .idcard');
+      if (icd) { icd.classList.toggle('flipped'); return; }
       var tb = tg.closest('[data-tab]');
       if (tb) { setTab(tb.getAttribute('data-tab')); return; }
       var kp = tg.closest('[data-kpi]');
@@ -806,7 +846,7 @@
       }
       var go = tg.closest('[data-go]');
       if (go) { S.f[go.getAttribute('data-go')] = go.getAttribute('data-v'); S.shown = PAGE; setTab('staff'); return; }
-      var vw = tg.closest('[data-view]');
+      var vw = tg.closest('.adm-view [data-view]');
       if (vw) { S.view = vw.getAttribute('data-view'); $$('.adm-view [data-view]').forEach(function (b) { b.setAttribute('aria-pressed', String(b === vw)); }); drawTable(); return; }
       var so = tg.closest('[data-sort]');
       if (so) { var sk = so.getAttribute('data-sort'); S.sort = S.sort.k === sk ? { k: sk, dir: -S.sort.dir } : { k: sk, dir: sk === 'createdAt' ? -1 : 1 }; drawTable(); return; }
@@ -833,6 +873,7 @@
     document.addEventListener('keydown', function (e) {
       if (A.state.view !== 'admin') return;
       if (e.key === 'Escape') { if (S.open) closeDrawer(); else closeDDs(); }
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('#drCard .idcard')) { e.preventDefault(); e.target.classList.toggle('flipped'); }
       if (e.key === 'Enter' && e.target.matches && e.target.matches('#admRows tr[data-ref]')) openDrawer(e.target.getAttribute('data-ref'));
     });
     var qT = 0;
