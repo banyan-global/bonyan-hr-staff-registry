@@ -110,7 +110,7 @@
     pNone: 'لا توجد رواتب مسجّلة بعد.', pNote: 'تُحسب الأرقام لكل عملة على حدة، ولا تُجمع العملات المختلفة معًا.',
     aTime: 'الوقت', aAct: 'العملية', aWho: 'المستخدم', aEmpty: 'لا توجد عمليات دخول مسجّلة.', aLogin: 'دخول', aFail: 'محاولة خاطئة',
     print: 'طباعة الملف', backForm: 'رجوع إلى النموذج',
-    mailBtn: 'إرسال رسالة التأكيد', mailBusy: 'جارٍ تجهيز البطاقة والإرسال…', mailSent: 'أُرسلت رسالة التأكيد إلى', mailFail: 'تعذّر إرسال الرسالة', edOpen: 'تعديل البيانات والمرفقات', edit: 'تعديل', edSave: 'حفظ التعديلات', edCancel: 'إلغاء', edBanner: 'وضع التعديل: غيّر ما تريد ثم اضغط «حفظ التعديلات». تُحفظ في الجدول مباشرة وتُسجَّل باسمك في ورقة «السجل».', edAuto: 'يُبنى تلقائيًا من أجزاء الاسم', edReplace: 'استبدال الملف', edUpload: 'رفع ملف', edAdd: 'إضافة صف', edDel: 'حذف الصف', edNone: 'لا توجد تعديلات لحفظها', edSaving: 'جارٍ الحفظ…', edUploading: 'رفع الملفات {i} من {n}…', edSaved: 'تم حفظ التعديلات في الجدول', edFail: 'تعذّر الحفظ', edBig: 'ملف أكبر من ١٠ ميغابايت:', edPicked: 'سيُرفع:', edDirty: 'لديك تعديلات غير محفوظة: احفظها أو اضغط «إلغاء»',
+    mailBtn: 'إرسال رسالة التأكيد', mailAll: 'إرسال رسائل التأكيد ({n})', mailAllRun: 'جارٍ الإرسال {i} من {n}…', mailAllDone: 'أُرسلت {n} رسالة تأكيد', mailBusy: 'جارٍ تجهيز البطاقة والإرسال…', mailSent: 'أُرسلت رسالة التأكيد إلى', mailFail: 'تعذّر إرسال الرسالة', edOpen: 'تعديل البيانات والمرفقات', edit: 'تعديل', edSave: 'حفظ التعديلات', edCancel: 'إلغاء', edBanner: 'وضع التعديل: غيّر ما تريد ثم اضغط «حفظ التعديلات». تُحفظ في الجدول مباشرة وتُسجَّل باسمك في ورقة «السجل».', edAuto: 'يُبنى تلقائيًا من أجزاء الاسم', edReplace: 'استبدال الملف', edUpload: 'رفع ملف', edAdd: 'إضافة صف', edDel: 'حذف الصف', edNone: 'لا توجد تعديلات لحفظها', edSaving: 'جارٍ الحفظ…', edUploading: 'رفع الملفات {i} من {n}…', edSaved: 'تم حفظ التعديلات في الجدول', edFail: 'تعذّر الحفظ', edBig: 'ملف أكبر من ١٠ ميغابايت:', edPicked: 'سيُرفع:', edDirty: 'لديك تعديلات غير محفوظة: احفظها أو اضغط «إلغاء»',
     pList: 'كشف الرواتب', pAllEnt: 'كل الجهات', pSal: 'الراتب الشهري', pMeth: 'طريقة الاستلام', pBank: 'البنك', pAcc: 'الآيبان / رقم الحساب', pHolder: 'صاحب الحساب', pTotal: 'الإجمالي', pMissing: 'منسوبون لم يُسجَّل راتبهم', pCsv: 'تصدير كشف الرواتب', pEntHint: 'اضغط على جهة لعرض رواتبها فقط في الكشف', pShown: '{n} منسوبًا', pRowHint: 'اضغط على أي منسوب لعرض ملفه كاملًا',
     cardT: 'بطاقة المنسوب', cardFlip: 'اقلب البطاقة', cardPng: 'تنزيل البطاقة بوجهيها', cardMaking: 'جارٍ تجهيز البطاقة…', cardFail: 'تعذّر تجهيز البطاقة', cardHint: 'اضغط على البطاقة لقلبها', cardRow: 'عرض البطاقة'
   });
@@ -130,7 +130,7 @@
     pNone: 'No salaries recorded yet.', pNote: 'Figures are calculated per currency; different currencies are never added together.',
     aTime: 'Time', aAct: 'Action', aWho: 'User', aEmpty: 'No sign-ins recorded.', aLogin: 'Sign-in', aFail: 'Wrong code',
     print: 'Print record', backForm: 'Back to the form',
-    mailBtn: 'Send confirmation email', mailBusy: 'Preparing the card and sending…', mailSent: 'Confirmation email sent to', mailFail: 'Could not send the email', edOpen: 'Edit data & documents', edit: 'Edit', edSave: 'Save changes', edCancel: 'Cancel', edBanner: 'Edit mode: change what you need, then tap “Save changes”. Changes go straight to the sheet and are logged under your name.', edAuto: 'Built automatically from the name parts', edReplace: 'Replace file', edUpload: 'Upload file', edAdd: 'Add row', edDel: 'Delete row', edNone: 'Nothing to save', edSaving: 'Saving…', edUploading: 'Uploading files {i} of {n}…', edSaved: 'Changes saved to the sheet', edFail: 'Could not save', edBig: 'File larger than 10 MB:', edPicked: 'Will upload:', edDirty: 'You have unsaved changes: save them or tap Cancel',
+    mailBtn: 'Send confirmation email', mailAll: 'Send confirmation emails ({n})', mailAllRun: 'Sending {i} of {n}…', mailAllDone: '{n} confirmation emails sent', mailBusy: 'Preparing the card and sending…', mailSent: 'Confirmation email sent to', mailFail: 'Could not send the email', edOpen: 'Edit data & documents', edit: 'Edit', edSave: 'Save changes', edCancel: 'Cancel', edBanner: 'Edit mode: change what you need, then tap “Save changes”. Changes go straight to the sheet and are logged under your name.', edAuto: 'Built automatically from the name parts', edReplace: 'Replace file', edUpload: 'Upload file', edAdd: 'Add row', edDel: 'Delete row', edNone: 'Nothing to save', edSaving: 'Saving…', edUploading: 'Uploading files {i} of {n}…', edSaved: 'Changes saved to the sheet', edFail: 'Could not save', edBig: 'File larger than 10 MB:', edPicked: 'Will upload:', edDirty: 'You have unsaved changes: save them or tap Cancel',
     pList: 'Payroll list', pAllEnt: 'All entities', pSal: 'Monthly salary', pMeth: 'Payment method', pBank: 'Bank', pAcc: 'IBAN / account no.', pHolder: 'Account holder', pTotal: 'Total', pMissing: 'Staff with no salary recorded', pCsv: 'Export payroll', pEntHint: 'Tap an entity to list its salaries only', pShown: '{n} staff', pRowHint: 'Tap any staff member to open the full record',
     cardT: 'Staff card', cardFlip: 'Flip card', cardPng: 'Download both sides', cardMaking: 'Preparing the card…', cardFail: 'Could not prepare the card', cardHint: 'Tap the card to flip it', cardRow: 'View card'
   });
@@ -150,7 +150,7 @@
     pNone: 'Belum ada gaji yang tercatat.', pNote: 'Angka dihitung per mata uang; mata uang berbeda tidak dijumlahkan.',
     aTime: 'Waktu', aAct: 'Aksi', aWho: 'Pengguna', aEmpty: 'Belum ada catatan masuk.', aLogin: 'Masuk', aFail: 'Kode salah',
     print: 'Cetak data', backForm: 'Kembali ke formulir',
-    mailBtn: 'Kirim email konfirmasi', mailBusy: 'Menyiapkan kartu dan mengirim…', mailSent: 'Email konfirmasi terkirim ke', mailFail: 'Email gagal dikirim', edOpen: 'Ubah data & dokumen', edit: 'Ubah', edSave: 'Simpan perubahan', edCancel: 'Batal', edBanner: 'Mode ubah: ubah yang perlu lalu ketuk “Simpan perubahan”. Perubahan langsung masuk ke tabel dan dicatat atas nama Anda.', edAuto: 'Dibentuk otomatis dari bagian nama', edReplace: 'Ganti berkas', edUpload: 'Unggah berkas', edAdd: 'Tambah baris', edDel: 'Hapus baris', edNone: 'Tidak ada perubahan', edSaving: 'Menyimpan…', edUploading: 'Mengunggah berkas {i} dari {n}…', edSaved: 'Perubahan tersimpan di tabel', edFail: 'Gagal menyimpan', edBig: 'Berkas lebih dari 10 MB:', edPicked: 'Akan diunggah:', edDirty: 'Ada perubahan yang belum disimpan: simpan atau ketuk Batal',
+    mailBtn: 'Kirim email konfirmasi', mailAll: 'Kirim email konfirmasi ({n})', mailAllRun: 'Mengirim {i} dari {n}…', mailAllDone: '{n} email konfirmasi terkirim', mailBusy: 'Menyiapkan kartu dan mengirim…', mailSent: 'Email konfirmasi terkirim ke', mailFail: 'Email gagal dikirim', edOpen: 'Ubah data & dokumen', edit: 'Ubah', edSave: 'Simpan perubahan', edCancel: 'Batal', edBanner: 'Mode ubah: ubah yang perlu lalu ketuk “Simpan perubahan”. Perubahan langsung masuk ke tabel dan dicatat atas nama Anda.', edAuto: 'Dibentuk otomatis dari bagian nama', edReplace: 'Ganti berkas', edUpload: 'Unggah berkas', edAdd: 'Tambah baris', edDel: 'Hapus baris', edNone: 'Tidak ada perubahan', edSaving: 'Menyimpan…', edUploading: 'Mengunggah berkas {i} dari {n}…', edSaved: 'Perubahan tersimpan di tabel', edFail: 'Gagal menyimpan', edBig: 'Berkas lebih dari 10 MB:', edPicked: 'Akan diunggah:', edDirty: 'Ada perubahan yang belum disimpan: simpan atau ketuk Batal',
     pList: 'Daftar gaji', pAllEnt: 'Semua lembaga', pSal: 'Gaji bulanan', pMeth: 'Cara pembayaran', pBank: 'Bank', pAcc: 'IBAN / No. rekening', pHolder: 'Pemilik rekening', pTotal: 'Total', pMissing: 'Staf tanpa gaji tercatat', pCsv: 'Ekspor daftar gaji', pEntHint: 'Ketuk lembaga untuk melihat gajinya saja', pShown: '{n} staf', pRowHint: 'Ketuk staf untuk membuka data lengkapnya',
     cardT: 'Kartu staf', cardFlip: 'Balik kartu', cardPng: 'Unduh kedua sisi', cardMaking: 'Menyiapkan kartu…', cardFail: 'Kartu tidak dapat disiapkan', cardHint: 'Ketuk kartu untuk membaliknya', cardRow: 'Lihat kartu'
   });
@@ -417,6 +417,7 @@
         }).join('') + '</ul>' +
         '<div class="adm-actions">' +
           '<button type="button" class="btn ghost sm" data-adm="refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/></svg>' + esc(x('refresh')) + '</button>' +
+          (mailPending().length ? '<button type="button" class="btn ghost sm" data-adm="mailAll"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6"/></svg><span>' + esc(x('mailAll', { n: mailPending().length })) + '</span></button>' : '') +
           '<button type="button" class="btn ghost sm" data-adm="csv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg>' + esc(x('csv')) + '</button>' +
           (d.sheetUrl ? '<a class="btn ghost sm" href="' + esc(d.sheetUrl) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 9h16M4 14.5h16M10 9v11.5"/></svg>' + esc(x('sheet')) + '</a>' : '') +
           '<button type="button" class="btn ghost sm" data-adm="lock">' + LOCK_SVG + esc(x('lock')) + '</button>' +
@@ -941,6 +942,30 @@
       }
     }).catch(function () { delete PHOTOS[r.ref]; });
   }
+  /* من لم تصله رسالة التأكيد بعد (ولديه بريد) */
+  function mailPending() {
+    if (!S.data || A.DEMO || !A.card || !A.card.mailAssets) return [];
+    var done = S.data.mailed || {};
+    return (S.data.rows || []).filter(function (r) { return !done[r.ref] && (r.officialEmail || r.personalEmail); });
+  }
+  function mailAll(btn) {
+    var list = mailPending(); if (!list.length || btn.disabled) return;
+    var lbl = $('span', btn), code = readCode(), sent = 0, fails = [];
+    btn.disabled = true;
+    list.reduce(function (p, r, i) {
+      return p.then(function () {
+        lbl.textContent = x('mailAllRun', { i: i + 1, n: list.length });
+        var ph = PHOTOS[r.ref] ? Promise.resolve(PHOTOS[r.ref]) : (files(r.photo).length ? A.api({ action: 'photo', code: code, ref: r.ref }).then(function (j) { return (PHOTOS[r.ref] = j.b64 ? 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.b64 : null); }).catch(function () { return null; }) : Promise.resolve(null));
+        return ph.then(function (photo) { return A.card.mailAssets(r, photo); })
+          .then(function (a) { return A.api({ action: 'adminMail', code: code, ref: r.ref, gif: a.gif, jpg: a.jpg, info: A.card.mailInfo(r), skipIfMailed: true }); })
+          .then(function (j) { if (!j.skipped) sent++; })
+          .catch(function (e) { fails.push((r.fullNameAr || r.ref) + ((e && e.message) ? ': ' + e.message : '')); });
+      });
+    }, Promise.resolve()).then(function () {
+      A.toast(x('mailAllDone', { n: sent }) + (fails.length ? ' · ' + x('mailFail') + ': ' + fails.join('، ') : ''));
+      return load(code, true);
+    });
+  }
   function sendMail(btn) {
     var r = (S.data.rows || []).filter(function (v) { return v.ref === S.open; })[0];
     if (!r || btn.disabled) return;
@@ -950,7 +975,7 @@
       : A.api({ action: 'photo', code: code, ref: r.ref }).then(function (j) { return (PHOTOS[r.ref] = j.b64 ? 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.b64 : null); }).catch(function () { return null; }));
     photoP.then(function (ph) { return A.card.mailAssets(r, ph); })
       .then(function (a) { return A.DEMO ? { to: r.personalEmail || '—' } : A.api({ action: 'adminMail', code: code, ref: r.ref, gif: a.gif, jpg: a.jpg, info: A.card.mailInfo ? A.card.mailInfo(r) : null }); })
-      .then(function (j) { A.toast(x('mailSent') + ' ' + (j.to || '')); })
+      .then(function (j) { if (S.data) { S.data.mailed = S.data.mailed || {}; S.data.mailed[r.ref] = 1; } A.toast(x('mailSent') + ' ' + (j.to || '')); })
       .catch(function (e) { A.toast(x('mailFail') + ((e && e.message) ? ' · ' + e.message : '')); })
       .then(function () { btn.disabled = false; lbl.textContent = old; });
   }
@@ -1035,6 +1060,7 @@
         else if (a === 'cardFlip') { var ic = $('#drCard .idcard'); if (ic) ic.classList.toggle('flipped'); }
         else if (a === 'cardPng') cardPng(act);
         else if (a === 'sendMail') sendMail(act);
+        else if (a === 'mailAll') mailAll(act);
         return;
       }
       var icd = tg.closest('#drCard .idcard');

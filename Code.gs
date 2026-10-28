@@ -16,7 +16,8 @@ var CONFIG = {
   SS_TITLE: 'Bonyan HR · سجل المنسوبين',
   ROOT_FOLDER: 'Bonyan HR · ملفات المنسوبين',
   FORM_URL: 'https://banyan-global.github.io/bonyan-hr-staff-registry/',
-  MAIL_ONLY_TO: 'osama.mo.bonyan@gmail.com', // مرحلة التجربة: رسائل التأكيد تذهب لهذا البريد فقط. اتركه '' لتصل لكل منسوب على بريده
+  MAIL_ONLY_TO: '', // للتجربة فقط: ضع بريدًا هنا لتذهب كل رسائل التأكيد إليه وحده. فارغ = تصل كل منسوب على بريده الرسمي (أو الشخصي إن لم يوجد)
+  HR_NOTIFY: 'osama.mo.bonyan@gmail.com', // يصله تنبيه مختصر عند كل تسجيل جديد (تغلبه خاصية HR_EMAIL إن وُضعت)
   REF_PREFIX: 'BNY-HR',
   SHEETS: { main: 'المنسوبون', quals: 'المؤهلات', exp: 'الخبرات', langs: 'اللغات', log: 'السجل' },
   COLORS: { navy: '#143D66', brass: '#9C7432', band: '#F3F5F8', white: '#FFFFFF', ink: '#0F2238' },
@@ -336,7 +337,7 @@ function list_(code) {
     ok: true, at: fmtNow_(new Date()), who: who, audit: audit_(),
     cols: MAIN_COLS.filter(function (c) { return c[0] !== 'folderId'; }),
     rows: rows, quals: child(CONFIG.SHEETS.quals), exp: child(CONFIG.SHEETS.exp), langs: child(CONFIG.SHEETS.langs),
-    sheetUrl: ss.getUrl()
+    sheetUrl: ss.getUrl(), mailed: JSON.parse(PropertiesService.getScriptProperties().getProperty('MAILED') || '{}')
   };
 }
 
@@ -746,7 +747,7 @@ function sendConfirm_(sh, row, ref, updated, info) {
   info = info || {};
   var L = mailLang_(info.lang || get('lang')), T = MAIL_TX_[L];
   var fill = function (s, o) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return o[k] == null ? '' : o[k]; }); };
-  var staffMail = get('personalEmail') || get('officialEmail');
+  var staffMail = get('officialEmail') || get('personalEmail');
   var to = CONFIG.MAIL_ONLY_TO || staffMail;
   if (!to) return '';
   var female = /أنثى|female|perempuan/i.test(get('gender'));
@@ -783,6 +784,7 @@ function sendConfirm_(sh, row, ref, updated, info) {
     body: m.preheader + '\n\n' + m.formUrl + '\n\n' + T.regards + '\n' + T.sign
   });
   log_(ref, 'إرسال رسالة التأكيد', to + ' · ' + L);
+  try { var mp = PropertiesService.getScriptProperties(), mm = JSON.parse(mp.getProperty('MAILED') || '{}'); mm[ref] = fmtNow_(new Date()); mp.setProperty('MAILED', JSON.stringify(mm)); } catch (em) { }
   return to;
 }
 /* إعادة إرسال رسالة التأكيد من لوحة الموارد البشرية (مع بطاقة جديدة يصنعها المتصفح بلغة التعبئة) */
@@ -791,6 +793,7 @@ function adminMail_(b) {
   var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.main);
   var row = findRow_(sh, 'ref', function (v) { return v === b.ref; });
   if (!row) throw new Error('الرقم المرجعي غير موجود');
+  if (b.skipIfMailed && JSON.parse(PropertiesService.getScriptProperties().getProperty('MAILED') || '{}')[b.ref]) return { ok: true, skipped: true };
   if (b.gif || b.jpg) saveCardFiles_(DriveApp.getFolderById(sh.getRange(row, col_('folderId')).getValue()), b.ref, rowName_(sh, row), b.gif, b.jpg);
   var to = sendConfirm_(sh, row, b.ref, false, b.info || null);
   if (!to) throw new Error('لا يوجد بريد إلكتروني مسجّل لهذا المنسوب');
@@ -1050,20 +1053,21 @@ function log_(ref, action, detail) {
   } catch (e) { }
 }
 
+/* تنبيه مختصر لمسؤول النظام عند كل تسجيل جديد */
 function notify_(sh, row, ref, updated) {
-  var to = PropertiesService.getScriptProperties().getProperty('HR_EMAIL');
+  if (updated) return;
+  var to = PropertiesService.getScriptProperties().getProperty('HR_EMAIL') || CONFIG.HR_NOTIFY;
   if (!to) return;
   try {
-    var get = function (k) { return escHtml_(sh.getRange(row, col_(k)).getDisplayValue()); };
-    var plainName = sh.getRange(row, col_('fullNameLatin')).getDisplayValue();
-    var subject = (updated ? 'تحديث بيانات: ' : 'تسجيل جديد: ') + plainName + ' · ' + ref;
-    var html = '<div dir="rtl" style="font-family:Tahoma,Arial;font-size:14px;color:#0F2238">' +
-      '<p style="color:#9C7432;margin:0">Bonyan HR · سجل المنسوبين</p>' +
-      '<h2 style="margin:6px 0 14px;color:#143D66">' + escHtml_(subject) + '</h2><table cellpadding="6" style="border-collapse:collapse">' +
-      [['الرقم المرجعي', ref], ['الاسم', get('fullNameLatin')], ['الجهة', get('entity')], ['دولة العمل', get('workCountry')],
-       ['المسمى', get('jobTitle')], ['الجوال', get('mobile')], ['انتهاء الجواز', get('passportExpiry')]].map(function (r) {
-        return '<tr><td style="color:#4B5B6E">' + r[0] + '</td><td><b>' + r[1] + '</b></td></tr>';
-      }).join('') + '</table><p><a href="' + getSS_(false).getUrl() + '">فتح السجل</a></p></div>';
-    MailApp.sendEmail({ to: to, subject: subject, htmlBody: html, name: 'Bonyan HR' });
-  } catch (e) { log_(ref, 'تعذّر إرسال التنبيه', String(e)); }
+    var get = function (k) { return String(sh.getRange(row, col_(k)).getDisplayValue() || '').trim(); };
+    var e = escHtml_, name = get('fullNameAr') || get('fullNameLatin');
+    var subject = 'تسجيل جديد: ' + name + ' · ' + ref;
+    var line = function (k, v) { return v ? '<tr><td style="padding:5px 0;color:#6B778A;font-size:13px;width:110px;">' + k + '</td><td style="padding:5px 0;color:#1D2A3B;font-size:14px;font-weight:700;">' + e(v) + '</td></tr>' : ''; };
+    var html = '<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif;background:#EDF0F5;padding:18px 10px;"><div style="max-width:460px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #E8EBF1;">' +
+      '<div style="background:#16294A;padding:14px 18px;color:#fff;"><div style="font-size:11.5px;color:#D2B074;font-weight:700;">Bonyan HR · تسجيل جديد</div><div style="font-size:16px;font-weight:900;margin-top:2px;">' + e(name) + '</div></div>' +
+      '<div style="height:3px;background:#D2B074;"></div><div style="padding:12px 18px;"><table style="border-collapse:collapse;width:100%;">' +
+      line('الرقم المرجعي', ref) + line('الجهة', get('entity')) + line('المسمى', get('jobTitle')) + line('دولة العمل', get('workCountry')) + line('الجنسية', get('nationality')) + line('البريد', get('officialEmail') || get('personalEmail')) +
+      '</table><div style="margin-top:12px;"><a href="' + CONFIG.FORM_URL + 'admin.html" style="display:inline-block;padding:9px 18px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13px;text-decoration:none;">فتح لوحة الموارد البشرية</a></div></div></div></div>';
+    MailApp.sendEmail({ to: to, subject: subject, htmlBody: html, name: 'Bonyan HR', body: subject });
+  } catch (err) { log_(ref, 'تعذّر إرسال التنبيه', String(err)); }
 }
