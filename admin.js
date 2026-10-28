@@ -949,7 +949,7 @@
     var photoP = PHOTOS[r.ref] ? Promise.resolve(PHOTOS[r.ref]) : (A.DEMO || !files(r.photo).length ? Promise.resolve(null)
       : A.api({ action: 'photo', code: code, ref: r.ref }).then(function (j) { return (PHOTOS[r.ref] = j.b64 ? 'data:' + (j.mime || 'image/jpeg') + ';base64,' + j.b64 : null); }).catch(function () { return null; }));
     photoP.then(function (ph) { return A.card.mailAssets(r, ph); })
-      .then(function (a) { return A.DEMO ? { to: r.personalEmail || '—' } : A.api({ action: 'adminMail', code: code, ref: r.ref, gif: a.gif, jpg: a.jpg }); })
+      .then(function (a) { return A.DEMO ? { to: r.personalEmail || '—' } : A.api({ action: 'adminMail', code: code, ref: r.ref, gif: a.gif, jpg: a.jpg, info: A.card.mailInfo ? A.card.mailInfo(r) : null }); })
       .then(function (j) { A.toast(x('mailSent') + ' ' + (j.to || '')); })
       .catch(function (e) { A.toast(x('mailFail') + ((e && e.message) ? ' · ' + e.message : '')); })
       .then(function () { btn.disabled = false; lbl.textContent = old; });

@@ -1248,6 +1248,7 @@ html[dir="rtl"] .hdr-btn.hdr-back svg { transform: scaleX(-1); }
   .hdr-btn { height: 40px; padding: 0 11px; }
   .hdr-btn.hdr-back span { display: none; }
   .hdr-btn.hr span { display: none; }
+  .hdr-btn.upd span { display: none; }
   .hdr-btn.hr::after { content: "HR"; font-weight: 900; letter-spacing: .02em; }
   .theme-btn { width: 40px; height: 40px; }
 }
@@ -1329,3 +1330,66 @@ html[dir="ltr"] .dp-s { background-position: right 10px center; }
 .dr-tools .dr-folder { margin: 0; }
 .dr-editbtn { display: inline-flex; align-items: center; gap: 6px; }
 .dr-editbtn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ============================================================ صفحة «تحديث بياناتي» */
+.upd { padding-block: 28px 120px; }
+.upd .rise { animation: rise .6s var(--ease) both; }
+.upd-verify { display: grid; place-items: center; min-height: 58vh; }
+.upd-card { width: min(520px, 100%); padding: 30px 28px; border-radius: 26px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 24px 60px rgb(var(--shade-rgb) / .14); text-align: center; }
+.upd-card h1, .upd-done h1 { font-size: clamp(1.35rem, 3vw, 1.75rem); font-weight: 900; color: var(--txt); margin: 12px 0 6px; }
+.upd-lead { color: var(--txt-2); line-height: 1.85; font-size: .95rem; }
+.upd-ic { display: inline-grid; place-items: center; width: 62px; height: 62px; border-radius: 20px; background: linear-gradient(135deg, #1d3558, #10213b); color: #f3dca6; box-shadow: 0 10px 24px rgba(22, 41, 74, .3); font-size: 1.6rem; font-weight: 900; }
+.upd-ic svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.upd-ic.ok { background: linear-gradient(135deg, #1e7a52, #145a3c); color: #fff; }
+#updForm { display: grid; gap: 14px; margin-top: 20px; text-align: start; }
+.upd-f { display: grid; gap: 6px; min-width: 0; }
+.upd-f > span { font-size: .82rem; font-weight: 800; color: var(--txt-2); }
+.upd-f small { font-size: .76rem; color: var(--txt-3); line-height: 1.6; }
+.upd-f .inp { width: 100%; min-height: 46px; }
+.upd-f textarea.inp { min-height: 84px; }
+#updRef { font-family: var(--f-mono); letter-spacing: .06em; text-transform: uppercase; text-align: center; font-size: 1.05rem; }
+.upd-err { color: var(--bad, #c0392b); font-weight: 700; font-size: .86rem; }
+.upd-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: 24px; align-items: center; padding: 22px; border-radius: 26px; background: var(--card); border: 1px solid var(--line); margin-bottom: 18px; }
+.upd-hi { font-size: 1.25rem; font-weight: 800; color: var(--txt); }
+.upd-hi b { font-weight: 900; }
+.upd-who code { display: inline-block; margin: 6px 0 10px; padding: 4px 12px; border-radius: 999px; background: rgb(var(--gold-rgb) / .12); color: var(--gold-2); font-family: var(--f-mono); letter-spacing: .05em; }
+.upd-cardbox { display: flex; justify-content: center; width: 100%; }
+.upd-cardbox .idcard-wrap { width: 100%; max-width: 380px; }
+.upd-secs { display: grid; gap: 14px; }
+.upd-sec { border-radius: 22px; background: var(--card); border: 1px solid var(--line); padding: 16px 18px; transition: border-color .25s, box-shadow .25s; }
+.upd-sec.open { border-color: rgb(var(--gold-rgb) / .55); box-shadow: 0 12px 34px rgb(var(--shade-rgb) / .1); }
+.upd-sec > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.upd-sec h2 { font-size: 1.02rem; font-weight: 900; color: var(--gold-2); display: flex; align-items: center; gap: 8px; }
+.upd-sec h2::before { content: ""; width: 4px; height: 16px; border-radius: 4px; background: var(--gold); }
+.upd-pv { margin: 12px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px 18px; }
+.upd-pv dt { font-size: .74rem; color: var(--txt-3); font-weight: 700; }
+.upd-pv dd { margin: 0; font-weight: 800; color: var(--txt); font-size: .9rem; overflow-wrap: anywhere; }
+.upd-empty { margin-top: 10px; color: var(--txt-3); font-size: .85rem; }
+.upd-list { margin: 10px 0 0; padding-inline-start: 18px; color: var(--txt-2); font-size: .88rem; line-height: 1.9; }
+.upd-body { margin-top: 14px; display: grid; gap: 12px; }
+.upd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.upd-grid .upd-f.wide { grid-column: 1 / -1; }
+.upd .inp.dirty { border-color: var(--gold); background: rgb(var(--gold-rgb) / .07); }
+.upd-tbl { overflow-x: auto; }
+.upd-tbl td { padding: 4px !important; }
+.upd-tbl .inp { min-height: 40px; padding: 6px 10px; font-size: .86rem; min-width: 120px; border-radius: 10px; }
+.upd-file { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.upd-file:last-child { border-bottom: 0; }
+.upd-file > div { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.upd-file b { font-weight: 800; color: var(--txt); font-size: .92rem; }
+.upd-file .chip.ok { background: #EEF7F1; border-color: #CFE7D8; color: #1E6B49; }
+.upd-file label.btn { cursor: pointer; }
+.upd-picked { flex-basis: 100%; color: var(--gold-2); font-weight: 700; font-size: .78rem; }
+.upd-picked:empty { display: none; }
+.upd-bar { position: fixed; inset-inline: 0; bottom: 0; z-index: 30; display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--pop); border-top: 1px solid var(--line); box-shadow: 0 -12px 30px rgb(var(--shade-rgb) / .14); }
+.upd-bar .btn { min-width: 220px; justify-content: center; }
+.upd-bar .btn:disabled { opacity: .7; cursor: progress; }
+.upd-count { font-weight: 800; color: var(--gold-2); font-size: .9rem; }
+.upd-done { text-align: center; display: grid; justify-items: center; gap: 8px; padding: 20px 0; }
+.upd-cap { margin-top: 10px; font-size: .85rem; font-weight: 800; color: var(--txt-3); }
+.upd-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
+@media (max-width: 760px) {
+  .upd-head { grid-template-columns: minmax(0, 1fr); }
+  .upd-grid { grid-template-columns: minmax(0, 1fr); }
+  .upd-bar .btn { min-width: 0; flex: 1; }
+}

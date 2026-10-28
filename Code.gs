@@ -278,13 +278,18 @@ function photo_(b) {
   var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.main);
   var row = findRow_(sh, 'ref', function (v) { return v === b.ref; });
   if (!row) throw new Error('not_found');
-  var u = linksOf_(sh.getRange(row, col_('photo')).getRichTextValue())[0] || '';
-  var m = /\/d\/([\w-]+)|[?&]id=([\w-]+)/.exec(u);
-  if (!m) return { ok: true, none: true };
-  var f = DriveApp.getFileById(m[1] || m[2]);
-  var blob = f.getSize() > 2500000 ? f.getThumbnail() : f.getBlob();
-  if (!blob) return { ok: true, none: true };
-  return { ok: true, mime: blob.getContentType() || 'image/jpeg', b64: Utilities.base64Encode(blob.getBytes()) };
+  var p = photoB64_(sh, row);
+  return p ? { ok: true, mime: p.mime, b64: p.b64 } : { ok: true, none: true };
+}
+function photoB64_(sh, row) {
+  try {
+    var u = linksOf_(sh.getRange(row, col_('photo')).getRichTextValue())[0] || '';
+    var m = /\/d\/([\w-]+)|[?&]id=([\w-]+)/.exec(u);
+    if (!m) return null;
+    var f = DriveApp.getFileById(m[1] || m[2]);
+    var blob = f.getSize() > 2500000 ? f.getThumbnail() : f.getBlob();
+    return blob ? { mime: blob.getContentType() || 'image/jpeg', b64: Utilities.base64Encode(blob.getBytes()) } : null;
+  } catch (e) { return null; }
 }
 function audit_() {
   try {
@@ -347,6 +352,10 @@ function doPost(e) {
     if (body.action === 'adminUpload') return json_(adminUpload_(body));
     if (body.action === 'cardImg') return json_(cardImg_(body));
     if (body.action === 'adminMail') return json_(adminMail_(body));
+    if (body.action === 'selfStart') return json_(selfStart_(body));
+    if (body.action === 'selfUpdate') return json_(selfUpdate_(body));
+    if (body.action === 'selfUpload') return json_(selfUpload_(body));
+    if (body.action === 'selfFinish') return json_(selfFinish_(body));
     return json_({ ok: false, error: 'unknown action' });
   } catch (err) {
     log_('', 'خطأ', String(err && err.stack || err));
@@ -534,8 +543,8 @@ function finalize_(b) {
 var ADMIN_LOCKED_ = ['ref', 'createdAt', 'updatedAt', 'folder', 'folderId', 'fullNameAr', 'fullNameLatin', 'lang', 'tz'];
 var NAME_PARTS_ = ['firstNameAr', 'fatherNameAr', 'grandNameAr', 'lastNameAr', 'firstName', 'fatherName', 'grandName', 'lastName'];
 
-function adminUpdate_(b) {
-  var who = checkAdmin_(b.code);
+function adminUpdate_(b) { return updateCore_(b, checkAdmin_(b.code), false); }
+function updateCore_(b, who, self) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -545,7 +554,7 @@ function adminUpdate_(b) {
     var ch = b.changes || {}, done = [], nameChanged = false, statusSet = false;
     Object.keys(ch).forEach(function (k) {
       var ci = col_(k);
-      if (!ci || ADMIN_LOCKED_.indexOf(k) > -1) return;
+      if (!ci || ADMIN_LOCKED_.indexOf(k) > -1 || (self && SELF_LOCKED_.indexOf(k) > -1)) return;
       var c = MAIN_COLS[ci - 1];
       if (c[2] === 'f') return;
       var cell = sh.getRange(row, ci), old = cell.getDisplayValue(), v = ch[k] == null ? '' : String(ch[k]).trim();
@@ -590,7 +599,7 @@ function adminUpdate_(b) {
     sh.getRange(row, col_('updatedAt')).setValue(fmtNow_(new Date()));
     if (!statusSet && sh.getRange(row, col_('status')).getValue() === 'محدَّث') sh.getRange(row, col_('status')).setValue('مكتمل');
     CacheService.getScriptCache().remove('countries');
-    log_(b.ref, 'تعديل من لوحة الموارد البشرية', who + ' · ' + done.join(' | '));
+    log_(b.ref, self ? 'تحديث ذاتي من المنسوب' : 'تعديل من لوحة الموارد البشرية', who + ' · ' + done.join(' | '));
     return { ok: true, changed: done.length };
   } finally {
     lock.releaseLock();
@@ -598,8 +607,8 @@ function adminUpdate_(b) {
 }
 
 /* استبدال مرفق من لوحة الموارد البشرية: الملف الأول من الدفعة ينقل الملفات المرتبطة حاليًا بالخانة إلى سلة المحذوفات (قابلة للاسترجاع) */
-function adminUpload_(b) {
-  var who = checkAdmin_(b.code);
+function adminUpload_(b) { return uploadCore_(b, checkAdmin_(b.code), false); }
+function uploadCore_(b, who, self) {
   var ss = getSS_(false), sh = ss.getSheetByName(CONFIG.SHEETS.main);
   var row = findRow_(sh, 'ref', function (v) { return v === b.ref; });
   if (!row) throw new Error('الرقم المرجعي غير موجود');
@@ -636,16 +645,70 @@ function adminUpload_(b) {
   cell.setRichTextValue(rt.build());
   if (b.idx >= (b.total || 1)) {
     sh.getRange(row, col_('updatedAt')).setValue(fmtNow_(new Date()));
-    log_(b.ref, 'استبدال مرفق من لوحة الموارد البشرية', who + ' · ' + MAIN_COLS[ci - 1][1] + ' · ' + list.length + ' ملف');
+    log_(b.ref, self ? 'استبدال مرفق من المنسوب' : 'استبدال مرفق من لوحة الموارد البشرية', who + ' · ' + MAIN_COLS[ci - 1][1] + ' · ' + list.length + ' ملف');
   }
   return { ok: true, url: file.getUrl() };
 }
 
-/* ============================================================ رسالة تأكيد التسجيل للمنسوب
+/* ============================================================ رسالة تأكيد التسجيل للمنسوب (بلغة التعبئة: عربي/إنجليزي/إندونيسي)
    تُرسل بعد اكتمال التسجيل أو التحديث، وفيها بطاقته المتحركة (تنقلب بين وجهيها) التي يصنعها النموذج نفسه.
    مرحلة التجربة: CONFIG.MAIL_ONLY_TO يجعل كل الرسائل تذهب لهذا البريد فقط؛ عند الاعتماد النهائي يُترك فارغًا لتصل للمنسوبين */
 var LOGO_PNG_B64_ = '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';
 var CARD_PREFIX_ = 'بطاقة المنسوب - ';
+var MAIL_TX_ = {
+  ar: {
+    sender: 'الموارد البشرية · مجموعة بنيان العالمية', hr: 'الموارد البشرية · سجل المنسوبين', org: 'مجموعة بنيان العالمية', logoAlt: 'بنيان',
+    subjNew: 'تأكيد تسجيل بياناتكم', subjUpd: 'تأكيد تحديث بياناتكم', preNew: 'تم تسجيل بياناتكم في سجل منسوبي مجموعة بنيان العالمية. الرقم المرجعي {ref}', preUpd: 'تم تحديث بياناتكم في سجل منسوبي مجموعة بنيان العالمية. الرقم المرجعي {ref}',
+    titleNew: 'تم تسجيل بياناتكم بنجاح', titleUpd: 'تم تحديث بياناتكم بنجاح',
+    greetM: 'الأستاذ <b>{name}</b> المحترم،', greetF: 'الأستاذة <b>{name}</b> المحترمة،',
+    bodyNew: 'استلمنا بياناتكم ومرفقاتكم وسُجّلت في سجل منسوبي مجموعة بنيان العالمية.', bodyUpd: 'حُفظ تحديث بياناتكم ومرفقاتكم في سجل منسوبي مجموعة بنيان العالمية.',
+    card: 'بطاقة المنسوب', ref: 'الرقم المرجعي', date: 'تاريخ التسجيل', workCountry: 'دولة العمل', nationality: 'الجنسية', passport: 'رقم الجواز', passportExpiry: 'انتهاء الجواز',
+    permitExpiry: 'انتهاء الإقامة', mobile: 'الجوال', email: 'البريد الإلكتروني', files: 'المرفقات المستلمة', btn: 'تحديث بياناتي',
+    note: 'للتحديث: اضغط الزر ثم أدخل رقمك المرجعي · لا تتضمن هذه الرسالة أي بيانات مالية', regards: 'مع خالص التحية والتقدير', sign: 'إدارة الموارد البشرية · مجموعة بنيان العالمية',
+    auto: 'رسالة آلية من نظام سجل المنسوبين، ولأي استفسار تقني يسعدنا تواصلك عبر البريد أدناه.', dev: 'م. أسامة جنيدي', copy: '© {y} مجموعة بنيان العالمية',
+    expired: 'انتهت صلاحية {doc} بتاريخ {d}، نرجو تحديثها في النموذج بعد تجديدها.', soon: 'تنتهي صلاحية {doc} بتاريخ {d}، نرجو المبادرة بتجديدها وتحديثها في النموذج.',
+    docs: { passportExpiry: 'جواز السفر', permitExpiry: 'الإقامة', nationalIdExpiry: 'الهوية الوطنية', workPermitExpiry: 'تصريح العمل' }
+  },
+  en: {
+    sender: 'HR · Bonyan International Group', hr: 'Human Resources · Staff Registry', org: 'Bonyan International Group', logoAlt: 'Bonyan',
+    subjNew: 'Registration confirmed', subjUpd: 'Update confirmed', preNew: 'Your details are now recorded in the Bonyan International Group staff registry. Reference {ref}', preUpd: 'Your details have been updated in the Bonyan International Group staff registry. Reference {ref}',
+    titleNew: 'Your details have been registered', titleUpd: 'Your details have been updated',
+    greetM: 'Dear <b>{name}</b>,', greetF: 'Dear <b>{name}</b>,',
+    bodyNew: 'We have received your details and documents, and they are now recorded in the Bonyan International Group staff registry.', bodyUpd: 'Your updated details and documents have been saved in the Bonyan International Group staff registry.',
+    card: 'Staff card', ref: 'Reference number', date: 'Registered on', workCountry: 'Work country', nationality: 'Nationality', passport: 'Passport no.', passportExpiry: 'Passport expiry',
+    permitExpiry: 'Residence permit expiry', mobile: 'Mobile', email: 'Email', files: 'Documents received', btn: 'Update my details',
+    note: 'To update: tap the button, then enter your reference number · This email contains no financial data', regards: 'With kind regards', sign: 'Human Resources · Bonyan International Group',
+    auto: 'This is an automated message from the staff registry system. For any technical question, feel free to contact us at the address below.', dev: 'Eng. Osama Junaydi', copy: '© {y} Bonyan International Group',
+    expired: '{doc} expired on {d}. Please update it in the form once renewed.', soon: '{doc} expires on {d}. Please renew it and update it in the form.',
+    docs: { passportExpiry: 'Your passport', permitExpiry: 'Your residence permit', nationalIdExpiry: 'Your national ID', workPermitExpiry: 'Your work permit' }
+  },
+  id: {
+    sender: 'SDM · Bonyan International Group', hr: 'Sumber Daya Manusia · Registri Staf', org: 'Bonyan International Group', logoAlt: 'Bonyan',
+    subjNew: 'Konfirmasi pendaftaran', subjUpd: 'Konfirmasi pembaruan data', preNew: 'Data Anda telah tercatat dalam registri staf Bonyan International Group. Nomor referensi {ref}', preUpd: 'Data Anda telah diperbarui dalam registri staf Bonyan International Group. Nomor referensi {ref}',
+    titleNew: 'Data Anda telah terdaftar', titleUpd: 'Data Anda telah diperbarui',
+    greetM: 'Yth. Bapak <b>{name}</b>,', greetF: 'Yth. Ibu <b>{name}</b>,',
+    bodyNew: 'Data dan dokumen Anda telah kami terima dan tercatat dalam registri staf Bonyan International Group.', bodyUpd: 'Pembaruan data dan dokumen Anda telah tersimpan dalam registri staf Bonyan International Group.',
+    card: 'Kartu staf', ref: 'Nomor referensi', date: 'Tanggal pendaftaran', workCountry: 'Negara kerja', nationality: 'Kewarganegaraan', passport: 'No. paspor', passportExpiry: 'Masa berlaku paspor',
+    permitExpiry: 'Masa berlaku izin tinggal', mobile: 'Ponsel', email: 'Email', files: 'Dokumen diterima', btn: 'Perbarui data saya',
+    note: 'Untuk memperbarui: ketuk tombol, lalu masukkan nomor referensi Anda · Email ini tidak memuat data keuangan', regards: 'Hormat kami', sign: 'Sumber Daya Manusia · Bonyan International Group',
+    auto: 'Pesan otomatis dari sistem registri staf. Untuk pertanyaan teknis, silakan hubungi alamat di bawah.', dev: 'Osama Junaydi', copy: '© {y} Bonyan International Group',
+    expired: '{doc} telah habis masa berlakunya pada {d}. Mohon perbarui di formulir setelah diperpanjang.', soon: '{doc} akan habis masa berlakunya pada {d}. Mohon segera diperpanjang dan diperbarui di formulir.',
+    docs: { passportExpiry: 'Paspor Anda', permitExpiry: 'Izin tinggal Anda', nationalIdExpiry: 'KTP/ID Anda', workPermitExpiry: 'Izin kerja Anda' }
+  }
+};
+function mailLang_(v) { v = String(v || '').toLowerCase(); return MAIL_TX_[v] ? v : 'ar'; }
+
+/* توقيع رابط التحديث الخاص بكل منسوب (لا يفتح إلا سجله، ويُطلب معه الرقم المرجعي) */
+function selfSecret_() {
+  var p = PropertiesService.getScriptProperties(), s = p.getProperty('SELF_SECRET');
+  if (!s) { s = Utilities.getUuid() + Utilities.getUuid(); p.setProperty('SELF_SECRET', s); }
+  return s;
+}
+function selfSig_(ref) {
+  var raw = Utilities.computeHmacSha256Signature(String(ref).toUpperCase(), selfSecret_());
+  return Utilities.base64EncodeWebSafe(raw).replace(/=+$/, '').slice(0, 22);
+}
+function updateUrl_(ref, L) { return CONFIG.FORM_URL + 'update.html?k=' + selfSig_(ref) + '&lang=' + L; }
 
 function saveCardFiles_(folder, ref, name, gif, jpg) {
   var it = folder.getFiles();
@@ -657,12 +720,14 @@ function saveCardFiles_(folder, ref, name, gif, jpg) {
   if (out.gif) CacheService.getScriptCache().put('cardgif_' + ref, out.gif.getId(), 21600);
   return out;
 }
+function rowName_(sh, row) { return sh.getRange(row, col_('fullNameAr')).getDisplayValue() || sh.getRange(row, col_('fullNameLatin')).getDisplayValue(); }
+/* info: نصوص البطاقة بلغة التعبئة (الجهة، الدول، أسماء المرفقات) يرسلها النموذج لتظهر الرسالة بلغته */
 function cardImg_(b) {
   checkToken_(b.ref, b.token);
   var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.main), row = rowOf_(sh, b.ref);
   var folder = DriveApp.getFolderById(sh.getRange(row, col_('folderId')).getValue());
-  var name = sh.getRange(row, col_('fullNameAr')).getDisplayValue() || sh.getRange(row, col_('fullNameLatin')).getDisplayValue();
-  saveCardFiles_(folder, b.ref, name, b.gif, b.jpg);
+  saveCardFiles_(folder, b.ref, rowName_(sh, row), b.gif, b.jpg);
+  if (b.info) { try { CacheService.getScriptCache().put('mailinfo_' + b.ref, JSON.stringify(b.info).slice(0, 90000), 21600); } catch (e) { } }
   return { ok: true };
 }
 function cardGifBlob_(sh, row, ref) {
@@ -675,137 +740,211 @@ function cardGifBlob_(sh, row, ref) {
   } catch (e2) { return null; }
 }
 /* يرسل الرسالة ويعيد البريد الذي أُرسلت إليه (أو '' إن لم يوجد بريد) */
-function sendConfirm_(sh, row, ref, updated) {
+function sendConfirm_(sh, row, ref, updated, info) {
   var get = function (k) { return String(sh.getRange(row, col_(k)).getDisplayValue() || '').trim(); };
+  if (!info) { try { info = JSON.parse(CacheService.getScriptCache().get('mailinfo_' + ref) || 'null'); } catch (e0) { info = null; } }
+  info = info || {};
+  var L = mailLang_(info.lang || get('lang')), T = MAIL_TX_[L];
+  var fill = function (s, o) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return o[k] == null ? '' : o[k]; }); };
   var staffMail = get('personalEmail') || get('officialEmail');
   var to = CONFIG.MAIL_ONLY_TO || staffMail;
   if (!to) return '';
-  var female = /أنثى/.test(get('gender'));
+  var female = /أنثى|female|perempuan/i.test(get('gender'));
   var pass = get('passportNo').replace(/\s/g, '');
   var tz = 'Asia/Riyadh', today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
   var alerts = [];
-  [['passportExpiry', 'جواز السفر'], ['permitExpiry', 'الإقامة'], ['nationalIdExpiry', 'الهوية الوطنية'], ['workPermitExpiry', 'تصريح العمل']].forEach(function (d) {
-    var v = get(d[0]); if (!/^\d{4}-\d{2}-\d{2}/.test(v)) return;
+  ['passportExpiry', 'permitExpiry', 'nationalIdExpiry', 'workPermitExpiry'].forEach(function (k) {
+    var v = get(k); if (!/^\d{4}-\d{2}-\d{2}/.test(v)) return;
     var days = Math.round((new Date(v.slice(0, 10) + 'T12:00:00') - new Date(today + 'T12:00:00')) / 864e5);
-    if (days < 0) alerts.push('انتهت صلاحية ' + d[1] + ' بتاريخ ' + v.slice(0, 10) + '، نرجو تحديثها في النموذج بعد تجديدها.');
-    else if (days <= 90) alerts.push('تنتهي صلاحية ' + d[1] + ' بتاريخ ' + v.slice(0, 10) + '، نرجو المبادرة بتجديدها وتحديثها في النموذج.');
+    if (days < 0) alerts.push(fill(T.expired, { doc: T.docs[k], d: v.slice(0, 10) }));
+    else if (days <= 90) alerts.push(fill(T.soon, { doc: T.docs[k], d: v.slice(0, 10) }));
   });
-  var files = [];
+  var files = [], fl = info.fileLabels || {};
   MAIN_COLS.forEach(function (c, j) {
     if (c[2] !== 'f') return;
-    var rt = sh.getRange(row, j + 1).getRichTextValue();
-    if (linksOf_(rt).length) files.push(c[1]);
+    if (linksOf_(sh.getRange(row, j + 1).getRichTextValue()).length) files.push(fl[c[0]] || c[1]);
   });
   var gif = cardGifBlob_(sh, row, ref);
+  var nameMain = L === 'ar' ? (get('fullNameAr') || get('fullNameLatin')) : (get('fullNameLatin') || get('fullNameAr'));
   var m = {
-    subject: (updated ? 'تأكيد تحديث بياناتكم' : 'تأكيد تسجيل بياناتكم') + ' · ' + ref + ' · مجموعة بنيان العالمية',
-    preheader: (updated ? 'تم تحديث بياناتكم' : 'تم تسجيل بياناتكم') + ' في سجل منسوبي مجموعة بنيان العالمية. الرقم المرجعي ' + ref,
-    logo: 'cid:logo', cardImg: gif ? 'cid:card' : '', updated: updated, female: female, title: female ? 'الأستاذة' : 'الأستاذ',
-    nameAr: get('fullNameAr'), nameLatin: get('fullNameLatin'), ref: ref, date: get('createdAt'), entity: get('entity'), jobTitle: get('jobTitle'),
-    workCountry: get('workCountry'), nationality: get('nationality'), passportMasked: pass ? '••••' + pass.slice(-4) : '', passportExpiry: get('passportExpiry'),
+    L: L, T: T, subject: (updated ? T.subjUpd : T.subjNew) + ' · ' + ref + ' · ' + T.org,
+    preheader: fill(updated ? T.preUpd : T.preNew, { ref: ref }),
+    logo: 'cid:logo', cardImg: gif ? 'cid:card' : '', updated: updated, female: female, name: nameMain,
+    nameAr: get('fullNameAr'), nameLatin: get('fullNameLatin'), ref: ref, date: get('createdAt'), entity: info.entity || get('entity'), jobTitle: get('jobTitle'),
+    workCountry: info.workCountry || get('workCountry'), nationality: info.nationality || get('nationality'), passportMasked: pass ? '••••' + pass.slice(-4) : '', passportExpiry: get('passportExpiry'),
     permitExpiry: get('permitExpiry'), mobile: get('mobile'), email: staffMail, files: files, alerts: alerts,
-    formUrl: CONFIG.FORM_URL, devEmail: 'osama.mo.bonyan@gmail.com', year: Utilities.formatDate(new Date(), tz, 'yyyy')
+    formUrl: updateUrl_(ref, L), devEmail: 'osama.mo.bonyan@gmail.com', year: Utilities.formatDate(new Date(), tz, 'yyyy')
   };
   var inline = { logo: Utilities.newBlob(Utilities.base64Decode(LOGO_PNG_B64_), 'image/png', 'bonyan.png') };
   if (gif) inline.card = gif.setName('card.gif');
   MailApp.sendEmail({
-    to: to, subject: m.subject, name: 'الموارد البشرية · مجموعة بنيان العالمية',
+    to: to, subject: m.subject, name: T.sender,
     htmlBody: confirmMailHtml_(m), inlineImages: inline,
-    body: m.preheader + '\n\nمع خالص التحية والتقدير\nإدارة الموارد البشرية · مجموعة بنيان العالمية'
+    body: m.preheader + '\n\n' + m.formUrl + '\n\n' + T.regards + '\n' + T.sign
   });
-  log_(ref, 'إرسال رسالة التأكيد', to);
+  log_(ref, 'إرسال رسالة التأكيد', to + ' · ' + L);
   return to;
 }
-/* إعادة إرسال رسالة التأكيد من لوحة الموارد البشرية (مع بطاقة جديدة يصنعها المتصفح) */
+/* إعادة إرسال رسالة التأكيد من لوحة الموارد البشرية (مع بطاقة جديدة يصنعها المتصفح بلغة التعبئة) */
 function adminMail_(b) {
   var who = checkAdmin_(b.code);
   var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.main);
   var row = findRow_(sh, 'ref', function (v) { return v === b.ref; });
   if (!row) throw new Error('الرقم المرجعي غير موجود');
-  if (b.gif || b.jpg) {
-    var folder = DriveApp.getFolderById(sh.getRange(row, col_('folderId')).getValue());
-    saveCardFiles_(folder, b.ref, sh.getRange(row, col_('fullNameAr')).getDisplayValue() || sh.getRange(row, col_('fullNameLatin')).getDisplayValue(), b.gif, b.jpg);
-  }
-  var to = sendConfirm_(sh, row, b.ref, false);
+  if (b.gif || b.jpg) saveCardFiles_(DriveApp.getFolderById(sh.getRange(row, col_('folderId')).getValue()), b.ref, rowName_(sh, row), b.gif, b.jpg);
+  var to = sendConfirm_(sh, row, b.ref, false, b.info || null);
   if (!to) throw new Error('لا يوجد بريد إلكتروني مسجّل لهذا المنسوب');
   log_(b.ref, 'إعادة إرسال رسالة التأكيد من لوحة الموارد البشرية', who + ' · ' + to);
   return { ok: true, to: to };
 }
 
-/* قالب رسالة تأكيد التسجيل (يُنقل كما هو إلى Code.gs) — جداول وأنماط مضمّنة لتظهر صحيحة في Gmail وOutlook والجوال */
+/* ============================================================ تحديث المنسوب لبياناته بنفسه (update.html)
+   ١) يكتب رقمه المرجعي، ويتحقق إما برابط رسالته الخاص (k) أو ببريده/جواله المسجّل
+   ٢) يختار القسم الذي يريد تعديله ويحفظ؛ تُكتب التغييرات فقط، ويُسجَّل كل شيء في «السجل»، ثم تصله رسالة «تم تحديث بياناتكم» */
+var SELF_LOCKED_ = ['status'];
+function rowObj_(sh, row, ss) {
+  var o = {}, disp = sh.getRange(row, 1, 1, MAIN_COLS.length).getDisplayValues()[0];
+  MAIN_COLS.forEach(function (c, j) {
+    if (c[0] === 'folderId' || c[0] === 'folder') return;
+    if (c[2] === 'f') o[c[0]] = linksOf_(sh.getRange(row, j + 1).getRichTextValue()).length;
+    else o[c[0]] = disp[j];
+  });
+  var ref = o.ref, kids = {};
+  [['quals', CONFIG.SHEETS.quals], ['exp', CONFIG.SHEETS.exp], ['langs', CONFIG.SHEETS.langs]].forEach(function (t) {
+    var c = ss.getSheetByName(t[1]), n = c ? c.getLastRow() : 0;
+    if (n < 1) { kids[t[0]] = []; return; }
+    var v = c.getRange(1, 1, n, c.getLastColumn()).getDisplayValues();
+    kids[t[0]] = [v[0]].concat(v.slice(1).filter(function (r) { return r[0] === ref; }));
+  });
+  return { rec: o, kids: kids };
+}
+function selfStart_(b) {
+  var ref = String(b.ref || '').trim().toUpperCase().replace(/\s+/g, '');
+  var cache = CacheService.getScriptCache(), fk = 'selffail_' + ref;
+  var fails = +(cache.get(fk) || 0);
+  if (fails >= 6) throw new Error('locked');
+  var ss = getSS_(false), sh = ss.getSheetByName(CONFIG.SHEETS.main);
+  var row = ref ? findRow_(sh, 'ref', function (v) { return String(v).toUpperCase() === ref; }) : 0;
+  var ok = false;
+  if (row) {
+    if (b.k && b.k === selfSig_(ref)) ok = true;
+    else if (b.contact) {
+      var c = String(b.contact).trim().toLowerCase(), cd = digits_(c).slice(-8);
+      var mails = [sh.getRange(row, col_('personalEmail')).getDisplayValue(), sh.getRange(row, col_('officialEmail')).getDisplayValue()].map(function (v) { return String(v || '').trim().toLowerCase(); });
+      var mobs = [sh.getRange(row, col_('mobile')).getDisplayValue(), sh.getRange(row, col_('whatsapp')).getDisplayValue()].map(function (v) { return digits_(v).slice(-8); });
+      ok = (c.indexOf('@') > -1 && mails.indexOf(c) > -1) || (cd.length === 8 && mobs.indexOf(cd) > -1);
+    }
+  }
+  if (!ok) { cache.put(fk, String(fails + 1), 900); Utilities.sleep(600); throw new Error('self_bad'); }
+  cache.remove(fk);
+  var token = Utilities.getUuid();
+  cache.put('self_' + ref, token, 7200);
+  var out = rowObj_(sh, row, ss);
+  log_(ref, 'فتح صفحة التحديث الذاتي', b.k ? 'عبر رابط الرسالة' : 'بالبريد أو الجوال');
+  var ph = photoB64_(sh, row);
+  return { ok: true, ref: sh.getRange(row, col_('ref')).getValue(), token: token, rec: out.rec, kids: out.kids,
+    cols: MAIN_COLS.filter(function (c) { return c[0] !== 'folderId' && c[0] !== 'folder'; }), photo: ph ? 'data:' + ph.mime + ';base64,' + ph.b64 : '' };
+}
+function selfCheck_(b) {
+  var ref = String(b.ref || '').toUpperCase(), t = CacheService.getScriptCache().get('self_' + ref);
+  if (!t || t !== b.token) throw new Error('self_expired');
+  return ref;
+}
+function selfUpdate_(b) {
+  selfCheck_(b);
+  var r = updateCore_(b, 'المنسوب نفسه', true);
+  var ss = getSS_(false), sh = ss.getSheetByName(CONFIG.SHEETS.main), row = findRow_(sh, 'ref', function (v) { return v === b.ref; });
+  var out = rowObj_(sh, row, ss);
+  r.rec = out.rec; r.kids = out.kids;
+  return r;
+}
+function selfUpload_(b) { selfCheck_(b); return uploadCore_(b, 'المنسوب نفسه', true); }
+function selfFinish_(b) {
+  selfCheck_(b);
+  var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.main);
+  var row = findRow_(sh, 'ref', function (v) { return v === b.ref; });
+  if (b.gif || b.jpg) saveCardFiles_(DriveApp.getFolderById(sh.getRange(row, col_('folderId')).getValue()), b.ref, rowName_(sh, row), b.gif, b.jpg);
+  var to = '';
+  try { to = sendConfirm_(sh, row, b.ref, true, b.info || null); } catch (e) { log_(b.ref, 'تعذّر إرسال رسالة التأكيد', String(e)); }
+  return { ok: true, mailed: !!to };
+}
+
+/* قالب رسالة تأكيد التسجيل — جداول وأنماط مضمّنة لتظهر صحيحة في Gmail وOutlook والجوال، باتجاه اللغة */
 function confirmMailHtml_(m) {
+  var T = m.T || MAIL_TX_.ar, RTL = (m.L || 'ar') === 'ar', S = RTL ? 'right' : 'left', E = RTL ? 'left' : 'right', DIR = RTL ? 'rtl' : 'ltr';
   var e = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var NAVY = '#16294A', NAVY2 = '#0E1C33', GOLD = '#D2B074', GOLD2 = '#9C7432', INK = '#1D2A3B', MUTED = '#6B778A', LINE = '#E8EBF1';
-  var FONT = "'Tajawal','IBM Plex Sans Arabic',Tahoma,Arial,sans-serif", MONO = "Consolas,'SF Mono','Courier New',monospace";
+  var FONT = RTL ? "'Tajawal','IBM Plex Sans Arabic',Tahoma,Arial,sans-serif" : "'Segoe UI',Roboto,Helvetica,Arial,sans-serif", MONO = "Consolas,'SF Mono','Courier New',monospace";
   /* خانة بيانات صغيرة: العنوان فوق القيمة */
   var cell = function (k, v, ltr, span) {
     return '<td' + (span ? ' colspan="2"' : '') + ' width="' + (span ? '100%' : '50%') + '" style="padding:6px;vertical-align:top;"><div style="background:#F7F8FB;border:1px solid ' + LINE + ';border-radius:12px;padding:10px 14px;">' +
       '<div style="font-size:11.5px;color:' + MUTED + ';font-weight:700;">' + e(k) + '</div>' +
-      '<div' + (ltr ? ' dir="ltr" style="text-align:right;' : ' style="') + 'font-size:14px;color:' + INK + ';font-weight:800;margin-top:3px;word-break:break-word;">' + (v ? e(v) : '—') + '</div></div></td>';
+      '<div' + (ltr ? ' dir="ltr" style="text-align:' + S + ';' : ' style="') + 'font-size:14px;color:' + INK + ';font-weight:800;margin-top:3px;word-break:break-word;">' + (v ? e(v) : '—') + '</div></div></td>';
   };
-  var pairs = m.cardImg ? [['الجنسية', m.nationality], ['رقم الجواز', m.passportMasked, 1]] : [['دولة العمل', m.workCountry], ['الجنسية', m.nationality], ['رقم الجواز', m.passportMasked, 1], ['انتهاء الجواز', m.passportExpiry, 1]];
-  if (m.permitExpiry) pairs.push(['انتهاء الإقامة', m.permitExpiry, 1]);
-  pairs.push(['الجوال', m.mobile, 1]);
+  var pairs = m.cardImg ? [[T.nationality, m.nationality], [T.passport, m.passportMasked, 1]] : [[T.workCountry, m.workCountry], [T.nationality, m.nationality], [T.passport, m.passportMasked, 1], [T.passportExpiry, m.passportExpiry, 1]];
+  if (m.permitExpiry) pairs.push([T.permitExpiry, m.permitExpiry, 1]);
+  pairs.push([T.mobile, m.mobile, 1]);
   var grid = '', i;
   for (i = 0; i < pairs.length; i += 2) grid += '<tr>' + cell(pairs[i][0], pairs[i][1], pairs[i][2]) + (pairs[i + 1] ? cell(pairs[i + 1][0], pairs[i + 1][1], pairs[i + 1][2]) : '<td></td>') + '</tr>';
-  grid += '<tr>' + cell('البريد الإلكتروني', m.email, 1, 1) + '</tr>';
+  grid += '<tr>' + cell(T.email, m.email, 1, 1) + '</tr>';
   var chips = (m.files || []).map(function (f) {
     return '<span style="display:inline-block;margin:0 0 6px 6px;padding:6px 11px;border-radius:999px;background:#EEF7F1;border:1px solid #CFE7D8;color:#1E6B49;font-size:12.5px;font-weight:700;white-space:nowrap;">✓ ' + e(f) + '</span>';
   }).join('');
   var alerts = (m.alerts || []).map(function (a) {
-    return '<div style="margin-top:12px;padding:10px 14px;border-radius:12px;background:#FFF6E5;border:1px solid #F1D49B;color:#7A5410;font-size:13px;line-height:1.8;">⚠️ ' + e(a) + '</div>';
+    return '<div style="margin-top:12px;padding:10px 14px;border-radius:12px;background:#FFF6E5;border:1px solid #F1D49B;color:#7A5410;font-size:13px;line-height:1.8;text-align:' + S + ';">⚠️ ' + e(a) + '</div>';
   }).join('');
-  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>' + e(m.subject) + '</title>' +
+  var greet = (m.female ? T.greetF : T.greetM).replace('{name}', e(m.name || m.nameAr || m.nameLatin));
+  var nameBig = RTL ? (m.nameAr || m.nameLatin) : (m.nameLatin || m.nameAr), nameSmall = RTL ? (m.nameAr ? m.nameLatin : '') : (m.nameLatin ? m.nameAr : '');
+  return '<!doctype html><html lang="' + (m.L || 'ar') + '" dir="' + DIR + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>' + e(m.subject) + '</title>' +
   '<style>details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-marker{display:none}details[open] .chev{transform:rotate(180deg)}</style></head>' +
   '<body style="margin:0;padding:0;background:#EDF0F5;">' +
   '<div style="display:none;max-height:0;overflow:hidden;">' + e(m.preheader) + '</div>' +
   '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EDF0F5;"><tr><td align="center" style="padding:24px 10px;">' +
-  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="rtl" style="max-width:560px;background:#FFFFFF;border-radius:22px;overflow:hidden;font-family:' + FONT + ';text-align:right;box-shadow:0 12px 34px rgba(22,41,74,.13);">' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="' + DIR + '" style="max-width:560px;background:#FFFFFF;border-radius:22px;overflow:hidden;font-family:' + FONT + ';text-align:' + S + ';box-shadow:0 12px 34px rgba(22,41,74,.13);">' +
   /* الرأس */
   '<tr><td style="background:' + NAVY + ';background-image:linear-gradient(135deg,#1C335A 0%,' + NAVY + ' 45%,' + NAVY2 + ' 100%);padding:20px 24px;">' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
-    '<td style="vertical-align:middle;"><div style="font-size:11.5px;color:' + GOLD + ';font-weight:800;letter-spacing:.3px;">الموارد البشرية · سجل المنسوبين</div><div style="font-size:17px;font-weight:900;color:#FFFFFF;margin-top:2px;">مجموعة بنيان العالمية</div></td>' +
-    '<td align="left" style="vertical-align:middle;"><img src="' + e(m.logo) + '" width="64" alt="بنيان" style="display:block;width:64px;height:auto;border:0;"></td>' +
+    '<td style="vertical-align:middle;text-align:' + S + ';"><div style="font-size:11.5px;color:' + GOLD + ';font-weight:800;letter-spacing:.3px;">' + e(T.hr) + '</div><div style="font-size:17px;font-weight:900;color:#FFFFFF;margin-top:2px;">' + e(T.org) + '</div></td>' +
+    '<td align="' + E + '" style="vertical-align:middle;"><img src="' + e(m.logo) + '" width="64" alt="' + e(T.logoAlt) + '" style="display:block;width:64px;height:auto;border:0;"></td>' +
     '</tr></table></td></tr>' +
   '<tr><td style="height:3px;line-height:3px;font-size:0;background:' + GOLD + ';background-image:linear-gradient(90deg,#B8924F,' + GOLD + ',#F0D9A8,' + GOLD + ',#B8924F);">&nbsp;</td></tr>' +
   /* العنوان */
   '<tr><td align="center" style="padding:26px 24px 4px;">' +
     '<div style="width:54px;height:54px;line-height:54px;border-radius:50%;background:#EEF7F1;border:2px solid #BFE0CC;color:#1E7A52;font-size:26px;font-weight:900;text-align:center;margin:0 auto;">✓</div>' +
-    '<h1 style="margin:14px 0 4px;font-size:21px;line-height:1.5;color:' + NAVY + ';font-weight:900;text-align:center;">' + e(m.updated ? 'تم تحديث بياناتكم بنجاح' : 'تم تسجيل بياناتكم بنجاح') + '</h1>' +
-    '<p style="margin:0;font-size:14px;line-height:1.95;color:' + INK + ';text-align:center;">' + e(m.title) + ' <b>' + e(m.nameAr || m.nameLatin) + '</b> المحترم' + (m.female ? 'ة' : '') + '،<br>' +
-    e(m.updated ? 'حُفظ تحديث بياناتكم ومرفقاتكم في سجل منسوبي مجموعة بنيان العالمية.' : 'استلمنا بياناتكم ومرفقاتكم وسُجّلت في سجل منسوبي مجموعة بنيان العالمية.') + '</p>' +
+    '<h1 style="margin:14px 0 4px;font-size:21px;line-height:1.5;color:' + NAVY + ';font-weight:900;text-align:center;">' + e(m.updated ? T.titleUpd : T.titleNew) + '</h1>' +
+    '<p style="margin:0;font-size:14px;line-height:1.95;color:' + INK + ';text-align:center;">' + greet + '<br>' + e(m.updated ? T.bodyUpd : T.bodyNew) + '</p>' +
   '</td></tr>' +
-  /* بطاقة المنسوب: صورة البطاقة نفسها كما في الموقع (الوجهان)، وإن لم تتوفر فبطاقة نصية */
-  (m.cardImg ? '<tr><td align="center" style="padding:14px 10px 0;"><img src="' + e(m.cardImg) + '" width="540" alt="بطاقة المنسوب" style="display:block;width:100%;max-width:540px;height:auto;border:0;margin:0 auto;"></td></tr>' +
-    '<tr><td align="center" style="padding:2px 24px 0;font-size:12.5px;color:' + MUTED + ';">الرقم المرجعي <b dir="ltr" style="font-family:' + MONO + ';color:' + NAVY + ';letter-spacing:.5px;">' + e(m.ref) + '</b> &nbsp;·&nbsp; تاريخ التسجيل <b dir="ltr" style="color:' + INK + ';">' + e(m.date) + '</b>' + alerts + '</td></tr>' :
+  /* بطاقة المنسوب: صورة البطاقة نفسها كما في الموقع، وإن لم تتوفر فبطاقة نصية */
+  (m.cardImg ? '<tr><td align="center" style="padding:14px 10px 0;"><img src="' + e(m.cardImg) + '" width="540" alt="' + e(T.card) + '" style="display:block;width:100%;max-width:540px;height:auto;border:0;margin:0 auto;"></td></tr>' +
+    '<tr><td align="center" style="padding:2px 24px 0;font-size:12.5px;color:' + MUTED + ';">' + e(T.ref) + ' <b dir="ltr" style="font-family:' + MONO + ';color:' + NAVY + ';letter-spacing:.5px;">' + e(m.ref) + '</b> &nbsp;·&nbsp; ' + e(T.date) + ' <b dir="ltr" style="color:' + INK + ';">' + e(m.date) + '</b>' + alerts + '</td></tr>' :
   '<tr><td style="padding:18px 24px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-radius:16px;background:' + NAVY + ';background-image:linear-gradient(135deg,#21396A,' + NAVY + ' 55%,' + NAVY2 + ');"><tr>' +
-    '<td style="padding:18px 20px;vertical-align:top;">' +
-      '<div style="font-size:17px;font-weight:900;color:#FFFFFF;line-height:1.5;">' + e(m.nameAr || m.nameLatin) + '</div>' +
-      (m.nameAr ? '<div dir="ltr" style="text-align:right;font-size:11px;letter-spacing:1px;color:rgba(255,255,255,.7);font-weight:700;margin-top:1px;">' + e(m.nameLatin) + '</div>' : '') +
+    '<td style="padding:18px 20px;vertical-align:top;text-align:' + S + ';">' +
+      '<div style="font-size:17px;font-weight:900;color:#FFFFFF;line-height:1.5;">' + e(nameBig) + '</div>' +
+      (nameSmall ? '<div style="font-size:11px;letter-spacing:' + (RTL ? '1px' : '0') + ';color:rgba(255,255,255,.7);font-weight:700;margin-top:1px;">' + e(nameSmall) + '</div>' : '') +
       '<div style="font-size:13.5px;color:' + GOLD + ';font-weight:800;margin-top:8px;">' + e(m.jobTitle || '') + '</div>' +
       '<div style="font-size:12.5px;color:rgba(255,255,255,.78);margin-top:1px;">' + e(m.entity || '') + '</div>' +
     '</td></tr><tr><td style="padding:0 20px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid rgba(210,176,116,.35);"><tr>' +
-      '<td style="padding-top:12px;"><div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:700;">الرقم المرجعي</div><div dir="ltr" style="text-align:right;font-family:' + MONO + ';font-size:16px;font-weight:700;letter-spacing:1px;color:' + GOLD + ';white-space:nowrap;">' + e(m.ref) + '</div></td>' +
-      '<td align="left" style="padding-top:12px;"><div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:700;">تاريخ التسجيل</div><div dir="ltr" style="font-size:13px;font-weight:700;color:#FFFFFF;">' + e(m.date) + '</div></td>' +
+      '<td style="padding-top:12px;text-align:' + S + ';"><div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:700;">' + e(T.ref) + '</div><div dir="ltr" style="text-align:' + S + ';font-family:' + MONO + ';font-size:16px;font-weight:700;letter-spacing:1px;color:' + GOLD + ';white-space:nowrap;">' + e(m.ref) + '</div></td>' +
+      '<td align="' + E + '" style="padding-top:12px;"><div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:700;">' + e(T.date) + '</div><div dir="ltr" style="font-size:13px;font-weight:700;color:#FFFFFF;">' + e(m.date) + '</div></td>' +
     '</tr></table></td></tr></table>' + alerts + '</td></tr>') +
   /* البيانات */
   '<tr><td style="padding:12px 18px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">' + grid + '</table></td></tr>' +
   /* المرفقات: قائمة منسدلة */
   (chips ? '<tr><td style="padding:8px 24px 0;"><details style="border:1px solid ' + LINE + ';border-radius:14px;background:#FBFCFD;">' +
-    '<summary style="padding:12px 16px;font-size:14px;font-weight:800;color:' + NAVY + ';"><span style="display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:999px;background:#EEF7F1;color:#1E7A52;font-size:12px;margin-left:8px;">' + (m.files || []).length + '</span>المرفقات المستلمة<span class="chev" style="float:left;color:' + GOLD2 + ';font-size:12px;line-height:22px;display:inline-block;">▼</span></summary>' +
-    '<div style="padding:4px 16px 10px;">' + chips + '</div></details></td></tr>' : '') +
+    '<summary style="padding:12px 16px;font-size:14px;font-weight:800;color:' + NAVY + ';text-align:' + S + ';"><span style="display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:999px;background:#EEF7F1;color:#1E7A52;font-size:12px;margin-' + E + ':8px;">' + (m.files || []).length + '</span>' + e(T.files) + '<span class="chev" style="float:' + E + ';color:' + GOLD2 + ';font-size:12px;line-height:22px;display:inline-block;">▼</span></summary>' +
+    '<div style="padding:4px 16px 10px;text-align:' + S + ';">' + chips + '</div></details></td></tr>' : '') +
   /* زر التحديث */
   '<tr><td align="center" style="padding:20px 24px 4px;">' +
-    '<table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr><td style="border-radius:12px;background:' + NAVY + ';background-image:linear-gradient(135deg,#21396A,' + NAVY2 + ');"><a href="' + e(m.formUrl) + '" style="display:inline-block;padding:12px 28px;font-family:' + FONT + ';font-size:14.5px;font-weight:800;color:#FFFFFF;text-decoration:none;">تحديث بياناتي</a></td></tr></table>' +
-    '<p style="margin:10px 0 0;font-size:12px;line-height:1.8;color:' + MUTED + ';text-align:center;">للتحديث استخدموا البريد أو رقم الجوال المسجّلين · لا تتضمن هذه الرسالة أي بيانات مالية</p>' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr><td style="border-radius:12px;background:' + NAVY + ';background-image:linear-gradient(135deg,#21396A,' + NAVY2 + ');"><a href="' + e(m.formUrl) + '" style="display:inline-block;padding:12px 28px;font-family:' + FONT + ';font-size:14.5px;font-weight:800;color:#FFFFFF;text-decoration:none;">' + e(T.btn) + '</a></td></tr></table>' +
+    '<p style="margin:10px 0 0;font-size:12px;line-height:1.8;color:' + MUTED + ';text-align:center;">' + e(T.note) + '</p>' +
   '</td></tr>' +
   /* الختام */
-  '<tr><td align="center" style="padding:18px 24px 22px;"><div style="font-size:13.5px;color:' + INK + ';line-height:1.8;">مع خالص التحية والتقدير</div><div style="font-size:14.5px;font-weight:900;color:' + NAVY + ';">إدارة الموارد البشرية · مجموعة بنيان العالمية</div></td></tr>' +
+  '<tr><td align="center" style="padding:18px 24px 22px;"><div style="font-size:13.5px;color:' + INK + ';line-height:1.8;">' + e(T.regards) + '</div><div style="font-size:14.5px;font-weight:900;color:' + NAVY + ';">' + e(T.sign) + '</div></td></tr>' +
   /* التذييل وتوقيع المطوّر */
   '<tr><td align="center" style="background:#F6F7FA;border-top:1px solid ' + LINE + ';padding:14px 24px 16px;">' +
-    '<p style="margin:0 0 8px;font-size:11.5px;line-height:1.8;color:' + MUTED + ';">رسالة آلية من نظام سجل المنسوبين، ولأي استفسار تقني يسعدنا تواصلك عبر البريد أدناه.</p>' +
-    '<a href="mailto:' + e(m.devEmail) + '" style="display:inline-block;padding:4px 11px;border-radius:999px;background:#FFF1E6;border:1px solid #F5C9A3;color:#B4570F;font-size:11.5px;font-weight:800;text-decoration:none;white-space:nowrap;">م. أسامة جنيدي · <span dir="ltr">' + e(m.devEmail) + '</span></a>' +
-    '<div style="margin-top:8px;font-size:11px;color:#9AA5B6;">© ' + e(m.year) + ' مجموعة بنيان العالمية</div>' +
+    '<p style="margin:0 0 8px;font-size:11.5px;line-height:1.8;color:' + MUTED + ';">' + e(T.auto) + '</p>' +
+    '<a href="mailto:' + e(m.devEmail) + '" style="display:inline-block;padding:4px 11px;border-radius:999px;background:#FFF1E6;border:1px solid #F5C9A3;color:#B4570F;font-size:11.5px;font-weight:800;text-decoration:none;white-space:nowrap;">' + e(T.dev) + ' · <span dir="ltr">' + e(m.devEmail) + '</span></a>' +
+    '<div style="margin-top:8px;font-size:11px;color:#9AA5B6;">' + e(String(T.copy).replace('{y}', m.year)) + '</div>' +
   '</td></tr>' +
   '</table></td></tr></table></body></html>';
 }

@@ -1065,6 +1065,7 @@
     $('.lang-toggle').setAttribute('aria-label', t('m.lang') + ': ' + DICT[L]['lang.name']);
     $('#footPrivacy').textContent = t('m.privacy');
     $('#hrBtnLbl').textContent = ({ ar: 'الموارد البشرية', en: 'HR', id: 'SDM' })[L];
+    var ub = $('#updBtn'); if (ub) { $('#updBtnLbl').textContent = ({ ar: 'تحديث بياناتي', en: 'Update my details', id: 'Perbarui data' })[L]; ub.setAttribute('href', 'update.html?lang=' + L); ub.setAttribute('title', ({ ar: 'سبق لك التسجيل؟ حدّث بياناتك برقمك المرجعي', en: 'Already registered? Update your details with your reference number', id: 'Sudah terdaftar? Perbarui data dengan nomor referensi' })[L]); }
     $('#hrBtn').setAttribute('title', ({ ar: 'لوحة بيانات الموارد البشرية (برمز دخول)', en: 'HR data dashboard (access code required)', id: 'Dasbor data SDM (perlu kode akses)' })[L]);
     $('#btnHomeLbl').textContent = ({ ar: 'رجوع', en: 'Back', id: 'Kembali' })[L];
     $('#btnHome').setAttribute('aria-label', ({ ar: 'رجوع إلى الصفحة الرئيسية', en: 'Back to the home page', id: 'Kembali ke beranda' })[L]);
@@ -1595,6 +1596,13 @@
   /* ---------------------------------------------------------- تصدير البطاقة صورةً عالية الجودة */
   /* صورة البطاقة لرسالة تأكيد التسجيل: بطاقة الموقع نفسها تنقلب بين وجهيها (GIF متحركة)، وصورة ثابتة للوجهين (JPG) تُحفظ في مجلد المنسوب */
   function b64OfBytes(u8) { var s = '', CH = 0x8000; for (var i = 0; i < u8.length; i += CH) s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); return btoa(s); }
+  /* نصوص رسالة التأكيد بلغة التعبئة: اسم الجهة والدول وأسماء المرفقات */
+  function mailInfo(L, d) {
+    L = DICT[L] ? L : state.lang; d = d || state.data;
+    var ent = CFG.ENTITIES.filter(function (x) { return x.v === d.entity; })[0], fl = {};
+    Object.keys(FIELD).forEach(function (k) { var f = FIELD[k]; if (f && f.type === 'file') fl[k] = tl(L, f.labelKey ? f.labelKey(d) : (f.label || ('f.' + k))); });
+    return { lang: L, entity: ent ? (ent.v === 'other' ? (d.entityOther || ent[L]) : ent[L]) : '', workCountry: cname(d.workCountry, L), nationality: cname(d.nationality, L), fileLabels: fl };
+  }
   function cardMailAssets() {
     var G = window.gifenc;
     return exportCard({ mail: true }).then(function (src) {
@@ -1638,6 +1646,7 @@
   function exportCard(opt) {
     opt = opt || {}; var MAIL = !!opt.mail;
     var c = cardData(), L = c.L, rtl = L === 'ar';
+    var t = function (k, v) { return tl(L, k, v); }; /* لغة البطاقة ثابتة طوال الرسم حتى لو تغيّرت لغة الواجهة */
     var CW = 1012, CH = 638, M = 110, GAP = 90, HEAD = 250, FOOT = 120, MP = 44, MG = 56;
     var SW = M * 2 + CW * 2 + GAP, SH = HEAD + 80 + CH + 70 + FOOT, Q = 1.35;
     if (MAIL) { SW = CW + MP * 2; SH = CH * 2 + MG + MP * 2; Q = opt.q || 1; }
@@ -1732,11 +1741,11 @@
       if (c.d.jobTitle) { txt(c.d.jobTitle, ix, iy, { size: 32, w: 800, color: ca, align: ia, max: iw }); iy += 46; }
       if (c.entName) { txt(c.entName, ix, iy, { size: 28, w: 500, color: 'rgba(255,255,255,.75)', align: ia, max: iw }); iy += 54; }
       if (c.svc) {
-        var sv = svcLine(c.st0); x.font = F(800, 26); var chw = x.measureText(sv).width + 70, chx = rtl ? ix - chw : ix;
+        var sv = svcLine(c.st0, L); x.font = F(800, 26); var chw = x.measureText(sv).width + 70, chx = rtl ? ix - chw : ix;
         rr(chx, iy - 36, chw, 50, 25); var cg = x.createLinearGradient(chx, 0, chx + chw, 0); cg.addColorStop(0, mix(ca, '#ffffff', .5)); cg.addColorStop(1, ca); x.fillStyle = cg; x.fill();
         txt(sv, rtl ? chx + chw - 24 : chx + 24, iy - 2, { size: 26, w: 800, color: c2, align: ia }); iy += 56;
       }
-      if (c.d.workCountry) txt(cname(c.d.workCountry), ix, iy, { size: 28, w: 600, color: 'rgba(255,255,255,.88)', align: ia });
+      if (c.d.workCountry) txt(cname(c.d.workCountry, L), ix, iy, { size: 28, w: 600, color: 'rgba(255,255,255,.88)', align: ia });
       /* سطرا MRZ */
       x.fillStyle = hexA(ca, .14); x.fillRect(X0, Y0 + CH - 120, CW, 120);
       txt(c.l1, X0 + pad, Y0 + CH - 70, { size: 25, w: 500, mono: 1, color: 'rgba(255,255,255,.78)', dir: 'ltr', align: 'left', ls: 5 });
@@ -1759,8 +1768,8 @@
         x.save(); x.globalAlpha = .05; x.drawImage(tmp, X0 + (CW - dw) / 2, Y0 + CH - dh - CH * .18); x.restore();
       }
       var lab = mix(c1, '#9a7a45', .25), fields = [
-        [t('card.ref'), c.ref, 1, 1], [t('card.emergency'), c.emerg], [t('card.blood'), '\u200E' + c.blood + '\u200E'], [t('card.passport'), c.d.passportExpiry ? fmtDate(c.d.passportExpiry) : '—'],
-        [t('card.since'), c.st0 ? fmtDate(c.st0) : '—'], [t('card.svcT'), c.svc || '—', 0, 0, 1], [t('card.empNo'), c.d.employeeNo || '—', 1]
+        [t('card.ref'), c.ref, 1, 1], [t('card.emergency'), c.emerg], [t('card.blood'), '\u200E' + c.blood + '\u200E'], [t('card.passport'), c.d.passportExpiry ? fmtDate(c.d.passportExpiry, L) : '—'],
+        [t('card.since'), c.st0 ? fmtDate(c.st0, L) : '—'], [t('card.svcT'), c.svc || '—', 0, 0, 1], [t('card.empNo'), c.d.employeeNo || '—', 1]
       ];
       var colW = (CW - pad * 2) / 3, fy = Y0 + 196;
       fields.forEach(function (f, i) {
@@ -1785,7 +1794,7 @@
       /* التذييل */
       if (MAIL) return cv;
       var today2 = new Date(), iso = today2.getFullYear() + '-' + ('0' + (today2.getMonth() + 1)).slice(-2) + '-' + ('0' + today2.getDate()).slice(-2);
-      txt(t('ex.foot', { d: fmtDate(iso) }), SW / 2, SH - 52, { size: 24, w: 600, color: '#5f7286', align: 'center', dir: rtl ? 'rtl' : 'ltr' });
+      txt(t('ex.foot', { d: fmtDate(iso, L) }), SW / 2, SH - 52, { size: 24, w: 600, color: '#5f7286', align: 'center', dir: rtl ? 'rtl' : 'ltr' });
       return cv;
     });
   }
@@ -2317,7 +2326,7 @@
       }).then(function () {
         overlay(t('m.finishing'), 94);
         /* صورة البطاقة لرسالة التأكيد؛ أي خطأ هنا لا يوقف التسجيل */
-        return cardMailAssets().then(function (a) { return api({ action: 'cardImg', ref: ref, token: token, gif: a.gif, jpg: a.jpg }); }).catch(function () { });
+        return cardMailAssets().then(function (a) { return api({ action: 'cardImg', ref: ref, token: token, gif: a.gif, jpg: a.jpg, info: mailInfo(state.lang) }); }).catch(function () { });
       }).then(function () {
         overlay(t('m.finishing'), 97);
         return withRetry(function () { return api({ action: 'finalize', ref: ref, token: token }); }, 1);
@@ -2358,7 +2367,8 @@
     num: function (n) { return state.lang === 'ar' ? arDigits(n) : String(n); },
     card: { render: function (sel, rec, photo) { withRec(rec, photo, function () { renderCard(sel); }); },
       png: function (rec, photo) { return withRec(rec, photo, function () { return exportCard(); }).then(function (cv) { return cv.toDataURL('image/png'); }); },
-      mailAssets: function (rec, photo) { return withRec(rec, photo, function () { return cardMailAssets(); }); },
+      mailAssets: function (rec, photo) { return withRec(rec, photo, function () { return cardMailAssets(); }, rec.lang); },
+      mailInfo: function (rec) { return withRec(rec, null, function () { return mailInfo(rec.lang, state.data); }, rec.lang); },
       mailJpg: function (rec, photo) { return withRec(rec, photo, function () { return exportCard({ mail: true }); }).then(function (cv) { return cv.toDataURL('image/jpeg', 0.9); }); } }
   };
   /* بطاقة منسوب من سجل الجدول (كما تعيده لوحة الموارد البشرية): تُحوَّل قيمه إلى صيغة النموذج مؤقتًا ثم تُعاد الحالة كما كانت */
@@ -2376,10 +2386,12 @@
       em1Name: r.em1Name, em1Full: r.em1Phone
     };
   }
-  function withRec(rec, photo, fn) {
-    var keep = { d: state.data, f: state.files, r: state.result };
+  /* lang (اختياري): ترسم البطاقة بلغة التعبئة الخاصة بالمنسوب ثم تعود اللغة كما كانت */
+  function withRec(rec, photo, fn, lang) {
+    var keep = { d: state.data, f: state.files, r: state.result, L: state.lang };
     state.data = recToData(rec); state.files = { photo: photo ? [{ thumb: photo }] : [] }; state.result = { ref: rec.ref };
-    try { return fn(); } finally { state.data = keep.d; state.files = keep.f; state.result = keep.r; }
+    if (lang && DICT[lang]) state.lang = lang;
+    try { return fn(); } finally { state.data = keep.d; state.files = keep.f; state.result = keep.r; state.lang = keep.L; }
   }
 
 
