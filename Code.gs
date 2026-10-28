@@ -15,6 +15,8 @@
 var CONFIG = {
   SS_TITLE: 'Bonyan HR · سجل المنسوبين',
   ROOT_FOLDER: 'Bonyan HR · ملفات المنسوبين',
+  FORM_URL: 'https://banyan-global.github.io/bonyan-hr-staff-registry/',
+  MAIL_ONLY_TO: 'osama.mo.bonyan@gmail.com', // مرحلة التجربة: رسائل التأكيد تذهب لهذا البريد فقط. اتركه '' لتصل لكل منسوب على بريده
   REF_PREFIX: 'BNY-HR',
   SHEETS: { main: 'المنسوبون', quals: 'المؤهلات', exp: 'الخبرات', langs: 'اللغات', log: 'السجل' },
   COLORS: { navy: '#143D66', brass: '#9C7432', band: '#F3F5F8', white: '#FFFFFF', ink: '#0F2238' },
@@ -343,6 +345,8 @@ function doPost(e) {
     if (body.action === 'photo') return json_(photo_(body));
     if (body.action === 'adminUpdate') return json_(adminUpdate_(body));
     if (body.action === 'adminUpload') return json_(adminUpload_(body));
+    if (body.action === 'cardImg') return json_(cardImg_(body));
+    if (body.action === 'adminMail') return json_(adminMail_(body));
     return json_({ ok: false, error: 'unknown action' });
   } catch (err) {
     log_('', 'خطأ', String(err && err.stack || err));
@@ -521,6 +525,7 @@ function finalize_(b) {
   cache.put('done_' + b.ref, b.token, 3600);
   log_(b.ref, 'اكتمل الرفع', '');
   notify_(sh, row, b.ref, updated);
+  try { sendConfirm_(sh, row, b.ref, updated); } catch (em) { log_(b.ref, 'تعذّر إرسال رسالة التأكيد', String(em)); }
   return { ok: true };
 }
 
@@ -634,6 +639,175 @@ function adminUpload_(b) {
     log_(b.ref, 'استبدال مرفق من لوحة الموارد البشرية', who + ' · ' + MAIN_COLS[ci - 1][1] + ' · ' + list.length + ' ملف');
   }
   return { ok: true, url: file.getUrl() };
+}
+
+/* ============================================================ رسالة تأكيد التسجيل للمنسوب
+   تُرسل بعد اكتمال التسجيل أو التحديث، وفيها بطاقته المتحركة (تنقلب بين وجهيها) التي يصنعها النموذج نفسه.
+   مرحلة التجربة: CONFIG.MAIL_ONLY_TO يجعل كل الرسائل تذهب لهذا البريد فقط؛ عند الاعتماد النهائي يُترك فارغًا لتصل للمنسوبين */
+var LOGO_PNG_B64_ = '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';
+var CARD_PREFIX_ = 'بطاقة المنسوب - ';
+
+function saveCardFiles_(folder, ref, name, gif, jpg) {
+  var it = folder.getFiles();
+  while (it.hasNext()) { var f = it.next(); if (f.getName().indexOf(CARD_PREFIX_) === 0) f.setTrashed(true); }
+  var clean = String(name || ref).replace(/[\\\/:*?"<>|\n\r]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 80);
+  var out = {};
+  if (jpg) out.jpg = folder.createFile(Utilities.newBlob(Utilities.base64Decode(jpg), 'image/jpeg', CARD_PREFIX_ + clean + '.jpg'));
+  if (gif) out.gif = folder.createFile(Utilities.newBlob(Utilities.base64Decode(gif), 'image/gif', CARD_PREFIX_ + clean + ' (متحركة).gif'));
+  if (out.gif) CacheService.getScriptCache().put('cardgif_' + ref, out.gif.getId(), 21600);
+  return out;
+}
+function cardImg_(b) {
+  checkToken_(b.ref, b.token);
+  var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.main), row = rowOf_(sh, b.ref);
+  var folder = DriveApp.getFolderById(sh.getRange(row, col_('folderId')).getValue());
+  var name = sh.getRange(row, col_('fullNameAr')).getDisplayValue() || sh.getRange(row, col_('fullNameLatin')).getDisplayValue();
+  saveCardFiles_(folder, b.ref, name, b.gif, b.jpg);
+  return { ok: true };
+}
+function cardGifBlob_(sh, row, ref) {
+  var id = CacheService.getScriptCache().get('cardgif_' + ref);
+  try { if (id) return DriveApp.getFileById(id).getBlob(); } catch (e) { }
+  try {
+    var folder = DriveApp.getFolderById(sh.getRange(row, col_('folderId')).getValue()), it = folder.getFiles(), best = null;
+    while (it.hasNext()) { var f = it.next(); if (f.getName().indexOf(CARD_PREFIX_) === 0 && f.getMimeType() === 'image/gif' && (!best || f.getDateCreated() > best.getDateCreated())) best = f; }
+    return best ? best.getBlob() : null;
+  } catch (e2) { return null; }
+}
+/* يرسل الرسالة ويعيد البريد الذي أُرسلت إليه (أو '' إن لم يوجد بريد) */
+function sendConfirm_(sh, row, ref, updated) {
+  var get = function (k) { return String(sh.getRange(row, col_(k)).getDisplayValue() || '').trim(); };
+  var staffMail = get('personalEmail') || get('officialEmail');
+  var to = CONFIG.MAIL_ONLY_TO || staffMail;
+  if (!to) return '';
+  var female = /أنثى/.test(get('gender'));
+  var pass = get('passportNo').replace(/\s/g, '');
+  var tz = 'Asia/Riyadh', today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  var alerts = [];
+  [['passportExpiry', 'جواز السفر'], ['permitExpiry', 'الإقامة'], ['nationalIdExpiry', 'الهوية الوطنية'], ['workPermitExpiry', 'تصريح العمل']].forEach(function (d) {
+    var v = get(d[0]); if (!/^\d{4}-\d{2}-\d{2}/.test(v)) return;
+    var days = Math.round((new Date(v.slice(0, 10) + 'T12:00:00') - new Date(today + 'T12:00:00')) / 864e5);
+    if (days < 0) alerts.push('انتهت صلاحية ' + d[1] + ' بتاريخ ' + v.slice(0, 10) + '، نرجو تحديثها في النموذج بعد تجديدها.');
+    else if (days <= 90) alerts.push('تنتهي صلاحية ' + d[1] + ' بتاريخ ' + v.slice(0, 10) + '، نرجو المبادرة بتجديدها وتحديثها في النموذج.');
+  });
+  var files = [];
+  MAIN_COLS.forEach(function (c, j) {
+    if (c[2] !== 'f') return;
+    var rt = sh.getRange(row, j + 1).getRichTextValue();
+    if (linksOf_(rt).length) files.push(c[1]);
+  });
+  var gif = cardGifBlob_(sh, row, ref);
+  var m = {
+    subject: (updated ? 'تأكيد تحديث بياناتكم' : 'تأكيد تسجيل بياناتكم') + ' · ' + ref + ' · مجموعة بنيان العالمية',
+    preheader: (updated ? 'تم تحديث بياناتكم' : 'تم تسجيل بياناتكم') + ' في سجل منسوبي مجموعة بنيان العالمية. الرقم المرجعي ' + ref,
+    logo: 'cid:logo', cardImg: gif ? 'cid:card' : '', updated: updated, female: female, title: female ? 'الأستاذة' : 'الأستاذ',
+    nameAr: get('fullNameAr'), nameLatin: get('fullNameLatin'), ref: ref, date: get('createdAt'), entity: get('entity'), jobTitle: get('jobTitle'),
+    workCountry: get('workCountry'), nationality: get('nationality'), passportMasked: pass ? '••••' + pass.slice(-4) : '', passportExpiry: get('passportExpiry'),
+    permitExpiry: get('permitExpiry'), mobile: get('mobile'), email: staffMail, files: files, alerts: alerts,
+    formUrl: CONFIG.FORM_URL, devEmail: 'osama.mo.bonyan@gmail.com', year: Utilities.formatDate(new Date(), tz, 'yyyy')
+  };
+  var inline = { logo: Utilities.newBlob(Utilities.base64Decode(LOGO_PNG_B64_), 'image/png', 'bonyan.png') };
+  if (gif) inline.card = gif.setName('card.gif');
+  MailApp.sendEmail({
+    to: to, subject: m.subject, name: 'الموارد البشرية · مجموعة بنيان العالمية',
+    htmlBody: confirmMailHtml_(m), inlineImages: inline,
+    body: m.preheader + '\n\nمع خالص التحية والتقدير\nإدارة الموارد البشرية · مجموعة بنيان العالمية'
+  });
+  log_(ref, 'إرسال رسالة التأكيد', to);
+  return to;
+}
+/* إعادة إرسال رسالة التأكيد من لوحة الموارد البشرية (مع بطاقة جديدة يصنعها المتصفح) */
+function adminMail_(b) {
+  var who = checkAdmin_(b.code);
+  var sh = getSS_(false).getSheetByName(CONFIG.SHEETS.main);
+  var row = findRow_(sh, 'ref', function (v) { return v === b.ref; });
+  if (!row) throw new Error('الرقم المرجعي غير موجود');
+  if (b.gif || b.jpg) {
+    var folder = DriveApp.getFolderById(sh.getRange(row, col_('folderId')).getValue());
+    saveCardFiles_(folder, b.ref, sh.getRange(row, col_('fullNameAr')).getDisplayValue() || sh.getRange(row, col_('fullNameLatin')).getDisplayValue(), b.gif, b.jpg);
+  }
+  var to = sendConfirm_(sh, row, b.ref, false);
+  if (!to) throw new Error('لا يوجد بريد إلكتروني مسجّل لهذا المنسوب');
+  log_(b.ref, 'إعادة إرسال رسالة التأكيد من لوحة الموارد البشرية', who + ' · ' + to);
+  return { ok: true, to: to };
+}
+
+/* قالب رسالة تأكيد التسجيل (يُنقل كما هو إلى Code.gs) — جداول وأنماط مضمّنة لتظهر صحيحة في Gmail وOutlook والجوال */
+function confirmMailHtml_(m) {
+  var e = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var NAVY = '#16294A', NAVY2 = '#0E1C33', GOLD = '#D2B074', GOLD2 = '#9C7432', INK = '#1D2A3B', MUTED = '#6B778A', LINE = '#E8EBF1';
+  var FONT = "'Tajawal','IBM Plex Sans Arabic',Tahoma,Arial,sans-serif", MONO = "Consolas,'SF Mono','Courier New',monospace";
+  /* خانة بيانات صغيرة: العنوان فوق القيمة */
+  var cell = function (k, v, ltr, span) {
+    return '<td' + (span ? ' colspan="2"' : '') + ' width="' + (span ? '100%' : '50%') + '" style="padding:6px;vertical-align:top;"><div style="background:#F7F8FB;border:1px solid ' + LINE + ';border-radius:12px;padding:10px 14px;">' +
+      '<div style="font-size:11.5px;color:' + MUTED + ';font-weight:700;">' + e(k) + '</div>' +
+      '<div' + (ltr ? ' dir="ltr" style="text-align:right;' : ' style="') + 'font-size:14px;color:' + INK + ';font-weight:800;margin-top:3px;word-break:break-word;">' + (v ? e(v) : '—') + '</div></div></td>';
+  };
+  var pairs = m.cardImg ? [['الجنسية', m.nationality], ['رقم الجواز', m.passportMasked, 1]] : [['دولة العمل', m.workCountry], ['الجنسية', m.nationality], ['رقم الجواز', m.passportMasked, 1], ['انتهاء الجواز', m.passportExpiry, 1]];
+  if (m.permitExpiry) pairs.push(['انتهاء الإقامة', m.permitExpiry, 1]);
+  pairs.push(['الجوال', m.mobile, 1]);
+  var grid = '', i;
+  for (i = 0; i < pairs.length; i += 2) grid += '<tr>' + cell(pairs[i][0], pairs[i][1], pairs[i][2]) + (pairs[i + 1] ? cell(pairs[i + 1][0], pairs[i + 1][1], pairs[i + 1][2]) : '<td></td>') + '</tr>';
+  grid += '<tr>' + cell('البريد الإلكتروني', m.email, 1, 1) + '</tr>';
+  var chips = (m.files || []).map(function (f) {
+    return '<span style="display:inline-block;margin:0 0 6px 6px;padding:6px 11px;border-radius:999px;background:#EEF7F1;border:1px solid #CFE7D8;color:#1E6B49;font-size:12.5px;font-weight:700;white-space:nowrap;">✓ ' + e(f) + '</span>';
+  }).join('');
+  var alerts = (m.alerts || []).map(function (a) {
+    return '<div style="margin-top:12px;padding:10px 14px;border-radius:12px;background:#FFF6E5;border:1px solid #F1D49B;color:#7A5410;font-size:13px;line-height:1.8;">⚠️ ' + e(a) + '</div>';
+  }).join('');
+  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>' + e(m.subject) + '</title>' +
+  '<style>details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-marker{display:none}details[open] .chev{transform:rotate(180deg)}</style></head>' +
+  '<body style="margin:0;padding:0;background:#EDF0F5;">' +
+  '<div style="display:none;max-height:0;overflow:hidden;">' + e(m.preheader) + '</div>' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EDF0F5;"><tr><td align="center" style="padding:24px 10px;">' +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="rtl" style="max-width:560px;background:#FFFFFF;border-radius:22px;overflow:hidden;font-family:' + FONT + ';text-align:right;box-shadow:0 12px 34px rgba(22,41,74,.13);">' +
+  /* الرأس */
+  '<tr><td style="background:' + NAVY + ';background-image:linear-gradient(135deg,#1C335A 0%,' + NAVY + ' 45%,' + NAVY2 + ' 100%);padding:20px 24px;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+    '<td style="vertical-align:middle;"><div style="font-size:11.5px;color:' + GOLD + ';font-weight:800;letter-spacing:.3px;">الموارد البشرية · سجل المنسوبين</div><div style="font-size:17px;font-weight:900;color:#FFFFFF;margin-top:2px;">مجموعة بنيان العالمية</div></td>' +
+    '<td align="left" style="vertical-align:middle;"><img src="' + e(m.logo) + '" width="64" alt="بنيان" style="display:block;width:64px;height:auto;border:0;"></td>' +
+    '</tr></table></td></tr>' +
+  '<tr><td style="height:3px;line-height:3px;font-size:0;background:' + GOLD + ';background-image:linear-gradient(90deg,#B8924F,' + GOLD + ',#F0D9A8,' + GOLD + ',#B8924F);">&nbsp;</td></tr>' +
+  /* العنوان */
+  '<tr><td align="center" style="padding:26px 24px 4px;">' +
+    '<div style="width:54px;height:54px;line-height:54px;border-radius:50%;background:#EEF7F1;border:2px solid #BFE0CC;color:#1E7A52;font-size:26px;font-weight:900;text-align:center;margin:0 auto;">✓</div>' +
+    '<h1 style="margin:14px 0 4px;font-size:21px;line-height:1.5;color:' + NAVY + ';font-weight:900;text-align:center;">' + e(m.updated ? 'تم تحديث بياناتكم بنجاح' : 'تم تسجيل بياناتكم بنجاح') + '</h1>' +
+    '<p style="margin:0;font-size:14px;line-height:1.95;color:' + INK + ';text-align:center;">' + e(m.title) + ' <b>' + e(m.nameAr || m.nameLatin) + '</b> المحترم' + (m.female ? 'ة' : '') + '،<br>' +
+    e(m.updated ? 'حُفظ تحديث بياناتكم ومرفقاتكم في سجل منسوبي مجموعة بنيان العالمية.' : 'استلمنا بياناتكم ومرفقاتكم وسُجّلت في سجل منسوبي مجموعة بنيان العالمية.') + '</p>' +
+  '</td></tr>' +
+  /* بطاقة المنسوب: صورة البطاقة نفسها كما في الموقع (الوجهان)، وإن لم تتوفر فبطاقة نصية */
+  (m.cardImg ? '<tr><td align="center" style="padding:14px 10px 0;"><img src="' + e(m.cardImg) + '" width="540" alt="بطاقة المنسوب" style="display:block;width:100%;max-width:540px;height:auto;border:0;margin:0 auto;"></td></tr>' +
+    '<tr><td align="center" style="padding:2px 24px 0;font-size:12.5px;color:' + MUTED + ';">الرقم المرجعي <b dir="ltr" style="font-family:' + MONO + ';color:' + NAVY + ';letter-spacing:.5px;">' + e(m.ref) + '</b> &nbsp;·&nbsp; تاريخ التسجيل <b dir="ltr" style="color:' + INK + ';">' + e(m.date) + '</b>' + alerts + '</td></tr>' :
+  '<tr><td style="padding:18px 24px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-radius:16px;background:' + NAVY + ';background-image:linear-gradient(135deg,#21396A,' + NAVY + ' 55%,' + NAVY2 + ');"><tr>' +
+    '<td style="padding:18px 20px;vertical-align:top;">' +
+      '<div style="font-size:17px;font-weight:900;color:#FFFFFF;line-height:1.5;">' + e(m.nameAr || m.nameLatin) + '</div>' +
+      (m.nameAr ? '<div dir="ltr" style="text-align:right;font-size:11px;letter-spacing:1px;color:rgba(255,255,255,.7);font-weight:700;margin-top:1px;">' + e(m.nameLatin) + '</div>' : '') +
+      '<div style="font-size:13.5px;color:' + GOLD + ';font-weight:800;margin-top:8px;">' + e(m.jobTitle || '') + '</div>' +
+      '<div style="font-size:12.5px;color:rgba(255,255,255,.78);margin-top:1px;">' + e(m.entity || '') + '</div>' +
+    '</td></tr><tr><td style="padding:0 20px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid rgba(210,176,116,.35);"><tr>' +
+      '<td style="padding-top:12px;"><div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:700;">الرقم المرجعي</div><div dir="ltr" style="text-align:right;font-family:' + MONO + ';font-size:16px;font-weight:700;letter-spacing:1px;color:' + GOLD + ';white-space:nowrap;">' + e(m.ref) + '</div></td>' +
+      '<td align="left" style="padding-top:12px;"><div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:700;">تاريخ التسجيل</div><div dir="ltr" style="font-size:13px;font-weight:700;color:#FFFFFF;">' + e(m.date) + '</div></td>' +
+    '</tr></table></td></tr></table>' + alerts + '</td></tr>') +
+  /* البيانات */
+  '<tr><td style="padding:12px 18px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">' + grid + '</table></td></tr>' +
+  /* المرفقات: قائمة منسدلة */
+  (chips ? '<tr><td style="padding:8px 24px 0;"><details style="border:1px solid ' + LINE + ';border-radius:14px;background:#FBFCFD;">' +
+    '<summary style="padding:12px 16px;font-size:14px;font-weight:800;color:' + NAVY + ';"><span style="display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:999px;background:#EEF7F1;color:#1E7A52;font-size:12px;margin-left:8px;">' + (m.files || []).length + '</span>المرفقات المستلمة<span class="chev" style="float:left;color:' + GOLD2 + ';font-size:12px;line-height:22px;display:inline-block;">▼</span></summary>' +
+    '<div style="padding:4px 16px 10px;">' + chips + '</div></details></td></tr>' : '') +
+  /* زر التحديث */
+  '<tr><td align="center" style="padding:20px 24px 4px;">' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr><td style="border-radius:12px;background:' + NAVY + ';background-image:linear-gradient(135deg,#21396A,' + NAVY2 + ');"><a href="' + e(m.formUrl) + '" style="display:inline-block;padding:12px 28px;font-family:' + FONT + ';font-size:14.5px;font-weight:800;color:#FFFFFF;text-decoration:none;">تحديث بياناتي</a></td></tr></table>' +
+    '<p style="margin:10px 0 0;font-size:12px;line-height:1.8;color:' + MUTED + ';text-align:center;">للتحديث استخدموا البريد أو رقم الجوال المسجّلين · لا تتضمن هذه الرسالة أي بيانات مالية</p>' +
+  '</td></tr>' +
+  /* الختام */
+  '<tr><td align="center" style="padding:18px 24px 22px;"><div style="font-size:13.5px;color:' + INK + ';line-height:1.8;">مع خالص التحية والتقدير</div><div style="font-size:14.5px;font-weight:900;color:' + NAVY + ';">إدارة الموارد البشرية · مجموعة بنيان العالمية</div></td></tr>' +
+  /* التذييل وتوقيع المطوّر */
+  '<tr><td align="center" style="background:#F6F7FA;border-top:1px solid ' + LINE + ';padding:14px 24px 16px;">' +
+    '<p style="margin:0 0 8px;font-size:11.5px;line-height:1.8;color:' + MUTED + ';">رسالة آلية من نظام سجل المنسوبين، ولأي استفسار تقني يسعدنا تواصلك عبر البريد أدناه.</p>' +
+    '<a href="mailto:' + e(m.devEmail) + '" style="display:inline-block;padding:4px 11px;border-radius:999px;background:#FFF1E6;border:1px solid #F5C9A3;color:#B4570F;font-size:11.5px;font-weight:800;text-decoration:none;white-space:nowrap;">م. أسامة جنيدي · <span dir="ltr">' + e(m.devEmail) + '</span></a>' +
+    '<div style="margin-top:8px;font-size:11px;color:#9AA5B6;">© ' + e(m.year) + ' مجموعة بنيان العالمية</div>' +
+  '</td></tr>' +
+  '</table></td></tr></table></body></html>';
 }
 
 /* ============================================================ أدوات */

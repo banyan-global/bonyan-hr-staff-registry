@@ -1593,6 +1593,46 @@
 
 
   /* ---------------------------------------------------------- تصدير البطاقة صورةً عالية الجودة */
+  /* صورة البطاقة لرسالة تأكيد التسجيل: بطاقة الموقع نفسها تنقلب بين وجهيها (GIF متحركة)، وصورة ثابتة للوجهين (JPG) تُحفظ في مجلد المنسوب */
+  function b64OfBytes(u8) { var s = '', CH = 0x8000; for (var i = 0; i < u8.length; i += CH) s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); return btoa(s); }
+  function cardMailAssets() {
+    var G = window.gifenc;
+    return exportCard({ mail: true }).then(function (src) {
+      var jpg = src.toDataURL('image/jpeg', 0.9).split(',')[1];
+      if (!G) return { jpg: jpg, gif: '' };
+      var CW = 1012, CH = 638, MP = 44, MG = 56, W = 540, s = W / CW, H = Math.round(CH * s), PAD = 30, CVW = W + PAD * 2, CVH = H + PAD * 2 + 8;
+      var face = function (y) { var c = document.createElement('canvas'); c.width = W; c.height = H; var g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(src, MP, y, CW, CH, 0, 0, W, H); return c; };
+      var fr = face(MP), bk = face(MP + CH + MG);
+      var cv = document.createElement('canvas'); cv.width = CVW; cv.height = CVH;
+      var x = cv.getContext('2d', { willReadFrequently: true }), R = 46 * s;
+      var rrect = function (px, py, w, h, r) { r = Math.min(r, w / 2); x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); };
+      var frame = function (th) {
+        x.fillStyle = '#fff'; x.fillRect(0, 0, CVW, CVH);
+        var cs = Math.cos(th), sn = Math.sin(th), img = cs >= 0 ? fr : bk, w = Math.max(2, Math.round(W * Math.abs(cs))), x0 = Math.round((CVW - w) / 2);
+        x.save(); x.shadowColor = 'rgba(22,41,74,.24)'; x.shadowBlur = 18; x.shadowOffsetY = 8; x.fillStyle = '#fff'; rrect(x0, PAD, w, H, R); x.fill(); x.restore();
+        var p = 0.16 * Math.abs(sn), rev = sn * cs < 0;
+        x.save(); rrect(x0, PAD - H * p, w, H * (1 + p * 2), R); x.clip();
+        for (var xx = 0; xx < w; xx += 3) {
+          var tt = xx / Math.max(1, w - 1); if (rev) tt = 1 - tt;
+          var hh = Math.max(1, Math.round(H * (1 - p * tt))), sx = xx / w * W, sw = Math.min(3 / w * W, W - sx);
+          if (sw > 0) x.drawImage(img, sx, 0, sw, H, x0 + xx, PAD + (H - hh) / 2, Math.min(3, w - xx), hh);
+        }
+        x.restore();
+        return x.getImageData(0, 0, CVW, CVH).data;
+      };
+      var N = 8, frames = [[frame(0), 2400]], i;
+      for (i = 1; i < N; i++) frames.push([frame(Math.PI * i / N), 55]);
+      frames.push([frame(Math.PI), 2800]);
+      for (i = 1; i < N; i++) frames.push([frame(Math.PI + Math.PI * i / N), 55]);
+      var a = frames[0][0], b = frames[N][0], both = new Uint8ClampedArray(a.length + b.length); both.set(a); both.set(b, a.length);
+      var pal = G.quantize(both, 256, { format: 'rgb565' });
+      pal.forEach(function (c) { if (Math.min(c[0], c[1], c[2]) >= 246) { c[0] = c[1] = c[2] = 255; } });
+      var enc = G.GIFEncoder();
+      frames.forEach(function (f, k) { enc.writeFrame(G.applyPalette(f[0], pal, 'rgb565'), CVW, CVH, k ? { delay: f[1] } : { palette: pal, delay: f[1], repeat: 0 }); });
+      enc.finish();
+      return { jpg: jpg, gif: b64OfBytes(enc.bytes()) };
+    });
+  }
   function loadImg2(src) { return new Promise(function (res) { if (!src) return res(null); var im = new Image(); im.onload = function () { res(im); }; im.onerror = function () { res(null); }; im.src = src; }); }
   /* opt.mail: الوجهان فقط فوق بعضهما على خلفية بيضاء (لصورة البطاقة في رسالة البريد) */
   function exportCard(opt) {
@@ -2275,7 +2315,11 @@
           });
         }, Promise.resolve());
       }).then(function () {
-        overlay(t('m.finishing'), 96);
+        overlay(t('m.finishing'), 94);
+        /* صورة البطاقة لرسالة التأكيد؛ أي خطأ هنا لا يوقف التسجيل */
+        return cardMailAssets().then(function (a) { return api({ action: 'cardImg', ref: ref, token: token, gif: a.gif, jpg: a.jpg }); }).catch(function () { });
+      }).then(function () {
+        overlay(t('m.finishing'), 97);
         return withRetry(function () { return api({ action: 'finalize', ref: ref, token: token }); }, 1);
       });
     }
@@ -2314,6 +2358,7 @@
     num: function (n) { return state.lang === 'ar' ? arDigits(n) : String(n); },
     card: { render: function (sel, rec, photo) { withRec(rec, photo, function () { renderCard(sel); }); },
       png: function (rec, photo) { return withRec(rec, photo, function () { return exportCard(); }).then(function (cv) { return cv.toDataURL('image/png'); }); },
+      mailAssets: function (rec, photo) { return withRec(rec, photo, function () { return cardMailAssets(); }); },
       mailJpg: function (rec, photo) { return withRec(rec, photo, function () { return exportCard({ mail: true }); }).then(function (cv) { return cv.toDataURL('image/jpeg', 0.9); }); } }
   };
   /* بطاقة منسوب من سجل الجدول (كما تعيده لوحة الموارد البشرية): تُحوَّل قيمه إلى صيغة النموذج مؤقتًا ثم تُعاد الحالة كما كانت */

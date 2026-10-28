@@ -157,7 +157,7 @@
       for (var i = 0; i < list.length; i++) { var o = list[i]; if (r[0] < o[0] + o[2] && r[0] + r[2] > o[0] && r[1] < o[1] + o[3] && r[1] + r[3] > o[1]) return true; }
       return false;
     }
-    function bubbleR(n) { return compact ? Math.max(7, Math.min(15, 6 + 2.4 * Math.log2(1 + n))) : Math.max(13, Math.min(30, 10 + 4.2 * Math.log2(1 + n))); }
+    function bubbleR(n) { return compact ? Math.max(10, Math.min(20, 9 + 3.2 * Math.log2(1 + n))) : Math.max(19, Math.min(36, 15 + 5.6 * Math.log2(1 + n))); } /* دوائر أكبر وأوضح */
 
     function frame(now) {
       var t = (now - t0) / 1000;
@@ -215,7 +215,7 @@
       var labels = [];
       var vis = points.map(function (pt) { pt.screen = proj(pt.v); return pt; }).filter(function (pt) { return pt.screen[2] > 0.04; })
         .sort(function (a, b) { return a.screen[2] - b.screen[2]; });
-      var bScale = compact ? 1 : Math.max(0.72, Math.min(1, baseR / 170));
+      var bScale = compact ? 1 : Math.max(0.85, Math.min(1.1, baseR / 160));
       vis.forEach(function (pt) {
         var grow = Math.min(1, (now - pt.at) / 700);
         pt.r = bubbleR(pt.n) * bScale * (pt === hover ? 1.08 : 1) * (0.4 + 0.6 * ease(grow));
@@ -277,11 +277,11 @@
         ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(q[0], q[1], r, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#10253f'; ctx.lineWidth = compact ? 1.5 : 2.5; ctx.stroke();
         ctx.fillStyle = '#0b1a2e'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        var fs = Math.round(Math.max(compact ? 8 : 11, Math.min(17, r * (String(pt.nLabel).length > 2 ? 0.62 : 0.8))));
+        var fs = Math.round(Math.max(compact ? 10 : 13, Math.min(22, r * (String(pt.nLabel).length > 2 ? 0.62 : 0.8))));
         ctx.font = '900 ' + fs + 'px ' + FONT;
         if (!compact || r >= 9) ctx.fillText(pt.nLabel, q[0], q[1] + 1);
         if (pt.nat) {
-          var bR = compact ? 6 : Math.max(9, Math.min(12, r * 0.42)), ang = rtl ? -2.35 : -0.8;
+          var bR = compact ? 7.5 : Math.max(11, Math.min(15, r * 0.42)), ang = rtl ? -2.35 : -0.8;
           var bx = q[0] + Math.cos(ang) * r * 0.98, by = q[1] + Math.sin(ang) * r * 0.98;
           ctx.fillStyle = '#7fd8e6'; ctx.beginPath(); ctx.arc(bx, by, bR, 0, Math.PI * 2); ctx.fill();
           ctx.strokeStyle = '#10253f'; ctx.lineWidth = compact ? 1.2 : 2; ctx.stroke();
