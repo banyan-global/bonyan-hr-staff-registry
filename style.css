@@ -1248,7 +1248,7 @@ html[dir="rtl"] .hdr-btn.hdr-back svg { transform: scaleX(-1); }
   .hdr-btn { height: 40px; padding: 0 11px; }
   .hdr-btn.hdr-back span { display: none; }
   .hdr-btn.hr span { display: none; }
-  .hdr-btn.upd span { display: none; }
+  .hdr-btn.upd-btn span { display: none; }
   .hdr-btn.hr::after { content: "HR"; font-weight: 900; letter-spacing: .02em; }
   .theme-btn { width: 40px; height: 40px; }
 }
