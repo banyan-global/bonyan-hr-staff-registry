@@ -1469,3 +1469,11 @@ html[dir="ltr"] .dp-s { background-position: right 10px center; }
 
 /* وضوح التركيز عند التنقل بلوحة المفاتيح في كل الصفحات */
 .btn:focus-visible, .hdr-btn:focus-visible, a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+/* ملف المنسوب داخل المنصة (admin.html?embed=1): تظهر نافذة الملف وحدها */
+html.embed, html.embed body { background: transparent !important; }
+html.embed #top, html.embed .main, html.embed .foot, html.embed #scrollBar, html.embed .bg-deco { display: none !important; }
+html.embed .drawer-scrim { display: none; }
+html.embed .drawer { width: 100%; border: 0; box-shadow: none; }
+html.embed .drawer-scrim { display: block; }
+html.embed .drawer { width: min(920px, 100%); }

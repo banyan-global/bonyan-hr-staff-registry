@@ -1199,7 +1199,7 @@
     var w = $('#cardWrapSide'); if (w) w.style.setProperty('--s', (box.offsetWidth / 380).toFixed(4));
   }
   function renderCard(targetSel) {
-    var wrap = $(targetSel || '#cardWrap');
+    var wrap = targetSel && targetSel.nodeType === 1 ? targetSel : $(targetSel || '#cardWrap'); /* يقبل عنصرًا أيضًا (المنصة) */
     if (!wrap) return;
     var flipped = $('.idcard.flipped', wrap);
     wrap.innerHTML = cardHTML();

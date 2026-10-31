@@ -599,7 +599,11 @@ function enterApp(u) {
   screen = 'loading'; render();
   return (role === 'staff' ? loadMe() : loadAll()).then(function () {
     if (role === 'staff' && !ME) { screen = 'noreg'; render(); return; }
-    screen = 'app'; openG = null; route();
+    screen = 'app'; openG = null;
+    /* روابط الملف القديمة (admin.html?ref=…) تصل هنا: تفتح ملف المنسوب في المنصة */
+    var qref = (location.search.match(/[?&]ref=([^&#]+)/) || [])[1];
+    if (qref) { qref = decodeURIComponent(qref); try { history.replaceState(null, '', location.pathname + '#people'); } catch (e) { } if (role !== 'staff' && byRef(qref)) { cur = qref; ptab = 'over'; TAB.people = 'dir'; filt = { q: '', ent: '', cc: '', st: 'all' }; } }
+    route();
   }).catch(function (e) { if (SESSION) { screen = 'login'; LG.err = errText(e); render(); } });
 }
 function resetState() { SESSION = null; ME = null; ME_DATA = null; STAFF = []; ENT = []; CTRY = []; CACHE = {}; CAP = {}; role = 'hr'; cur = ''; ptab = 'over'; filt = { q: '', ent: '', cc: '', st: 'all' }; }
@@ -797,7 +801,7 @@ VIEWS.home = function () {
   if (can('pay') && nob.length) D.push({ j: 'sapphire', i: 'bank', t: nq(nob.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' بلا حساب بنكي', s: 'يتعطل صرف رواتبهم حتى يضيفوه من «تحديث بياناتي».', faces: nob, a: '<a class="btn sm" href="#banks">عرض</a>' });
   if (!D.length) D.push({ j: 'emerald', i: 'check', t: 'لا شيء ينتظرك الآن', s: 'الملفات مكتملة والوثائق سارية.' });
   var todo = pn('garnet', 'bolt', role === 'ceo' ? 'يستحق انتباهك' : 'يحتاج إجراءً منك', 'الأهم أولًا', '', '<ul class="lst">' + D.map(function (d) { return '<li>' + tile(d.j, d.i) + '<div><b>' + d.t + '</b><span class="s">' + d.s + '</span>' + (d.faces && d.faces.length ? '<div class="faces">' + d.faces.slice(0, 7).map(function (s) { return av(s, ' title="' + esc(s.name) + '"'); }).join('') + (d.faces.length > 7 ? '<span class="av" style="background:var(--well);color:var(--mute)">+' + (d.faces.length - 7) + '</span>' : '') + '</div>' : '') + '</div>' + (d.a || '<span></span>') + '</li>'; }).join('') + '</ul>');
-  var QA = [['sapphire', 'plus', 'نسخ رابط التسجيل', 'regLink', 'view'], ['emerald', 'edit', 'التعديل التفصيلي', 'editor', 'edit'], ['garnet', 'send', 'تذكير الوثائق', 'remindAll', 'mail'], ['gold', 'excel', 'تصدير Excel', 'excel', 'export'], ['amethyst', 'refresh', 'نسخة احتياطية الآن', 'backupNow', 'drive'], ['teal', 'shield', 'صحة النظام', 'health', 'users']];
+  var QA = [['sapphire', 'plus', 'نسخ رابط التسجيل', 'regLink', 'view'], ['emerald', 'chat', 'مراسلة الناقصة ملفاتهم', 'msgGap', 'mail'], ['garnet', 'send', 'تذكير الوثائق', 'remindAll', 'mail'], ['gold', 'excel', 'تصدير Excel', 'excel', 'export'], ['amethyst', 'refresh', 'نسخة احتياطية الآن', 'backupNow', 'drive'], ['teal', 'shield', 'صحة النظام', 'health', 'users']];
   var qa = pn('teal', 'bolt', 'إجراءات سريعة', '', '', '<div class="pb"><div class="qa">' + QA.map(function (q) { return '<button data-act="' + q[3] + '"' + (can(q[4]) ? '' : ' disabled title="خارج صلاحياتك"') + '>' + tile(q[0], q[1]) + q[2] + '</button>'; }).join('') + '</div></div>');
   var cal = pn('sapphire', 'calendar', 'تقويم انتهاء الوثائق', 'أربعة أسابيع مضت واثنا عشر أسبوعًا قادمة، وكل مربع وثيقة', more('الوثائق', '#documents'), calHTML());
   var ents = ENT.map(function (e) { return { e: e, ss: STAFF.filter(function (s) { return s.ent.v === e.v; }) }; });
@@ -887,12 +891,39 @@ VIEWS.dir = function () {
   return ptitle('دليل المنسوبين', CNT.tot + ' منسوبًا. اختر منسوبًا لعرض ملفه وبطاقته ووثائقه.', '') +
     '<div class="md">' + listH + (s ? profHTML(s) : '<section class="pn prof"><div class="empty">اختر منسوبًا من القائمة.</div></section>') + '</div>';
 };
-function cardHTML(s) {
-  var pd = s.docs.filter(function (d) { return d.t !== 'العقد' && d.exp; })[0];
-  return '<div class="scard" style="background:linear-gradient(135deg,' + s.ent.c + ' 0%,' + s.ent.c + ' 35%,#0a172e 135%)"><div class="lg">' + elogo(s.ent) + '<small>بطاقة منسوب<br>مجموعة بنيان العالمية</small></div>' +
-    (s.photo ? '<div class="ph2 img"><img src="' + esc(s.photo) + '" alt=""></div>' : '<div class="ph2">' + esc(s.ini) + '</div>') +
-    '<div class="nm"><b>' + esc(s.name) + '</b><small>' + esc(s.job) + '، ' + esc(s.c.n) + '</small></div><div class="ft"><span>' + (pd ? pd.t + ' حتى ' + fd(pd.exp, { month: 'short', year: 'numeric' }) : esc(s.ent.n)) + '</span><b>' + esc(s.ref) + '</b></div></div>';
+function cardHTML(s, tools) {
+  /* البطاقة الرسمية نفسها التي يصدرها النموذج (app.js) — تُرسم بعد إدراج الصفحة */
+  if (window.BonyanApp && BonyanApp.card) return '<div class="offcard"><div class="idcard-wrap" data-card="' + esc(s.ref) + '"></div>' + (tools === false ? '' : '<div class="cardtools"><button type="button" class="btn sm" data-cardflip="1">' + ic('refresh') + 'قلب البطاقة</button><button type="button" class="btn sm" data-cardpng="' + esc(s.ref) + '">' + ic('dl') + 'تنزيل البطاقة</button></div>') + '</div>';
+  return '<div class="scard" style="background:linear-gradient(135deg,' + s.ent.c + ' 0%,' + s.ent.c + ' 35%,#0a172e 135%)"><div class="lg">' + elogo(s.ent) + '<small>بطاقة منسوب<br>مجموعة بنيان العالمية</small></div><div class="ph2">' + esc(s.ini) + '</div><div class="nm"><b>' + esc(s.name) + '</b><small>' + esc(s.job) + '</small></div><div class="ft"><span>' + esc(s.ent.n) + '</span><b>' + esc(s.ref) + '</b></div></div>';
 }
+function mountCards() {
+  if (!window.BonyanApp || !BonyanApp.card) return;
+  document.querySelectorAll('[data-card]').forEach(function (el) {
+    var s = byRef(el.dataset.card) || (ME && ME.ref === el.dataset.card ? ME : null); if (!s) return;
+    try { BonyanApp.card.render(el, cardRec(s), s.photo || null); } catch (e) { if (window.console) console.error(e); }
+  });
+}
+/* إن لم تُسجَّل أجزاء الاسم (سجلات قديمة) يُستعمل الاسم الكامل */
+function cardRec(s) { var r = {}; Object.keys(s.r).forEach(function (k) { r[k] = s.r[k]; }); if (!r.firstNameAr && !r.lastNameAr) r.firstNameAr = r.fullNameAr || ''; if (!r.firstName && !r.lastName) r.firstName = r.fullNameLatin || ''; return r; }
+function cardPng(s, btn) {
+  if (btn) btn.disabled = true;
+  BonyanApp.card.png(cardRec(s), s.photo || null).then(function (url) { var a = document.createElement('a'); a.href = url; a.download = 'Bonyan-Staff-Card-' + s.ref + '.png'; document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 500); })
+    .catch(function () { toast('تعذّر تجهيز البطاقة، حاول مرة أخرى'); }).then(function () { if (btn) btn.disabled = false; });
+}
+/* الملف الكامل (التعديل والمرفقات والأرشيف والطباعة) داخل المنصة نفسها */
+var FULL_CHANGED = false;
+function openFull(ref, edit) {
+  closeFull();
+  var el = document.createElement('div'); el.id = 'fullLayer';
+  el.innerHTML = '<div class="fl-load" role="status"><i class="spin" aria-hidden="true"></i><span>جارٍ فتح الملف…</span></div><iframe title="ملف المنسوب الكامل" src="admin.html?embed=1&amp;ref=' + encodeURIComponent(ref) + (edit ? '&amp;edit=1' : '') + '"></iframe>';
+  document.body.appendChild(el); document.body.classList.add('no-scroll');
+}
+function closeFull() { var el = document.getElementById('fullLayer'); if (el) el.remove(); document.body.classList.remove('no-scroll'); }
+window.addEventListener('message', function (e) {
+  if (e.origin !== location.origin || !e.data || !e.data.bhr) return;
+  if (e.data.type === 'saved') FULL_CHANGED = true;
+  if (e.data.type === 'close') { closeFull(); if (FULL_CHANGED) { FULL_CHANGED = false; Object.keys(CACHE).forEach(function (k) { if (/^(aud|msg):/.test(k) || k === 'audit') delete CACHE[k]; }); reloadList().then(softRender, softRender); toast('حُدّثت بيانات المنسوب'); } }
+});
 function svc(d) { if (!d) return '—'; var m = Math.round((Date.now() - d) / DAY / 30.4); if (m < 0) return 'لم يباشر بعد'; var y = Math.floor(m / 12), r = m % 12; return ((y ? (y === 1 ? 'سنة' : y === 2 ? 'سنتان' : y + (y <= 10 ? ' سنوات' : ' سنة')) : '') + (y && r ? ' و' : '') + (r ? (r === 1 ? 'شهر' : r === 2 ? 'شهران' : r + ' أشهر') : '')) || 'أقل من شهر'; }
 function docRows(docs, withNo) {
   return '<div class="docs">' + (docs.length ? docs.map(function (d) { var left = d.days > 9000 ? 1 : Math.max(0, Math.min(1, d.days / (DOC_LIFE[d.t] || 730)));
@@ -916,9 +947,9 @@ function profHTML(s) {
       ['طريقة الاستلام', esc(r.payMethod || '—')], ['البنك', esc(r.bankName || '—')], ['دولة البنك', esc(r.bankCountry || '—')], ['الحساب', s.iban ? '<span class="ltr">' + s.iban + '</span>' : '<span class="pill bad"><i></i>غير مسجل</span>']]) +
     '<div class="note">' + ic('lock') + '<span>رقم الحساب يظهر مقنّعًا في المنصة. بياناته كاملة في التعديل التفصيلي لمن يملك صلاحية المالية.</span></div>';
   if (ptab === 'log') body = profLog(s);
-  var foot = (can('edit') ? '<a class="btn prim" href="admin.html?ref=' + encodeURIComponent(s.ref) + '&edit=1">' + ic('edit') + 'تعديل البيانات والمرفقات</a>' : ro()) +
+  var foot = (can('edit') ? '<button class="btn prim" data-full="' + esc(s.ref) + '" data-fedit="1">' + ic('edit') + 'تعديل البيانات والمرفقات</button>' : ro()) +
     (can('mail') ? '<button class="btn goldb" data-msg="' + esc(s.ref) + '">' + ic('chat') + 'مراسلة المنسوب</button>' : '') +
-    '<a class="btn" href="admin.html?ref=' + encodeURIComponent(s.ref) + '">' + ic('card') + 'البطاقة والطباعة</a><a class="btn" href="api/?action=zip&amp;ref=' + encodeURIComponent(s.ref) + '" download>' + ic('folder') + 'تنزيل المرفقات</a>';
+    '<button class="btn" data-full="' + esc(s.ref) + '">' + ic('doc') + 'الملف الكامل والطباعة</button><a class="btn" href="api/?action=zip&amp;ref=' + encodeURIComponent(s.ref) + '" download>' + ic('folder') + 'تنزيل المرفقات</a>';
   return '<section class="pn prof" aria-live="polite"><div class="hd"><div><div style="display:flex;gap:14px;align-items:center">' + avP(s) + '<div><h2>' + esc(s.name) + '</h2><span class="ref">' + esc(s.ref) + '</span></div></div>' +
     '<div class="meta">' + (s.status === 'مكتمل' ? '<span class="pill ok"><i></i>ملف مكتمل</span>' : '<span class="pill warn"><i></i>' + nq(s.miss.length || 1, 'نقص واحد', 'نقصان', 'نواقص', 'نقصًا') + '</span>') + (s.worst < 0 ? '<span class="pill bad"><i></i>وثيقة منتهية</span>' : s.worst <= 30 ? '<span class="pill warn"><i></i>وثيقة تنتهي قريبًا</span>' : '') + '</div>' +
     '<dl class="facts">' + [['sapphire', 'building', 'الجهة', s.ent.full || s.ent.n], ['emerald', 'user', 'المسمى', s.job], ['teal', 'globe', 'دولة العمل', s.c.n], ['gold', 'clock', 'مدة الخدمة', svc(s.hire)]].map(function (f) { return '<div class="fact">' + tile(f[0], f[1]) + '<div style="min-width:0"><dt>' + f[2] + '</dt><dd>' + esc(f[3]) + '</dd></div></div>'; }).join('') + '</dl></div>' +
@@ -1012,7 +1043,7 @@ VIEWS.data = function () {
   var stats = '<div class="tabs2">' + [['sapphire', 'users', S ? S.staff : STAFF.length, 'منسوبًا في قاعدة البيانات'], ['gold', 'file', S ? S.files : '…', 'مرفقًا محفوظًا'], ['emerald', 'archive', S ? S.archived : '…', 'نسخة سابقة مؤرشفة'], ['teal', 'refresh', B ? B.backups.length : S ? S.backups : '…', 'نسخة احتياطية']].map(function (x) { return '<div class="stat">' + tile(x[0], x[1]) + '<div><b>' + x[2] + '</b><span>' + x[3] + '</span></div></div>'; }).join('') + '</div>';
   var where = pn('gold', 'folder', 'أين تُحفظ البيانات', 'على خادم بنيان، لا على أي خدمة خارجية', '', '<div class="pb">' + (S ? kvHTML([['قاعدة البيانات', '<span class="ltr">' + esc(S.db) + '</span> <small class="mu">MySQL</small>'], ['المرفقات والنسخ', '<span class="ltr" style="font-size:13px">' + esc(S.storage) + '</span> <small class="mu">خارج المجلد العام</small>'], ['حجم المرفقات', bytes(S.filesBytes)], ['الخادم', esc(S.server)], ['سجل العمليات', S.audit + ' عملية'], ['الحسابات الإدارية النشطة', S.users]])
     : '<div class="empty">' + (h && h.err ? esc(h.err) : can('users') ? 'جارٍ التحميل…' : 'تفاصيل الخادم لمدير النظام.') + '</div>') +
-    '<div class="xrow"><a class="btn goldb" href="api/?action=exportXlsx" download>' + ic('excel') + 'تصدير السجل كاملًا (Excel)</a><a class="btn" href="admin.html">' + ic('edit') + 'لوحة التعديل التفصيلي</a></div><p class="hint">ملف Excel فيه أوراق المنسوبين والمؤهلات والخبرات واللغات' + (can('audit') ? ' وسجل العمليات' : '') + '. ولتنزيل مرفقات منسوب افتح ملفه واضغط «تنزيل المرفقات».</p></div>');
+    '<div class="xrow"><a class="btn goldb" href="api/?action=exportXlsx" download>' + ic('excel') + 'تصدير السجل كاملًا (Excel)</a></div><p class="hint">ملف Excel فيه أوراق المنسوبين والمؤهلات والخبرات واللغات' + (can('audit') ? ' وسجل العمليات' : '') + '. ولتنزيل مرفقات منسوب افتح ملفه واضغط «تنزيل المرفقات».</p></div>');
   var checks = can('users') ? pn('emerald', 'shield', 'صحة النظام', H ? H.checks.filter(function (x) { return x.ok; }).length + ' من ' + H.checks.length + ' سليمة' : '', '<button class="btn sm" data-act="recheck">' + ic('refresh') + 'إعادة الفحص</button>',
     '<div class="pb">' + (H ? '<ul class="hlist">' + H.checks.map(function (x) { return '<li><span class="o ' + (x.ok ? 'y' : 'p') + '">' + ic(x.ok ? 'check' : 'alert') + '</span><div><b>' + esc(x.name) + '</b><span>' + esc(x.note) + '</span></div></li>'; }).join('') + '</ul><p class="hint">الإصدار ' + esc(H.version) + ' · PHP ' + esc(H.php) + '</p>' : '<div class="empty">' + (h.err ? esc(h.err) : 'جارٍ الفحص…') + '</div>') + '</div>') : '';
   var bk = can('drive') ? pn('teal', 'refresh', 'النسخ الاحتياطية', 'نسخة آلية كل ليلة، ويُحفظ آخر ٣٠ نسخة', '', '<div class="pb">' + (B ? (B.backups.length ? '<ul class="bklist">' + B.backups.slice(0, 12).map(function (x) { return '<li>' + ic('archive') + '<div><b class="ltr">' + esc(x.name) + '</b><span>' + esc(x.at) + ' · ' + bytes(x.size) + '</span></div><a class="btn sm" href="api/?action=backupDownload&amp;name=' + encodeURIComponent(x.name) + '" download>' + ic('dl') + 'تنزيل</a></li>'; }).join('') + '</ul>' : '<div class="empty">لا توجد نسخ بعد.</div>') +
@@ -1050,7 +1081,7 @@ VIEWS.myfile = function () {
     (ex.length ? '<h3 class="h3s">الخبرات</h3><ul class="lst" style="padding:0">' + ex.map(function (q) { return '<li>' + tile('teal', 'building') + '<div><b>' + esc([q[1], q[0]].filter(Boolean).join('، ')) + '</b><span class="s">' + esc([q[2], [q[3], q[4]].filter(Boolean).join(' – ')].filter(Boolean).join(' · ')) + '</span></div><span></span></li>'; }).join('') + '</ul>' : '') +
     (lg.length ? '<h3 class="h3s">اللغات</h3><div class="miss">' + lg.map(function (q) { return '<div><span>' + esc(q[0]) + '</span><b>' + esc(q[1] || '') + '</b></div>'; }).join('') + '</div>' : '');
   return ptitle('ملفي وبطاقتي', 'بياناتك كما هي في سجل المنسوبين. لتعديل أي شيء استخدم «تحديث بياناتي»، وتصل التعديلات إلى الموارد البشرية مباشرة.', '<a class="btn goldb" href="update.html?me=1">' + ic('edit') + 'تحديث بياناتي</a>') +
-    '<div class="grid g12"><div class="grid"><div class="pn" style="padding:18px">' + cardHTML(s) + '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">' + (s.card ? '<a class="btn sm" href="' + esc(s.card) + '" download="Bonyan-Staff-Card-' + esc(s.ref) + '.jpg">' + ic('dl') + 'تنزيل بطاقتي</a>' : '<a class="btn sm" href="update.html?me=1">' + ic('card') + 'إصدار البطاقة من صفحة التحديث</a>') + '</div></div>' +
+    '<div class="grid g12"><div class="grid"><div class="pn" style="padding:18px">' + cardHTML(s) + '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">' + (window.BonyanApp ? '' : s.card ? '<a class="btn sm" href="' + esc(s.card) + '" download>' + ic('dl') + 'تنزيل بطاقتي</a>' : '') + '</div></div>' +
     (kids ? pn('amethyst', 'cert', 'المؤهلات والخبرات', '', '', '<div class="pb">' + kids + '</div>') : '') + '</div>' +
     pn('sapphire', 'user', 'بياناتي', '', '', '<div class="pb">' + meKV(s) + '</div>') + '</div>' +
     pn('garnet', 'pass', 'وثائقي', '', '', '<div class="pb">' + docRows(s.docs, true) + '</div>');
@@ -1099,7 +1130,7 @@ function copyText(t) {
 function doAct(a, el) {
   if (a === 'excel') { dlLink(API + '?action=exportXlsx'); toast('جارٍ تجهيز ملف Excel، وسيُنزَّل خلال لحظات'); return; }
   if (a === 'regLink' || a === 'invite') { var u = regURL(); copyText(u).then(function () { toast('نُسخ رابط التسجيل: ' + u); }, function () { toast('رابط التسجيل: ' + u); }); return; }
-  if (a === 'editor') { location.href = 'admin.html'; return; }
+  if (a === 'msgGap') { var G = STAFF.filter(function (s) { return s.status === 'ناقص'; }); if (!G.length) { toast('لا توجد ملفات ناقصة'); return; } msgTpl(G.map(function (s) { return s.ref; }), 'gap'); return; }
   if (a === 'remindAll') {
     var L = STAFF.filter(function (s) { return s.worst < 0; }); if (!L.length) L = STAFF.filter(function (s) { return s.worst <= 30; });
     if (!L.length) { toast('لا توجد وثائق منتهية أو قريبة من الانتهاء'); return; }
@@ -1131,6 +1162,11 @@ function bindLive() {
     else if (a === 'kick') api({ action: 'sessionsRevoke', id: id }).then(function () { toast('أُنهيت كل جلسات هذا الحساب'); el.disabled = false; }).catch(function (e) { toast(errText(e)); el.disabled = false; });
     else if (a === 'toggle') { var u = CACHE.users.data.users.filter(function (x) { return x.id === id; })[0]; saveUser(id, { active: !u.active }); }
   }; });
+  mountCards();
+  document.querySelectorAll('.offcard .idcard-wrap').forEach(function (w) { w.onclick = function (e) { var c = w.querySelector('.idcard'); if (c) c.classList.toggle('flipped'); }; w.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); w.onclick(); } }; });
+  document.querySelectorAll('[data-cardflip]').forEach(function (el) { el.onclick = function () { var c = el.closest('.offcard').querySelector('.idcard'); if (c) c.classList.toggle('flipped'); }; });
+  document.querySelectorAll('[data-cardpng]').forEach(function (el) { el.onclick = function () { var s = byRef(el.dataset.cardpng) || ME; if (s) cardPng(s, el); }; });
+  all('[data-full]', function (el) { el.onclick = function (e) { e.stopPropagation(); openFull(el.dataset.full, !!el.dataset.fedit); }; });
   all('[data-acedit]', function (el) { el.onclick = function () { acctOpen(+el.dataset.acedit); }; });
   var aq = $('#acq'); if (aq) aq.oninput = function () { ACQ = aq.value; softRender(); };
   document.querySelectorAll('[data-bnqa]').forEach(function (el) { el.onclick = function (e) { e.stopPropagation(); window.scrollTo(0, 0); setTimeout(function () { var b = document.getElementById('qaBtn'); if (b) b.click(); }, 60); }; });
@@ -1199,7 +1235,7 @@ function ctryOpts() { return [{ v: '', n: 'كل الدول', ic: 'globe' }].conc
 /* ---------- quick actions (one place for every action) ---------- */
 function qaMenuHTML() {
   var G = [];
-  G.push(['المنسوبون', 'users', 'sapphire', [['#people', 'all', 'دليل المنسوبين', 'الملفات والبطاقات والوثائق', 'users'], ['#people', 'gap', 'الملفات الناقصة', CNT.gap + ' ملفًا ينقصه شيء', 'alert'], ['act:regLink', '', 'نسخ رابط التسجيل', 'لإرساله إلى منسوب جديد', 'plus']].concat(can('edit') ? [['act:editor', '', 'التعديل التفصيلي', 'تعديل البيانات والمرفقات', 'edit']] : [])]);
+  G.push(['المنسوبون', 'users', 'sapphire', [['#people', 'all', 'دليل المنسوبين', 'الملفات والبطاقات والوثائق', 'users'], ['#people', 'gap', 'الملفات الناقصة', CNT.gap + ' ملفًا ينقصه شيء', 'alert'], ['act:regLink', '', 'نسخ رابط التسجيل', 'لإرساله إلى منسوب جديد', 'plus']].concat(can('mail') ? [['act:msgGap', '', 'مراسلة الناقصة ملفاتهم', 'طلب استكمال بلغة كل منسوب', 'chat']] : [])]);
   G.push(['الوثائق', 'pass', 'garnet', [['#documents', 'bad', 'الوثائق المنتهية', CNT.exp + ' منسوبًا', 'alert'], ['#documents', 'warn', 'تنتهي خلال ٣٠ يومًا', CNT.soon + ' منسوبًا', 'clock']].concat(can('mail') ? [['act:remindAll', '', 'تذكير أصحابها', 'رسالة بلغة كل منسوب', 'send']] : [])]);
   G.push(['التقارير', 'chart', 'gold', [['act:excel', '', 'تصدير Excel', 'السجل كاملًا في ملف واحد', 'excel']].concat(can('pay') ? [['#payroll', '', 'الرواتب', 'حسب الجهة والعملة', 'wallet']] : []).concat(can('audit') ? [['#log', '', 'سجل العمليات', 'من فعل ماذا ومتى', 'history']] : [])]);
   var sys = [];

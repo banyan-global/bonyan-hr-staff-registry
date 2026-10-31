@@ -856,3 +856,138 @@ a.kpilink:hover .pn { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(20
 :root[data-theme="light"], :root:not([data-theme]) { --faint: #5f6b82; --ok: #11744c; --bad: #b02a3e; --warn: #8a5300; }
 .kpi .v .vs { font-size: 20px; line-height: 1.35; display: inline-block; }
 .polrow .stat b { font-size: 17px; }
+
+/* ===== official card & full file window ===== */
+.offcard { display: grid; gap: 10px; justify-items: center; width: 100%; }
+.offcard .idcard-wrap { width: 100%; max-width: 400px; cursor: pointer; }
+.cardtools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.me-card .offcard .cardtools .btn { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .22); color: #fff; box-shadow: none; }
+#fullLayer { position: fixed; inset: 0; z-index: 95; background: rgba(5, 12, 26, .55); backdrop-filter: blur(3px); }
+#fullLayer iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+.fl-load { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; color: #f6e8c6; font-weight: 800; }
+body.no-scroll { overflow: hidden; }
+.prof { container-type: inline-size; }
+@container (max-width: 760px) {
+  .prof .hd { grid-template-columns: minmax(0, 1fr); }
+  .prof .cardcol { order: -1; justify-self: center; width: min(380px, 100%); }
+}
+/* نفس أساسيات الصفحة السابقة داخل البطاقة الرسمية */
+.idcard-wrap { font-size: 16px; line-height: 1.7; font-family: var(--f-display); text-align: right; }
+.idcard p, .idcard dl, .idcard dd { margin: 0; }
+.idcard h1, .idcard h2, .idcard h3 { margin: 0; }
+.idcard .ic-mrz { text-align: left; }
+
+/* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
+:root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
+.idcard-wrap {--bg-0: #162942;
+  --bg-1: #0f1f38;
+  --body-grad: radial-gradient(60% 50% at 80% 0%, rgba(227, 196, 133, .14), transparent 60%), radial-gradient(55% 45% at 10% 12%, rgba(95, 217, 230, .08), transparent 60%), radial-gradient(50% 50% at 50% 100%, rgba(169, 155, 255, .06), transparent 60%), linear-gradient(180deg, #16294a, #0f1f38);
+  --pattern-op: .12;
+  --card: linear-gradient(160deg, #21385a, #1b3050);
+  --glass: linear-gradient(160deg, rgba(33, 56, 90, .88), rgba(27, 48, 80, .88));
+  --pop: linear-gradient(180deg, #24406a, #1b3050);
+  --head-bg: rgba(17, 32, 58, .82);
+  --head-bg-2: rgba(17, 32, 58, .92);
+  --gold-rgb: 227 196 133;
+  --gold2-rgb: 243 220 166;
+  --ink-rgb: 255 255 255;
+  --well-rgb: 9 18 34;
+  --shade-rgb: 8 18 35;
+  --accent-bg: linear-gradient(135deg, #f3dca6, #e3c485);
+  --on-accent: #0b0f17;
+  --line: rgba(227, 196, 133, .30);
+  --line-2: rgba(227, 196, 133, .48);
+  --line-soft: rgba(255, 255, 255, .09);
+  --tint: rgba(255, 255, 255, .04);
+  --tint-gold: rgba(227, 196, 133, .08);
+  --field: rgba(9, 18, 34, .32);
+  --field-hover: rgba(9, 18, 34, .42);
+  --gold: #e3c485;
+  --gold-2: #f3dca6;
+  --gold-deep: #c9a86a;
+  --cyan: #5fd9e6;
+  --txt: #f4f8fd;
+  --txt-2: #c3d2e4;
+  --txt-3: #8ba0bb;
+  --ok: #5fe0a0; --ok-soft: rgba(95, 224, 160, .12);
+  --warn: #ffd27a; --warn-soft: rgba(255, 210, 122, .12);
+  --bad: #ff8893; --bad-soft: rgba(255, 136, 147, .12);
+  --info: #9fe6f0; --info-soft: rgba(127, 216, 230, .12);
+  --shadow-sm: 0 8px 22px rgba(8, 18, 35, .28);
+  --shadow: 0 18px 44px rgba(8, 18, 35, .42);
+  --shadow-lg: 0 24px 60px rgba(8, 18, 35, .55);
+  --ink: var(--txt); --ink-2: var(--txt-2); --ink-3: var(--txt-3);
+  color-scheme: dark;}
+.idcard-wrap {--rx: 0deg; --ry: 0deg; --gx: 30%; --gy: 20%; perspective: 1000px; width: 100%; max-width: 380px;}
+.idcard {position: relative; width: 100%; aspect-ratio: 85.6 / 54; cursor: pointer; border-radius: 18px; outline-offset: 4px; transform: rotateX(var(--rx)) rotateY(var(--ry)); transition: transform .25s ease-out; transform-style: preserve-3d;}
+.idcard-in {position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .8s var(--spring);}
+.idcard.flipped .idcard-in {transform: rotateY(180deg);}
+.idcard .face {position: absolute; inset: 0; border-radius: 18px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 2px 4px rgba(27, 31, 59, .15), 0 22px 44px rgba(27, 31, 59, .3);}
+.idcard .front {color: #fff; padding: 12px 14px 0; display: grid; grid-template-rows: auto 1fr auto; background: linear-gradient(135deg, color-mix(in srgb, var(--c1) 80%, #000) 0%, var(--c1) 50%, var(--c2) 100%); transition: background .4s;}
+.idcard .front::after {content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at var(--gx) var(--gy), rgba(255, 255, 255, .22), transparent 45%); mix-blend-mode: soft-light;}
+.idcard .ic-guil {position: absolute; inset: 0; opacity: .55; pointer-events: none; background-image: repeating-radial-gradient(circle at 115% 125%, color-mix(in srgb, var(--ca) 14%, transparent) 0 1px, transparent 1px 8px);}
+.idcard .ic-top {position: relative; display: flex; align-items: center; gap: 10px;}
+.idcard .ic-logo {height: 30px; display: flex; align-items: center;}
+.idcard .ic-logo-img {height: 30px; width: auto; display: block;}
+.idcard .ic-logo-img.logo-fallback {font-family: var(--f-display); font-size: .7rem; font-weight: 600; color: #fff; height: auto; white-space: nowrap;}
+.idcard .ic-kind {font-family: var(--f-display); font-size: .64rem; line-height: 1.2; color: rgba(255, 255, 255, .82); display: grid; padding-inline-start: 10px; border-inline-start: 1px solid color-mix(in srgb, var(--ca) 50%, transparent);}
+.idcard .ic-kind b {font-family: var(--f-mono); font-weight: 500; letter-spacing: .14em; color: var(--ca); font-size: .56rem; direction: ltr; text-align: start;}
+.idcard .ic-holo {margin-inline-start: auto; width: 30px; height: 30px; border-radius: 8px; opacity: .95; background: conic-gradient(from 0deg, var(--ca), #F6EEDF, color-mix(in srgb, var(--ca) 70%, #000), #F3E6CC, var(--ca)); -webkit-mask: radial-gradient(circle, transparent 36%, #000 38%); mask: radial-gradient(circle, transparent 36%, #000 38%); animation: spin 9s linear infinite;}
+.idcard .ic-body {position: relative; display: flex; gap: 12px; align-items: center; min-height: 0;}
+.idcard .ic-photo {flex: none; width: 23%; aspect-ratio: 35 / 45; border-radius: 8px; overflow: hidden; background: rgba(255, 255, 255, .1); border: 2px solid var(--ca); display: grid; place-items: end center; color: rgba(255, 255, 255, .35);}
+.idcard .ic-photo img {width: 100%; height: 100%; object-fit: cover;}
+.idcard html[dir="rtl"] .ic-photo {order: 2;}
+.idcard .ic-photo svg {width: 86%;}
+.idcard .ic-info {flex: 1; min-width: 0; display: grid; gap: 1px;}
+.idcard .ic-info p {overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+.idcard .ic-name-ar {font-family: var(--f-display); font-weight: 900; font-size: 1.12rem; line-height: 1.35; color: #fff; text-align: start; letter-spacing: 0;}
+.idcard .ic-name-ar.ic-latin {letter-spacing: .03em;}
+.idcard .ic-name-en {font-family: var(--f-display); font-weight: 700; font-size: .62rem; letter-spacing: .09em; color: rgba(255, 255, 255, .72); margin-bottom: 3px;}
+.idcard html[dir="rtl"] .ic-info p {text-align: right;}
+.idcard html[dir="ltr"] .ic-info p {text-align: left;}
+.idcard .ic-wm {position: absolute; z-index: 0; pointer-events: none; inset-inline-end: 5%; top: 30%; height: 50%; opacity: .045; -webkit-mask-image: linear-gradient(180deg, #000 40%, transparent 100%); mask-image: linear-gradient(180deg, #000 40%, transparent 100%);}
+.idcard .ic-wm img {height: 100%; width: auto; display: block;}
+.idcard .ic-wm.dark {inset: auto; left: 50%; translate: -50% 0; bottom: 16%; height: 54%; max-width: 80%; opacity: .045; -webkit-mask-image: none; mask-image: none; z-index: 0;}
+.idcard .ic-wm.dark img {height: 100%; width: auto; max-width: 100%; object-fit: contain;}
+.idcard .ic-wm.dark.ent {opacity: .1;}
+.idcard .ic-wm.dark:not(.ent) img {filter: brightness(0);}
+.idcard .front > :not(.ic-wm):not(.ic-guil),
+.idcard .back > :not(.ic-wm) {position: relative; z-index: 1;}
+.idcard .ic-role {font-size: .74rem; color: var(--ca); font-weight: 600;}
+.idcard .ic-ent {font-size: .7rem; color: rgba(255, 255, 255, .72);}
+.idcard .ic-loc {display: flex; align-items: center; gap: 6px; font-size: .7rem; color: rgba(255, 255, 255, .86); margin-top: 2px;}
+.idcard .ic-loc .flag {width: 16px; height: 12px;}
+.idcard .ic-nat {display: inline-flex; padding-inline-start: 6px; border-inline-start: 1px solid rgba(255, 255, 255, .25);}
+.idcard .ic-mrz {position: relative; margin-inline: -14px; padding: 5px 14px 7px; background: color-mix(in srgb, var(--ca) 12%, transparent); display: grid; font-family: var(--f-mono); font-size: .54rem; letter-spacing: .16em; color: rgba(255, 255, 255, .75); white-space: nowrap; overflow: hidden;}
+.idcard .back {transform: rotateY(180deg); color: var(--c2); padding: 0 14px 12px; display: grid; grid-template-rows: auto 1fr auto; gap: 8px;
+  background: radial-gradient(120% 90% at 100% 100%, color-mix(in srgb, var(--c1) 13%, #fff) 0%, transparent 60%), radial-gradient(90% 70% at 0% 100%, color-mix(in srgb, var(--ca) 22%, #fff) 0%, transparent 55%), linear-gradient(165deg, #ffffff 0%, color-mix(in srgb, var(--c1) 5%, #fff) 100%);}
+.idcard .back::after {content: ""; position: absolute; inset: 0; pointer-events: none; background-image: repeating-radial-gradient(circle at -10% 120%, color-mix(in srgb, var(--c1) 7%, transparent) 0 1px, transparent 1px 9px);}
+.idcard .back dd {color: var(--c2);}
+.idcard .ic-strip {margin-inline: -14px; height: 22%; min-height: 34px; background: linear-gradient(180deg, var(--c2), var(--c1) 60%, var(--c2));}
+.idcard .ic-back {margin: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px 10px; align-content: start; font-size: .62rem;}
+.idcard .ic-back div:first-child {grid-column: 1 / -1;}
+.idcard .ic-back dt {color: color-mix(in srgb, var(--c1) 60%, #8a6c2e); font-weight: 700; font-size: .6rem;}
+.idcard .ic-back dd {margin: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+.idcard .ic-back .mono {font-family: var(--f-mono); letter-spacing: .05em; text-align: start;}
+.idcard .ic-bars {position: relative; height: 22px; direction: ltr; overflow: hidden;}
+.idcard .ic-bars i {position: absolute; top: 0; bottom: 0; background: var(--c2);}
+.idcard .ic-svc {display: inline-flex; align-items: center; gap: 5px; width: fit-content; margin-top: 3px; padding: 1px 8px 1px 7px; border-radius: 999px; font-size: .66rem; font-weight: 800; color: var(--c2); background: linear-gradient(135deg, color-mix(in srgb, var(--ca) 50%, #fff), var(--ca));}
+.idcard .ic-svc svg {width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; flex: none;}
+.idcard .ic-svc.ph {opacity: .55;}
+.idcard .ic-back dd.gold {color: var(--c1);}
+.idcard {--c1: #2B3155; --c2: #191D38; --ca: #D9B67F;}
+.idcard .ic-plate {height: 42px; max-width: 56%; flex: none; display: flex; align-items: center; justify-content: center; padding: 4px 9px; border-radius: 10px; background: #fff; box-shadow: 0 6px 16px rgba(0, 0, 0, .28), inset 0 0 0 1px color-mix(in srgb, var(--ca) 45%, transparent); animation: plateIn .5s var(--spring) both;}
+.idcard .ic-plate.sq {width: 46px; height: 46px; padding: 5px; border-radius: 12px;}
+.idcard .ic-plate img {height: 100%; width: auto; max-width: 100%; object-fit: contain; display: block;}
+.idcard .ic-plate.txt {font-family: var(--f-display); font-weight: 900; font-size: .72rem; color: var(--c1); padding-inline: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.idcard .ic-bny {margin-inline-start: auto; height: 24px; display: flex; align-items: center; gap: 6px; opacity: .95;}
+.idcard .ic-bny img {height: 100%; width: auto; display: block;}
+.idcard .ic-bny::before {content: ""; width: 1px; height: 18px; background: color-mix(in srgb, var(--ca) 55%, transparent);}
+.idcard .has-ent .ic-kind {border-inline-start: 0; padding-inline-start: 0;}
+.idcard .back .ic-ent-logo img {height: 100%; width: auto; max-width: 100%; object-fit: contain; display: block;}
+.dr-card-box .idcard-wrap {max-width: 380px;}
+.side-card-box > .idcard-wrap {position: absolute; top: 0; inset-inline-start: 0; width: 380px; max-width: none; transform: scale(var(--s, .8)); transform-origin: top right;}
+html[dir="ltr"] .side-card-box > .idcard-wrap {transform-origin: top left;}
+.upd-cardbox .idcard-wrap {width: 100%; max-width: 380px;}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes plateIn { from { opacity: 0; transform: scale(.7) rotate(-4deg); } }

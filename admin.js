@@ -323,12 +323,15 @@
     var el = S.el; if (!el) return;
     if (!S.data) { if (S.globe) { S.globe.destroy(); S.globe = null; } el.innerHTML = lockHTML(); var i = $('#admCode') || $('#admEmail'); if (i && !S.loading) setTimeout(function () { i.focus(); }, 60); return; }
     el.innerHTML = dashHTML();
-    if (S.tab === 'overview') mountGlobe();
+    if (S.tab === 'overview' && !EMBED) mountGlobe();
     if (S.tab === 'staff') drawTable();
   }
   var LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path class="shackle" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15.5" r="1.4"/></svg>';
   /* الدخول ببريد الحساب + رمز من ٦ أرقام يصل إليه (الخادم الجديد) */
   var AUTH = !A.DEMO && A.CFG.AUTH === 'email';
+  /* داخل المنصة (index.html) تُفتح هذه الصفحة في نافذة ملف المنسوب فقط: admin.html?embed=1&ref=… */
+  var EMBED = /[?&]embed=1/.test(location.search) && window.parent !== window;
+  function toParent(m) { if (EMBED) try { window.parent.postMessage(Object.assign({ bhr: 1 }, m), location.origin); } catch (e) { } }
   var API = A.CFG.GAS_URL || 'api/';
   function can(p) { return !AUTH || !S.me || (S.me.perms || []).indexOf(p) > -1; }
   S.auth = { step: 'email', email: '' };
@@ -1002,6 +1005,7 @@
     setTimeout(function () { host.hidden = true; host.innerHTML = ''; }, 320);
     var tr = S.open && $('tr[data-ref="' + S.open + '"]'); S.open = null;
     if (tr) tr.focus();
+    toParent({ type: 'close' });
   }
 
   /* ---------------------------------------------------------- التعديل من اللوحة
@@ -1116,6 +1120,7 @@
       }).then(function () { return load(code, true); });
     }
     p.then(function () {
+      toParent({ type: 'saved', ref: ref });
       S.edit = null; ED.files = {};
       if (A.DEMO) draw();
       if ((S.data.rows || []).some(function (v) { return v.ref === ref; })) openDrawer(ref);
@@ -1216,7 +1221,7 @@
     if (S.globe) { S.globe.destroy(); S.globe = null; }
     p.innerHTML = panelHTML();
     $$('.adm-tabs [data-tab]').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === S.tab)); });
-    if (S.tab === 'overview') mountGlobe();
+    if (S.tab === 'overview' && !EMBED) mountGlobe();
     if (S.tab === 'staff') drawTable();
   }
   function setTab(t) { S.tab = t; S.shown = PAGE; closeDDs(); redrawPanel(); if (AUTH && (t === 'sys' || t === 'log')) sysLoad(true); }
@@ -1376,7 +1381,14 @@
   };
 
   /* ---------------------------------------------------------- تشغيل الصفحة المستقلة */
+  if (STANDALONE && !EMBED) {
+    /* موقع واحد: لوحة البيانات السابقة أصبحت داخل المنصة */
+    var dref = (location.search.match(/[?&]ref=([^&#]+)/) || [])[1];
+    location.replace('./' + (dref ? '?ref=' + dref : '') + '#people');
+    return;
+  }
   if (STANDALONE) {
+    if (EMBED) document.documentElement.classList.add('embed');
     var boot = function () {
       var L = A.state.lang, D = window.I18N;
       document.documentElement.lang = L; document.documentElement.dir = D[L].dir || 'rtl';
