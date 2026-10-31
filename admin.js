@@ -156,6 +156,7 @@
   });
   function x(k, v) {
     var d = TX[A.state.lang] || TX.ar, s = k.indexOf('.') > 0 ? d[k.split('.')[0]][k.split('.')[1]] : d[k];
+    if (s == null && typeof SYS !== 'undefined' && SYS.ar[k] != null) s = (SYS[A.state.lang] || SYS.ar)[k] || SYS.ar[k];
     s = s == null ? k : s;
     return v ? s.replace(/\{(\w+)\}/g, function (_, n) { return A.num(v[n]); }) : s;
   }
@@ -325,6 +326,7 @@
   var LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path class="shackle" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15.5" r="1.4"/></svg>';
   /* الدخول ببريد الحساب + رمز من ٦ أرقام يصل إليه (الخادم الجديد) */
   var AUTH = !A.DEMO && A.CFG.AUTH === 'email';
+  var API = A.CFG.GAS_URL || 'api/';
   function can(p) { return !AUTH || !S.me || (S.me.perms || []).indexOf(p) > -1; }
   S.auth = { step: 'email', email: '' };
   function authErr(m) {
@@ -424,7 +426,13 @@
     money: 'M3 7h18v10H3zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M6 10v.01M18 14v.01',
     shield: 'M12 3 4.5 6v6c0 4.5 3.2 7.8 7.5 9 4.3-1.2 7.5-4.5 7.5-9V6z',
     chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
-    back: 'M14 6l6 6-6 6M20 12H4'
+    back: 'M14 6l6 6-6 6M20 12H4',
+    gear: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4z',
+    xls: 'M6 2.5h8l4 4V21H6zM14 2.5V7h4M9 11l5 6M14 11l-5 6',
+    db: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+    box: 'M3 7.5 12 3l9 4.5v9L12 21l-9-4.5zM3 7.5l9 4.5 9-4.5M12 12v9',
+    key: 'M15 7a4 4 0 1 1-3.4 6.1L4 20.5V17h3v-3h3l1.6-1.6A4 4 0 0 1 15 7M16 9.5v.01',
+    zip: 'M6 2.5h12V21H6zM11 2.5v2h2v2h-2v2h2v2h-2v3h2v3h-2'
   };
   function ic(p) { return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + p + '"/></svg>'; }
 
@@ -444,7 +452,8 @@
     ];
     var tabs = [['overview', 'tabOv', ICON.chart], ['staff', 'tabStaff', ICON.users], ['docs', 'tabDocs', ICON.clock, nExp + nSoon], ['pay', 'tabPay', ICON.money]];
     if (!can('finance.view')) { tabs = tabs.filter(function (t) { return t[0] !== 'pay'; }); if (S.tab === 'pay') S.tab = 'overview'; }
-    if (d.audit) tabs.push(['audit', 'tabAudit', ICON.shield]);
+    if (AUTH) { if (can('audit.view')) tabs.push(['log', 'tabLog', ICON.shield]); tabs.push(['sys', 'tabSys', ICON.gear]); }
+    else if (d.audit) tabs.push(['audit', 'tabAudit', ICON.shield]);
     var ring = pct(done, rows.length);
     return '<section class="adm-hero rise" style="--d:0">' +
         '<span class="adm-hero-glow" aria-hidden="true"></span>' +
@@ -459,7 +468,8 @@
         }).join('') + '</ul>' +
         '<div class="adm-actions">' +
           '<button type="button" class="btn ghost sm" data-adm="refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/></svg>' + esc(x('refresh')) + '</button>' +
-          (mailPending().length && can('staff.mail') ? '<button type="button" class="btn ghost sm" data-adm="mailAll"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6"/></svg><span>' + esc(x('mailAll', { n: mailPending().length })) + '</span></button>' : '') +
+          (!AUTH && mailPending().length && can('staff.mail') ? '<button type="button" class="btn ghost sm" data-adm="mailAll"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6"/></svg><span>' + esc(x('mailAll', { n: mailPending().length })) + '</span></button>' : '') +
+          (AUTH ? '<a class="btn ghost sm" href="' + API + '?action=exportXlsx" data-adm="xlsx" download>' + ic(ICON.xls) + esc(sx('xlsx')) + '</a>' : '') +
           '<button type="button" class="btn ghost sm" data-adm="csv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg>' + esc(x('csv')) + '</button>' +
           (d.sheetUrl ? '<a class="btn ghost sm" href="' + esc(d.sheetUrl) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 9h16M4 14.5h16M10 9v11.5"/></svg>' + esc(x('sheet')) + '</a>' : '') +
           '<button type="button" class="btn ghost sm" data-adm="lock">' + LOCK_SVG + esc(AUTH ? x('logout') : x('lock')) + '</button>' +
@@ -475,6 +485,8 @@
     if (S.tab === 'docs') return docsHTML();
     if (S.tab === 'pay' && can('finance.view')) return payHTML();
     if (S.tab === 'audit') return auditHTML();
+    if (S.tab === 'log' && AUTH) return logHTML();
+    if (S.tab === 'sys' && AUTH) return sysHTML();
     return overviewHTML();
   }
 
@@ -768,6 +780,148 @@
       '</tbody></table></div></section>';
   }
 
+  /* ==========================================================  «السجل» و«النظام» (الخادم الجديد)
+     كل ما كان في جدول Google ومجلد Drive صار هنا: البيانات، المرفقات، السجل، النسخ الاحتياطية، الحسابات والصلاحيات */
+  var SYS = {
+    ar: {
+      tabLog: 'سجل العمليات', tabSys: 'النظام والبيانات', xlsx: 'تنزيل Excel', zipAll: 'تنزيل كل المرفقات', loading: 'جارٍ التحميل…', fail: 'تعذّر التحميل',
+      whereT: 'أين تُحفظ البيانات', whereD: 'كل البيانات على خوادم المجموعة في هوستنجر، ولا يصل إليها إلا من يملك حسابًا وصلاحية.',
+      wDb: 'قاعدة البيانات', wDbD: 'بيانات المنسوبين والمؤهلات والخبرات واللغات والحسابات والسجل', wFiles: 'المرفقات', wFilesD: 'مجلد خاص خارج الموقع — لا تُفتح إلا بعد الدخول',
+      wBk: 'النسخ الاحتياطية', wBkD: 'نسخة يومية تلقائية (آخر ٣٠ يومًا) + نسخ هوستنجر اليومية', wLog: 'سجل العمليات', wLogD: 'كل دخول وعرض وتعديل وتنزيل — لا يمكن تعديله دون أن يُكشف',
+      nStaff: 'منسوب', nFiles: 'مرفق', nArch: 'مؤرشف', nAudit: 'عملية مسجّلة', nBk: 'نسخة', nUsers: 'حساب نشط',
+      expT: 'التصدير والتنزيل', expD: 'استخرج البيانات في أي وقت من هنا بدل الجدول.',
+      eX: 'ملف Excel كامل', eXD: 'المنسوبون + المؤهلات + الخبرات + اللغات + سجل العمليات، بأوراق منسّقة', eC: 'ملف CSV للمنسوبين المعروضين', eCD: 'حسب الفلاتر الحالية في تبويب «المنسوبون»',
+      eZ: 'مرفقات منسوب', eZD: 'افتح ملف أي منسوب واضغط «تنزيل كل المرفقات» لتحصل عليها مضغوطة بأسماء واضحة',
+      bkT: 'النسخ الاحتياطية', bkNow: 'أخذ نسخة الآن', bkNone: 'لا توجد نسخ بعد', bkDl: 'تنزيل',
+      hT: 'فحص الجاهزية', usT: 'الحسابات والصلاحيات', usD: 'من يدخل اللوحة وماذا يرى. الدخول دائمًا برمز يصل إلى بريد الحساب.',
+      uName: 'الاسم', uEmail: 'البريد', uTitle: 'المسمى', uRole: 'الدور', uLast: 'آخر دخول', uState: 'الحالة', uAct: 'إجراءات', uActive: 'نشط', uOff: 'موقوف', uLocked: 'مقفل مؤقتًا',
+      uUnlock: 'فك القفل', uKick: 'إنهاء الجلسات', uStop: 'إيقاف', uStart: 'تفعيل', uAdd: 'إضافة حساب', uSave: 'حفظ', uSaved: 'تم الحفظ', uNever: 'لم يدخل بعد', uSelf: 'لا يمكنك إيقاف حسابك أو سحب صلاحية الإدارة منه', uDup: 'هذا البريد مسجّل لحساب آخر',
+      permsT: 'صلاحيات كل دور', lgQ: 'بحث في السجل (الاسم، الرقم المرجعي، العملية)', lgOk: 'السجل سليم · {n} عملية', lgBad: 'تنبيه: تغيّر سطر في السجل (رقم {n})', lgMore: 'عرض المزيد',
+      lgT: 'الوقت', lgRef: 'الرقم المرجعي', lgA: 'العملية', lgD: 'التفاصيل', lgW: 'بواسطة', none: 'لا شيء'
+    },
+    en: {
+      tabLog: 'Activity log', tabSys: 'System & data', xlsx: 'Download Excel', zipAll: 'Download all documents', loading: 'Loading…', fail: 'Could not load',
+      whereT: 'Where the data lives', whereD: 'All data is on the Group’s own Hostinger servers; only signed-in accounts with permission can reach it.',
+      wDb: 'Database', wDbD: 'Staff records, qualifications, experience, languages, accounts and the log', wFiles: 'Documents', wFilesD: 'A private folder outside the website — opened only after sign-in',
+      wBk: 'Backups', wBkD: 'Automatic daily copy (last 30 days) + Hostinger daily backups', wLog: 'Activity log', wLogD: 'Every sign-in, view, edit and download — tamper-evident',
+      nStaff: 'staff', nFiles: 'documents', nArch: 'archived', nAudit: 'logged actions', nBk: 'backups', nUsers: 'active accounts',
+      expT: 'Export & download', expD: 'Pull the data any time from here instead of the sheet.',
+      eX: 'Full Excel file', eXD: 'Staff + qualifications + experience + languages + activity log, formatted sheets', eC: 'CSV of the staff shown', eCD: 'Uses the current filters in the Staff tab',
+      eZ: 'A staff member’s documents', eZD: 'Open any staff file and tap “Download all documents” for a neatly named zip',
+      bkT: 'Backups', bkNow: 'Back up now', bkNone: 'No backups yet', bkDl: 'Download',
+      hT: 'Health check', usT: 'Accounts & permissions', usD: 'Who can open the dashboard and what they see. Sign-in is always by a code sent to the account’s email.',
+      uName: 'Name', uEmail: 'Email', uTitle: 'Title', uRole: 'Role', uLast: 'Last sign-in', uState: 'Status', uAct: 'Actions', uActive: 'Active', uOff: 'Disabled', uLocked: 'Temporarily locked',
+      uUnlock: 'Unlock', uKick: 'End sessions', uStop: 'Disable', uStart: 'Enable', uAdd: 'Add account', uSave: 'Save', uSaved: 'Saved', uNever: 'Never', uSelf: 'You cannot disable your own account or remove its admin rights', uDup: 'This email already belongs to another account',
+      permsT: 'What each role can do', lgQ: 'Search the log (name, reference, action)', lgOk: 'Log intact · {n} actions', lgBad: 'Warning: a log line was changed (#{n})', lgMore: 'Show more',
+      lgT: 'Time', lgRef: 'Reference', lgA: 'Action', lgD: 'Details', lgW: 'By', none: 'None'
+    }
+  };
+  function sx(k, v) { var d = SYS[A.state.lang] || SYS.ar, s = d[k] != null ? d[k] : SYS.ar[k]; s = s == null ? k : s; return v ? s.replace(/\{(\w+)\}/g, function (_, n) { return A.num(v[n]); }) : s; }
+  S.sys = { at: 0, busy: false, health: null, backups: null, users: null, log: null, logN: 300, q: '' };
+  function sysLoad(force) {
+    var Y = S.sys; if (Y.busy || (!force && Date.now() - Y.at < 30000)) return;
+    Y.busy = true;
+    var jobs = [];
+    if (can('audit.view')) jobs.push(A.api({ action: 'audit', limit: Y.logN }).then(function (j) { Y.log = j; }).catch(function () { Y.log = { err: 1 }; }));
+    if (S.tab === 'sys') {
+      if (can('backup.run')) jobs.push(A.api({ action: 'backups' }).then(function (j) { Y.backups = j; }).catch(function () { Y.backups = { err: 1 }; }));
+      if (can('users.manage')) {
+        jobs.push(A.api({ action: 'health' }).then(function (j) { Y.health = j; }).catch(function () { Y.health = { err: 1 }; }));
+        jobs.push(A.api({ action: 'usersList' }).then(function (j) { Y.users = j; }).catch(function () { Y.users = { err: 1 }; }));
+      }
+    }
+    Promise.all(jobs).then(function () { Y.busy = false; Y.at = Date.now(); if (S.tab === 'sys' || S.tab === 'log') redrawPanel(); });
+  }
+  function fmtBytes(b) { b = +b || 0; return b > 1048576 ? A.num((b / 1048576).toFixed(1)) + ' MB' : A.num(Math.max(1, Math.round(b / 1024))) + ' KB'; }
+  function spin() { return '<p class="adm-empty">' + esc(sx('loading')) + '</p>'; }
+
+  function logHTML() {
+    var L = S.sys.log; if (!L) { sysLoad(); return spin(); }
+    if (L.err) return '<p class="adm-empty">' + esc(sx('fail')) + '</p>';
+    var q = (S.sys.q || '').toLowerCase(), rows = (L.rows || []).filter(function (r) { return !q || [r.ref, r.action, r.detail, r.actor].join(' ').toLowerCase().indexOf(q) > -1; });
+    var it = L.integrity || {};
+    return '<section class="adm-list sys-log"><div class="sys-bar"><label class="sys-q">' + ic('M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4') + '<input type="search" id="sysQ" placeholder="' + esc(sx('lgQ')) + '" value="' + esc(S.sys.q) + '"></label>' +
+      '<span class="chip ' + (it.ok ? 'ok' : 'bad') + '">' + ic(ICON.shield) + esc(it.ok ? sx('lgOk', { n: it.rows || 0 }) : sx('lgBad', { n: it.brokenAt || '?' })) + '</span></div>' +
+      '<div class="adm-table-wrap"><table class="adm-table audit sys-tbl"><thead><tr><th>' + esc(sx('lgT')) + '</th><th>' + esc(sx('lgA')) + '</th><th>' + esc(sx('lgD')) + '</th><th>' + esc(sx('lgW')) + '</th><th>' + esc(sx('lgRef')) + '</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var bad = /خاطئة|خطأ|غير مسجّل|قفل/.test(r.action);
+        return '<tr class="static"><td dir="ltr" class="mono">' + esc((r.at || '').slice(0, 16)) + '</td><td><span class="chip ' + (bad ? 'bad' : '') + '">' + esc(r.action) + '</span></td><td class="sys-det">' + esc(r.detail || '') + '</td><td>' + esc(r.actor || '—') + '</td><td dir="ltr" class="mono">' +
+          (r.ref ? '<button type="button" class="link" data-ref="' + esc(r.ref) + '">' + esc(r.ref) + '</button>' : '—') + '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      ((L.rows || []).length >= S.sys.logN ? '<div class="sys-more"><button type="button" class="btn ghost sm" data-sys="logMore">' + esc(sx('lgMore')) + '</button></div>' : '') + '</section>';
+  }
+
+  function sysHTML() {
+    var Y = S.sys; if (!Y.at && !Y.busy) sysLoad(true);
+    var H = Y.health && !Y.health.err ? Y.health : null, st = H ? H.stats : null, B = Y.backups && !Y.backups.err ? Y.backups : null;
+    var rows = S.data.rows || [];
+    var nFiles = st ? st.files : rows.reduce(function (n, r) { return n + ['photo', 'passportScan', 'nationalIdScan', 'permitScan', 'workPermitScan', 'contractFile', 'degreeFile', 'certFiles', 'bankProof'].reduce(function (m, k) { return m + (Array.isArray(r[k]) ? r[k].length : 0); }, 0); }, 0);
+    var tile = function (n, l) { return '<li><b>' + (n == null ? '—' : A.num(n)) + '</b><span>' + esc(l) + '</span></li>'; };
+    var where = card(sx('whereT'),
+      '<p class="hint">' + esc(sx('whereD')) + '</p>' +
+      '<ul class="sys-where">' +
+        '<li>' + ic(ICON.db) + '<div><b>' + esc(sx('wDb')) + '</b><span>' + esc(sx('wDbD')) + '</span>' + (st ? '<code dir="ltr">MySQL · ' + esc(st.db) + '</code>' : '') + '</div></li>' +
+        '<li>' + ic(ICON.box) + '<div><b>' + esc(sx('wFiles')) + '</b><span>' + esc(sx('wFilesD')) + '</span>' + (st ? '<code dir="ltr">' + esc(st.storage) + ' · ' + fmtBytes(st.filesBytes) + '</code>' : '') + '</div></li>' +
+        '<li>' + ic(ICON.clock) + '<div><b>' + esc(sx('wBk')) + '</b><span>' + esc(sx('wBkD')) + '</span></div></li>' +
+        '<li>' + ic(ICON.shield) + '<div><b>' + esc(sx('wLog')) + '</b><span>' + esc(sx('wLogD')) + '</span></div></li>' +
+      '</ul>' +
+      '<ul class="sys-tiles">' + tile(st ? st.staff : rows.length, sx('nStaff')) + tile(nFiles, sx('nFiles')) + tile(st ? st.archived : null, sx('nArch')) + tile(st ? st.audit : null, sx('nAudit')) + tile(st ? st.backups : (B ? B.backups.length : null), sx('nBk')) + tile(st ? st.users : null, sx('nUsers')) + '</ul>', 'span3');
+    var exp = card(sx('expT'),
+      '<p class="hint">' + esc(sx('expD')) + '</p><ul class="sys-exp">' +
+        '<li><a class="sys-exp-b" href="' + API + '?action=exportXlsx" download>' + ic(ICON.xls) + '<div><b>' + esc(sx('eX')) + '</b><span>' + esc(sx('eXD')) + '</span></div></a></li>' +
+        '<li><button type="button" class="sys-exp-b" data-adm="csv">' + ic(ICON.rows) + '<div><b>' + esc(sx('eC')) + '</b><span>' + esc(sx('eCD')) + '</span></div></button></li>' +
+        '<li><div class="sys-exp-b static">' + ic(ICON.zip) + '<div><b>' + esc(sx('eZ')) + '</b><span>' + esc(sx('eZD')) + '</span></div></div></li>' +
+      '</ul>', 'span2');
+    var bk = '';
+    if (can('backup.run')) {
+      var list = B ? B.backups : null;
+      bk = card(sx('bkT'), '<div class="sys-bk-top"><button type="button" class="btn gold sm" data-sys="bkNow">' + ic(ICON.db) + esc(sx('bkNow')) + '</button></div>' +
+        (!list ? spin() : !list.length ? '<p class="hint">' + esc(sx('bkNone')) + '</p>' :
+          '<ul class="sys-bk">' + list.slice(0, 6).map(function (b) { return '<li><span dir="ltr" class="mono">' + esc(b.at) + '</span><small>' + fmtBytes(b.size) + '</small><a class="link" href="' + API + '?action=backupDownload&name=' + encodeURIComponent(b.name) + '" download>' + esc(sx('bkDl')) + '</a></li>'; }).join('') + '</ul>'));
+    }
+    var health = '';
+    if (can('users.manage')) {
+      health = card(sx('hT'), !H ? spin() : '<ul class="sys-health">' + H.checks.map(function (c) { return '<li class="' + (c.ok ? 'ok' : 'bad') + '"><i aria-hidden="true">' + (c.ok ? '✓' : '!') + '</i><div><b>' + esc(c.name) + '</b><span>' + esc(c.note) + '</span></div></li>'; }).join('') + '</ul>' +
+        '<p class="hint" dir="ltr">v' + esc(H.version) + ' · PHP ' + esc(H.php) + '</p>', 'span3');
+    }
+    var users = can('users.manage') ? usersHTML() : '';
+    return '<section class="adm-cards sys-grid">' + where + exp + bk + health + users + '</section>';
+  }
+
+  function usersHTML() {
+    var U = S.sys.users; if (!U) return card(sx('usT'), spin(), 'span3');
+    if (U.err) return card(sx('usT'), '<p class="hint">' + esc(sx('fail')) + '</p>', 'span3');
+    var roles = U.roles || {}, me = S.me || {};
+    var roleSel = function (cur, id) { return '<select class="inp sm" data-urole="' + id + '"' + (id === me.id ? ' disabled' : '') + '>' + Object.keys(roles).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + esc(roles[k]) + '</option>'; }).join('') + '</select>'; };
+    var body = '<p class="hint">' + esc(sx('usD')) + '</p><div class="adm-table-wrap"><table class="adm-table sys-users"><thead><tr><th>' + esc(sx('uName')) + '</th><th>' + esc(sx('uEmail')) + '</th><th>' + esc(sx('uRole')) + '</th><th>' + esc(sx('uLast')) + '</th><th>' + esc(sx('uState')) + '</th><th>' + esc(sx('uAct')) + '</th></tr></thead><tbody>' +
+      U.users.map(function (u) {
+        var state = !u.active ? '<span class="chip">' + esc(sx('uOff')) + '</span>' : u.locked ? '<span class="chip bad">' + esc(sx('uLocked')) + '</span>' : '<span class="chip ok">' + esc(sx('uActive')) + '</span>';
+        return '<tr class="static" data-uid="' + u.id + '"><td><b>' + esc(u.name || '—') + '</b><small class="sys-sub">' + esc(u.title || '') + '</small></td><td dir="ltr">' + esc(u.email) + '</td><td>' + roleSel(u.role, u.id) + '</td><td dir="ltr" class="mono">' + esc(u.lastLogin || sx('uNever')) + '</td><td>' + state + '</td><td class="sys-act">' +
+          (u.locked ? '<button type="button" class="link" data-sys="unlock" data-id="' + u.id + '">' + esc(sx('uUnlock')) + '</button>' : '') +
+          '<button type="button" class="link" data-sys="kick" data-id="' + u.id + '">' + esc(sx('uKick')) + '</button>' +
+          (u.id === me.id ? '' : '<button type="button" class="link" data-sys="toggle" data-id="' + u.id + '">' + esc(u.active ? sx('uStop') : sx('uStart')) + '</button>') + '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<form class="sys-add" id="sysAdd" autocomplete="off"><b>' + esc(sx('uAdd')) + '</b>' +
+        '<input class="inp sm" name="name" placeholder="' + esc(sx('uName')) + '" required><input class="inp sm" name="title" placeholder="' + esc(sx('uTitle')) + '">' +
+        '<input class="inp sm" name="email" type="email" dir="ltr" placeholder="name@bonyanglobal.com" required>' + roleSel('viewer', 'new') +
+        '<button type="submit" class="btn gold sm">' + esc(sx('uSave')) + '</button></form>' +
+      '<details class="sys-perms"><summary>' + esc(sx('permsT')) + '</summary><ul>' + Object.keys(U.rolePerms || {}).map(function (r) { return '<li><b>' + esc(roles[r] || r) + '</b><span>' + (U.rolePerms[r] || []).map(function (p) { return esc((U.perms || {})[p] || p); }).join(' · ') + '</span></li>'; }).join('') + '</ul></details>';
+    return card(sx('usT'), body, 'span3');
+  }
+  function userById(id) { return ((S.sys.users || {}).users || []).filter(function (u) { return u.id === +id; })[0]; }
+  function usersSave(payload) {
+    return A.api(Object.assign({ action: 'usersSave' }, payload)).then(function (j) { S.sys.users = j; A.toast(sx('uSaved')); redrawPanel(); })
+      .catch(function (e) { var m = (e && e.message) || ''; A.toast(/cannot_lock_self/.test(m) ? sx('uSelf') : /email_exists/.test(m) ? sx('uDup') : /bad_email/.test(m) ? x('badEmail') : (m || sx('fail'))); redrawPanel(); });
+  }
+  function sysClick(el) {
+    var a = el.getAttribute('data-sys'), id = el.getAttribute('data-id');
+    if (a === 'logMore') { S.sys.logN += 500; S.sys.at = 0; S.sys.log = null; redrawPanel(); return; }
+    if (a === 'bkNow') { el.classList.add('busy'); A.api({ action: 'backupNow' }).then(function (j) { S.sys.backups = j; S.sys.at = 0; sysLoad(true); }).catch(function () { A.toast(sx('fail')); el.classList.remove('busy'); }); return; }
+    if (a === 'unlock') { A.api({ action: 'usersUnlock', id: +id }).then(function (j) { S.sys.users = j; redrawPanel(); }); return; }
+    if (a === 'kick') { A.api({ action: 'sessionsRevoke', id: +id }).then(function () { A.toast(sx('uSaved')); }); return; }
+    if (a === 'toggle') { var u = userById(id); if (u) usersSave({ id: u.id, email: u.email, name: u.name, title: u.title, role: u.role, active: !u.active }); }
+  }
+
   function mountGlobe() {
     if (S.globe) { S.globe.destroy(); S.globe = null; }
     var c = $('#admGlobe'); if (!c || !window.BonyanGlobe) return;
@@ -803,7 +957,8 @@
         '<p class="dr-card-hint">' + esc(x('cardHint')) + '</p><div class="dr-card-act"><button type="button" class="btn ghost sm" data-adm="cardFlip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7"/></svg>' + esc(x('cardFlip')) + '</button>' +
         '<button type="button" class="btn gold sm" data-adm="cardPng"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19.5h14"/></svg><span>' + esc(x('cardPng')) + '</span></button></div></section>' : '') +
       '<div class="dr-tools">' + (can('staff.edit') ? '<button type="button" class="btn ghost sm dr-editbtn" data-adm="edit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg>' + esc(x('edOpen')) + '</button>' : '') +
-      (A.card && A.card.mailAssets ? '<button type="button" class="btn ghost sm dr-editbtn" data-adm="sendMail"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6"/></svg><span>' + esc(x('mailBtn')) + '</span></button>' : '') +
+      (AUTH ? '<a class="btn ghost sm dr-editbtn" href="' + API + '?action=zip&ref=' + encodeURIComponent(r.ref) + '" download>' + ic(ICON.zip) + '<span>' + esc(sx('zipAll')) + '</span></a>' : '') +
+      (!AUTH && A.card && A.card.mailAssets ? '<button type="button" class="btn ghost sm dr-editbtn" data-adm="sendMail"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6"/></svg><span>' + esc(x('mailBtn')) + '</span></button>' : '') +
       (r.folder ? '<a class="btn gold sm dr-folder" href="' + esc(r.folder) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' + esc(x('folder')) + '</a>' : '') + '</div>');
     if (S.edit !== ref) GROUPS.forEach(function (g) {
       var items = g[1].filter(function (k) { var v = r[k]; return cols[k] && v != null && v !== '' && !(Array.isArray(v) && !v.length) || (g[0] === 'files' && cols[k]); });
@@ -1060,7 +1215,7 @@
     if (S.tab === 'overview') mountGlobe();
     if (S.tab === 'staff') drawTable();
   }
-  function setTab(t) { S.tab = t; S.shown = PAGE; closeDDs(); redrawPanel(); }
+  function setTab(t) { S.tab = t; S.shown = PAGE; closeDDs(); redrawPanel(); if (AUTH && (t === 'sys' || t === 'log')) sysLoad(true); }
   function setFilter(k, v) {
     S.f[k] = v; S.shown = PAGE;
     if (S.tab !== 'staff') { setTab('staff'); return; }
@@ -1073,6 +1228,12 @@
     /* صورة مصغّرة تعذّر تحميلها تُزال (بدل onerror المضمّن، ليتوافق مع سياسة أمان المحتوى) */
     document.addEventListener('error', function (e) { var t = e.target; if (t && t.tagName === 'IMG' && t.closest && t.closest('.av')) t.remove(); }, true);
     document.addEventListener('submit', function (e) {
+      if (e.target.id === 'sysAdd') {
+        e.preventDefault();
+        var f = e.target, rs = $('[data-urole="new"]', f);
+        usersSave({ email: f.email.value.trim(), name: f.name.value.trim(), title: f.title.value.trim(), role: rs ? rs.value : 'viewer' });
+        return;
+      }
       if (e.target.id !== 'admLock') return;
       e.preventDefault();
       if (AUTH) { authSubmit(false); return; }
@@ -1110,6 +1271,8 @@
         else if (a === 'mailAll') mailAll(act);
         return;
       }
+      var sy = tg.closest('[data-sys]');
+      if (sy) { sysClick(sy); return; }
       var icd = tg.closest('#drCard .idcard');
       if (icd) { icd.classList.toggle('flipped'); return; }
       var tb = tg.closest('[data-tab]');
@@ -1149,7 +1312,7 @@
       var li = tg.closest('.adm-dd li[data-cc]');
       if (li) { var k = li.closest('.adm-dd').getAttribute('data-dd'); closeDDs(); setFilter(k, li.getAttribute('data-cc')); return; }
       if (!tg.closest('.adm-dd')) closeDDs();
-      var tr = tg.closest('#admRows tr[data-ref], .p-card[data-ref], .d-row[data-ref], .pay-row[data-ref]');
+      var tr = tg.closest('#admRows tr[data-ref], .p-card[data-ref], .d-row[data-ref], .pay-row[data-ref], .sys-log button[data-ref]');
       if (tr) openDrawer(tr.getAttribute('data-ref'));
     });
     document.addEventListener('keydown', function (e) {
@@ -1159,6 +1322,8 @@
       if (e.key === 'Enter' && e.target.matches && e.target.matches('#admRows tr[data-ref], .pay-row[data-ref]')) openDrawer(e.target.getAttribute('data-ref'));
     });
     document.addEventListener('change', function (e) {
+      var ur = e.target && e.target.getAttribute && e.target.getAttribute('data-urole');
+      if (ur && ur !== 'new') { var uu = userById(ur); if (uu) usersSave({ id: uu.id, email: uu.email, name: uu.name, title: uu.title, role: e.target.value, active: uu.active }); return; }
       var fk = e.target && e.target.getAttribute && e.target.getAttribute('data-fk');
       if (!fk) return;
       ED.files[fk] = e.target.files && e.target.files.length ? Array.prototype.slice.call(e.target.files) : null;
@@ -1169,6 +1334,11 @@
     document.addEventListener('input', function (e) {
       var ek = e.target.getAttribute && e.target.getAttribute('data-ek');
       if (ek) { e.target.classList.toggle('dirty', e.target.value.trim() !== (e.target.getAttribute('data-orig') || '').trim()); return; }
+      if (e.target.id === 'sysQ') {
+        clearTimeout(qT); var sv = e.target.value;
+        qT = setTimeout(function () { S.sys.q = sv; redrawPanel(); var i = $('#sysQ'); if (i) { i.focus(); i.setSelectionRange(sv.length, sv.length); } }, 200);
+        return;
+      }
       if (e.target.id !== 'admQ') return;
       clearTimeout(qT); var v = e.target.value;
       qT = setTimeout(function () { S.f.q = v; S.shown = PAGE; drawTable(); }, 160);

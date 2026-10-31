@@ -11,6 +11,7 @@ require __DIR__ . '/../server/files.php';
 require __DIR__ . '/../server/mail.php';
 require __DIR__ . '/../server/staff.php';
 require __DIR__ . '/../server/admin.php';
+require __DIR__ . '/../server/export.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -36,6 +37,8 @@ try {
         elseif ($a === 'file') file_serve();
         elseif ($a === 'me') out(auth_me());
         elseif ($a === 'backupDownload') backup_download();
+        elseif ($a === 'exportXlsx') export_xlsx();
+        elseif ($a === 'zip') staff_zip();
         else out(['ok' => true, 'service' => 'Bonyan HR · Global Staff Registry', 'v' => BHR_VERSION]);
         exit;
     }

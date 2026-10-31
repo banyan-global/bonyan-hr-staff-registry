@@ -173,5 +173,15 @@ function health(): array {
     $checks[] = ['الاتصال المشفّر HTTPS', $https, $https ? 'مفعّل' : 'غير مفعّل'];
     $integrity = audit_verify();
     $checks[] = ['سلامة سجل العمليات', $integrity['ok'], $integrity['ok'] ? 'سليم · ' . $integrity['rows'] . ' عملية' : 'تغيّر سطر رقم ' . $integrity['brokenAt']];
-    return ['ok' => true, 'checks' => array_map(function ($x) { return ['name' => $x[0], 'ok' => (bool)$x[1], 'note' => $x[2]]; }, $checks), 'version' => BHR_VERSION, 'php' => PHP_VERSION];
+    /* أين تُحفظ البيانات وكم حجمها */
+    $fs = q1("SELECT COUNT(*) n, COALESCE(SUM(size),0) b, SUM(archived_at IS NOT NULL) a FROM files WHERE LEFT(kind,1) <> '_'");
+    $home = preg_match('~^(/home/[^/]+)~', storage_dir(), $m) ? $m[1] : '';
+    $stats = [
+        'staff' => (int)q1('SELECT COUNT(*) n FROM staff')['n'],
+        'files' => (int)$fs['n'], 'filesBytes' => (int)$fs['b'], 'archived' => (int)$fs['a'],
+        'audit' => (int)q1('SELECT COUNT(*) n FROM audit')['n'], 'backups' => count($last),
+        'db' => (string)(cfg('db')['name'] ?? ''), 'storage' => $home !== '' ? str_replace($home, '~', storage_dir()) : 'bonyan-hr-private/storage',
+        'server' => 'Hostinger · ' . php_uname('n'), 'users' => (int)q1('SELECT COUNT(*) n FROM users WHERE active=1')['n'],
+    ];
+    return ['ok' => true, 'checks' => array_map(function ($x) { return ['name' => $x[0], 'ok' => (bool)$x[1], 'note' => $x[2]]; }, $checks), 'stats' => $stats, 'version' => BHR_VERSION, 'php' => PHP_VERSION];
 }

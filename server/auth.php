@@ -157,6 +157,8 @@ function users_save(array $b): array {
     if ($id === (int)$me['id'] && (!$active || ($perms !== null && !in_array('users.manage', $perms, true)) || ($perms === null && !in_array('users.manage', ROLE_PERMS[$role], true))))
         throw new HttpError('cannot_lock_self');
     $permsJson = $perms === null ? null : json_encode($perms);
+    $dup = q1('SELECT id FROM users WHERE email=? AND id<>?', [$email, $id]);
+    if ($dup) throw new HttpError('email_exists');
     if ($id) {
         $old = q1('SELECT * FROM users WHERE id=?', [$id]);
         if (!$old) throw new HttpError('not_found', 404);
