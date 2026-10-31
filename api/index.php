@@ -12,6 +12,7 @@ require __DIR__ . '/../server/mail.php';
 require __DIR__ . '/../server/staff.php';
 require __DIR__ . '/../server/admin.php';
 require __DIR__ . '/../server/export.php';
+require __DIR__ . '/../server/requests.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -60,6 +61,8 @@ try {
         'adminMail' => fn() => admin_mail($b), 'message' => fn() => admin_message($b), 'messageWa' => fn() => message_wa($b), 'messages' => fn() => messages_list($b), 'audit' => fn() => audit_list($b),
         'fileHistory' => fn() => file_history($b), 'fileRestore' => fn() => file_restore($b),
         'backups' => fn() => backups_list(), 'backupNow' => fn() => backup_now(), 'health' => fn() => health(),
+        /* طلبات المنسوبين */
+        'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqTrack' => fn() => req_track($b),
         /* تحديث المنسوب لبياناته */
         'selfStart' => fn() => self_start($b), 'selfUpdate' => fn() => self_update($b), 'selfUpload' => fn() => self_upload($b), 'selfFinish' => fn() => self_finish($b),
         /* الاستيراد من النظام القديم (بمفتاح مؤقت) */

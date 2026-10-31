@@ -164,11 +164,6 @@ function home() { return role === 'staff' ? 'me' : 'home'; }
 function grpOf(v) { var g = NAV.filter(function (x) { return x.v === v || (x.items && x.items.some(function (i) { return i.v === v; })); })[0]; return g ? g.k : 'dash'; }
 
 var app = document.getElementById('app');
-function direct(x, on) { return '<div class="grp' + (on ? ' on' : '') + '"><a class="gh" href="#' + x.v + '"' + (on ? ' aria-current="page"' : '') + '>' + tile(x.j, x.i) + '<span>' + x.n + '</span>' + (x.b && CNT[x.b] ? '<span class="gc hot">' + CNT[x.b] + '</span>' : '') + '</a></div>'; }
-function sideHTML() {
-  var navH = (role === 'staff' ? SNAV : NAV.filter(function (x) { return !x.p || can(x.p); })).map(function (x) { return direct(x, view === x.v); }).join('');
-  return '<div class="side-in"><div class="brand"><span class="lt"><img src="' + LOGO + '" alt="بنيان"></span><div><b>' + (role === 'staff' ? 'بوابة المنسوب' : 'بنيان للموارد البشرية') + '</b><small>مجموعة بنيان العالمية</small></div></div><nav class="nav" aria-label="الأقسام">' + navH + '</nav></div>';
-}
 function sigHTML() { return '<div class="sigblock"><a class="sigp" href="mailto:osama.mo.bonyan@gmail.com" title="osama.mo.bonyan@gmail.com"><span class="sm">' + ic('edit') + '</span><span>تطوير وتنفيذ <b>أسامة جنيدي</b></span><i></i><span class="tt">أخصائي بيانات ومطوّر أنظمة</span></a><span class="cp">© ' + new Date().getFullYear() + ' مجموعة بنيان العالمية</span></div>'; }
 function footHTML() { return '<footer class="foot">' + sigHTML() + '</footer>'; }
 function ptitle(h, p, acts) { if (NOTITLE) return ''; return '<div class="ptitle"><div><h1>' + h + '</h1><p>' + p + '</p></div>' + (acts ? '<div class="acts">' + acts + '</div>' : '') + '</div>'; }
@@ -565,8 +560,10 @@ function loadAll() {
   return Promise.all([
     api({ action: 'list' }),
     can('audit') ? api({ action: 'audit', limit: 400 }).catch(function () { return null; }) : null,
-    can('users') ? api({ action: 'health' }).catch(function () { return null; }) : null
+    can('users') ? api({ action: 'health' }).catch(function () { return null; }) : null,
+    api({ action: 'reqList' }).catch(function () { return null; })
   ]).then(function (R) {
+    if (R[3]) seed('reqs', R[3].rows);
     var j = R[0]; MAILED = j.mailed || {}; ENT_MAP = {}; CT_MAP = {};
     STAFF = (j.rows || []).map(toStaff).sort(function (a, b) { return b.reg - a.reg; });
     rebuildIndex();
@@ -576,6 +573,7 @@ function loadAll() {
 }
 function reloadList() { return api({ action: 'list' }).then(function (j) { MAILED = j.mailed || {}; STAFF = (j.rows || []).map(toStaff).sort(function (a, b) { return b.reg - a.reg; }); rebuildIndex(); }); }
 function loadMe() {
+  api({ action: 'reqList' }).then(function (j) { seed('reqs', j.rows); if (screen === 'app') softRender(); }).catch(function () { });
   return api({ action: 'me' }).then(function (j) {
     ME_DATA = j;
     if (!j.record) { ME = null; return; }
@@ -618,7 +616,7 @@ function sessionEnded() { resetState(); LG = { step: 'email', mail: LG.mail || '
 function route() {
   if (!SESSION || screen === 'login' || screen === 'loading' || screen === 'noreg') { render(); return; }
   var h = location.hash.slice(1), a = ALIAS[h]; screen = 'app';
-  if (a) { h = a[0]; if (a[1]) TAB[h] = a[1]; if (h === 'payroll') { PAYF = a[2] || 'all'; PAYE = ''; } try { history.replaceState(null, '', '#' + h); } catch (e) { } }
+  if (a) { h = a[0]; if (a[1]) TAB[h] = a[1]; if (h === 'payroll') { PAYF = a[2] || 'all'; PAYE = ''; } if (h === 'people' && a[1] === 'dir') { filt = { q: '', ent: '', cc: '', st: a[2] || 'all' }; } try { history.replaceState(null, '', '#' + h); } catch (e) { } }
   view = allowed(h) ? h : home(); window.scrollTo(0, 0); render();
 }
 function render() {
@@ -630,15 +628,16 @@ function render() {
   var body;
   try { body = VIEWS[view](); } catch (e) { if (window.console) console.error(e); body = '<section class="pn"><div class="empty">تعذّر عرض هذه الصفحة. حدّث الصفحة وحاول مرة أخرى.</div></section>'; }
   app.innerHTML = '<div class="shell"><aside class="side" id="side">' + sideHTML() + '</aside><div class="main">' + topHTML() + '<main class="page" id="page">' + body + footHTML() + '</main></div></div>' + bnavHTML();
-  bind(); bindLive();
+  bind(); bindLive(); bindReq();
   if (view === 'home') { startMap(document.getElementById('map'), false); tickClocks(); }
 }
 
 var LG = { step: 'email', mail: '', to: '', err: '', busy: false, tab: 'in' };
 function loginHTML() {
   var f, steps = '<div class="steps s3">' + ['البريد', 'الرمز', 'الدخول'].map(function (l, i) { return '<div class="' + (i <= (LG.step === 'code' ? 1 : 0) ? 'on' : '') + '"><i></i>' + l + '</div>'; }).join('') + '</div>';
-  var tabs = '<div class="ltabs two" role="group" aria-label="نوع الدخول">' + [['in', 'تسجيل الدخول'], ['new', 'سجّل بياناتك']].map(function (t) { return '<button type="button" data-lt="' + t[0] + '" aria-pressed="' + (LG.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div>';
-  if (LG.tab === 'new') f = '<h2>سجّل بياناتك في سجل المنسوبين</h2><p class="lp">إن لم تسجّل بياناتك من قبل، عبّئ النموذج مرة واحدة وارفع وثائقك. بعدها تدخل من هنا ببريدك لترى ملفك وبطاقتك وتحدّث بياناتك متى شئت.</p>' +
+  var tabs = '<div class="ltabs" role="group" aria-label="نوع الدخول">' + [['in', 'تسجيل الدخول'], ['new', 'سجّل بياناتك'], ['track', 'متابعة طلب']].map(function (t) { return '<button type="button" data-lt="' + t[0] + '" aria-pressed="' + (LG.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div>';
+  if (LG.tab === 'track') f = trackHTML();
+  else if (LG.tab === 'new') f = '<h2>سجّل بياناتك في سجل المنسوبين</h2><p class="lp">إن لم تسجّل بياناتك من قبل، عبّئ النموذج مرة واحدة وارفع وثائقك. بعدها تدخل من هنا ببريدك لترى ملفك وبطاقتك وتحدّث بياناتك متى شئت.</p>' +
     '<ul class="lneed">' + [['pass', 'صورة الجواز أو الهوية والإقامة'], ['user', 'صورة شخصية واضحة'], ['bank', 'بيانات الحساب البنكي'], ['clock', 'حوالي ١٠ دقائق، بالعربية أو الإنجليزية أو الإندونيسية']].map(function (x) { return '<li>' + ic(x[0]) + '<span>' + x[1] + '</span></li>'; }).join('') + '</ul>' +
     '<a class="btn goldb" href="register.html">' + ic('edit') + 'ابدأ التسجيل الآن</a><button type="button" class="lnk" data-lt="in">سجّلت من قبل؟ ادخل ببريدك</button>';
   else if (LG.step === 'email') f = steps + '<h2>أهلًا بك</h2><p class="lp">ادخل ببريدك المسجّل لدينا، وسيصلك رمز دخول من ٦ أرقام. الإدارة والمنسوبون يدخلون من هنا.</p>' +
@@ -656,6 +655,7 @@ function loginHTML() {
 function bindLogin() {
   var $ = function (i) { return document.getElementById(i); };
   document.querySelectorAll('[data-lt]').forEach(function (b) { b.onclick = function () { LG.tab = b.dataset.lt; LG.err = ''; render(); }; });
+  if (LG.tab === 'track') { bindTrack(); return; }
   if (!$('lnext')) return;
   var otp = $('otp'), ins = otp ? otp.querySelectorAll('input') : [];
   function code() { var c = ''; ins.forEach(function (x) { c += x.value; }); return c; }
@@ -701,9 +701,11 @@ function ntfItems() {
   if (role === 'staff') {
     if (!ME) return out;
     ME.docs.filter(function (d) { return d.days <= 60; }).forEach(function (d) { out.push([d.days < 0 ? 'garnet' : 'gold', 'pass', d.t + ': ' + dl(d.days), d.exp ? 'تاريخ الانتهاء ' + fd(d.exp) + '. حدّث الوثيقة من «تحديث بياناتي».' : '', '', 'myfile']); });
+    reqRows().filter(function (r) { return r.status !== 'pending' && r.status !== 'cancelled' && Date.now() - pdt(r.updatedAt) < 14 * DAY; }).slice(0, 3).forEach(function (r) { out.push([r.status === 'approved' ? 'emerald' : 'garnet', r.status === 'approved' ? 'check' : 'alert', (r.status === 'approved' ? 'اعتُمد طلبك ' : 'لم يُعتمد طلبك ') + r.no, reqSum(r), '', 'myreq']); });
     if (ME.miss.length) out.push(['amethyst', 'alert', 'ينقص ملفك: ' + ME.miss.slice(0, 2).join('، ') + (ME.miss.length > 2 ? ' وغيرها' : ''), 'أكملها من «تحديث بياناتي»', '', 'myfile']);
     return out;
   }
+  reqPendingForMe().slice(0, 4).forEach(function (r) { out.push([RT2[r.type][0], RT2[r.type][1], r.typeName + ': ' + r.name, 'بانتظار قرارك · ' + r.no, '', 'reqs-pend']); });
   var docs = []; STAFF.forEach(function (s) { s.docs.forEach(function (d) { if (d.days <= 30) docs.push({ s: s, d: d }); }); });
   docs.sort(function (a, b) { return a.d.days - b.d.days; }).slice(0, 5).forEach(function (x) { out.push([x.d.days < 0 ? 'garnet' : 'gold', 'pass', x.d.t + ': ' + x.s.name, dl(x.d.days), x.s.ref]); });
   STAFF.filter(function (s) { return Date.now() - s.reg < 3 * DAY; }).slice(0, 3).forEach(function (s) { out.push(['emerald', 'userok', 'سجّل ' + s.name, s.ent.n + ' · ' + agoD(s.reg), s.ref]); });
@@ -795,6 +797,7 @@ VIEWS.home = function () {
     '<h3 style="font-size:14px;font-weight:800;margin:20px 0 10px;color:var(--mute)">أيام التسجيل خلال الأسبوع</h3><div class="wkd">' + dow.map(function (v, i) { return '<div><i style="height:' + Math.max(18, v / dmx * 100) + '%;opacity:' + (.45 + v / dmx * .55) + '">' + v + '</i><span>' + DN[i].replace('ال', '') + '</span></div>'; }).join('') + '</div></div>');
 
   var D = [], soonL = STAFF.filter(function (s) { return s.worst >= 0 && s.worst <= 30; }), nob = STAFF.filter(function (s) { return !s.iban; });
+  var RP = reqPendingForMe(); if (RP.length) D.push({ j: 'amethyst', i: 'stamp', t: nq(RP.length, 'طلب واحد', 'طلبان', 'طلبات', 'طلبًا') + ' بانتظار قرارك', s: 'إجازات وأوامر إركاب وتعريفات وصلت إلى خطوتك في مسار الاعتماد.', faces: RP.map(function (r) { return byRef(r.ref); }).filter(Boolean), a: '<a class="btn sm prim" href="#reqs-pend">مراجعة</a>' });
   if (exp) D.push({ j: 'garnet', i: 'pass', t: nq(exp, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' بوثائق منتهية', s: 'راسلهم بلغتهم من صفحة الوثائق، وتصلهم رسالة فيها رابط رفع الوثيقة الجديدة.', faces: STAFF.filter(function (s) { return s.worst < 0; }), a: '<a class="btn sm prim" href="#documents" data-bk="bad">عرض</a>' });
   if (soonL.length) D.push({ j: 'gold', i: 'clock', t: nq(soonL.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' تنتهي وثائقهم خلال ٣٠ يومًا', s: 'ذكّرهم الآن قبل أن تنتهي.', faces: soonL, a: '<a class="btn sm" href="#documents" data-bk="warn">عرض</a>' });
   if (gap) D.push({ j: 'amethyst', i: 'alert', t: nq(gap, 'ملف واحد ناقص', 'ملفان ناقصان', 'ملفات ناقصة', 'ملفًا ناقصًا'), s: 'صورة شخصية أو حساب بنكي أو صور وثائق لم تُرفع بعد.', faces: STAFF.filter(function (s) { return s.status === 'ناقص'; }), a: '<a class="btn sm" href="#people" data-f="gap">عرض</a>' });
@@ -1062,7 +1065,7 @@ VIEWS.me = function () {
   var s = ME, h = new Date().getHours(), next = s.docs.filter(function (d) { return d.exp; }).sort(function (a, b) { return a.days - b.days; })[0];
   var sum = hijri(new Date()) + '. ' + (s.status === 'مكتمل' ? 'ملفك <b>مكتمل</b>' : 'ينقص ملفك <b>' + nq(s.miss.length, 'أمر واحد', 'أمران', 'أمور', 'أمرًا') + '</b>') + (next ? '، وأقرب وثيقة تنتهي هي <b>' + next.t + '</b> (' + dl(next.days) + ').' : '.');
   var hero = '<section class="hero"><div class="hero-in me-hero"><div><span class="rl"><i></i>' + esc(s.job) + '، ' + esc(s.ent.n) + '</span><h1>' + (h < 12 ? 'صباح الخير' : 'مساء الخير') + ' يا ' + esc(s.name.split(' ')[0]) + '</h1><p class="sum">' + sum + '</p>' +
-    '<div class="chips"><a class="chip" href="update.html?me=1"><i style="background:#e3c485"></i>تحديث بياناتي</a><a class="chip" href="#myfile"><i style="background:#82c8f2"></i>ملفي وبطاقتي</a>' + (s.miss.length ? '<a class="chip" href="update.html?me=1"><i style="background:#ffc966"></i>أكمل النواقص</a>' : '') + '</div></div>' +
+    '<div class="chips"><a class="chip" href="#myreq-new"><i style="background:#5cdba0"></i>طلب جديد</a><a class="chip" href="update.html?me=1"><i style="background:#e3c485"></i>تحديث بياناتي</a><a class="chip" href="#myfile"><i style="background:#82c8f2"></i>ملفي وبطاقتي</a>' + (s.miss.length ? '<a class="chip" href="update.html?me=1"><i style="background:#ffc966"></i>أكمل النواقص</a>' : '') + '</div></div>' +
     '<div class="cardcol me-card">' + cardHTML(s) + '</div></div></section>';
   var docsOk = s.docs.filter(function (d) { return d.days > 30; }).length;
   var kp = '<div class="grid g4">' + kpi(s.status === 'مكتمل' ? 'emerald' : 'gold', s.status === 'مكتمل' ? 'userok' : 'alert', s.status === 'مكتمل' ? 'مكتمل' : s.miss.length, s.status === 'مكتمل' ? '' : 'نواقص', 'حالة ملفي', s.status === 'مكتمل' ? 'كل البيانات المطلوبة موجودة' : s.miss.slice(0, 2).join('، '), '') +
@@ -1236,6 +1239,7 @@ function ctryOpts() { return [{ v: '', n: 'كل الدول', ic: 'globe' }].conc
 function qaMenuHTML() {
   var G = [];
   G.push(['المنسوبون', 'users', 'sapphire', [['#people', 'all', 'دليل المنسوبين', 'الملفات والبطاقات والوثائق', 'users'], ['#people', 'gap', 'الملفات الناقصة', CNT.gap + ' ملفًا ينقصه شيء', 'alert'], ['act:regLink', '', 'نسخ رابط التسجيل', 'لإرساله إلى منسوب جديد', 'plus']].concat(can('mail') ? [['act:msgGap', '', 'مراسلة الناقصة ملفاتهم', 'طلب استكمال بلغة كل منسوب', 'chat']] : [])]);
+  G.push(['الطلبات', 'stamp', 'amethyst', [['#reqs-pend', '', 'بانتظار اعتمادي', reqPendingForMe().length + ' طلبًا ينتظر قرارك', 'stamp'], ['#reqs-all', '', 'كل الطلبات', 'إجازات وإركاب وتعريفات', 'doc']].concat(can('edit') ? [['#reqs-new', '', 'طلب نيابة عن منسوب', 'تقدّمه الموارد البشرية عنه', 'plus']] : [])]);
   G.push(['الوثائق', 'pass', 'garnet', [['#documents', 'bad', 'الوثائق المنتهية', CNT.exp + ' منسوبًا', 'alert'], ['#documents', 'warn', 'تنتهي خلال ٣٠ يومًا', CNT.soon + ' منسوبًا', 'clock']].concat(can('mail') ? [['act:remindAll', '', 'تذكير أصحابها', 'رسالة بلغة كل منسوب', 'send']] : [])]);
   G.push(['التقارير', 'chart', 'gold', [['act:excel', '', 'تصدير Excel', 'السجل كاملًا في ملف واحد', 'excel']].concat(can('pay') ? [['#payroll', '', 'الرواتب', 'حسب الجهة والعملة', 'wallet']] : []).concat(can('audit') ? [['#log', '', 'سجل العمليات', 'من فعل ماذا ومتى', 'history']] : [])]);
   var sys = [];
@@ -1250,8 +1254,8 @@ function qaMenuHTML() {
     }).join('') + '</section>'; }).join('') + '</div>';
 }
 function bnavHTML() {
-  var L = role === 'staff' ? [['#me', 'صفحتي', 'grid', 'me'], ['#myfile', 'ملفي', 'card', 'myfile'], ['update.html?me=1', 'تحديث', 'edit', '']]
-    : [['#home', 'الرئيسية', 'grid', 'home'], ['#people', 'المنسوبون', 'users', 'people']].concat(can('pay') ? [['#payroll', 'الرواتب', 'wallet', 'payroll']] : []).concat(can('sys') ? [['#system', 'النظام', 'shield', 'system']] : []);
+  var L = role === 'staff' ? [['#me', 'صفحتي', 'grid', 'me'], ['#myreq', 'طلباتي', 'doc', 'myreq'], ['#myfile', 'ملفي', 'card', 'myfile'], ['update.html?me=1', 'تحديث', 'edit', '']]
+    : [['#home', 'الرئيسية', 'grid', 'home'], ['#people', 'المنسوبون', 'users', 'people'], ['#reqs', 'الطلبات', 'stamp', 'reqs']].concat(can('sys') ? [['#system', 'النظام', 'shield', 'system']] : []);
   return '<nav class="bnav" aria-label="التنقل السريع">' + L.map(function (x) { return '<a href="' + x[0] + '"' + (x[3] && view === x[3] ? ' aria-current="page"' : '') + '>' + ic(x[2]) + '<span>' + x[1] + '</span></a>'; }).join('') +
     (role === 'staff' ? '' : '<button type="button" class="bn-qa" data-bnqa="1" aria-label="إجراءات سريعة">' + ic('plus') + '<span>إجراء</span></button>') + '</nav>';
 }
@@ -1315,6 +1319,237 @@ function drawAcct() {
       .catch(function (e) { btn.disabled = false; err.textContent = errText(e); });
   };
   setTimeout(function () { $('acName').focus(); }, 30);
+}
+
+/* ======================================================================
+   Requests (leave · travel · salary letter) and the new sidebar
+   ====================================================================== */
+TITLES.reqs = ['الطلبات']; TITLES.myreq = ['طلباتي'];
+STAFF_VIEWS.push('myreq');
+TAB.reqs = 'pend'; TAB.myreq = 'list';
+TABL.reqs = { pend: 'بانتظار اعتمادي', all: 'كل الطلبات', 'new': 'طلب نيابة عن منسوب' };
+TABL.myreq = { list: 'طلباتي', 'new': 'طلب جديد' };
+ALIAS['reqs-pend'] = ['reqs', 'pend']; ALIAS['reqs-all'] = ['reqs', 'all']; ALIAS['reqs-new'] = ['reqs', 'new'];
+ALIAS['myreq-new'] = ['myreq', 'new']; ALIAS['myreq-list'] = ['myreq', 'list']; ALIAS.gaps = ['people', 'dir', 'gap']; ALIAS.expired = ['people', 'dir', 'exp'];
+
+var RT2 = { leave: ['emerald', 'umbrella', 'إجازة', 'LV'], travel: ['amethyst', 'plane', 'أمر إركاب', 'TR'], cert: ['gold', 'cert', 'تعريف بالراتب', 'CR'] };
+var RST = { pending: ['warn', 'قيد الإجراء'], approved: ['ok', 'معتمد'], rejected: ['bad', 'مرفوض'], cancelled: ['mute', 'ملغى'] };
+function reqRows() { var c = need('reqs', function () { return api({ action: 'reqList' }).then(function (j) { return j.rows; }); }, 60000); return c.data || []; }
+function reqPendingForMe() { return reqRows().filter(function (r) { return r.canDecide; }); }
+function reqByNo(no) { return reqRows().filter(function (r) { return r.no === no; })[0]; }
+function reqSum(r) {
+  var d = r.data || {};
+  if (r.type === 'leave') return 'إجازة ' + (d.kind || '') + '، ' + dn(d.days || 0);
+  if (r.type === 'travel') return 'إلى ' + (d.dest || '') + '، ' + dn(d.days || 0);
+  return (d.kind || '') + ' إلى ' + (d.to || '');
+}
+function reqDates(r) { var d = r.data || {}; return d.from ? fdx(pdate(d.from), { day: 'numeric', month: 'short' }) + (d.to && d.to !== d.from ? ' – ' + fdx(pdate(d.to), { day: 'numeric', month: 'short', year: 'numeric' }) : '') : ''; }
+function reqPill(r) { var s = RST[r.status] || ['mute', r.statusName]; var at = r.status === 'pending' && r.chain[r.stage] ? 'عند ' + r.chain[r.stage].label : s[1]; return '<span class="pill ' + s[0] + '"><i></i>' + esc(at) + '</span>'; }
+function reqTrail(r) {
+  var steps = [{ l: 'تقديم الطلب', st: 'done' }].concat(r.chain.map(function (c, i) { return { l: c.label, st: c.decision === 'approve' ? 'done' : c.decision === 'reject' ? 'x' : r.status === 'pending' && i === r.stage ? 'now' : '' }; }));
+  steps.push({ l: r.status === 'approved' ? 'معتمد' : r.status === 'rejected' ? 'مرفوض' : r.status === 'cancelled' ? 'ملغى' : 'القرار', st: r.status === 'approved' ? 'done' : r.status === 'rejected' || r.status === 'cancelled' ? 'x' : '' });
+  return '<ol class="stg">' + steps.map(function (s, i) { return '<li class="' + s.st + '"><i>' + (s.st === 'done' ? ic('check') : s.st === 'x' ? '×' : i + 1) + '</i><span>' + esc(s.l) + '</span></li>'; }).join('') + '</ol>';
+}
+
+/* ---------- sidebar: sections with their headings underneath ---------- */
+function sideHTML() {
+  var G;
+  if (role === 'staff') {
+    var open = reqRows().filter(function (r) { return r.status === 'pending'; }).length;
+    G = [['خدماتي', [
+      { v: 'me', n: 'صفحتي', d: 'ملخص ملفك ووثائقك', j: 'emerald', i: 'grid' },
+      { v: 'myreq', n: 'طلباتي', d: 'إجازة وإركاب وتعريف', j: 'sapphire', i: 'doc', b: open, s: [['myreq-new', 'طلب جديد', TAB.myreq === 'new'], ['myreq-list', 'متابعة طلباتي', TAB.myreq === 'list', open]] },
+      { v: 'myfile', n: 'ملفي وبطاقتي', d: 'بياناتك والبطاقة الرسمية', j: 'garnet', i: 'card', s: [['update.html?me=1', 'تحديث بياناتي', false]] }]]];
+  } else {
+    var pend = reqPendingForMe().length;
+    G = [['العمل اليومي', [
+      { v: 'home', n: 'لوحة القيادة', d: 'ملخص اليوم وما يحتاج إجراء', j: 'emerald', i: 'grid' },
+      { v: 'people', n: 'المنسوبون', d: 'الملفات والوثائق والبطاقات', j: 'sapphire', i: 'users', b: CNT.exp, s: [['staff', 'دليل المنسوبين', view === 'people' && TAB.people === 'dir' && filt.st === 'all', CNT.tot], ['gaps', 'الملفات الناقصة', view === 'people' && TAB.people === 'dir' && filt.st === 'gap', CNT.gap], ['documents', 'الوثائق', view === 'people' && TAB.people === 'docs', CNT.exp, 1]] },
+      { v: 'reqs', n: 'الطلبات', d: 'إجازات وإركاب وتعريفات', j: 'amethyst', i: 'stamp', b: pend, s: [['reqs-pend', 'بانتظار اعتمادي', view === 'reqs' && TAB.reqs === 'pend', pend, 1], ['reqs-all', 'كل الطلبات', view === 'reqs' && TAB.reqs === 'all'], ['reqs-new', 'طلب نيابة عن منسوب', view === 'reqs' && TAB.reqs === 'new']].filter(function (x) { return x[0] !== 'reqs-new' || can('edit'); }) }]],
+      ['الإدارة', [
+        can('pay') ? { v: 'payroll', n: 'الرواتب', d: 'حسب الجهة والعملة', j: 'gold', i: 'wallet', b: 0, s: [['payroll', 'كشف الرواتب', view === 'payroll' && PAYF === 'all'], ['banks', 'الحسابات البنكية', view === 'payroll' && PAYF === 'nobank', CNT.nobank, 1]] } : null,
+        can('sys') ? { v: 'system', n: 'النظام', d: 'الحسابات والسجل والبيانات', j: 'teal', i: 'shield', s: [can('users') ? ['accounts', 'الموظفون والصلاحيات', view === 'system' && TAB.system === 'acc'] : null, can('audit') ? ['log', 'سجل العمليات', view === 'system' && TAB.system === 'log'] : null, can('drive') || can('users') ? ['data', 'البيانات والنسخ', view === 'system' && TAB.system === 'data'] : null].filter(Boolean) } : null].filter(Boolean)]];
+  }
+  var navH = G.filter(function (g) { return g[1].length; }).map(function (g) {
+    return '<div class="nsec"><span class="nlab">' + g[0] + '</span>' + g[1].map(function (x) {
+      var on = view === x.v;
+      return '<div class="grp' + (on ? ' on' : '') + '"><a class="gh" href="#' + x.v + '"' + (on ? ' aria-current="page"' : '') + '>' + tile(x.j, x.i) + '<span class="gt"><b>' + x.n + '</b><small>' + x.d + '</small></span>' + (x.b ? '<span class="gc hot">' + x.b + '</span>' : '') + '</a>' +
+        (x.s && x.s.length ? '<div class="subs">' + x.s.map(function (s) { return '<a class="sb' + (s[2] ? ' on' : '') + '" href="' + (/\.html/.test(s[0]) ? s[0] : '#' + s[0]) + '"' + (s[2] ? ' aria-current="true"' : '') + '><i aria-hidden="true"></i><span>' + s[1] + '</span>' + (s[3] ? '<em' + (s[4] ? ' class="hot"' : '') + '>' + s[3] + '</em>' : '') + '</a>'; }).join('') + '</div>' : '') + '</div>';
+    }).join('') + '</div>';
+  }).join('');
+  return '<div class="side-in"><div class="brand"><span class="lt"><img src="' + LOGO + '" alt="بنيان"></span><div><b>' + (role === 'staff' ? 'بوابة المنسوب' : 'بنيان للموارد البشرية') + '</b><small>مجموعة بنيان العالمية</small></div></div><nav class="nav" aria-label="الأقسام">' + navH + '</nav></div>';
+}
+
+/* ---------- request wizard (staff for themselves, HR on behalf) ---------- */
+var RW = { i: 0, type: '', ref: '', d: {}, busy: false, err: '' };
+var RW_STEPS = [['نوع الطلب', 'إجازة أو إركاب أو تعريف'], ['التفاصيل', 'التواريخ والبيانات'], ['المراجعة والإرسال', 'إقرار ثم إرسال']];
+function rwDays() { var d = RW.d; if (!d.from || !d.to) return 0; var a = pdate(d.from), b = pdate(d.to); return a && b && b >= a ? Math.round((b - a) / DAY) + 1 : 0; }
+function rwField(id, label, html, req, wide) { return '<div class="fld' + (wide ? ' wide' : '') + '"><label for="' + id + '">' + label + (req ? ' <i class="rq">*</i>' : '') + '</label>' + html + '</div>'; }
+function rwIn(k, type, ph, extra) { return '<input id="rw_' + k + '" data-rw="' + k + '" type="' + (type || 'text') + '" value="' + esc(RW.d[k] == null ? '' : RW.d[k]) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + (extra || '') + '>'; }
+function rwSeg(k, opts) { return '<div class="seg2" role="group">' + opts.map(function (o) { return '<button type="button" data-rwseg="' + k + '" data-v="' + esc(o) + '" aria-pressed="' + (RW.d[k] === o) + '">' + esc(o) + '</button>'; }).join('') + '</div>'; }
+function rwStaff() { return RW.ref ? byRef(RW.ref) : (role === 'staff' ? ME : null); }
+function rwBody() {
+  if (RW.i === 0) {
+    var T = [['leave', 'إجازة', 'اعتيادية أو مرضية أو اضطرارية', '#1f8f6a', 'umbrella'], ['travel', 'أمر إركاب', 'مهمة رسمية داخلية أو خارجية', '#5b3fc4', 'plane'], ['cert', 'تعريف بالراتب', 'أو شهادة خبرة لجهة محددة', '#b98f25', 'cert']];
+    return (role !== 'staff' ? '<div class="fld wide"><label for="rwRefS">المنسوب <i class="rq">*</i></label>' + ssel('rwRefS', STAFF.map(function (s) { return { v: s.ref, n: s.name, d: s.ref + ' · ' + s.ent.n, c: s.ent.c }; }), RW.ref, 'اختر المنسوب', function (v) { RW.ref = v; render(); }, 'المنسوب') + '</div>' : '') +
+      '<div class="ccards" role="radiogroup" aria-label="نوع الطلب">' + T.map(function (t) { return '<button type="button" class="ccard" role="radio" data-rwtype="' + t[0] + '" aria-checked="' + (RW.type === t[0]) + '"><span class="ti" style="background:' + t[3] + '">' + ic(t[4]) + '</span><b>' + t[1] + '</b><small>' + t[2] + '</small></button>'; }).join('') + '</div>';
+  }
+  if (RW.i === 1) {
+    if (RW.type === 'leave') return '<div class="form">' + rwField('lk', 'نوع الإجازة', rwSeg('kind', ['اعتيادية', 'مرضية', 'اضطرارية', 'بدون راتب']), true, true) +
+      rwField('rw_from', 'من', rwIn('from', 'date'), true) + rwField('rw_to', 'إلى', rwIn('to', 'date'), true) +
+      '<div class="fld wide">' + (rwDays() ? '<div class="note">' + ic('calendar') + '<span>مدة الإجازة <b>' + dn(rwDays()) + '</b> شاملة الأيام كلها.</span></div>' : '') + '</div>' +
+      rwField('rw_substitute', 'القائم بالعمل', rwIn('substitute', 'text', 'اسم الزميل البديل (اختياري)')) + rwField('rw_contact', 'رقم للتواصل أثناء الإجازة', rwIn('contact', 'tel', 'اختياري', ' dir="ltr"')) +
+      rwField('rw_note', 'ملاحظات', '<textarea id="rw_note" data-rw="note" maxlength="1500" placeholder="سبب الإجازة أو أي تفصيل يفيد الموارد البشرية">' + esc(RW.d.note || '') + '</textarea>', false, true) + '</div>';
+    if (RW.type === 'travel') return '<div class="form">' + rwField('rw_dest', 'الوجهة', rwIn('dest', 'text', 'مثال: جاكرتا، إندونيسيا'), true) + rwField('tk', 'وسيلة السفر', rwSeg('transport', ['طيران', 'بري', 'لا يلزم']), true) +
+      rwField('rw_from', 'تاريخ السفر', rwIn('from', 'date'), true) + rwField('rw_to', 'تاريخ العودة', rwIn('to', 'date'), true) +
+      rwField('rw_purpose', 'الغرض من المهمة', '<textarea id="rw_purpose" data-rw="purpose" maxlength="1500" placeholder="مثال: زيارة إشرافية لمراكز التدريب">' + esc(RW.d.purpose || '') + '</textarea>', true, true) +
+      '<div class="fld"><label class="ck"><input type="checkbox" data-rwck="hotel"' + (RW.d.hotel ? ' checked' : '') + '> أحتاج سكنًا</label></div>' + rwField('rw_advance', 'سلفة مصاريف (ر.س)', rwIn('advance', 'number', '0', ' min="0"')) + '</div>';
+    return '<div class="form">' + rwField('ck', 'نوع الخطاب', rwSeg('kind', ['تعريف بالراتب', 'شهادة خبرة', 'تعريف بدون راتب']), true, true) +
+      rwField('rw_to', 'الجهة الموجّه إليها', rwIn('to', 'text', 'مثال: البنك الأهلي، سفارة إندونيسيا'), true) + rwField('cl', 'لغة الخطاب', rwSeg('lang', ['العربية', 'الإنجليزية']), true) +
+      rwField('rw_note', 'ملاحظات', '<textarea id="rw_note" data-rw="note" maxlength="800" placeholder="اختياري">' + esc(RW.d.note || '') + '</textarea>', false, true) + '</div>';
+  }
+  var s = rwStaff(), d = RW.d, rows = [['المنسوب', s ? esc(s.name) + ' <span class="ref">' + esc(s.ref) + '</span>' : '—'], ['نوع الطلب', RT2[RW.type][2]]];
+  if (RW.type === 'leave') rows.push(['الإجازة', esc(d.kind) + '، ' + dn(rwDays())], ['المدة', fdx(pdate(d.from)) + ' إلى ' + fdx(pdate(d.to))], ['القائم بالعمل', esc(d.substitute || '—')]);
+  if (RW.type === 'travel') rows.push(['الوجهة', esc(d.dest)], ['المدة', fdx(pdate(d.from)) + ' إلى ' + fdx(pdate(d.to)) + '، ' + dn(rwDays())], ['السفر', esc(d.transport || 'طيران') + (d.hotel ? ' وسكن' : '') + (+d.advance ? '، سلفة ' + n(+d.advance) + ' ر.س' : '')]);
+  if (RW.type === 'cert') rows.push(['الخطاب', esc(d.kind) + ' بال' + esc(d.lang || 'العربية').replace('ال', '')], ['موجّه إلى', esc(d.to)]);
+  return kvHTML(rows) + '<label class="consent"><input type="checkbox" id="rwAgree"' + (RW.d.agree ? ' checked' : '') + '><span>أقر بصحة البيانات' + (RW.type === 'leave' ? '، وأتعهد بالعودة إلى العمل في اليوم التالي لانتهاء الإجازة وإبلاغ مديري بأي طارئ' : '') + '.</span></label>';
+}
+function rwHTML() {
+  var sum = !RW.type ? 'لم تختر نوع الطلب بعد' : RT2[RW.type][2] + (RW.type === 'leave' && RW.d.kind ? ' ' + RW.d.kind : '') + (rwDays() ? '، ' + dn(rwDays()) : '') + (RW.type === 'cert' && RW.d.to ? ' إلى ' + RW.d.to : '') + (RW.type === 'travel' && RW.d.dest ? ' إلى ' + RW.d.dest : '');
+  var s = rwStaff();
+  return '<div class="wiz"><form class="wcard pn" id="rwForm" novalidate><span class="stepchip">الخطوة ' + (RW.i + 1) + ' من ' + RW_STEPS.length + '</span><h2 class="wt">' + RW_STEPS[RW.i][0] + '</h2>' + rwBody() +
+    '<div class="lerr" role="alert">' + esc(RW.err) + '</div><div class="wfoot"><button class="btn" type="button" id="rwBack"' + (RW.i ? '' : ' disabled') + '>' + ic('back') + 'السابق</button><span class="ctr">' + (RW.i + 1) + ' / ' + RW_STEPS.length + '</span><button class="btn ' + (RW.i === RW_STEPS.length - 1 ? 'goldb' : 'prim') + '" type="submit"' + (RW.busy ? ' disabled' : '') + '>' + (RW.i === RW_STEPS.length - 1 ? ic('send') + (RW.busy ? 'جارٍ الإرسال…' : 'إرسال الطلب') : 'التالي') + '</button></div></form>' +
+    '<aside class="wside" aria-label="تقدم الطلب"><div class="wsh">' + tile('gold', 'stamp') + '<div><b>طلب جديد</b><small>' + (s ? esc(s.name) : 'يصلك رقم الطلب فور الإرسال') + '</small></div></div><ol class="wsteps">' + RW_STEPS.map(function (x, k) { return '<li class="' + (k < RW.i ? 'done' : k === RW.i ? 'on' : '') + '"><span><b>' + x[0] + '</b><small>' + x[1] + '</small></span><i>' + (k < RW.i ? '✓' : k + 1) + '</i></li>'; }).join('') + '</ol>' +
+    '<div class="wsum"><small>اختيارك</small><b>' + esc(sum) + '</b></div><div class="whelp">' + ic('info') + '<span>' + (RW.type === 'travel' ? 'يعتمده الموارد البشرية ثم الرئيس التنفيذي.' : 'تعتمده الموارد البشرية، ويصلك بريد بالقرار.') + '</span></div></aside></div>';
+}
+function rwSync() { document.querySelectorAll('[data-rw]').forEach(function (e) { RW.d[e.dataset.rw] = e.value; }); var a = document.getElementById('rwAgree'); if (a) RW.d.agree = a.checked; }
+function rwValidate() {
+  var d = RW.d;
+  if (RW.i === 0) { if (role !== 'staff' && !RW.ref) return 'اختر المنسوب أولًا'; if (!RW.type) return 'اختر نوع الطلب'; }
+  if (RW.i === 1) {
+    if (RW.type === 'leave') { if (!d.kind) return 'اختر نوع الإجازة'; if (!rwDays()) return 'تحقق من تاريخي البداية والنهاية'; }
+    if (RW.type === 'travel') { if (!String(d.dest || '').trim() || !String(d.purpose || '').trim()) return 'اكتب الوجهة والغرض من المهمة'; if (!rwDays()) return 'تحقق من تاريخي السفر والعودة'; }
+    if (RW.type === 'cert') { if (!d.kind) return 'اختر نوع الخطاب'; if (!String(d.to || '').trim()) return 'اكتب الجهة الموجّه إليها الخطاب'; }
+  }
+  if (RW.i === 2 && !d.agree) return 'ضع علامة على الإقرار قبل الإرسال';
+  return '';
+}
+function rwBind() {
+  var f = document.getElementById('rwForm'); if (!f) return;
+  f.querySelectorAll('[data-rwtype]').forEach(function (b) { b.onclick = function () { rwSync(); if (RW.type !== b.dataset.rwtype) RW.d = {}; RW.type = b.dataset.rwtype; RW.err = ''; render(); }; });
+  f.querySelectorAll('[data-rwseg]').forEach(function (b) { b.onclick = function () { rwSync(); RW.d[b.dataset.rwseg] = b.dataset.v; RW.err = ''; render(); }; });
+  f.querySelectorAll('[data-rwck]').forEach(function (c) { c.onchange = function () { RW.d[c.dataset.rwck] = c.checked; }; });
+  f.querySelectorAll('input[type=date][data-rw]').forEach(function (c) { c.onchange = function () { rwSync(); softRender(); }; });
+  document.getElementById('rwBack').onclick = function () { rwSync(); if (RW.i) { RW.i--; RW.err = ''; render(); } };
+  f.onsubmit = function (e) {
+    e.preventDefault(); rwSync(); var err = rwValidate(); if (err) { RW.err = err; render(); return; }
+    RW.err = '';
+    if (RW.i < RW_STEPS.length - 1) { RW.i++; render(); window.scrollTo(0, 0); return; }
+    var d = {}; Object.keys(RW.d).forEach(function (k) { if (k !== 'agree') d[k] = RW.d[k]; });
+    RW.busy = true; render();
+    api({ action: 'reqCreate', type: RW.type, ref: role === 'staff' ? '' : RW.ref, data: d }).then(function (j) {
+      var rows = reqRows().slice(); rows.unshift(j.request); seed('reqs', rows); delete CACHE.audit;
+      RW = { i: 0, type: '', ref: '', d: {}, busy: false, err: '' };
+      if (role === 'staff') { TAB.myreq = 'list'; location.hash = 'myreq'; } else { TAB.reqs = 'all'; }
+      render(); reqOpen(j.request.no, true);
+    }).catch(function (e2) { RW.busy = false; RW.err = errText(e2); render(); });
+  };
+}
+
+/* ---------- lists ---------- */
+var RF = { type: '', st: '', q: '' };
+function reqListHTML(rows, mine) {
+  if (!rows.length) return '<div class="empty">' + (mine ? 'لا طلبات بعد. ابدأ بطلب جديد من الزر أعلاه.' : 'لا طلبات في هذه القائمة.') + '</div>';
+  return '<ul class="rqlist">' + rows.map(function (r) { var T = RT2[r.type];
+    return '<li><button type="button" class="rqrow" data-rq="' + esc(r.no) + '">' + tile(T[0], T[1]) + '<div class="rqm"><b>' + esc(mine ? reqSum(r) : r.name) + '</b><span class="s"><span class="ltr">' + esc(r.no) + '</span> · ' + esc(mine ? T[2] : reqSum(r)) + (reqDates(r) ? ' · ' + reqDates(r) : '') + ' · ' + agoD(pdt(r.createdAt)) + '</span>' + reqTrail(r) + '</div>' + reqPill(r) + '</button></li>'; }).join('') + '</ul>';
+}
+VIEWS.reqs = function () {
+  var all = reqRows(), pend = reqPendingForMe(), t = TAB.reqs;
+  if (t === 'new' && !can('edit')) t = TAB.reqs = 'all';
+  var T = [['pend', 'بانتظار اعتمادي', pend.length, 'stamp', pend.length], ['all', 'كل الطلبات', all.length, 'doc']].concat(can('edit') ? [['new', 'طلب نيابة عن منسوب', null, 'plus']] : []);
+  var body;
+  if (t === 'new') body = rwHTML();
+  else {
+    var q = RF.q.trim().toLowerCase(), list = (t === 'pend' ? pend : all).filter(function (r) { return (!RF.type || r.type === RF.type) && (!RF.st || r.status === RF.st) && (!q || (r.no + ' ' + r.name + ' ' + r.ref + ' ' + reqSum(r)).toLowerCase().indexOf(q) >= 0); });
+    var cnt = function (k, v) { return (t === 'pend' ? pend : all).filter(function (r) { return r[k] === v; }).length; };
+    body = '<section class="pn"><div class="filters"><input id="rfq" placeholder="ابحث برقم الطلب أو اسم المنسوب" value="' + esc(RF.q) + '" aria-label="بحث في الطلبات">' +
+      ssel('rft', [{ v: '', n: 'كل الأنواع', ic: 'doc' }].concat(Object.keys(RT2).map(function (k) { return { v: k, n: RT2[k][2], k: cnt('type', k) }; })), RF.type, 'كل الأنواع', function (v) { RF.type = v; render(); }, 'نوع الطلب') +
+      (t === 'all' ? ssel('rfs', [{ v: '', n: 'كل الحالات', ic: 'stamp' }].concat(Object.keys(RST).map(function (k) { return { v: k, n: RST[k][1], k: cnt('status', k) }; })), RF.st, 'كل الحالات', function (v) { RF.st = v; render(); }, 'حالة الطلب') : '') + '</div>' +
+      '<div class="pb">' + (t === 'pend' && !pend.length ? '<div class="note">' + ic('check') + '<span>لا شيء ينتظر قرارك الآن. يصلك بريد عند وصول طلب جديد إلى خطوتك.</span></div>' : reqListHTML(list, false)) + '</div></section>';
+  }
+  var k = { pending: all.filter(function (r) { return r.status === 'pending'; }).length, approved: all.filter(function (r) { return r.status === 'approved'; }).length, rejected: all.filter(function (r) { return r.status === 'rejected'; }).length };
+  return ptitle('الطلبات', 'إجازات المنسوبين وأوامر الإركاب والتعريفات. لكل طلب رقم ثابت ومسار اعتماد، وكل قرار يُسجَّل باسم صاحبه ويصل المنسوب ببريد.', can('edit') && t !== 'new' ? '<a class="btn goldb" href="#reqs-new">' + ic('plus') + 'طلب نيابة عن منسوب</a>' : '') +
+    '<div class="tabs2">' + [['amethyst', 'stamp', pend.length, 'بانتظار اعتمادي'], ['gold', 'clock', k.pending, 'قيد الإجراء'], ['emerald', 'check', k.approved, 'معتمد'], ['garnet', 'alert', k.rejected, 'مرفوض']].map(function (x) { return '<div class="stat">' + tile(x[0], x[1]) + '<div><b>' + x[2] + '</b><span>' + x[3] + '</span></div></div>'; }).join('') + '</div>' +
+    vtabs('reqs', T) + body;
+};
+VIEWS.myreq = function () {
+  var rows = reqRows(), t = TAB.myreq, open = rows.filter(function (r) { return r.status === 'pending'; }).length;
+  var body = t === 'new' ? rwHTML() : pn('sapphire', 'doc', 'طلباتي', rows.length ? rows.length + ' طلبًا، ' + open + ' قيد الإجراء' : '', '<a class="btn sm goldb" href="#myreq-new">' + ic('plus') + 'طلب جديد</a>', '<div class="pb">' + reqListHTML(rows, true) + '</div>');
+  return ptitle('طلباتي', 'قدّم طلب إجازة أو أمر إركاب أو تعريف بالراتب، وتابع أين وصل. يصلك بريد عند كل خطوة.') +
+    vtabs('myreq', [['list', 'طلباتي', open ? open + ' قيد الإجراء' : rows.length, 'doc', open], ['new', 'طلب جديد', null, 'plus']]) + body;
+};
+
+/* ---------- the official request sheet (view · decide · print) ---------- */
+function reqSheetHTML(r) {
+  var d = r.data || {}, st = r.staff || {}, kv = function (a) { return '<div class="srow">' + a.map(function (x) { return '<div class="sf"><span>' + x[0] + '</span><b>' + (x[1] === '' || x[1] == null ? '—' : esc(x[1])) + '</b></div>'; }).join('') + '</div>'; };
+  var det = r.type === 'leave' ? kv([['نوع الإجازة', d.kind], ['من', fdx(pdate(d.from))], ['إلى', fdx(pdate(d.to))], ['المدة', dn(d.days || 0)], ['القائم بالعمل', d.substitute], ['التواصل أثناء الإجازة', d.contact]])
+    : r.type === 'travel' ? kv([['الوجهة', d.dest], ['من', fdx(pdate(d.from))], ['إلى', fdx(pdate(d.to))], ['المدة', dn(d.days || 0)], ['وسيلة السفر', (d.transport || '') + (d.hotel ? ' وسكن' : '')], ['السلفة', +d.advance ? n(+d.advance) + ' ' + (d.currency || 'SAR') : 'لا يوجد']])
+    : kv([['نوع الخطاب', d.kind], ['موجّه إلى', d.to], ['لغة الخطاب', d.lang]]);
+  var note = d.note || d.purpose;
+  return '<div class="sheet" id="reqSheet"><div class="shead"><div class="sorg"><span class="seal"><img src="' + LOGO + '" alt=""></span><div><b>مجموعة بنيان العالمية</b><small>Bonyan International Group</small><em>إدارة الموارد البشرية</em></div></div><div class="smeta">رمز النموذج<b>' + esc(r.form) + '</b>الإصدار 1.0<span>رقم المعاملة</span><b>' + esc(r.no) + '</b></div></div>' +
+    '<div class="stitle"><h3>' + esc(r.typeName) + '</h3><p>قُدّم ' + fdx(pdt(r.createdAt)) + ' بواسطة ' + esc(r.createdBy || r.name) + '</p></div>' +
+    '<div class="sbar">بيانات المنسوب</div>' + kv([['الاسم', r.name], ['الرقم المرجعي', r.ref], ['الجهة', st.entity], ['المسمى', st.jobTitle], ['الإدارة', st.department], ['المدير المباشر', st.manager]]) +
+    '<div class="sbar">تفاصيل الطلب</div>' + det + (note ? '<div class="snote">' + esc(note) + '</div>' : '') +
+    '<div class="sbar">الاعتماد والتوقيعات</div><div class="tw"><table class="sappr"><thead><tr><th>م</th><th>الجهة</th><th>الاسم</th><th>القرار</th><th>التاريخ</th></tr></thead><tbody>' +
+    r.chain.map(function (c, i) { var dec = c.decision === 'approve' ? '<span class="pill ok"><i></i>موافق</span>' : c.decision === 'reject' ? '<span class="pill bad"><i></i>غير موافق</span>' : r.status === 'pending' && i === r.stage ? '<span class="pill warn"><i></i>بانتظار القرار</span>' : r.status === 'cancelled' ? '<span class="pill mute"><i></i>ألغي الطلب</span>' : '<span class="pill mute"><i></i>—</span>';
+      return '<tr><td>' + (i + 1) + '</td><td class="r">' + esc(c.label) + '</td><td>' + esc(c.by || '') + (c.note ? '<small class="dn2">' + esc(c.note) + '</small>' : '') + '</td><td>' + dec + '</td><td>' + esc(c.at || '') + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+    '<div class="sfoot"><span>hr.bonyanglobal.com</span><span>' + esc(r.form) + ' · ' + esc(r.no) + '</span><span>الحالة: ' + esc(RST[r.status] ? RST[r.status][1] : r.statusName) + '</span></div></div>';
+}
+function reqOpen(no, fresh) {
+  var r = reqByNo(no); if (!r) return;
+  var old = document.getElementById('reqLayer'); if (old) old.remove();
+  var own = role === 'staff' || (ME && ME.ref === r.ref), el = document.createElement('div'); el.id = 'reqLayer';
+  el.innerHTML = '<div class="mscrim" data-rqclose="1"></div><section class="mdl rqm2" role="dialog" aria-modal="true" aria-labelledby="rqT"><header class="mh">' + tile(RT2[r.type][0], RT2[r.type][1]) + '<div><h2 id="rqT">' + esc(r.typeName) + ' <span class="ltr ref">' + esc(r.no) + '</span></h2><p>' + (fresh ? 'أُرسل الطلب. احتفظ برقمه للمتابعة.' : esc(r.name)) + '</p></div>' + reqPill(r) + '<button class="ib mx" data-rqclose="1" aria-label="إغلاق">' + ic('plus') + '</button></header>' +
+    '<div class="rqbody"><div class="rqtrack">' + reqTrail(r) + '</div>' + reqSheetHTML(r) + '</div>' +
+    '<footer class="mf">' + (r.canDecide ? '<div class="rqdec"><textarea id="rqNote" rows="2" maxlength="600" placeholder="ملاحظة للمنسوب (إلزامية عند الرفض)"></textarea><div class="lerr" id="rqErr" role="alert"></div></div><button class="btn" data-rqdec="reject">' + ic('alert') + 'رفض</button><button class="btn goldb" data-rqdec="approve">' + ic('check') + 'اعتماد</button>'
+      : (r.status === 'pending' && (own || can('edit')) ? '<button class="btn" id="rqCancel">إلغاء الطلب</button>' : '') + '<span class="sp"></span>') +
+    '<button class="btn" id="rqPrint">' + ic('dl') + 'طباعة أو حفظ PDF</button></footer></section>';
+  document.body.appendChild(el); document.body.classList.add('no-scroll');
+  var close = function () { el.remove(); document.body.classList.remove('no-scroll'); };
+  el.querySelectorAll('[data-rqclose]').forEach(function (b) { b.onclick = close; });
+  document.getElementById('rqPrint').onclick = function () { document.body.classList.add('print-sheet'); window.print(); setTimeout(function () { document.body.classList.remove('print-sheet'); }, 500); };
+  var c = document.getElementById('rqCancel'); if (c) c.onclick = function () { c.disabled = true; api({ action: 'reqCancel', no: r.no }).then(function () { r.status = 'cancelled'; r.statusName = 'ملغى'; seed('reqs', reqRows()); close(); softRender(); toast('أُلغي الطلب ' + r.no); }).catch(function (e) { c.disabled = false; toast(errText(e)); }); };
+  el.querySelectorAll('[data-rqdec]').forEach(function (b) { b.onclick = function () {
+    var ok = b.dataset.rqdec === 'approve', note = document.getElementById('rqNote').value.trim(), err = document.getElementById('rqErr');
+    if (!ok && !note) { err.textContent = 'اكتب سبب الرفض ليصل إلى المنسوب.'; document.getElementById('rqNote').focus(); return; }
+    el.querySelectorAll('[data-rqdec]').forEach(function (x) { x.disabled = true; });
+    api({ action: 'reqDecide', no: r.no, decision: ok ? 'approve' : 'reject', note: note }).then(function (j) {
+      seed('reqs', reqRows().map(function (x) { return x.no === r.no ? j.request : x; })); delete CACHE.audit; delete CACHE['aud:' + r.ref];
+      close(); softRender(); toast(ok ? (j.request.status === 'approved' ? 'اعتُمد الطلب نهائيًا وأُبلغ المنسوب' : 'وافقت، وانتقل الطلب إلى ' + j.request.chain[j.request.stage].label) : 'رُفض الطلب وأُبلغ المنسوب بالسبب');
+    }).catch(function (e) { el.querySelectorAll('[data-rqdec]').forEach(function (x) { x.disabled = false; }); err.textContent = errText(e); });
+  }; });
+}
+function bindReq() {
+  document.querySelectorAll('[data-rq]').forEach(function (b) { b.onclick = function () { reqOpen(b.dataset.rq); }; });
+  var q = document.getElementById('rfq'); if (q) q.oninput = function () { RF.q = q.value; softRender(); };
+  rwBind();
+}
+
+/* ---------- public tracking on the sign-in screen ---------- */
+var TRK = { no: '', mail: '', res: null, err: '', busy: false };
+function trackHTML() {
+  var r = TRK.res, res = '';
+  if (r) { var steps = [{ l: 'تقديم الطلب', st: 'done', at: r.createdAt }].concat(r.chain.map(function (c, i) { return { l: c.label, st: c.decision === 'approve' ? 'done' : c.decision === 'reject' ? 'x' : r.status === 'pending' && i === r.stage ? 'now' : '', at: c.at, note: c.note }; }));
+    res = '<div class="trres"><div class="trh"><b>' + esc(r.typeName) + '</b><span class="pill ' + (RST[r.status] || ['mute'])[0] + '"><i></i>' + esc(r.statusName) + '</span></div><ol class="tl3">' + steps.map(function (s, i) { return '<li class="' + s.st + '"><i>' + (s.st === 'done' ? '✓' : s.st === 'x' ? '×' : i + 1) + '</i><div><b>' + esc(s.l) + '</b><small>' + esc(s.at || (s.st === 'now' ? 'يُراجع الآن' : 'لاحقًا')) + (s.note ? ' · ' + esc(s.note) : '') + '</small></div></li>'; }).join('') + '</ol></div>'; }
+  return '<h2>متابعة طلب</h2><p class="lp">اكتب رقم الطلب كما وصلك في البريد، والبريد المسجّل في ملفك. لا تحتاج إلى تسجيل الدخول.</p>' +
+    '<div class="lf"><label for="trkNo">رقم الطلب</label><input id="trkNo" class="ltr" style="text-align:left" value="' + esc(TRK.no) + '" placeholder="LV-2026-0001" autocomplete="off"></div>' +
+    '<div class="lf"><label for="trkMail">البريد الإلكتروني</label><input id="trkMail" class="ltr" style="text-align:left" type="email" value="' + esc(TRK.mail) + '" placeholder="name@example.com"></div>' +
+    '<div class="lerr" role="alert">' + esc(TRK.err) + '</div><button class="btn prim" id="lnext" type="submit"' + (TRK.busy ? ' disabled' : '') + '>' + ic('search') + (TRK.busy ? 'جارٍ البحث…' : 'تحقق') + '</button>' + res;
+}
+function bindTrack() {
+  var f = document.getElementById('lf'); if (!f || LG.tab !== 'track') return;
+  f.onsubmit = function (e) { e.preventDefault(); TRK.no = document.getElementById('trkNo').value.trim(); TRK.mail = document.getElementById('trkMail').value.trim(); TRK.busy = true; TRK.err = ''; TRK.res = null; render();
+    api({ action: 'reqTrack', no: TRK.no, email: TRK.mail }).then(function (j) { TRK.busy = false; TRK.res = j; render(); }).catch(function (er) { TRK.busy = false; TRK.err = errText(er); render(); }); };
 }
 
 window.addEventListener('hashchange', route);

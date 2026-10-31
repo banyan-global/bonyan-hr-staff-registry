@@ -17,12 +17,13 @@ const PERMS = [
     'audit.view'   => 'عرض سجل العمليات',
     'users.manage' => 'إدارة الحسابات والصلاحيات',
     'backup.run'   => 'النسخ الاحتياطي والتصدير الكامل',
+    'requests.approve' => 'اعتماد طلبات المنسوبين',
     'self.view'    => 'صفحة المنسوب الخاصة (بياناته فقط)',
 ];
 const ROLE_PERMS = [
-    'admin' => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'users.manage', 'backup.run'],
-    'hr'    => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view'],
-    'ceo'   => ['staff.view', 'finance.view', 'audit.view'],
+    'admin' => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'users.manage', 'backup.run', 'requests.approve'],
+    'hr'    => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'requests.approve'],
+    'ceo'   => ['staff.view', 'finance.view', 'audit.view', 'requests.approve'],
     'viewer'=> ['staff.view'],
     'staff' => ['self.view'],
 ];

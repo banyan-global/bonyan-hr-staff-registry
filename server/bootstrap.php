@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 3;
+const BHR_SCHEMA_VERSION = 4;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -93,6 +93,12 @@ function migrate(PDO $pdo): void {
     /* ٣) ربط حساب الدخول بسجل المنسوب (صفحة المنسوب الخاصة) */
     $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'staff_ref'")->fetchColumn();
     if (!(int)$has) { try { $pdo->exec('ALTER TABLE users ADD COLUMN staff_ref VARCHAR(40) NULL'); } catch (PDOException $e) { if (stripos($e->getMessage(), 'Duplicate column') === false) throw $e; } } /* طلبان متزامنان قد يضيفان العمود معًا */
+    /* ٤) طلبات المنسوبين (إجازة، أمر إركاب، تعريف بالراتب) ومسار اعتمادها */
+    $pdo->exec("CREATE TABLE IF NOT EXISTS requests (
+        id INT AUTO_INCREMENT PRIMARY KEY, no VARCHAR(24) NOT NULL UNIQUE, ref VARCHAR(40) NOT NULL, type VARCHAR(12) NOT NULL,
+        status VARCHAR(12) NOT NULL DEFAULT 'pending', stage TINYINT NOT NULL DEFAULT 0, chain TEXT NOT NULL, data TEXT NOT NULL,
+        created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL,
+        KEY k_ref (ref), KEY k_status (status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {
