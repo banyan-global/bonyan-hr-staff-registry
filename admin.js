@@ -795,7 +795,7 @@
       bkT: 'النسخ الاحتياطية', bkNow: 'أخذ نسخة الآن', bkNone: 'لا توجد نسخ بعد', bkDl: 'تنزيل',
       hT: 'فحص الجاهزية', usT: 'الحسابات والصلاحيات', usD: 'من يدخل اللوحة وماذا يرى. الدخول دائمًا برمز يصل إلى بريد الحساب.',
       uName: 'الاسم', uEmail: 'البريد', uTitle: 'المسمى', uRole: 'الدور', uLast: 'آخر دخول', uState: 'الحالة', uAct: 'إجراءات', uActive: 'نشط', uOff: 'موقوف', uLocked: 'مقفل مؤقتًا',
-      uUnlock: 'فك القفل', uKick: 'إنهاء الجلسات', uStop: 'إيقاف', uStart: 'تفعيل', uAdd: 'إضافة حساب', uSave: 'حفظ', uSaved: 'تم الحفظ', uNever: 'لم يدخل بعد', uSelf: 'لا يمكنك إيقاف حسابك أو سحب صلاحية الإدارة منه', uDup: 'هذا البريد مسجّل لحساب آخر',
+      uUnlock: 'فك القفل', uKick: 'إنهاء الجلسات', uStop: 'إيقاف', uStart: 'تفعيل', uAdd: 'إضافة حساب', uSave: 'حفظ', uSaved: 'تم الحفظ', uNever: 'لم يدخل بعد', uSelf: 'لا يمكنك إيقاف حسابك أو سحب صلاحية الإدارة منه', uNotify: 'تنبيه التسجيلات', uNotifyD: 'يصل كل من فُعّل له نسخة من تنبيه «تسجيل جديد» والتنبيه الأسبوعي للوثائق، إضافة إلى البريد الرسمي {m}.', uDup: 'هذا البريد مسجّل لحساب آخر',
       permsT: 'صلاحيات كل دور', lgQ: 'بحث في السجل (الاسم، الرقم المرجعي، العملية)', lgOk: 'السجل سليم · {n} عملية', lgBad: 'تنبيه: تغيّر سطر في السجل (رقم {n})', lgMore: 'عرض المزيد',
       lgT: 'الوقت', lgRef: 'الرقم المرجعي', lgA: 'العملية', lgD: 'التفاصيل', lgW: 'بواسطة', none: 'لا شيء'
     },
@@ -811,7 +811,7 @@
       bkT: 'Backups', bkNow: 'Back up now', bkNone: 'No backups yet', bkDl: 'Download',
       hT: 'Health check', usT: 'Accounts & permissions', usD: 'Who can open the dashboard and what they see. Sign-in is always by a code sent to the account’s email.',
       uName: 'Name', uEmail: 'Email', uTitle: 'Title', uRole: 'Role', uLast: 'Last sign-in', uState: 'Status', uAct: 'Actions', uActive: 'Active', uOff: 'Disabled', uLocked: 'Temporarily locked',
-      uUnlock: 'Unlock', uKick: 'End sessions', uStop: 'Disable', uStart: 'Enable', uAdd: 'Add account', uSave: 'Save', uSaved: 'Saved', uNever: 'Never', uSelf: 'You cannot disable your own account or remove its admin rights', uDup: 'This email already belongs to another account',
+      uUnlock: 'Unlock', uKick: 'End sessions', uStop: 'Disable', uStart: 'Enable', uAdd: 'Add account', uSave: 'Save', uSaved: 'Saved', uNever: 'Never', uSelf: 'You cannot disable your own account or remove its admin rights', uNotify: 'Registration alerts', uNotifyD: 'Everyone switched on gets their own copy of the “new registration” alert and the weekly documents alert, in addition to the official mailbox {m}.', uDup: 'This email already belongs to another account',
       permsT: 'What each role can do', lgQ: 'Search the log (name, reference, action)', lgOk: 'Log intact · {n} actions', lgBad: 'Warning: a log line was changed (#{n})', lgMore: 'Show more',
       lgT: 'Time', lgRef: 'Reference', lgA: 'Action', lgD: 'Details', lgW: 'By', none: 'None'
     }
@@ -893,10 +893,10 @@
     if (U.err) return card(sx('usT'), '<p class="hint">' + esc(sx('fail')) + '</p>', 'span3');
     var roles = U.roles || {}, me = S.me || {};
     var roleSel = function (cur, id) { return '<select class="inp sm" data-urole="' + id + '"' + (id === me.id ? ' disabled' : '') + '>' + Object.keys(roles).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + esc(roles[k]) + '</option>'; }).join('') + '</select>'; };
-    var body = '<p class="hint">' + esc(sx('usD')) + '</p><div class="adm-table-wrap"><table class="adm-table sys-users"><thead><tr><th>' + esc(sx('uName')) + '</th><th>' + esc(sx('uEmail')) + '</th><th>' + esc(sx('uRole')) + '</th><th>' + esc(sx('uLast')) + '</th><th>' + esc(sx('uState')) + '</th><th>' + esc(sx('uAct')) + '</th></tr></thead><tbody>' +
+    var body = '<p class="hint">' + esc(sx('usD')) + '</p><p class="hint">' + esc(sx('uNotifyD').replace('{m}', 'digital@bonyanglobal.com')) + '</p><div class="adm-table-wrap"><table class="adm-table sys-users"><thead><tr><th>' + esc(sx('uName')) + '</th><th>' + esc(sx('uEmail')) + '</th><th>' + esc(sx('uRole')) + '</th><th>' + esc(sx('uLast')) + '</th><th>' + esc(sx('uState')) + '</th><th>' + esc(sx('uNotify')) + '</th><th>' + esc(sx('uAct')) + '</th></tr></thead><tbody>' +
       U.users.map(function (u) {
         var state = !u.active ? '<span class="chip">' + esc(sx('uOff')) + '</span>' : u.locked ? '<span class="chip bad">' + esc(sx('uLocked')) + '</span>' : '<span class="chip ok">' + esc(sx('uActive')) + '</span>';
-        return '<tr class="static" data-uid="' + u.id + '"><td><b>' + esc(u.name || '—') + '</b><small class="sys-sub">' + esc(u.title || '') + '</small></td><td dir="ltr">' + esc(u.email) + '</td><td>' + roleSel(u.role, u.id) + '</td><td dir="ltr" class="mono">' + esc(u.lastLogin || sx('uNever')) + '</td><td>' + state + '</td><td class="sys-act">' +
+        return '<tr class="static" data-uid="' + u.id + '"><td><b>' + esc(u.name || '—') + '</b><small class="sys-sub">' + esc(u.title || '') + '</small></td><td dir="ltr">' + esc(u.email) + '</td><td>' + roleSel(u.role, u.id) + '</td><td dir="ltr" class="mono">' + esc(u.lastLogin || sx('uNever')) + '</td><td>' + state + '</td><td><button type="button" class="sw" role="switch" aria-checked="' + !!u.notify + '" aria-label="' + esc(sx('uNotify')) + '" data-sys="notify" data-id="' + u.id + '"></button></td><td class="sys-act">' +
           (u.locked ? '<button type="button" class="link" data-sys="unlock" data-id="' + u.id + '">' + esc(sx('uUnlock')) + '</button>' : '') +
           '<button type="button" class="link" data-sys="kick" data-id="' + u.id + '">' + esc(sx('uKick')) + '</button>' +
           (u.id === me.id ? '' : '<button type="button" class="link" data-sys="toggle" data-id="' + u.id + '">' + esc(u.active ? sx('uStop') : sx('uStart')) + '</button>') + '</td></tr>';
@@ -919,6 +919,7 @@
     if (a === 'bkNow') { el.classList.add('busy'); A.api({ action: 'backupNow' }).then(function (j) { S.sys.backups = j; S.sys.at = 0; sysLoad(true); }).catch(function () { A.toast(sx('fail')); el.classList.remove('busy'); }); return; }
     if (a === 'unlock') { A.api({ action: 'usersUnlock', id: +id }).then(function (j) { S.sys.users = j; redrawPanel(); }); return; }
     if (a === 'kick') { A.api({ action: 'sessionsRevoke', id: +id }).then(function () { A.toast(sx('uSaved')); }); return; }
+    if (a === 'notify') { var un = userById(id); if (un) usersSave({ id: un.id, email: un.email, name: un.name, title: un.title, role: un.role, active: un.active, notify: !un.notify }); return; }
     if (a === 'toggle') { var u = userById(id); if (u) usersSave({ id: u.id, email: u.email, name: u.name, title: u.title, role: u.role, active: !u.active }); }
   }
 

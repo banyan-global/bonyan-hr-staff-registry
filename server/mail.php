@@ -203,14 +203,24 @@ function confirm_mail_html(array $m): string {
 }
 
 /* تنبيه مختصر للموارد البشرية عند كل تسجيل جديد */
+/* مستلمو تنبيهات الموارد البشرية: البريد الرسمي في الإعدادات + كل حساب نشط مفعّل له التنبيه — كلٌّ يصله نسخته */
+function hr_recipients(): array {
+    $out = [];
+    foreach (preg_split('/[\s,;]+/', (string)cfg('hr_notify')) as $e) if (filter_var($e, FILTER_VALIDATE_EMAIL)) $out[strtolower($e)] = 1;
+    try { foreach (q('SELECT * FROM users WHERE active=1')->fetchAll() as $u) if (user_notify($u)) $out[strtolower($u['email'])] = 1; } catch (Throwable $e) { }
+    return array_keys($out);
+}
 function notify_hr(array $row): void {
-    $to = (string)cfg('hr_notify'); if ($to === '') return;
+    $list = hr_recipients(); if (!$list) return;
     $d = $row['data']; $g = function ($k) use ($d) { return trim((string)($d[$k] ?? '')); };
     $name = $g('fullNameAr') ?: $g('fullNameLatin');
     $line = function ($k, $v) { return $v !== '' ? '<tr><td style="padding:5px 0;color:#6B778A;font-size:13px;width:110px;">' . esc_html($k) . '</td><td style="padding:5px 0;color:#1D2A3B;font-size:14px;font-weight:700;">' . esc_html($v) . '</td></tr>' : ''; };
     $inner = '<table style="border-collapse:collapse;width:100%;">' . $line('الرقم المرجعي', $row['ref']) . $line('الجهة', $g('entity')) . $line('المسمى', $g('jobTitle'))
         . $line('دولة العمل', $g('workCountry')) . $line('الجنسية', $g('nationality')) . $line('البريد', $g('officialEmail') ?: $g('personalEmail')) . '</table>'
         . '<div style="margin:14px 0 6px;"><a href="' . esc_html(cfg('site_url') . 'admin.html') . '" style="display:inline-block;padding:9px 18px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13px;text-decoration:none;">فتح لوحة الموارد البشرية</a></div>';
-    try { send_mail($to, 'تسجيل جديد: ' . $name . ' · ' . $row['ref'], mail_frame('Bonyan HR · تسجيل جديد', $name, $inner), 'تسجيل جديد: ' . $name . ' · ' . $row['ref'], 'Bonyan HR', logo_inline()); }
-    catch (Throwable $e) { audit_log($row['ref'], 'تعذّر إرسال التنبيه', $e->getMessage()); }
+    foreach ($list as $to) {
+        try { send_mail($to, 'تسجيل جديد: ' . $name . ' · ' . $row['ref'], mail_frame('Bonyan HR · تسجيل جديد', $name, $inner), 'تسجيل جديد: ' . $name . ' · ' . $row['ref'], 'Bonyan HR', logo_inline()); }
+        catch (Throwable $e) { audit_log($row['ref'], 'تعذّر إرسال التنبيه', mask_email($to) . ' · ' . $e->getMessage()); }
+    }
+    audit_log($row['ref'], 'تنبيه الموارد البشرية بتسجيل جديد', implode('، ', array_map('mask_email', $list)), 'النظام');
 }

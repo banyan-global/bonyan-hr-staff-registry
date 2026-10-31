@@ -81,11 +81,18 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 1;
+const BHR_SCHEMA_VERSION = 2;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
     if ((int)$v >= BHR_SCHEMA_VERSION) return;
+    if ((int)$v < 1) migrate_v1($pdo);
+    /* ٢) من يصله تنبيه «تسجيل جديد» والتنبيه الأسبوعي: فارغ = حسب الدور (مدير النظام والموارد البشرية) */
+    $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'notify'")->fetchColumn();
+    if (!(int)$has) $pdo->exec('ALTER TABLE users ADD COLUMN notify TINYINT NULL');
+    $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
+}
+function migrate_v1(PDO $pdo): void {
     $T = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
     $pdo->exec("CREATE TABLE IF NOT EXISTS staff (
         id INT AUTO_INCREMENT PRIMARY KEY, ref VARCHAR(40) NOT NULL, status VARCHAR(40) NOT NULL DEFAULT '',

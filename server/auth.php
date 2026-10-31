@@ -45,9 +45,11 @@ function user_perms(array $u): array {
 }
 function user_public(array $u): array {
     return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'title' => $u['title'], 'role' => $u['role'],
-        'roleName' => ROLE_NAMES[$u['role']] ?? $u['role'], 'perms' => user_perms($u), 'active' => (bool)$u['active'],
+        'roleName' => ROLE_NAMES[$u['role']] ?? $u['role'], 'perms' => user_perms($u), 'active' => (bool)$u['active'], 'notify' => user_notify($u),
         'lastLogin' => $u['last_login_at'] ? substr($u['last_login_at'], 0, 16) : '', 'locked' => $u['locked_until'] && $u['locked_until'] > now()];
 }
+/* هل يصله تنبيه «تسجيل جديد» والتنبيه الأسبوعي؟ (اختيار صريح، وإلا حسب الدور) */
+function user_notify(array $u): bool { return isset($u['notify']) && $u['notify'] !== null ? (bool)$u['notify'] : in_array($u['role'], ['admin', 'hr'], true); }
 function code_hash(string $code, int $uid): string { return hash_hmac('sha256', $uid . ':' . $code, app_secret()); }
 
 /* ١) طلب رمز الدخول: الرد نفسه دائمًا سواء وُجد الحساب أم لا (منع كشف الحسابات) */
@@ -165,6 +167,7 @@ function users_save(array $b): array {
         q('UPDATE users SET email=?, name=?, title=?, role=?, perms=?, active=?, locked_until=IF(?=1, locked_until, NULL) WHERE id=?',
             [$email, safe_text($b['name'] ?? ''), safe_text($b['title'] ?? ''), $role, $permsJson, $active, $active, $id]);
         if (!$active) q('DELETE FROM sessions WHERE user_id=?', [$id]);
+        if (array_key_exists('notify', $b)) q('UPDATE users SET notify=? WHERE id=?', [$b['notify'] === null ? null : (int)(bool)$b['notify'], $id]);
         audit_log('', 'تعديل حساب', $email . ' · ' . ROLE_NAMES[$role] . ($active ? '' : ' · موقوف') . ' · ' . ($perms === null ? 'صلاحيات الدور' : implode('، ', $perms)), $me['_label']);
     } else {
         q('INSERT INTO users (email, name, title, role, perms, active, created_at) VALUES (?,?,?,?,?,?,?)',
