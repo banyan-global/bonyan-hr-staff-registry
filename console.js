@@ -1075,7 +1075,7 @@ VIEWS.system = function () {
   return ptitle('النظام', D[t], t === 'data' && can('drive') ? '<button class="btn goldb" data-act="backupNow">' + ic('refresh') + 'نسخة احتياطية الآن</button>' : '') + (T.length > 1 ? vtabs('system', T) : '') +
     (t === 'acc' ? sub(VIEWS.accounts) : t === 'log' ? sub(VIEWS.log) : sub(VIEWS.data));
 };
-var PERM_ROWS = [['staff.view', 'users'], ['staff.edit', 'edit'], ['staff.files', 'file'], ['staff.mail', 'mail'], ['finance.view', 'wallet'], ['audit.view', 'history'], ['users.manage', 'key'], ['backup.run', 'archive']];
+var PERM_ROWS = [['staff.view', 'users'], ['staff.edit', 'edit'], ['staff.files', 'file'], ['staff.mail', 'mail'], ['finance.view', 'wallet'], ['audit.view', 'history'], ['requests.approve', 'stamp'], ['users.manage', 'key'], ['backup.run', 'archive']];
 var ACQ = '';
 VIEWS.accounts = function () {
   var c = need('users', function () { return api({ action: 'usersList' }); }, 60000), d = c.data;
@@ -1363,7 +1363,7 @@ var ROLE_INFO = {
   viewer: ['slate', 'eye', 'عرض بيانات المنسوبين فقط، دون الرواتب ودون تعديل']
 };
 var PERM_GROUPS = [['بيانات المنسوبين', [['staff.view', 'عرض الملفات والوثائق'], ['staff.edit', 'تعديل البيانات'], ['staff.files', 'رفع المرفقات واستبدالها']]], ['التواصل', [['staff.mail', 'مراسلة المنسوبين بالبريد وواتساب']]],
-  ['المالية', [['finance.view', 'الرواتب والحسابات البنكية']]], ['الرقابة', [['audit.view', 'سجل العمليات']]], ['الإدارة', [['users.manage', 'إدارة الحسابات والصلاحيات'], ['backup.run', 'النسخ الاحتياطي والتصدير الكامل']]]];
+  ['المالية', [['finance.view', 'الرواتب والحسابات البنكية']]], ['الطلبات', [['requests.approve', 'اعتماد طلبات المنسوبين']]], ['الرقابة', [['audit.view', 'سجل العمليات']]], ['الإدارة', [['users.manage', 'إدارة الحسابات والصلاحيات'], ['backup.run', 'النسخ الاحتياطي والتصدير الكامل']]]];
 var TITLE_SUGG = ['مدير الموارد البشرية', 'أخصائي موارد بشرية', 'أخصائية موارد بشرية', 'محاسب الرواتب', 'مشرف جهة', 'مدقق داخلي', 'مساعد إداري', 'مدير تنفيذي'];
 function samePerms(a, b) { return a.slice().sort().join() === b.slice().sort().join(); }
 var AC = null;
@@ -1422,9 +1422,9 @@ function drawAcct() {
 TITLES.reqs = ['الطلبات']; TITLES.myreq = ['طلباتي'];
 STAFF_VIEWS.push('myreq');
 TAB.reqs = 'pend'; TAB.myreq = 'list';
-TABL.reqs = { pend: 'بانتظار اعتمادي', all: 'كل الطلبات', 'new': 'طلب نيابة عن منسوب' };
+TABL.reqs = { pend: 'بانتظار اعتمادي', all: 'كل الطلبات', 'new': 'طلب نيابة عن منسوب', forms: 'النماذج الإدارية' };
 TABL.myreq = { list: 'طلباتي', 'new': 'طلب جديد' };
-ALIAS['reqs-pend'] = ['reqs', 'pend']; ALIAS['reqs-all'] = ['reqs', 'all']; ALIAS['reqs-new'] = ['reqs', 'new'];
+ALIAS['reqs-pend'] = ['reqs', 'pend']; ALIAS['reqs-all'] = ['reqs', 'all']; ALIAS['reqs-new'] = ['reqs', 'new']; ALIAS.forms = ['reqs', 'forms'];
 ALIAS['myreq-new'] = ['myreq', 'new']; ALIAS['myreq-list'] = ['myreq', 'list']; ALIAS.gaps = ['people', 'dir', 'gap']; ALIAS.expired = ['people', 'dir', 'exp'];
 
 var RT2 = { leave: ['emerald', 'umbrella', 'إجازة', 'LV'], travel: ['amethyst', 'plane', 'أمر إركاب', 'TR'], cert: ['gold', 'cert', 'تعريف بالراتب', 'CR'] };
@@ -1460,7 +1460,7 @@ function sideHTML() {
     G = [['العمل اليومي', [
       { v: 'home', n: 'لوحة القيادة', d: 'ملخص اليوم وما يحتاج إجراء', j: 'emerald', i: 'grid' },
       { v: 'people', n: 'المنسوبون', d: 'الملفات والوثائق والبطاقات', j: 'sapphire', i: 'users', b: CNT.exp, s: [['staff', 'دليل المنسوبين', view === 'people' && TAB.people === 'dir' && filt.st === 'all', CNT.tot], ['gaps', 'الملفات الناقصة', view === 'people' && TAB.people === 'dir' && filt.st === 'gap', CNT.gap], ['documents', 'الوثائق', view === 'people' && TAB.people === 'docs', CNT.exp, 1]] },
-      { v: 'reqs', n: 'الطلبات', d: 'إجازات وإركاب وتعريفات', j: 'amethyst', i: 'stamp', b: pend, s: [['reqs-pend', 'بانتظار اعتمادي', view === 'reqs' && TAB.reqs === 'pend', pend, 1], ['reqs-all', 'كل الطلبات', view === 'reqs' && TAB.reqs === 'all'], ['reqs-new', 'طلب نيابة عن منسوب', view === 'reqs' && TAB.reqs === 'new']].filter(function (x) { return x[0] !== 'reqs-new' || can('edit'); }) }]],
+      { v: 'reqs', n: 'الطلبات', d: 'إجازات وإركاب وتعريفات', j: 'amethyst', i: 'stamp', b: pend, s: [['reqs-pend', 'بانتظار اعتمادي', view === 'reqs' && TAB.reqs === 'pend', pend, 1], ['reqs-all', 'كل الطلبات', view === 'reqs' && TAB.reqs === 'all'], ['forms', 'النماذج الإدارية', view === 'reqs' && TAB.reqs === 'forms'], ['reqs-new', 'طلب نيابة عن منسوب', view === 'reqs' && TAB.reqs === 'new']].filter(function (x) { return x[0] !== 'reqs-new' || can('edit'); }) }]],
       ['الإدارة', [
         can('pay') ? { v: 'payroll', n: 'الرواتب', d: 'حسب الجهة والعملة', j: 'gold', i: 'wallet', b: 0, s: [['payroll', 'كشف الرواتب', view === 'payroll' && PAYF === 'all'], ['banks', 'الحسابات البنكية', view === 'payroll' && PAYF === 'nobank', CNT.nobank, 1]] } : null,
         can('sys') ? { v: 'system', n: 'النظام', d: 'الحسابات والسجل والبيانات', j: 'teal', i: 'shield', s: [can('users') ? ['accounts', 'الموظفون والصلاحيات', view === 'system' && TAB.system === 'acc'] : null, can('audit') ? ['log', 'سجل العمليات', view === 'system' && TAB.system === 'log'] : null, can('drive') || can('users') ? ['data', 'البيانات والنسخ', view === 'system' && TAB.system === 'data'] : null].filter(Boolean) } : null].filter(Boolean)]];
@@ -1487,7 +1487,7 @@ function rwBody() {
   if (RW.i === 0) {
     var T = [['leave', 'إجازة', 'اعتيادية أو مرضية أو اضطرارية', '#1f8f6a', 'umbrella'], ['travel', 'أمر إركاب', 'مهمة رسمية داخلية أو خارجية', '#5b3fc4', 'plane'], ['cert', 'تعريف بالراتب', 'أو شهادة خبرة لجهة محددة', '#b98f25', 'cert']];
     return (role !== 'staff' ? '<div class="fld wide"><label for="rwRefS">المنسوب <i class="rq">*</i></label>' + ssel('rwRefS', STAFF.map(function (s) { return { v: s.ref, n: s.name, d: s.ref + ' · ' + s.ent.n, c: s.ent.c }; }), RW.ref, 'اختر المنسوب', function (v) { RW.ref = v; render(); }, 'المنسوب') + '</div>' : '') +
-      '<div class="ccards" role="radiogroup" aria-label="نوع الطلب">' + T.map(function (t) { return '<button type="button" class="ccard" role="radio" data-rwtype="' + t[0] + '" aria-checked="' + (RW.type === t[0]) + '"><span class="ti" style="background:' + t[3] + '">' + ic(t[4]) + '</span><b>' + t[1] + '</b><small>' + t[2] + '</small></button>'; }).join('') + '</div>';
+      '<div class="ccards" role="radiogroup" aria-label="نوع الطلب">' + T.filter(function (t) { return formOn(t[0]); }).map(function (t) { return '<button type="button" class="ccard" role="radio" data-rwtype="' + t[0] + '" aria-checked="' + (RW.type === t[0]) + '"><span class="ti" style="background:' + t[3] + '">' + ic(t[4]) + '</span><b>' + t[1] + '</b><small>' + t[2] + '</small></button>'; }).join('') + '</div>';
   }
   if (RW.i === 1) {
     if (RW.type === 'leave') return '<div class="form">' + rwField('lk', 'نوع الإجازة', rwSeg('kind', ['اعتيادية', 'مرضية', 'اضطرارية', 'بدون راتب']), true, true) +
@@ -1515,7 +1515,7 @@ function rwHTML() {
   return '<div class="wiz"><form class="wcard pn" id="rwForm" novalidate><span class="stepchip">الخطوة ' + (RW.i + 1) + ' من ' + RW_STEPS.length + '</span><h2 class="wt">' + RW_STEPS[RW.i][0] + '</h2>' + rwBody() +
     '<div class="lerr" role="alert">' + esc(RW.err) + '</div><div class="wfoot"><button class="btn" type="button" id="rwBack"' + (RW.i ? '' : ' disabled') + '>' + ic('back') + 'السابق</button><span class="ctr">' + (RW.i + 1) + ' / ' + RW_STEPS.length + '</span><button class="btn ' + (RW.i === RW_STEPS.length - 1 ? 'goldb' : 'prim') + '" type="submit"' + (RW.busy ? ' disabled' : '') + '>' + (RW.i === RW_STEPS.length - 1 ? ic('send') + (RW.busy ? 'جارٍ الإرسال…' : 'إرسال الطلب') : 'التالي') + '</button></div></form>' +
     '<aside class="wside" aria-label="تقدم الطلب"><div class="wsh">' + tile('gold', 'stamp') + '<div><b>طلب جديد</b><small>' + (s ? esc(s.name) : 'يصلك رقم الطلب فور الإرسال') + '</small></div></div><ol class="wsteps">' + RW_STEPS.map(function (x, k) { return '<li class="' + (k < RW.i ? 'done' : k === RW.i ? 'on' : '') + '"><span><b>' + x[0] + '</b><small>' + x[1] + '</small></span><i>' + (k < RW.i ? '✓' : k + 1) + '</i></li>'; }).join('') + '</ol>' +
-    '<div class="wsum"><small>اختيارك</small><b>' + esc(sum) + '</b></div><div class="whelp">' + ic('info') + '<span>' + (RW.type === 'travel' ? 'يعتمده الموارد البشرية ثم الرئيس التنفيذي.' : 'تعتمده الموارد البشرية، ويصلك بريد بالقرار.') + '</span></div></aside></div>';
+    '<div class="wsum"><small>اختيارك</small><b>' + esc(sum) + '</b></div><div class="whelp">' + ic('info') + '<span>' + flowText(RW.type) + '</span></div></aside></div>';
 }
 function rwSync() { document.querySelectorAll('[data-rw]').forEach(function (e) { RW.d[e.dataset.rw] = e.value; }); var a = document.getElementById('rwAgree'); if (a) RW.d.agree = a.checked; }
 function rwValidate() {
@@ -1561,9 +1561,10 @@ function reqListHTML(rows, mine) {
 VIEWS.reqs = function () {
   var all = reqRows(), pend = reqPendingForMe(), t = TAB.reqs;
   if (t === 'new' && !can('edit')) t = TAB.reqs = 'all';
-  var T = [['pend', 'بانتظار اعتمادي', pend.length, 'stamp', pend.length], ['all', 'كل الطلبات', all.length, 'doc']].concat(can('edit') ? [['new', 'طلب نيابة عن منسوب', null, 'plus']] : []);
+  var T = [['pend', 'بانتظار اعتمادي', pend.length, 'stamp', pend.length], ['all', 'كل الطلبات', all.length, 'doc'], ['forms', 'النماذج الإدارية', null, 'file']].concat(can('edit') ? [['new', 'طلب نيابة عن منسوب', null, 'plus']] : []);
   var body;
-  if (t === 'new') body = rwHTML();
+  if (t === 'forms') body = formsHTML();
+  else if (t === 'new') body = rwHTML();
   else {
     var q = RF.q.trim().toLowerCase(), list = (t === 'pend' ? pend : all).filter(function (r) { return (!RF.type || r.type === RF.type) && (!RF.st || r.status === RF.st) && (!q || (r.no + ' ' + r.name + ' ' + r.ref + ' ' + reqSum(r)).toLowerCase().indexOf(q) >= 0); });
     var cnt = function (k, v) { return (t === 'pend' ? pend : all).filter(function (r) { return r[k] === v; }).length; };
@@ -1628,7 +1629,7 @@ function reqOpen(no, fresh) {
 function bindReq() {
   document.querySelectorAll('[data-rq]').forEach(function (b) { b.onclick = function () { reqOpen(b.dataset.rq); }; });
   var q = document.getElementById('rfq'); if (q) q.oninput = function () { RF.q = q.value; softRender(); };
-  rwBind();
+  rwBind(); bindForms();
 }
 
 /* ---------- public tracking on the sign-in screen ---------- */
@@ -1647,6 +1648,91 @@ function bindTrack() {
   f.onsubmit = function (e) { e.preventDefault(); TRK.no = document.getElementById('trkNo').value.trim(); TRK.mail = document.getElementById('trkMail').value.trim(); TRK.busy = true; TRK.err = ''; TRK.res = null; render();
     api({ action: 'reqTrack', no: TRK.no, email: TRK.mail }).then(function (j) { TRK.busy = false; TRK.res = j; render(); }).catch(function (er) { TRK.busy = false; TRK.err = errText(er); render(); }); };
 }
+
+/* ---------- النماذج الإدارية ومسؤولو الاعتماد (يحددهم مدير النظام) ---------- */
+function formsData() { return need('reqForms', function () { return api({ action: 'reqForms' }); }, 120000).data; }
+function formOf(t) { var d = formsData(); return d ? d.forms.filter(function (f) { return f.type === t; })[0] : null; }
+function formOn(t) { var f = formOf(t); return !f || f.on; }
+function flowText(t) {
+  var f = formOf(t); if (!t) return 'اختر نوع الطلب، وسيظهر هنا مسار اعتماده.';
+  if (!f) return 'يمر الطلب بمسار اعتماد، ويصلك بريد عند كل خطوة.';
+  return 'يمر الطلب على: ' + f.steps.map(function (s) { return s.label; }).join(' ثم ') + '، ويصلك بريد عند كل خطوة.';
+}
+function formsHTML() {
+  var c = need('reqForms', function () { return api({ action: 'reqForms' }); }, 120000), d = c.data;
+  if (!d) return '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ التحميل…') + '</div></div></section>';
+  var cards = d.forms.map(function (f) {
+    var T = RT2[f.type] || ['slate', 'doc', f.name];
+    var path = '<ol class="fpath"><li class="st0"><i>' + ic('user') + '</i><span><b>المنسوب يقدّم</b><small>من صفحته أو نيابة عنه</small></span></li>' + f.steps.map(function (s, i) {
+      var who = s.people.length ? s.people.map(function (p) { return p.name; }).slice(0, 3).join('، ') + (s.people.length > 3 ? ' و' + (s.people.length - 3) + ' آخرون' : '') : '';
+      return '<li class="' + (who ? '' : 'nobody') + '"><i>' + (i + 1) + '</i><span><b>' + esc(s.label) + '</b><small>' + (who ? (s.kind === 'user' ? 'حساب محدد: ' : 'كل من بدور ' + esc(d.roles[s.v] || s.v) + ': ') + esc(who) : 'لا يوجد حساب نشط يعتمد هذه الخطوة!') + '</small></span></li>'; }).join('') +
+      '<li class="stz"><i>' + ic('check') + '</i><span><b>القرار النهائي</b><small>يصل المنسوب ببريد</small></span></li></ol>';
+    return '<article class="fcard' + (f.on ? '' : ' off') + '"><header>' + tile(T[0], T[1]) + '<div><h3>' + esc(f.name) + '</h3><span class="fcode ltr">' + esc(f.code) + ' · ' + esc(f.prefix) + '-YYYY-NNNN</span></div>' +
+      (f.on ? '<span class="pill ok"><i></i>مفعّل</span>' : '<span class="pill mute"><i></i>موقوف</span>') + '</header><p class="finfo">' + esc(f.info) + '</p>' +
+      '<h4>مسار الاعتماد</h4>' + path +
+      '<div class="fstats"><span><b>' + f.total + '</b> طلبًا</span><span><b>' + f.pending + '</b> قيد الإجراء</span></div>' +
+      '<footer>' + (d.canEdit ? '<button class="btn prim" data-flow="' + f.type + '">' + ic('users') + 'تحديد المسؤولين</button>' : '') +
+      (can('edit') && f.on ? '<a class="btn" href="#reqs-new" data-ftype="' + f.type + '">' + ic('plus') + 'تقديم نيابة عن منسوب</a>' : '') + '</footer></article>';
+  }).join('');
+  return '<div class="note fnote">' + ic('info') + '<span>هذه النماذج الإلكترونية المعتمدة في المنصة. يقدّمها المنسوب من «طلباتي»، أو الموارد البشرية نيابة عنه. ' + (d.canEdit ? 'بصفتك مدير النظام تحدد من يعتمد كل نموذج وترتيب الخطوات، أو توقف النموذج مؤقتًا.' : 'مدير النظام هو من يحدد مسؤولي الاعتماد.') + '</span></div><div class="fcards">' + cards + '</div>';
+}
+function bindForms() {
+  document.querySelectorAll('[data-flow]').forEach(function (b) { b.onclick = function () { feOpen(b.dataset.flow); }; });
+  document.querySelectorAll('[data-ftype]').forEach(function (b) { b.addEventListener('click', function () { RW = { i: 0, type: b.dataset.ftype, ref: '', d: {}, busy: false, err: '' }; TAB.reqs = 'new'; }); });
+}
+var FE = null;
+function feOpen(t) {
+  var f = formOf(t); if (!f) return;
+  FE = { type: t, name: f.name, on: f.on, steps: f.steps.map(function (s) { return { kind: s.kind, v: s.v, label: s.label }; }), err: '', busy: false };
+  need('users', function () { return api({ action: 'usersList' }); }, 60000);
+  drawFE();
+}
+function feOpts() {
+  var d = formsData(), U = (CACHE.users && CACHE.users.data && CACHE.users.data.users) || [];
+  var R = Object.keys(d.roles).map(function (k) { var n = U.filter(function (u) { return u.active && u.role === k && u.perms.indexOf('requests.approve') > -1; }).length;
+    return { v: 'role:' + k, n: d.roles[k], d: CACHE.users && CACHE.users.data ? (n ? n + ' حساب يملك صلاحية الاعتماد' : 'لا يوجد حساب بهذا الدور يملك صلاحية الاعتماد') : 'كل حساب بهذا الدور', ic: 'users', g: 'حسب الدور' }; });
+  var P = U.filter(function (u) { return u.active; }).map(function (u) { return { v: 'user:' + u.id, n: u.name || u.email, d: (u.title || u.roleName) + ' · ' + u.email, ic: 'user', g: 'حساب محدد بالاسم' }; });
+  return R.concat(P);
+}
+function feAuto(kind, v) {
+  var d = formsData(), U = (CACHE.users && CACHE.users.data && CACHE.users.data.users) || [];
+  if (kind === 'role') return d.roles[v] || '';
+  var u = U.filter(function (x) { return String(x.id) === String(v); })[0]; return u ? (u.title || u.name) : '';
+}
+function drawFE() {
+  var old = document.getElementById('feLayer'); if (old) old.remove();
+  var opts = feOpts(), el = document.createElement('div'); el.id = 'feLayer';
+  var rows = FE.steps.map(function (s, i) {
+    return '<li class="ferow"><span class="fen">' + (i + 1) + '</span><div class="fef"><label>المسؤول عن الاعتماد</label>' + ssel('fe' + i, opts, s.kind ? s.kind + ':' + s.v : '', 'اختر دورًا أو حسابًا', (function (k) { return function (v) {
+        var p = v.split(':'), prevAuto = feAuto(FE.steps[k].kind, FE.steps[k].v);
+        if (!FE.steps[k].label || FE.steps[k].label === prevAuto) FE.steps[k].label = feAuto(p[0], p[1]);
+        FE.steps[k].kind = p[0]; FE.steps[k].v = p[0] === 'user' ? +p[1] : p[1]; FE.err = ''; drawFE(); }; })(i), 'المسؤول عن الخطوة ' + (i + 1)) +
+      '</div><div class="fef"><label for="fel' + i + '">اسم الخطوة كما يظهر للمنسوب</label><input id="fel' + i + '" data-fel="' + i + '" value="' + esc(s.label) + '" maxlength="60" placeholder="مثال: المدير المالي"></div>' +
+      '<div class="fea"><button type="button" class="ib" data-feup="' + i + '" aria-label="تقديم الخطوة"' + (i ? '' : ' disabled') + '>' + ic('chev') + '</button><button type="button" class="ib" data-fedn="' + i + '" aria-label="تأخير الخطوة"' + (i < FE.steps.length - 1 ? '' : ' disabled') + '>' + ic('chev') + '</button><button type="button" class="ib del" data-fedel="' + i + '" aria-label="حذف الخطوة"' + (FE.steps.length > 1 ? '' : ' disabled') + '>' + ic('x') + '</button></div></li>';
+  }).join('');
+  el.innerHTML = '<div class="mscrim" data-feclose="1"></div><section class="mdl fem" role="dialog" aria-modal="true" aria-labelledby="feT"><header class="mh">' + tile('amethyst', 'stamp') + '<div><h2 id="feT">مسؤولو اعتماد: ' + esc(FE.name) + '</h2><p>رتّب خطوات الاعتماد وحدد من يعتمد كل خطوة</p></div><button class="ib mx" data-feclose="1" aria-label="إغلاق">' + ic('plus') + '</button></header>' +
+    '<div class="abody"><label class="tgl"><button type="button" class="sw" role="switch" id="feOn" aria-checked="' + FE.on + '"></button><span><b>النموذج مفعّل</b><small>' + (FE.on ? 'يظهر للمنسوبين ويمكن تقديمه' : 'موقوف: لا يظهر في «طلب جديد» ولا يُقبل تقديمه') + '</small></span></label>' +
+    '<ol class="felist">' + rows + '</ol>' + (FE.steps.length < 5 ? '<button type="button" class="btn feadd" id="feAdd">' + ic('plus') + 'إضافة خطوة اعتماد</button>' : '') +
+    '<div class="fepre"><small>المسار بعد الحفظ</small><b>المنسوب ← ' + FE.steps.map(function (s) { return esc(s.label || '…'); }).join(' ← ') + ' ← القرار</b></div>' +
+    '<div class="note">' + ic('info') + '<span>«حسب الدور» يعني أن أي حساب بهذا الدور يملك صلاحية «اعتماد طلبات المنسوبين» يستطيع الاعتماد. «حساب محدد» يجعل الاعتماد لشخص بعينه حتى لو لم تكن لديه هذه الصلاحية. التعديل يسري على الطلبات الجديدة، والطلبات القائمة تكمل مسارها. ولمدير النظام اعتماد أي خطوة عند الضرورة.</span></div></div>' +
+    '<footer class="mf"><div class="lerr" role="alert">' + esc(FE.err) + '</div><button class="btn" data-feclose="1">إلغاء</button><button class="btn goldb" id="feSave"' + (FE.busy ? ' disabled' : '') + '>' + ic('check') + (FE.busy ? 'جارٍ الحفظ…' : 'حفظ المسار') + '</button></footer></section>';
+  document.body.appendChild(el);
+  var sync = function () { el.querySelectorAll('[data-fel]').forEach(function (x) { FE.steps[+x.dataset.fel].label = x.value; }); };
+  el.querySelectorAll('[data-feclose]').forEach(function (b) { b.onclick = function () { el.remove(); FE = null; }; });
+  el.querySelectorAll('[data-fel]').forEach(function (x) { x.oninput = function () { FE.steps[+x.dataset.fel].label = x.value; var p = el.querySelector('.fepre b'); if (p) p.textContent = 'المنسوب ← ' + FE.steps.map(function (s) { return s.label || '…'; }).join(' ← ') + ' ← القرار'; }; });
+  el.querySelectorAll('[data-feup],[data-fedn]').forEach(function (b) { b.onclick = function () { sync(); var i = +(b.dataset.feup || b.dataset.fedn), j = b.dataset.feup ? i - 1 : i + 1, t = FE.steps[i]; FE.steps[i] = FE.steps[j]; FE.steps[j] = t; drawFE(); }; });
+  el.querySelectorAll('[data-fedel]').forEach(function (b) { b.onclick = function () { sync(); FE.steps.splice(+b.dataset.fedel, 1); drawFE(); }; });
+  var add = document.getElementById('feAdd'); if (add) add.onclick = function () { sync(); FE.steps.push({ kind: '', v: '', label: '' }); drawFE(); };
+  document.getElementById('feOn').onclick = function () { sync(); FE.on = !FE.on; drawFE(); };
+  document.getElementById('feSave').onclick = function () {
+    sync();
+    if (FE.steps.some(function (s) { return !s.kind; })) { FE.err = 'اختر المسؤول عن كل خطوة.'; drawFE(); return; }
+    FE.busy = true; drawFE();
+    api({ action: 'reqFormsSave', type: FE.type, on: FE.on, steps: FE.steps }).then(function (j) { seed('reqForms', j); var L = document.getElementById('feLayer'); if (L) L.remove(); FE = null; toast('حُفظ مسار الاعتماد'); render(); })
+      .catch(function (e) { FE.busy = false; FE.err = errText(e); drawFE(); });
+  };
+}
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && document.getElementById('feLayer') && !document.querySelector('.ss-pop')) { document.getElementById('feLayer').remove(); FE = null; } });
 
 /* ================= الدخول السريع: جهاز محفوظ + البصمة (مفاتيح المرور) ================= */
 var PK_OK = !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);

@@ -1160,6 +1160,51 @@ body.nav-open .bnav { display: none; }
 .pkoffer .lnk { border: 0; background: none; color: var(--mute); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; padding: 8px; text-decoration: underline; text-underline-offset: 3px; }
 .pkoffer .lnk:hover { color: var(--ink); }
 
+/* ===== النماذج الإدارية ومسار الاعتماد ===== */
+.fnote { margin-bottom: 4px; }
+.fcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 18px; }
+.fcard { background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); box-shadow: var(--sh); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.fcard.off { opacity: .72; }
+.fcard header { display: flex; gap: 12px; align-items: center; }
+.fcard header > div { flex: 1; min-width: 0; }
+.fcard h3 { font-size: 17px; font-weight: 900; margin: 0; }
+.fcode { display: block; font-family: var(--f-mono, ui-monospace, monospace); font-size: 12px; color: var(--faint); text-align: right; margin-top: 2px; }
+.finfo { margin: 0; color: var(--mute); font-size: 14px; line-height: 1.8; }
+.fcard h4 { margin: 4px 0 0; font-size: 13px; font-weight: 900; color: var(--faint); }
+.fpath { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.fpath li { display: flex; gap: 10px; align-items: flex-start; position: relative; padding-bottom: 12px; }
+.fpath li:not(:last-child)::before { content: ""; position: absolute; inset-inline-start: 13px; top: 28px; bottom: 0; width: 2px; background: var(--line); }
+.fpath li > i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; font-style: normal; font-weight: 900; font-size: 13px; background: var(--navy); color: #f3dca6; position: relative; z-index: 1; }
+.fpath li > i svg.i { width: 15px; height: 15px; }
+.fpath li.st0 > i { background: var(--well); color: var(--mute); }
+.fpath li.stz > i { background: var(--c-ok); color: #fff; }
+.fpath li.nobody > i { background: var(--c-bad); color: #fff; }
+.fpath b { display: block; font-size: 14px; font-weight: 800; line-height: 1.5; }
+.fpath small { display: block; font-size: 12.5px; color: var(--faint); font-weight: 600; }
+.fpath li.nobody small { color: var(--c-bad); font-weight: 800; }
+.fstats { display: flex; gap: 16px; font-size: 13px; color: var(--mute); }
+.fstats b { color: var(--ink); font-weight: 900; }
+.fcard footer { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
+.fcard footer .btn { flex: 1 1 auto; justify-content: center; }
+#feLayer { position: fixed; inset: 0; z-index: 92; display: grid; place-items: center; padding: 16px; }
+.mdl.fem { width: min(760px, 100%); }
+.felist { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.ferow { display: grid; grid-template-columns: 34px minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; padding: 12px; border: 1px solid var(--line-2); border-radius: 16px; background: var(--soft); }
+.fen { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--navy); color: #f3dca6; font-weight: 900; align-self: center; }
+.fef { display: grid; gap: 6px; min-width: 0; }
+.fef label { font-size: 12.5px; font-weight: 800; color: var(--faint); }
+.fef input { height: 46px; border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; background: var(--panel); color: var(--ink); font: inherit; font-size: 14px; }
+.fea { display: flex; gap: 4px; }
+.fea .ib { width: 38px; height: 38px; }
+.fea [data-feup] svg.i { transform: rotate(180deg); }
+.fea .del { color: var(--c-bad); }
+.feadd { margin-top: 10px; }
+.fepre { margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: var(--gold-wash); border: 1px solid rgba(185, 143, 69, .35); }
+.fepre small { display: block; font-size: 12px; font-weight: 800; color: var(--gold-ink); }
+.fepre b { font-size: 14.5px; font-weight: 900; }
+.mdl.fem .mf .lerr { flex: 1; text-align: start; }
+@media (max-width: 640px) { .ferow { grid-template-columns: 34px minmax(0, 1fr); } .ferow .fef, .ferow .fea { grid-column: 2; } #feLayer { padding: 8px; } }
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--bg-0: #162942;

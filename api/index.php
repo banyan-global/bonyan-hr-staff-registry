@@ -66,7 +66,7 @@ try {
         'fileHistory' => fn() => file_history($b), 'fileRestore' => fn() => file_restore($b),
         'backups' => fn() => backups_list(), 'backupNow' => fn() => backup_now(), 'health' => fn() => health(),
         /* طلبات المنسوبين */
-        'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqTrack' => fn() => req_track($b),
+        'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqTrack' => fn() => req_track($b), 'reqForms' => fn() => req_forms(), 'reqFormsSave' => fn() => req_forms_save($b),
         /* تحديث المنسوب لبياناته */
         'selfStart' => fn() => self_start($b), 'selfUpdate' => fn() => self_update($b), 'selfUpload' => fn() => self_upload($b), 'selfFinish' => fn() => self_finish($b),
         /* الاستيراد من النظام القديم (بمفتاح مؤقت) */

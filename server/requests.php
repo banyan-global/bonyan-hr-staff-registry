@@ -70,11 +70,88 @@ function req_row(array $r, bool $full = true): array {
     }
     return $o;
 }
-/* هل يستطيع هذا الحساب اتخاذ القرار في الخطوة الحالية؟ */
+/* ============ النماذج الإدارية ومسؤولو اعتمادها (يحددهم مدير النظام) ============
+   الخطوة إمّا «دور» (كل حساب بهذا الدور ولديه صلاحية الاعتماد) أو «حساب محدد» بالاسم.
+   التعديل يسري على الطلبات الجديدة؛ الطلب القائم يكمل المسار الذي قُدّم عليه. */
+const REQ_FORM_INFO = [
+    'leave'  => 'إجازة اعتيادية أو مرضية أو اضطرارية أو بدون راتب، بتاريخ البداية والنهاية والقائم بالعمل.',
+    'travel' => 'تكليف بمهمة رسمية: الوجهة والغرض والتواريخ ووسيلة السفر والسكن والسلفة.',
+    'cert'   => 'خطاب تعريف بالراتب أو شهادة خبرة موجّه إلى جهة، بالعربية أو الإنجليزية.',
+];
+const REQ_STEP_ROLES = ['hr', 'ceo', 'admin', 'viewer'];
+function req_flow(): array {
+    $saved = json_decode((string)(setting('req_flow') ?: ''), true); $saved = is_array($saved) ? $saved : [];
+    $out = [];
+    foreach (REQ_CHAINS as $t => $def) {
+        $f = $saved[$t] ?? null;
+        $steps = is_array($f['steps'] ?? null) && $f['steps'] ? $f['steps'] : array_map(fn($c) => ['kind' => 'role', 'v' => $c[0], 'label' => $c[1]], $def);
+        $out[$t] = ['on' => isset($f['on']) ? (bool)$f['on'] : true, 'steps' => array_values($steps)];
+    }
+    return $out;
+}
+/* سلسلة الطلب الجديد من الإعداد الحالي */
+function req_new_chain(string $type): array {
+    return array_map(function ($s) {
+        $c = ['label' => (string)$s['label'], 'decision' => '', 'by' => '', 'at' => '', 'note' => ''];
+        if (($s['kind'] ?? '') === 'user') { $c['user'] = (int)$s['v']; $c['role'] = ''; } else $c['role'] = (string)$s['v'];
+        return $c;
+    }, req_flow()[$type]['steps']);
+}
+/* من يعتمد هذه الخطوة؟ (حسابات نشطة) */
+function req_step_people(array $step): array {
+    if (!empty($step['user'])) { $u = q1('SELECT * FROM users WHERE id=? AND active=1', [(int)$step['user']]); return $u ? [$u] : []; }
+    return array_values(array_filter(q('SELECT * FROM users WHERE active=1 AND role=?', [(string)($step['role'] ?? '')])->fetchAll(), fn($u) => in_array('requests.approve', user_perms($u), true)));
+}
+/* هل يستطيع هذا الحساب اتخاذ القرار في الخطوة الحالية؟ مدير النظام يستطيع دائمًا (للطوارئ) */
 function req_can_decide(array $u, array $r): bool {
-    if ($r['status'] !== 'pending' || !has_perm($u, 'requests.approve')) return false;
+    if ($r['status'] !== 'pending') return false;
     $chain = json_decode($r['chain'], true) ?: []; $step = $chain[(int)$r['stage']] ?? null;
-    return $step && ($u['role'] === 'admin' || $u['role'] === $step['role']);
+    if (!$step) return false;
+    if ($u['role'] === 'admin' && has_perm($u, 'requests.approve')) return true;
+    if (!empty($step['user'])) return (int)$step['user'] === (int)$u['id'];
+    return has_perm($u, 'requests.approve') && $u['role'] === ($step['role'] ?? '');
+}
+function req_forms(): array {
+    $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
+    $flow = req_flow(); $isAdmin = has_perm($u, 'users.manage'); $forms = [];
+    $cnt = []; foreach (q('SELECT type, status, COUNT(*) n FROM requests GROUP BY type, status')->fetchAll() as $r) $cnt[$r['type']][$r['status']] = (int)$r['n'];
+    foreach (REQ_TYPES as $t => $T) {
+        $steps = array_map(function ($s) {
+            $c = ($s['kind'] ?? '') === 'user' ? ['user' => (int)$s['v']] : ['role' => (string)$s['v']];
+            $people = array_map(fn($p) => ['id' => (int)$p['id'], 'name' => $p['name'] ?: mask_email((string)$p['email'])], req_step_people($c));
+            return ['kind' => $s['kind'], 'v' => $s['v'], 'label' => $s['label'], 'people' => $people];
+        }, $flow[$t]['steps']);
+        $forms[] = ['type' => $t, 'code' => $T[2], 'prefix' => $T[0], 'name' => $T[1], 'info' => REQ_FORM_INFO[$t] ?? '', 'on' => $flow[$t]['on'], 'steps' => $steps,
+            'total' => array_sum($cnt[$t] ?? []), 'pending' => $cnt[$t]['pending'] ?? 0];
+    }
+    return ['ok' => true, 'forms' => $forms, 'roles' => array_intersect_key(ROLE_NAMES, array_flip(REQ_STEP_ROLES)), 'canEdit' => $isAdmin];
+}
+function req_forms_save(array $b): array {
+    $me = require_perm('users.manage');
+    $t = (string)($b['type'] ?? ''); if (!isset(REQ_TYPES[$t])) throw new HttpError('نوع النموذج غير معروف');
+    $in = is_array($b['steps'] ?? null) ? $b['steps'] : [];
+    if (!$in) throw new HttpError('أضف خطوة اعتماد واحدة على الأقل');
+    if (count($in) > 5) throw new HttpError('خمس خطوات على الأكثر');
+    $steps = []; $seen = [];
+    foreach ($in as $s) {
+        $kind = ($s['kind'] ?? '') === 'user' ? 'user' : 'role';
+        $label = req_str($s['label'] ?? '', 60);
+        if ($kind === 'user') {
+            $u = q1("SELECT * FROM users WHERE id=? AND active=1 AND role <> 'staff'", [(int)($s['v'] ?? 0)]);
+            if (!$u) throw new HttpError('اختر حسابًا نشطًا لكل خطوة');
+            $v = (int)$u['id']; if ($label === '') $label = $u['title'] ?: $u['name'];
+        } else {
+            $v = (string)($s['v'] ?? ''); if (!in_array($v, REQ_STEP_ROLES, true)) throw new HttpError('اختر المسؤول عن كل خطوة');
+            if ($label === '') $label = ROLE_NAMES[$v];
+        }
+        if (mb_strlen($label) < 2) throw new HttpError('اكتب اسمًا لكل خطوة');
+        $k = $kind . ':' . $v; if (isset($seen[$k])) throw new HttpError('المسؤول نفسه مكرر في خطوتين'); $seen[$k] = 1;
+        $steps[] = ['kind' => $kind, 'v' => $v, 'label' => $label];
+    }
+    $flow = req_flow(); $flow[$t] = ['on' => !isset($b['on']) || (bool)$b['on'], 'steps' => $steps];
+    setting_set('req_flow', json_encode($flow, JSON_UNESCAPED_UNICODE));
+    audit_log('', 'تحديد مسؤولي اعتماد ' . REQ_TYPES[$t][1], ($flow[$t]['on'] ? '' : 'النموذج موقوف · ') . implode(' ← ', array_column($steps, 'label')), $me['_label']);
+    return req_forms();
 }
 function req_summary(array $r): string {
     $d = json_decode($r['data'], true) ?: [];
@@ -93,12 +170,11 @@ function req_mail_staff(array $r, string $title, string $line): void {
     try { send_mail($to, $title . ' · ' . $r['no'], mail_frame('الموارد البشرية · طلباتي', $title, $inner), $line . "\n" . $r['no'] . "\n" . req_summary($r), 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline(), (string)cfg('hr_notify')); }
     catch (Throwable $e) { audit_log($r['ref'], 'تعذّر إرسال بريد الطلب', $r['no'] . ' · ' . $e->getMessage()); }
 }
-function req_mail_approvers(array $r, string $role): void {
+function req_mail_approvers(array $r, array $step): void {
     $list = [];
-    foreach (q('SELECT * FROM users WHERE active=1 AND role IN (?, ?)', [$role, 'admin'])->fetchAll() as $u) {
-        if ($u['role'] === 'admin' && $role !== 'admin' && !user_notify($u)) continue;
-        if (in_array('requests.approve', user_perms($u), true)) $list[strtolower($u['email'])] = 1;
-    }
+    foreach (req_step_people($step) as $u) $list[strtolower($u['email'])] = 1;
+    /* مدير النظام تصله نسخة إن كانت تنبيهاته مفعّلة (يستطيع الاعتماد عند الطوارئ) */
+    foreach (q("SELECT * FROM users WHERE active=1 AND role='admin'")->fetchAll() as $u) if (user_notify($u) && in_array('requests.approve', user_perms($u), true)) $list[strtolower($u['email'])] = 1;
     $s = staff_get($r['ref']); $name = $s ? staff_name($s) : $r['ref'];
     $inner = '<p style="margin:0 0 10px;font-size:14px;color:#1D2A3B;">طلب جديد بانتظار قرارك من <b>' . esc_html($name) . '</b>.</p><p style="margin:0 0 10px;font-size:13.5px;color:#3D4A60;">' . esc_html(req_summary($r)) . '</p>'
         . '<div style="margin:14px 0 6px;"><a href="' . esc_html(cfg('site_url')) . '#reqs" style="display:inline-block;padding:9px 18px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13px;text-decoration:none;">فتح الطلب</a></div>';
@@ -117,8 +193,9 @@ function req_create(array $b): array {
     if ($ref === '' || $ref === $mine) { if (!$mine) throw new HttpError('لا يوجد سجل منسوب لهذا الحساب'); $ref = $mine; $by = $u['name'] ?: $u['email']; }
     else { if (!has_perm($u, 'staff.edit')) throw new HttpError('forbidden', 403); if (!staff_get($ref)) throw new HttpError('not_found', 404); $by = ($u['name'] ?: $u['email']) . ' (نيابة عن المنسوب)'; }
     if (rate_hit('req:' . $u['id'], 30, 86400)) throw new HttpError('too_many', 429);
+    if (!req_flow()[$type]['on']) throw new HttpError('هذا النموذج موقوف حاليًا. تواصل مع الموارد البشرية.');
     $data = req_clean($type, is_array($b['data'] ?? null) ? $b['data'] : []);
-    $chain = array_map(function ($c) { return ['role' => $c[0], 'label' => $c[1], 'decision' => '', 'by' => '', 'at' => '', 'note' => '']; }, REQ_CHAINS[$type]);
+    $chain = req_new_chain($type);
     named_lock('req_no');
     try {
         $no = req_next_no($type);
@@ -128,7 +205,7 @@ function req_create(array $b): array {
     $r = q1('SELECT * FROM requests WHERE no=?', [$no]);
     audit_log($ref, 'تقديم ' . REQ_TYPES[$type][1], $no . ' · ' . req_summary($r), $by);
     req_mail_staff($r, 'استلمنا طلبك', 'استلمت الموارد البشرية طلبك، وسيصلك بريد عند كل خطوة في مساره.');
-    req_mail_approvers($r, $chain[0]['role']);
+    req_mail_approvers($r, $chain[0]);
     return ['ok' => true, 'request' => req_row($r) + ['canDecide' => req_can_decide($u, $r)]];
 }
 function req_list(array $b): array {
@@ -142,7 +219,7 @@ function req_list(array $b): array {
     return ['ok' => true, 'rows' => array_map(function ($r) { return req_row($r, true) + ['canDecide' => false]; }, $rows)];
 }
 function req_decide(array $b): array {
-    $u = require_perm('requests.approve');
+    $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
     $r = q1('SELECT * FROM requests WHERE no=?', [(string)($b['no'] ?? '')]); if (!$r) throw new HttpError('not_found', 404);
     if (!req_can_decide($u, $r)) throw new HttpError('هذه الخطوة ليست من صلاحيتك أو سبق اتخاذ القرار فيها', 403);
     $ok = ($b['decision'] ?? '') === 'approve'; $note = req_str($b['note'] ?? '', 600);
@@ -156,7 +233,7 @@ function req_decide(array $b): array {
     audit_log($r['ref'], ($ok ? 'اعتماد ' : 'رفض ') . REQ_TYPES[$r['type']][1], $r['no'] . ' · ' . $chain[$i]['label'] . ($note ? ' · ' . $note : ''), $u['_label']);
     if ($status === 'approved') req_mail_staff($r, 'اعتُمد طلبك', 'اعتُمد طلبك نهائيًا.' . ($note ? ' ملاحظة: ' . $note : ''));
     elseif ($status === 'rejected') req_mail_staff($r, 'لم يُعتمد طلبك', 'لم يُعتمد طلبك. السبب: ' . $note);
-    else { req_mail_staff($r, 'تقدّم طلبك خطوة', 'وافقت ' . $chain[$i]['label'] . ' على طلبك، وهو الآن عند ' . $chain[$stage]['label'] . '.'); req_mail_approvers($r, $chain[$stage]['role']); }
+    else { req_mail_staff($r, 'تقدّم طلبك خطوة', 'وافقت ' . $chain[$i]['label'] . ' على طلبك، وهو الآن عند ' . $chain[$stage]['label'] . '.'); req_mail_approvers($r, $chain[$stage]); }
     return ['ok' => true, 'request' => req_row($r) + ['canDecide' => req_can_decide($u, $r)]];
 }
 function req_cancel(array $b): array {
