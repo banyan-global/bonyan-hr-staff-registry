@@ -17,14 +17,41 @@ const PERMS = [
     'audit.view'   => 'عرض سجل العمليات',
     'users.manage' => 'إدارة الحسابات والصلاحيات',
     'backup.run'   => 'النسخ الاحتياطي والتصدير الكامل',
+    'self.view'    => 'صفحة المنسوب الخاصة (بياناته فقط)',
 ];
 const ROLE_PERMS = [
     'admin' => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'users.manage', 'backup.run'],
     'hr'    => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view'],
     'ceo'   => ['staff.view', 'finance.view', 'audit.view'],
     'viewer'=> ['staff.view'],
+    'staff' => ['self.view'],
 ];
-const ROLE_NAMES = ['admin' => 'مدير النظام', 'hr' => 'الموارد البشرية', 'ceo' => 'الرئيس التنفيذي', 'viewer' => 'اطلاع فقط'];
+const ROLE_NAMES = ['admin' => 'مدير النظام', 'hr' => 'الموارد البشرية', 'ceo' => 'الرئيس التنفيذي', 'viewer' => 'اطلاع فقط', 'staff' => 'منسوب'];
+
+/* سجل المنسوب صاحب هذا البريد (الرسمي أو الشخصي) */
+function staff_ref_by_email(string $email): ?string {
+    $email = strtolower(trim($email)); if ($email === '') return null;
+    foreach (q('SELECT ref, data FROM staff ORDER BY id DESC')->fetchAll() as $r) {
+        $d = json_decode($r['data'], true) ?: [];
+        foreach (['officialEmail', 'personalEmail'] as $k) if (strtolower(trim((string)($d[$k] ?? ''))) === $email) return $r['ref'];
+    }
+    return null;
+}
+/* حساب المنسوب يُنشأ تلقائيًا أول مرة يطلب فيها رمز الدخول ببريده المسجّل */
+function ensure_staff_user(string $email): ?array {
+    $ref = staff_ref_by_email($email); if (!$ref) return null;
+    $r = staff_get($ref); $name = $r ? staff_name($r) : '';
+    q('INSERT INTO users (email, name, title, role, staff_ref, created_at) VALUES (?,?,?,?,?,?)', [$email, $name, 'منسوب', 'staff', $ref, now()]);
+    audit_log($ref, 'إنشاء حساب منسوب', mask_email($email), 'النظام');
+    return q1('SELECT * FROM users WHERE email=?', [$email]);
+}
+/* سجل المستخدم الحالي في المنسوبين (للمنسوب، أو لأي حساب إداري له سجل ببريده) */
+function my_staff_ref(array $u): ?string {
+    if (!empty($u['staff_ref']) && staff_get((string)$u['staff_ref'])) return (string)$u['staff_ref'];
+    $ref = staff_ref_by_email((string)$u['email']);
+    if ($ref) q('UPDATE users SET staff_ref=? WHERE id=?', [$ref, $u['id']]);
+    return $ref;
+}
 const SESSION_COOKIE = 'bhr_s';
 
 /* الحسابات الأولى تُنشأ من ملف الإعدادات مرة واحدة (حين يكون جدول الحسابات فارغًا) */
@@ -60,6 +87,7 @@ function auth_start(array $b): array {
     if (rate_hit('ip_auth:' . client_ip(), 30, 3600)) throw new HttpError('locked', 429);
     $generic = ['ok' => true, 'sent' => true, 'to' => mask_email($email)];
     $u = q1('SELECT * FROM users WHERE email=?', [$email]);
+    if (!$u) $u = ensure_staff_user($email);
     if (!$u || !$u['active']) { usleep(400000); audit_log('', 'طلب رمز لبريد غير مسجّل', mask_email($email)); return $generic; }
     if ($u['locked_until'] && $u['locked_until'] > now()) throw new HttpError('locked', 429);
     if (rate_hit('mail_code:' . $u['id'], 5, 3600)) throw new HttpError('too_many_codes', 429);
@@ -133,7 +161,7 @@ function require_perm(string $perm): array {
 }
 function has_perm(array $u, string $perm): bool { return in_array($perm, $u['_perms'] ?? [], true); }
 
-function auth_me(): array { $u = current_user(); return ['ok' => true, 'user' => $u ? user_public($u) : null, 'perms' => PERMS, 'roles' => ROLE_NAMES]; }
+function auth_me(): array { $u = current_user(); return ['ok' => true, 'user' => $u ? user_public($u) + ['hasRecord' => (bool)my_staff_ref($u)] : null, 'perms' => PERMS, 'roles' => ROLE_NAMES]; }
 function auth_logout(): array {
     $tok = (string)($_COOKIE[SESSION_COOKIE] ?? '');
     if ($tok !== '') { $u = current_user(); q('DELETE FROM sessions WHERE id=?', [hash('sha256', $tok)]); if ($u) audit_log('', 'خروج', $u['_label'], $u['_label']); }
@@ -144,15 +172,17 @@ function auth_logout(): array {
 /* ============================================================ إدارة الحسابات (مدير النظام) */
 function users_list(): array {
     require_perm('users.manage');
-    $rows = q('SELECT * FROM users ORDER BY id')->fetchAll();
-    return ['ok' => true, 'users' => array_map('user_public', $rows), 'perms' => PERMS, 'roles' => ROLE_NAMES, 'rolePerms' => ROLE_PERMS];
+    $rows = q("SELECT * FROM users WHERE role <> 'staff' ORDER BY id")->fetchAll();
+    $staffN = (int)q1("SELECT COUNT(*) n FROM users WHERE role = 'staff'")['n'];
+    $roles = ROLE_NAMES; unset($roles['staff']); $rp = ROLE_PERMS; unset($rp['staff']);
+    return ['ok' => true, 'users' => array_map('user_public', $rows), 'staffAccounts' => $staffN, 'perms' => PERMS, 'roles' => $roles, 'rolePerms' => $rp];
 }
 function users_save(array $b): array {
     $me = require_perm('users.manage');
     $email = strtolower(trim((string)($b['email'] ?? '')));
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new HttpError('bad_email');
     $role = (string)($b['role'] ?? 'viewer');
-    if (!isset(ROLE_PERMS[$role])) throw new HttpError('bad_role');
+    if (!isset(ROLE_PERMS[$role]) || $role === 'staff') throw new HttpError('bad_role');
     $perms = isset($b['perms']) && is_array($b['perms']) ? array_values(array_intersect(array_keys(PERMS), $b['perms'])) : null;
     $id = (int)($b['id'] ?? 0);
     $active = isset($b['active']) ? (int)(bool)$b['active'] : 1;
@@ -172,7 +202,8 @@ function users_save(array $b): array {
     } else {
         q('INSERT INTO users (email, name, title, role, perms, active, created_at) VALUES (?,?,?,?,?,?,?)',
             [$email, safe_text($b['name'] ?? ''), safe_text($b['title'] ?? ''), $role, $permsJson, $active, now()]);
-        audit_log('', 'إنشاء حساب', $email . ' · ' . ROLE_NAMES[$role], $me['_label']);
+        if (array_key_exists('notify', $b) && $b['notify'] !== null) q('UPDATE users SET notify=? WHERE email=?', [(int)(bool)$b['notify'], $email]);
+        audit_log('', 'إنشاء حساب', $email . ' · ' . ROLE_NAMES[$role] . ($perms === null ? '' : ' · ' . implode('، ', $perms)), $me['_label']);
     }
     return users_list();
 }

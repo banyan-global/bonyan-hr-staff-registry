@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 2;
+const BHR_SCHEMA_VERSION = 3;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -90,6 +90,9 @@ function migrate(PDO $pdo): void {
     /* ٢) من يصله تنبيه «تسجيل جديد» والتنبيه الأسبوعي: فارغ = حسب الدور (مدير النظام والموارد البشرية) */
     $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'notify'")->fetchColumn();
     if (!(int)$has) $pdo->exec('ALTER TABLE users ADD COLUMN notify TINYINT NULL');
+    /* ٣) ربط حساب الدخول بسجل المنسوب (صفحة المنسوب الخاصة) */
+    $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'staff_ref'")->fetchColumn();
+    if (!(int)$has) $pdo->exec('ALTER TABLE users ADD COLUMN staff_ref VARCHAR(40) NULL');
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {

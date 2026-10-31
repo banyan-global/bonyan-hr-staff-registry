@@ -47,7 +47,7 @@
     ar: {
       eyebrow: 'الموارد البشرية · سري', title: 'لوحة بيانات المنسوبين', lockT: 'صفحة خاصة بالموارد البشرية',
       lockD: 'أدخل رمز الدخول لعرض بيانات المنسوبين ومرفقاتهم.', code: 'رمز الدخول', lockE: 'سجّل الدخول ببريدك المعتمد، وسيصلك رمز من ٦ أرقام.', email: 'البريد الإلكتروني', sendCode: 'إرسال رمز الدخول', codeSent: 'أرسلنا رمزًا من ٦ أرقام إلى {to} — صالح ١٠ دقائق.', enter: 'دخول', otherEmail: 'تغيير البريد', resend: 'إعادة إرسال الرمز', badEmail: 'اكتب بريدًا إلكترونيًا صحيحًا.', expiredCode: 'انتهت صلاحية الرمز، اطلب رمزًا جديدًا.', manyCodes: 'طلبت رموزًا كثيرة، حاول بعد ساعة.', sessionEnd: 'انتهت الجلسة، سجّل الدخول من جديد.', logout: 'خروج', forbidden: 'لا تملك صلاحية هذا الإجراء.', show: 'إظهار الرمز', view: 'عرض البيانات',
-      demoHint: 'وضع المعاينة: استخدم الرمز {c} لعرض بيانات تجريبية.', checking: 'جارٍ التحقق…', back: 'العودة إلى النموذج',
+      demoHint: 'وضع المعاينة: استخدم الرمز {c} لعرض بيانات تجريبية.', checking: 'جارٍ التحقق…', back: 'العودة إلى المنصة',
       bad: 'الرمز غير صحيح', locked: 'أُوقفت المحاولات مؤقتًا لكثرة الأخطاء، حاول بعد ١٥ دقيقة.', notSetup: 'لم يُضبط رمز صفحة البيانات بعد. شغّل الدالة setup في Apps Script.', refreshFail: 'تعذّر التحديث، ما زالت البيانات السابقة معروضة.', stDone: 'مكتمل', stUpd: 'محدَّث', stPend: 'بانتظار المرفقات', net: 'تعذّر الاتصال بالخادم، حاول مرة أخرى.', updated: 'آخر تحديث: {d}', demoTag: 'بيانات تجريبية',
       refresh: 'تحديث', csv: 'تصدير CSV', sheet: 'فتح الجدول', lock: 'قفل',
       kTotal: 'إجمالي المنسوبين', kCountries: 'دولة عمل', kNat: 'جنسية', kEnt: 'جهة', kExp: 'وثائق منتهية أو تنتهي خلال ٩٠ يومًا', kPend: 'بانتظار المرفقات',
@@ -63,7 +63,7 @@
     en: {
       eyebrow: 'Human Resources · Confidential', title: 'Staff Data Dashboard', lockT: 'HR-only page',
       lockD: 'Enter the access code to view staff records and documents.', code: 'Access code', lockE: 'Sign in with your approved email; you will receive a 6-digit code.', email: 'Email', sendCode: 'Send sign-in code', codeSent: 'We sent a 6-digit code to {to} — valid for 10 minutes.', enter: 'Sign in', otherEmail: 'Use another email', resend: 'Resend code', badEmail: 'Enter a valid email address.', expiredCode: 'The code has expired; request a new one.', manyCodes: 'Too many codes requested; try again in an hour.', sessionEnd: 'Your session ended; please sign in again.', logout: 'Sign out', forbidden: 'You do not have permission for this action.', show: 'Show code', view: 'View data',
-      demoHint: 'Preview mode: use code {c} to see sample data.', checking: 'Checking…', back: 'Back to the form',
+      demoHint: 'Preview mode: use code {c} to see sample data.', checking: 'Checking…', back: 'Back to the platform',
       bad: 'Incorrect code', locked: 'Too many wrong attempts. Try again in 15 minutes.', notSetup: 'The dashboard code is not set yet. Run setup in Apps Script.', refreshFail: 'Refresh failed; showing the previous data.', stDone: 'Complete', stUpd: 'Updated', stPend: 'Awaiting attachments', net: 'Could not reach the server, please try again.', updated: 'Updated: {d}', demoTag: 'Sample data',
       refresh: 'Refresh', csv: 'Export CSV', sheet: 'Open sheet', lock: 'Lock',
       kTotal: 'Total staff', kCountries: 'Countries', kNat: 'Nationalities', kEnt: 'Entities', kExp: 'Documents expired or expiring within 90 days', kPend: 'Awaiting documents',
@@ -79,7 +79,7 @@
     id: {
       eyebrow: 'SDM · Rahasia', title: 'Dasbor Data Staf', lockT: 'Halaman khusus SDM',
       lockD: 'Masukkan kode akses untuk melihat data staf dan dokumennya.', code: 'Kode akses', lockE: 'Masuk dengan email yang disetujui; Anda akan menerima kode 6 digit.', email: 'Email', sendCode: 'Kirim kode masuk', codeSent: 'Kami mengirim kode 6 digit ke {to} — berlaku 10 menit.', enter: 'Masuk', otherEmail: 'Ganti email', resend: 'Kirim ulang kode', badEmail: 'Masukkan email yang valid.', expiredCode: 'Kode kedaluwarsa; minta kode baru.', manyCodes: 'Terlalu banyak permintaan kode; coba lagi dalam satu jam.', sessionEnd: 'Sesi berakhir; silakan masuk lagi.', logout: 'Keluar', forbidden: 'Anda tidak memiliki izin untuk tindakan ini.', show: 'Tampilkan kode', view: 'Lihat data',
-      demoHint: 'Mode pratinjau: gunakan kode {c} untuk melihat data contoh.', checking: 'Memeriksa…', back: 'Kembali ke formulir',
+      demoHint: 'Mode pratinjau: gunakan kode {c} untuk melihat data contoh.', checking: 'Memeriksa…', back: 'Kembali ke platform',
       bad: 'Kode salah', locked: 'Terlalu banyak percobaan salah. Coba lagi dalam 15 menit.', notSetup: 'Kode dasbor belum diatur. Jalankan setup di Apps Script.', refreshFail: 'Gagal memperbarui; data sebelumnya tetap ditampilkan.', stDone: 'Lengkap', stUpd: 'Diperbarui', stPend: 'Menunggu lampiran', net: 'Tidak dapat terhubung ke server, coba lagi.', updated: 'Diperbarui: {d}', demoTag: 'Data contoh',
       refresh: 'Muat ulang', csv: 'Ekspor CSV', sheet: 'Buka sheet', lock: 'Kunci',
       kTotal: 'Total staf', kCountries: 'Negara', kNat: 'Kewarganegaraan', kEnt: 'Lembaga', kExp: 'Dokumen kedaluwarsa atau habis dalam 90 hari', kPend: 'Menunggu dokumen',
@@ -299,6 +299,9 @@
     return p.then(function (j) {
       S.data = j; S.loading = false; saveCode(code); S.shown = PAGE; if (j.user) S.me = j.user;
       draw();
+      /* فتح ملف منسوب مباشرة من المنصة: admin.html?ref=…&edit=1 */
+      var dl = (location.search.match(/[?&]ref=([^&#]+)/) || [])[1];
+      if (dl && !S.deep) { S.deep = 1; dl = decodeURIComponent(dl); if (/[?&]edit=1/.test(location.search) && can('staff.edit')) S.edit = dl; openDrawer(dl); }
       return true;
     }).catch(function (e) {
       S.loading = false;
@@ -345,7 +348,7 @@
       '<p class="err" role="alert">' + esc(S.err) + '</p>' +
       '<button type="submit" class="btn gold big" id="admGo"' + dis + '><span>' + esc(S.loading ? x('checking') : (codeStep ? x('enter') : x('sendCode'))) + '</span>' + (S.loading ? '<i class="spin" aria-hidden="true"></i>' : '<svg class="arr" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>') + '</button>' +
       (codeStep ? '<p class="note"><button type="button" class="link" data-auth="resend">' + esc(x('resend')) + '</button> · <button type="button" class="link" data-auth="email">' + esc(x('otherEmail')) + '</button></p>' : '') +
-      '<a class="link" href="index.html">' + esc(x('back')) + '</a>' +
+      '<a class="link" href="./">' + esc(x('back')) + '</a>' +
       '</form></div>';
   }
   function authSubmit(resend) {
@@ -375,7 +378,7 @@
       '<p class="err" role="alert">' + esc(S.err) + '</p>' +
       '<button type="submit" class="btn gold big" id="admGo"' + (S.loading ? ' disabled' : '') + '><span>' + esc(S.loading ? x('checking') : x('view')) + '</span>' + (S.loading ? '<i class="spin" aria-hidden="true"></i>' : '<svg class="arr" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>') + '</button>' +
       (A.DEMO ? '<p class="note"><span class="dot" aria-hidden="true"></span>' + esc(x('demoHint', { c: DEMO_CODE }).replace(A.num(DEMO_CODE), DEMO_CODE)) + '</p>' : '') +
-      '<a class="link" href="index.html">' + esc(x('back')) + '</a>' +
+      '<a class="link" href="./">' + esc(x('back')) + '</a>' +
       '</form></div>';
   }
   function stats(rows) {

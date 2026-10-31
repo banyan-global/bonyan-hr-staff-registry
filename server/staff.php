@@ -331,6 +331,8 @@ function admin_message(array $b): array {
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) throw new HttpError('لا يوجد بريد إلكتروني مسجّل لهذا المنسوب');
     $subject = mb_substr(safe_text($b['subject'] ?? ''), 0, 200); $body = mb_substr(safe_text($b['body'] ?? ''), 0, 8000);
     if ($subject === '' || $body === '') throw new HttpError('اكتب العنوان والرسالة');
+    /* {link} ← رابط «تحديث بياناتي» الخاص بالمنسوب (لا يُكشف في الواجهة) */
+    if (str_contains($body, '{link}')) $body = str_replace('{link}', update_url($r['ref'], mail_lang($b['lang'] ?? ($r['data']['lang'] ?? 'ar'))), $body);
     if (rate_hit('msg:' . $u['id'], 200, 86400)) throw new HttpError('too_many', 429);
     $inner = '<div style="font-size:14px;line-height:2;color:#1D2A3B;white-space:pre-wrap;">' . nl2br(esc_html($body)) . '</div>'
         . '<p style="margin:16px 0 4px;font-size:13px;color:#6B778A;">' . esc_html($u['name'] . ($u['title'] ? ' · ' . $u['title'] : '')) . '</p>';
@@ -338,6 +340,24 @@ function admin_message(array $b): array {
     q('INSERT INTO messages (ref, channel, to_addr, subject, body, sent_by, at) VALUES (?,?,?,?,?,?,?)', [$r['ref'], 'mail', $to, $subject, $body, $u['_label'], now()]);
     audit_log($r['ref'], 'رسالة من الموارد البشرية', $u['_label'] . ' · ' . $to . ' · ' . $subject, $u['_label']);
     return ['ok' => true, 'to' => $to];
+}
+
+/* سجل المراسلات مع منسوب */
+function messages_list(array $b): array {
+    require_perm('staff.view');
+    $ref = (string)($b['ref'] ?? '');
+    $rows = q('SELECT channel, to_addr, subject, sent_by, at FROM messages WHERE ref=? ORDER BY id DESC LIMIT 100', [$ref])->fetchAll();
+    return ['ok' => true, 'rows' => $rows];
+}
+/* تسجيل رسالة واتساب فتحها المستخدم من المنصة (الإرسال نفسه يتم من واتساب) */
+function message_wa(array $b): array {
+    $u = require_perm('staff.mail');
+    $r = staff_get((string)($b['ref'] ?? '')); if (!$r) throw new HttpError('الرقم المرجعي غير موجود', 404);
+    $subject = mb_substr(safe_text($b['subject'] ?? ''), 0, 200); $body = mb_substr(safe_text($b['body'] ?? ''), 0, 8000);
+    $to = (string)(($r['data']['whatsapp'] ?? '') ?: ($r['data']['mobile'] ?? ''));
+    q('INSERT INTO messages (ref, channel, to_addr, subject, body, sent_by, at) VALUES (?,?,?,?,?,?,?)', [$r['ref'], 'wa', $to, $subject, $body, $u['_label'], now()]);
+    audit_log($r['ref'], 'رسالة واتساب من الموارد البشرية', $u['_label'] . ' · ' . $subject, $u['_label']);
+    return ['ok' => true];
 }
 
 /* ============================================================ «تحديث بياناتي»
@@ -355,7 +375,27 @@ function row_obj(array $r): array {
     $kids = []; foreach (KIDS as $k => $def) $kids[$k] = array_merge([$def[1]], kid_rows($r, $k));
     return ['rec' => $o, 'kids' => $kids];
 }
+/* صفحة المنسوب الخاصة: بياناته ومرفقاته فقط */
+function me_get(): array {
+    $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
+    $ref = my_staff_ref($u);
+    if (!$ref) return ['ok' => true, 'user' => user_public($u), 'record' => null];
+    $r = staff_get($ref);
+    $byKind = []; foreach (files_of($ref) as $f) if ($f['kind'][0] !== '_') $byKind[$f['kind']][] = $f;
+    $row = display_row($r, $byKind, true);
+    $kids = []; foreach (array_keys(KIDS) as $k) $kids[$k] = $r[$k] ?? [];
+    $card = q1("SELECT id FROM files WHERE ref=? AND kind='_card_jpg' AND archived_at IS NULL ORDER BY created_at DESC LIMIT 1", [$ref]);
+    audit_log($ref, 'فتح صفحتي', $u['name'] ?: $u['email'], $u['name'] ?: $u['email']);
+    return ['ok' => true, 'user' => user_public($u), 'record' => $row, 'kids' => $kids, 'card' => $card ? file_url($card['id']) : '',
+        'cols' => array_values(array_filter(staff_cols(), function ($c) { return $c[0] !== 'folderId' && $c[0] !== 'folder'; }))];
+}
 function self_start(array $b): array {
+    /* المنسوب الداخل بحسابه يفتح صفحة التحديث مباشرة دون رمز إضافي */
+    if (!empty($b['me'])) {
+        $u = current_user(); $mr = $u ? my_staff_ref($u) : null;
+        if (!$mr) throw new HttpError('self_bad', 401);
+        $b = ['ref' => $mr, 'k' => self_sig($mr)];
+    }
     $ref = strtoupper(preg_replace('/\s+/', '', (string)($b['ref'] ?? '')));
     $fk = 'selffail_' . $ref;
     if (rate_count($fk) >= 6 || rate_hit('selfip:' . client_ip(), 40, 3600)) throw new HttpError('locked', 429);

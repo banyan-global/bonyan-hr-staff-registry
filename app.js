@@ -1064,9 +1064,9 @@
     themeLabel();
     $('.lang-toggle').setAttribute('aria-label', t('m.lang') + ': ' + DICT[L]['lang.name']);
     $('#footPrivacy').textContent = t('m.privacy');
-    $('#hrBtnLbl').textContent = ({ ar: 'الموارد البشرية', en: 'HR', id: 'SDM' })[L];
+    $('#hrBtnLbl').textContent = ({ ar: 'دخول المنصة', en: 'Sign in', id: 'Masuk' })[L];
     var ub = $('#updBtn'); if (ub) { $('#updBtnLbl').textContent = ({ ar: 'تحديث بياناتي', en: 'Update my details', id: 'Perbarui data' })[L]; ub.setAttribute('href', 'update.html?lang=' + L); ub.setAttribute('title', ({ ar: 'سبق لك التسجيل؟ حدّث بياناتك برقمك المرجعي', en: 'Already registered? Update your details with your reference number', id: 'Sudah terdaftar? Perbarui data dengan nomor referensi' })[L]); }
-    $('#hrBtn').setAttribute('title', ({ ar: 'لوحة بيانات الموارد البشرية (برمز دخول)', en: 'HR data dashboard (access code required)', id: 'Dasbor data SDM (perlu kode akses)' })[L]);
+    $('#hrBtn').setAttribute('title', ({ ar: 'منصة بنيان للموارد البشرية: ادخل ببريدك المسجّل لترى ملفك وبطاقتك', en: 'Bonyan HR platform: sign in with your registered email to see your file and card', id: 'Platform SDM Bonyan: masuk dengan email terdaftar untuk melihat data dan kartu Anda' })[L]);
     $('#btnHomeLbl').textContent = ({ ar: 'رجوع', en: 'Back', id: 'Kembali' })[L];
     $('#btnHome').setAttribute('aria-label', ({ ar: 'رجوع إلى الصفحة الرئيسية', en: 'Back to the home page', id: 'Kembali ke beranda' })[L]);
   }

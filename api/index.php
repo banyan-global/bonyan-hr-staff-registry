@@ -53,11 +53,11 @@ try {
         /* النموذج العام */
         'submit' => fn() => submit((array)($b['payload'] ?? [])), 'upload' => fn() => upload($b), 'finalize' => fn() => finalize($b), 'cardImg' => fn() => card_img($b),
         /* الدخول والحسابات */
-        'authStart' => fn() => auth_start($b), 'authVerify' => fn() => auth_verify($b), 'authMe' => fn() => auth_me(), 'authLogout' => fn() => auth_logout(),
+        'authStart' => fn() => auth_start($b), 'authVerify' => fn() => auth_verify($b), 'authMe' => fn() => auth_me(), 'authLogout' => fn() => auth_logout(), 'me' => fn() => me_get(),
         'usersList' => fn() => users_list(), 'usersSave' => fn() => users_save($b), 'usersUnlock' => fn() => users_unlock($b), 'sessionsRevoke' => fn() => sessions_revoke($b),
         /* لوحة الموارد البشرية */
         'list' => fn() => admin_list(), 'photo' => fn() => photo($b), 'adminUpdate' => fn() => admin_update($b), 'adminUpload' => fn() => admin_upload($b),
-        'adminMail' => fn() => admin_mail($b), 'message' => fn() => admin_message($b), 'audit' => fn() => audit_list($b),
+        'adminMail' => fn() => admin_mail($b), 'message' => fn() => admin_message($b), 'messageWa' => fn() => message_wa($b), 'messages' => fn() => messages_list($b), 'audit' => fn() => audit_list($b),
         'fileHistory' => fn() => file_history($b), 'fileRestore' => fn() => file_restore($b),
         'backups' => fn() => backups_list(), 'backupNow' => fn() => backup_now(), 'health' => fn() => health(),
         /* تحديث المنسوب لبياناته */

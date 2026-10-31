@@ -59,7 +59,7 @@ function file_serve(): void {
     $f = q1('SELECT * FROM files WHERE id=?', [$id]);
     if (!$f) throw new HttpError('not_found', 404);
     $u = current_user();
-    $allowed = $u && has_perm($u, 'staff.view');
+    $allowed = $u && (has_perm($u, 'staff.view') || (has_perm($u, 'self.view') && my_staff_ref($u) === $f['ref']));
     if (!$allowed) {
         $self = (string)($_GET['t'] ?? '');
         $allowed = $self !== '' && hash_equals((string)kv_get('self_' . $f['ref']), $self);

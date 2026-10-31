@@ -14,7 +14,7 @@
 
   var TX = {
     ar: {
-      eyebrow: 'الموارد البشرية · سجل المنسوبين', title: 'تحديث بياناتي', back: 'العودة إلى النموذج',
+      eyebrow: 'الموارد البشرية · سجل المنسوبين', title: 'تحديث بياناتي', back: 'العودة إلى المنصة',
       vT: 'تحديث بياناتك المسجّلة', vD: 'اكتب رقمك المرجعي الموجود في رسالة التأكيد أو على بطاقتك، ثم اختر القسم الذي تريد تعديله.',
       vDk: 'فتحت الصفحة من رابط رسالتك الخاص. اكتب رقمك المرجعي للمتابعة.',
       ref: 'الرقم المرجعي', refPh: 'BNY-HR-SA-2026-0001', contact: 'البريد الإلكتروني أو رقم الجوال المسجّل', contactH: 'للتحقق من هويتك: اكتب البريد أو الجوال الذي سجّلت به.',
@@ -26,10 +26,10 @@
       save: 'حفظ التعديلات', saving: 'جارٍ الحفظ…', uploading: 'رفع الملفات {i} من {n}…', card: 'تجديد البطاقة وإرسال التأكيد…', none: 'لم تغيّر شيئًا بعد.', big: 'ملف أكبر من ١٠ ميغابايت:',
       changes: '{n} تعديل', fail: 'تعذّر الحفظ', doneT: 'تم تحديث بياناتك بنجاح', doneD: 'حُفظت تعديلاتك في سجل المنسوبين.', mailed: 'أرسلنا لك رسالة تأكيد على بريدك المسجّل.',
       otpT: 'أدخل رمز التحقق', otpD: 'أرسلنا رمزًا من ٦ أرقام إلى بريدك المسجّل {to} — صالح ١٠ دقائق.', otp: 'رمز التحقق', otpBad: 'الرمز غير صحيح أو انتهت صلاحيته.', otpBack: 'تغيير البيانات', otpGo: 'تحقق وافتح بياناتي',
-      again: 'تعديل قسم آخر', home: 'العودة إلى النموذج', dl: 'تنزيل البطاقة', select: '— اختر —', yourCard: 'بطاقتك بعد التحديث', ltrNote: ''
+      again: 'تعديل قسم آخر', home: 'العودة إلى المنصة', dl: 'تنزيل البطاقة', select: '— اختر —', yourCard: 'بطاقتك بعد التحديث', ltrNote: ''
     },
     en: {
-      eyebrow: 'Human Resources · Staff Registry', title: 'Update my details', back: 'Back to the form',
+      eyebrow: 'Human Resources · Staff Registry', title: 'Update my details', back: 'Back to the platform',
       vT: 'Update your registered details', vD: 'Enter the reference number from your confirmation email or your card, then choose the section you want to change.',
       vDk: 'You opened this page from your personal email link. Enter your reference number to continue.',
       ref: 'Reference number', refPh: 'BNY-HR-SA-2026-0001', contact: 'Registered email or mobile number', contactH: 'To verify it is you: enter the email or mobile you registered with.',
@@ -41,10 +41,10 @@
       save: 'Save changes', saving: 'Saving…', uploading: 'Uploading files {i} of {n}…', card: 'Renewing your card and sending the confirmation…', none: 'You have not changed anything yet.', big: 'File larger than 10 MB:',
       changes: '{n} change(s)', fail: 'Could not save', doneT: 'Your details have been updated', doneD: 'Your changes are saved in the staff registry.', mailed: 'We have sent a confirmation to your registered email.',
       otpT: 'Enter the verification code', otpD: 'We sent a 6-digit code to your registered email {to} — valid for 10 minutes.', otp: 'Verification code', otpBad: 'The code is wrong or has expired.', otpBack: 'Change details', otpGo: 'Verify and open my details',
-      again: 'Edit another section', home: 'Back to the form', dl: 'Download card', select: '— Select —', yourCard: 'Your card after the update'
+      again: 'Edit another section', home: 'Back to the platform', dl: 'Download card', select: '— Select —', yourCard: 'Your card after the update'
     },
     id: {
-      eyebrow: 'SDM · Registri Staf', title: 'Perbarui data saya', back: 'Kembali ke formulir',
+      eyebrow: 'SDM · Registri Staf', title: 'Perbarui data saya', back: 'Kembali ke platform',
       vT: 'Perbarui data Anda yang terdaftar', vD: 'Masukkan nomor referensi dari email konfirmasi atau kartu Anda, lalu pilih bagian yang ingin diubah.',
       vDk: 'Anda membuka halaman ini dari tautan email pribadi Anda. Masukkan nomor referensi untuk melanjutkan.',
       ref: 'Nomor referensi', refPh: 'BNY-HR-SA-2026-0001', contact: 'Email atau nomor ponsel terdaftar', contactH: 'Untuk verifikasi: masukkan email atau ponsel yang Anda daftarkan.',
@@ -56,7 +56,7 @@
       save: 'Simpan perubahan', saving: 'Menyimpan…', uploading: 'Mengunggah berkas {i} dari {n}…', card: 'Memperbarui kartu dan mengirim konfirmasi…', none: 'Anda belum mengubah apa pun.', big: 'Berkas lebih dari 10 MB:',
       changes: '{n} perubahan', fail: 'Gagal menyimpan', doneT: 'Data Anda telah diperbarui', doneD: 'Perubahan Anda tersimpan di registri staf.', mailed: 'Kami telah mengirim konfirmasi ke email terdaftar Anda.',
       otpT: 'Masukkan kode verifikasi', otpD: 'Kami mengirim kode 6 digit ke email terdaftar Anda {to} — berlaku 10 menit.', otp: 'Kode verifikasi', otpBad: 'Kode salah atau sudah kedaluwarsa.', otpBack: 'Ubah data', otpGo: 'Verifikasi dan buka data saya',
-      again: 'Ubah bagian lain', home: 'Kembali ke formulir', dl: 'Unduh kartu', select: '— Pilih —', yourCard: 'Kartu Anda setelah pembaruan'
+      again: 'Ubah bagian lain', home: 'Kembali ke platform', dl: 'Unduh kartu', select: '— Pilih —', yourCard: 'Kartu Anda setelah pembaruan'
     }
   };
   function L() { return TX[A.state.lang] ? A.state.lang : 'ar'; }
@@ -84,7 +84,7 @@
   var LTR = /Email$|^mobile$|^whatsapp$|Phone$|^iban$|^swift$|^accountNo$|No$|^npwp$|^bpjs|^kraPin$|^tin$/;
   var EXTRA = { topDegree: { ar: 'أعلى مؤهل', en: 'Highest qualification', id: 'Kualifikasi tertinggi' }, contractStatus: { ar: 'عقد العمل', en: 'Employment contract', id: 'Kontrak kerja' }, contractNo: { ar: 'رقم العقد', en: 'Contract number', id: 'Nomor kontrak' }, country: { ar: 'الدولة', en: 'Country', id: 'Negara' } };
 
-  var U = { view: 'verify', k: Q('k'), ref: '', token: '', rec: null, kids: null, cols: [], photo: '', open: {}, files: {}, err: '', busy: false, mailed: false, newPhoto: '' };
+  var U = { view: 'verify', me: Q('me') === '1', k: Q('k'), ref: '', token: '', rec: null, kids: null, cols: [], photo: '', open: {}, files: {}, err: '', busy: false, mailed: false, newPhoto: '' };
   var HEAD = {};
 
   function label(k) {
@@ -220,7 +220,7 @@
   function doneHTML() {
     return '<div class="upd-done rise"><span class="upd-ic ok" aria-hidden="true">✓</span><h1>' + esc(x('doneT')) + '</h1><p class="upd-lead">' + esc(x('doneD')) + (U.mailed ? ' ' + esc(x('mailed')) : '') + '</p>' +
       '<p class="upd-cap">' + esc(x('yourCard')) + '</p><div class="upd-cardbox"><div class="idcard-wrap" id="updCardDone"></div></div>' +
-      '<div class="upd-actions"><button type="button" class="btn gold" data-act="again">' + esc(x('again')) + '</button><button type="button" class="btn ghost" data-act="dl">' + esc(x('dl')) + '</button><a class="btn ghost" href="index.html">' + esc(x('home')) + '</a></div></div>';
+      '<div class="upd-actions"><button type="button" class="btn gold" data-act="again">' + esc(x('again')) + '</button><button type="button" class="btn ghost" data-act="dl">' + esc(x('dl')) + '</button><a class="btn ghost" href="./">' + esc(x('home')) + '</a></div></div>';
   }
 
   /* ---------------------------------------------------------- جمع التعديلات */
@@ -269,7 +269,7 @@
   function errMsg(e) {
     var m = (e && e.message) || '';
     if (/otp_bad/.test(m)) return x('otpBad');
-    if (/self_bad/.test(m)) return U.k ? x('badK') : x('bad');
+    if (/self_bad/.test(m)) { U.me = false; return U.k ? x('badK') : x('bad'); }
     if (/locked/.test(m)) return x('locked');
     if (/self_expired/.test(m)) return x('expired');
     if (/Failed to fetch|NetworkError|HTTP|Load failed/.test(m) || !m) return x('net');
@@ -277,7 +277,7 @@
   }
   function start(ref, contact, otp) {
     U.busy = true; U.err = ''; draw();
-    var p = A.DEMO ? demoStart(ref) : A.api({ action: 'selfStart', ref: ref, k: U.k || undefined, contact: otp ? undefined : (contact || undefined), otp: otp || undefined, lang: A.state.lang });
+    var p = A.DEMO ? demoStart(ref) : A.api({ action: 'selfStart', me: U.me ? 1 : undefined, ref: ref, k: U.k || undefined, contact: otp ? undefined : (contact || undefined), otp: otp || undefined, lang: A.state.lang });
     p.then(function (j) {
       if (j.otp) { U.busy = false; U.otpTo = j.to || '…'; draw(); var c = $('#updCode'); if (c) c.focus(); return; }
       U.otpTo = '';
@@ -382,5 +382,7 @@
     if (e.target.matches && e.target.matches('select[data-ek], select.ed-c')) { e.target.classList.toggle('dirty', e.target.value !== (e.target.getAttribute('data-orig') || '')); updateCount(); }
   });
   window.addEventListener('scroll', function () { var t = $('#top'); if (t) t.classList.toggle('scrolled', window.scrollY > 8); }, { passive: true });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', draw); else draw();
+  /* الداخل بحسابه من المنصة (update.html?me=1): يفتح سجله مباشرة دون رمز إضافي */
+  function boot() { draw(); if (U.me && !A.DEMO) start(''); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

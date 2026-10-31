@@ -1466,3 +1466,6 @@ html[dir="ltr"] .dp-s { background-position: right 10px center; }
 .sys-users .sw[aria-checked="true"] { background: linear-gradient(140deg, #34bf97, #0d6a58); border-color: transparent; }
 .sys-users .sw[aria-checked="true"]::after { right: 22px; }
 .sys-users .sw:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* وضوح التركيز عند التنقل بلوحة المفاتيح في كل الصفحات */
+.btn:focus-visible, .hdr-btn:focus-visible, a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }

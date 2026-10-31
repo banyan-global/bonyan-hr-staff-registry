@@ -217,7 +217,7 @@ function notify_hr(array $row): void {
     $line = function ($k, $v) { return $v !== '' ? '<tr><td style="padding:5px 0;color:#6B778A;font-size:13px;width:110px;">' . esc_html($k) . '</td><td style="padding:5px 0;color:#1D2A3B;font-size:14px;font-weight:700;">' . esc_html($v) . '</td></tr>' : ''; };
     $inner = '<table style="border-collapse:collapse;width:100%;">' . $line('الرقم المرجعي', $row['ref']) . $line('الجهة', $g('entity')) . $line('المسمى', $g('jobTitle'))
         . $line('دولة العمل', $g('workCountry')) . $line('الجنسية', $g('nationality')) . $line('البريد', $g('officialEmail') ?: $g('personalEmail')) . '</table>'
-        . '<div style="margin:14px 0 6px;"><a href="' . esc_html(cfg('site_url') . 'admin.html') . '" style="display:inline-block;padding:9px 18px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13px;text-decoration:none;">فتح لوحة الموارد البشرية</a></div>';
+        . '<div style="margin:14px 0 6px;"><a href="' . esc_html(cfg('site_url')) . '" style="display:inline-block;padding:9px 18px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13px;text-decoration:none;">فتح منصة الموارد البشرية</a></div>';
     foreach ($list as $to) {
         try { send_mail($to, 'تسجيل جديد: ' . $name . ' · ' . $row['ref'], mail_frame('Bonyan HR · تسجيل جديد', $name, $inner), 'تسجيل جديد: ' . $name . ' · ' . $row['ref'], 'Bonyan HR', logo_inline()); }
         catch (Throwable $e) { audit_log($row['ref'], 'تعذّر إرسال التنبيه', mask_email($to) . ' · ' . $e->getMessage()); }
