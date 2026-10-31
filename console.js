@@ -722,7 +722,7 @@ function topHTML() {
   var avt = role === 'staff' && ME ? (ME.photo ? '<span class="av ph"><img src="' + esc(ME.photo) + '" alt=""></span>' : '<span class="av" style="background:linear-gradient(140deg,' + ME.ent.c + 'cc,' + ME.ent.c + ');color:#fff">' + esc(u.ini) + '</span>') : '<span class="av">' + esc(u.ini) + '</span>';
   return '<header class="top"><button class="ib menu" id="menuBtn" aria-label="القائمة">' + ic('menu') + '</button><div class="crumb">' + (t[1] ? '<span class="parent">' + t[0] + '</span>' + ic('back') + '<b>' + t[1] + '</b>' : '<b>' + t[0] + '</b>') + '</div><span class="sp"></span>' +
     (role === 'staff' ? '' : '<div class="find">' + ic('search') + '<input id="gq" placeholder="ابحث بالاسم أو الرقم المرجعي أو الجوال" autocomplete="off" aria-label="بحث في المنسوبين"><kbd>/</kbd><div class="drop" id="hits" hidden></div></div>') +
-    (role === 'staff' ? '<a class="btn goldb topcta" href="update.html?me=1">' + ic('edit') + '<span>تحديث بياناتي</span></a>' : '<div class="qawrap"><button type="button" class="btn goldb topcta" id="qaBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="qaMenu">' + ic('bolt') + '<span>إجراء سريع</span>' + ic('chev') + '</button>' + qaMenuHTML() + '</div>') +
+    (role === 'staff' ? '<a class="btn goldb topcta" href="update.html?me=1">' + ic('edit') + '<span>تحديث بياناتي</span></a>' : '') +
     '<button class="ib" id="theme" aria-label="تبديل الوضع الليلي">' + ic('moon') + '</button>' +
     '<div class="bellwrap"><button class="ib" id="bell" aria-label="التنبيهات" aria-expanded="false">' + ic('bell') + (N.length ? '<span class="n">' + N.length + '</span>' : '') + '</button><div class="drop" id="ntf" hidden>' + ntfHTML(N) + '</div></div>' +
     '<div class="me">' + avt + '<div><b>' + esc(u.name) + '</b><small>' + esc(u.role) + '</small></div><button class="ib out" id="logout" aria-label="تسجيل الخروج" title="تسجيل الخروج">' + ic('out') + '</button></div></header>';
@@ -1346,7 +1346,7 @@ function bnavHTML() {
   var L = role === 'staff' ? [['#me', 'صفحتي', 'grid', 'me'], ['#myreq', 'طلباتي', 'doc', 'myreq'], ['#myfile', 'ملفي', 'card', 'myfile'], ['update.html?me=1', 'تحديث', 'edit', '']]
     : [['#home', 'الرئيسية', 'grid', 'home'], ['#people', 'المنسوبون', 'users', 'people'], ['#reqs', 'الطلبات', 'stamp', 'reqs']].concat(can('sys') ? [['#system', 'النظام', 'shield', 'system']] : []);
   return '<nav class="bnav" aria-label="التنقل السريع">' + L.map(function (x) { return '<a href="' + x[0] + '"' + (x[3] && view === x[3] ? ' aria-current="page"' : '') + '>' + ic(x[2]) + '<span>' + x[1] + '</span></a>'; }).join('') +
-    (role === 'staff' ? '' : '<button type="button" class="bn-qa" data-bnqa="1" aria-label="إجراءات سريعة">' + ic('plus') + '<span>إجراء</span></button>') + '</nav>';
+    '</nav>';
 }
 
 /* ---------- staff (admin accounts) & permissions editor ---------- */
