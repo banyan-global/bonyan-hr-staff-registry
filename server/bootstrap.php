@@ -89,10 +89,10 @@ function migrate(PDO $pdo): void {
     if ((int)$v < 1) migrate_v1($pdo);
     /* ٢) من يصله تنبيه «تسجيل جديد» والتنبيه الأسبوعي: فارغ = حسب الدور (مدير النظام والموارد البشرية) */
     $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'notify'")->fetchColumn();
-    if (!(int)$has) $pdo->exec('ALTER TABLE users ADD COLUMN notify TINYINT NULL');
+    if (!(int)$has) { try { $pdo->exec('ALTER TABLE users ADD COLUMN notify TINYINT NULL'); } catch (PDOException $e) { if (stripos($e->getMessage(), 'Duplicate column') === false) throw $e; } } /* طلبان متزامنان قد يضيفان العمود معًا */
     /* ٣) ربط حساب الدخول بسجل المنسوب (صفحة المنسوب الخاصة) */
     $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'staff_ref'")->fetchColumn();
-    if (!(int)$has) $pdo->exec('ALTER TABLE users ADD COLUMN staff_ref VARCHAR(40) NULL');
+    if (!(int)$has) { try { $pdo->exec('ALTER TABLE users ADD COLUMN staff_ref VARCHAR(40) NULL'); } catch (PDOException $e) { if (stripos($e->getMessage(), 'Duplicate column') === false) throw $e; } } /* طلبان متزامنان قد يضيفان العمود معًا */
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {
