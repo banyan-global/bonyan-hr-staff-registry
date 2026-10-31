@@ -188,7 +188,7 @@ ar: {
   'm.ref': 'الرقم المرجعي',
   'm.updated': 'وُجد سجل سابق برقم الجواز نفسه، فحُدّث بدل إنشاء سجل جديد.',
   'm.demo': 'وضع المعاينة: لم تُرسل أي بيانات لأن رابط الخادم لم يُضبط بعد.',
-  'm.privacy': 'تُحفظ بياناتك في أنظمة الموارد البشرية الداخلية، ولا يطّلع عليها إلا المختصون.',
+  'm.privacy': 'تُرسل بياناتك عبر اتصال مشفّر وتُحفظ على خوادم مجموعة بنيان الخاصة، ولا يطّلع عليها إلا المخوّلون في الموارد البشرية، ويُسجَّل كل اطلاع أو تعديل. الأرقام الحساسة (الجواز والهوية والحساب البنكي والراتب) لا تُحفظ في مسودة جهازك.',
   'm.lang': 'اللغة',
   'langs.list': 'العربية|الإنجليزية|الفرنسية|الإندونيسية|الملايوية|السواحيلية|الأمهرية|الأورومية|الصومالية|الهوسا|الأردية|البنغالية|الهندية|الفارسية|التركية|الصينية|الإسبانية|البرتغالية|الروسية|الألمانية'
 },
@@ -376,7 +376,7 @@ en: {
   'm.ref': 'Reference number',
   'm.updated': 'A record with the same passport number existed, so it was updated instead of duplicated.',
   'm.demo': 'Preview mode: nothing was sent because the server link is not set yet.',
-  'm.privacy': 'Your details are stored in internal HR systems and only HR staff can see them.',
+  'm.privacy': 'Your details travel over an encrypted connection and are stored on Bonyan Group’s own servers; only authorised HR staff can see them, and every view or change is logged. Sensitive numbers (passport, ID, bank account, salary) are never kept in your device’s draft.',
   'm.lang': 'Language',
   'langs.list': 'Arabic|English|French|Indonesian|Malay|Swahili|Amharic|Oromo|Somali|Hausa|Urdu|Bengali|Hindi|Persian|Turkish|Chinese|Spanish|Portuguese|Russian|German'
 },
@@ -564,7 +564,7 @@ id: {
   'm.ref': 'Nomor referensi',
   'm.updated': 'Data dengan nomor paspor yang sama sudah ada, jadi data tersebut diperbarui.',
   'm.demo': 'Mode pratinjau: tidak ada data terkirim karena tautan server belum diatur.',
-  'm.privacy': 'Data Anda disimpan di sistem internal SDM dan hanya dapat dilihat oleh petugas SDM.',
+  'm.privacy': 'Data Anda dikirim melalui koneksi terenkripsi dan disimpan di server milik Bonyan Group; hanya petugas SDM berwenang yang dapat melihatnya, dan setiap akses atau perubahan dicatat. Nomor sensitif (paspor, ID, rekening bank, gaji) tidak disimpan di draf perangkat Anda.',
   'm.lang': 'Bahasa',
   'langs.list': 'Arab|Inggris|Prancis|Indonesia|Melayu|Swahili|Amhara|Oromo|Somali|Hausa|Urdu|Bengali|Hindi|Persia|Turki|Mandarin|Spanyol|Portugis|Rusia|Jerman'
 }

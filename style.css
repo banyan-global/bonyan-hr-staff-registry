@@ -874,6 +874,7 @@ body.no-scroll { overflow: hidden; }
 :root[data-theme="light"] .sec, :root[data-theme="light"] .rv-sec, :root[data-theme="light"] .dr-sec { background: #f7f9fc; }
 :root[data-theme="light"] .stepper { background: #ffffff; box-shadow: 0 10px 26px rgba(22, 41, 74, .07); }
 :root[data-theme="light"] .blocks i { background: rgba(22, 41, 74, .1); }
+:root[data-theme="light"] .stepper .cur button { color: var(--gold-deep); }
 :root[data-theme="light"] .blocks i.cur { background: #16294a; box-shadow: 0 0 12px rgba(22, 41, 74, .3); }
 :root[data-theme="light"] .blocks i.done { background: linear-gradient(90deg, #c9a86a, #e6cf9a); }
 :root[data-theme="light"] .inp { border-color: rgba(22, 41, 74, .16); }

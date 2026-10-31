@@ -1,0 +1,39 @@
+# ============================================================
+#  Bonyan HR · hr.bonyanglobal.com — إعدادات الخادم (LiteSpeed/Apache)
+# ============================================================
+Options -Indexes
+DirectoryIndex index.html index.php
+ServerSignature Off
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # ١) HTTPS دائمًا
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+  # ٢) منع الوصول إلى ملفات الخادم والمصدر
+  RewriteRule ^(server|legacy|\.git|\.github|tests?)(/|$) - [F,L]
+</IfModule>
+
+<FilesMatch "(^\.|\.(gs|md|sql|log|bak|gz|zip|sh|lock|yml|yaml|ini|b64)$|^config\.(sample\.)?php$|^composer\.)">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-Frame-Options "DENY"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://flagcdn.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  <FilesMatch "\.(js|css|png|jpg|jpeg|webp|svg|woff2)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>

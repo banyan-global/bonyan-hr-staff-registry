@@ -25,6 +25,7 @@
       uploaded: 'مرفوع', noFile: 'لم يُرفع', replace: 'استبدال الملف', upload: 'رفع ملف', picked: 'سيُرفع:', addRow: 'إضافة صف', delRow: 'حذف الصف',
       save: 'حفظ التعديلات', saving: 'جارٍ الحفظ…', uploading: 'رفع الملفات {i} من {n}…', card: 'تجديد البطاقة وإرسال التأكيد…', none: 'لم تغيّر شيئًا بعد.', big: 'ملف أكبر من ١٠ ميغابايت:',
       changes: '{n} تعديل', fail: 'تعذّر الحفظ', doneT: 'تم تحديث بياناتك بنجاح', doneD: 'حُفظت تعديلاتك في سجل المنسوبين.', mailed: 'أرسلنا لك رسالة تأكيد على بريدك المسجّل.',
+      otpT: 'أدخل رمز التحقق', otpD: 'أرسلنا رمزًا من ٦ أرقام إلى بريدك المسجّل {to} — صالح ١٠ دقائق.', otp: 'رمز التحقق', otpBad: 'الرمز غير صحيح أو انتهت صلاحيته.', otpBack: 'تغيير البيانات', otpGo: 'تحقق وافتح بياناتي',
       again: 'تعديل قسم آخر', home: 'العودة إلى النموذج', dl: 'تنزيل البطاقة', select: '— اختر —', yourCard: 'بطاقتك بعد التحديث', ltrNote: ''
     },
     en: {
@@ -39,6 +40,7 @@
       uploaded: 'Uploaded', noFile: 'Not uploaded', replace: 'Replace file', upload: 'Upload file', picked: 'Will upload:', addRow: 'Add row', delRow: 'Delete row',
       save: 'Save changes', saving: 'Saving…', uploading: 'Uploading files {i} of {n}…', card: 'Renewing your card and sending the confirmation…', none: 'You have not changed anything yet.', big: 'File larger than 10 MB:',
       changes: '{n} change(s)', fail: 'Could not save', doneT: 'Your details have been updated', doneD: 'Your changes are saved in the staff registry.', mailed: 'We have sent a confirmation to your registered email.',
+      otpT: 'Enter the verification code', otpD: 'We sent a 6-digit code to your registered email {to} — valid for 10 minutes.', otp: 'Verification code', otpBad: 'The code is wrong or has expired.', otpBack: 'Change details', otpGo: 'Verify and open my details',
       again: 'Edit another section', home: 'Back to the form', dl: 'Download card', select: '— Select —', yourCard: 'Your card after the update'
     },
     id: {
@@ -53,6 +55,7 @@
       uploaded: 'Terunggah', noFile: 'Belum diunggah', replace: 'Ganti berkas', upload: 'Unggah berkas', picked: 'Akan diunggah:', addRow: 'Tambah baris', delRow: 'Hapus baris',
       save: 'Simpan perubahan', saving: 'Menyimpan…', uploading: 'Mengunggah berkas {i} dari {n}…', card: 'Memperbarui kartu dan mengirim konfirmasi…', none: 'Anda belum mengubah apa pun.', big: 'Berkas lebih dari 10 MB:',
       changes: '{n} perubahan', fail: 'Gagal menyimpan', doneT: 'Data Anda telah diperbarui', doneD: 'Perubahan Anda tersimpan di registri staf.', mailed: 'Kami telah mengirim konfirmasi ke email terdaftar Anda.',
+      otpT: 'Masukkan kode verifikasi', otpD: 'Kami mengirim kode 6 digit ke email terdaftar Anda {to} — berlaku 10 menit.', otp: 'Kode verifikasi', otpBad: 'Kode salah atau sudah kedaluwarsa.', otpBack: 'Ubah data', otpGo: 'Verifikasi dan buka data saya',
       again: 'Ubah bagian lain', home: 'Kembali ke formulir', dl: 'Unduh kartu', select: '— Pilih —', yourCard: 'Kartu Anda setelah pembaruan'
     }
   };
@@ -129,7 +132,19 @@
   }
   function recForCard() { var r = {}; Object.keys(U.rec).forEach(function (k) { r[k] = U.rec[k]; }); r.lang = L(); return r; }
 
+  function otpHTML() {
+    return '<div class="upd-verify rise"><div class="upd-card">' +
+      '<span class="upd-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6"/></svg></span>' +
+      '<h1>' + esc(x('otpT')) + '</h1><p class="upd-lead">' + esc(x('otpD', { to: U.otpTo || '' })) + '</p>' +
+      '<form id="updOtp" novalidate>' +
+        '<label class="upd-f"><span>' + esc(x('otp')) + '</span><input class="inp mono" id="updCode" dir="ltr" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••"></label>' +
+        (U.err ? '<p class="upd-err" role="alert">' + esc(U.err) + '</p>' : '') +
+        '<button type="submit" class="btn gold big"' + (U.busy ? ' disabled' : '') + '>' + esc(U.busy ? x('checking') : x('otpGo')) + '</button>' +
+        '<button type="button" class="link" data-otp-back>' + esc(x('otpBack')) + '</button>' +
+      '</form></div></div>';
+  }
   function verifyHTML() {
+    if (U.otpTo) return otpHTML();
     return '<div class="upd-verify rise"><div class="upd-card">' +
       '<span class="upd-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg></span>' +
       '<h1>' + esc(x('vT')) + '</h1><p class="upd-lead">' + esc(U.k ? x('vDk') : x('vD')) + '</p>' +
@@ -253,16 +268,19 @@
   /* ---------------------------------------------------------- الخادم */
   function errMsg(e) {
     var m = (e && e.message) || '';
+    if (/otp_bad/.test(m)) return x('otpBad');
     if (/self_bad/.test(m)) return U.k ? x('badK') : x('bad');
     if (/locked/.test(m)) return x('locked');
     if (/self_expired/.test(m)) return x('expired');
     if (/Failed to fetch|NetworkError|HTTP|Load failed/.test(m) || !m) return x('net');
     return m;
   }
-  function start(ref, contact) {
+  function start(ref, contact, otp) {
     U.busy = true; U.err = ''; draw();
-    var p = A.DEMO ? demoStart(ref) : A.api({ action: 'selfStart', ref: ref, k: U.k || undefined, contact: contact || undefined });
+    var p = A.DEMO ? demoStart(ref) : A.api({ action: 'selfStart', ref: ref, k: U.k || undefined, contact: otp ? undefined : (contact || undefined), otp: otp || undefined, lang: A.state.lang });
     p.then(function (j) {
+      if (j.otp) { U.busy = false; U.otpTo = j.to || '…'; draw(); var c = $('#updCode'); if (c) c.focus(); return; }
+      U.otpTo = '';
       U.busy = false; U.ref = j.ref; U.token = j.token; U.rec = j.rec; U.kids = j.kids || {}; U.cols = j.cols || []; U.photo = j.photo || '';
       U.cols.forEach(function (c) { HEAD[c[0]] = c[1]; });
       U.open = {}; U.files = {}; pending = {}; U.view = 'edit'; draw(); window.scrollTo(0, 0);
@@ -319,6 +337,12 @@
 
   /* ---------------------------------------------------------- الأحداث */
   document.addEventListener('submit', function (e) {
+    if (e.target.id === 'updOtp') {
+      e.preventDefault();
+      var code = ($('#updCode').value || '').replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); }).replace(/\D/g, '');
+      if (code.length !== 6) { U.err = x('otpBad'); draw(); return; }
+      start(U.ref, '', code); return;
+    }
     if (e.target.id !== 'updForm') return;
     e.preventDefault();
     var ref = ($('#updRef').value || '').trim().toUpperCase().replace(/\s+/g, ''), ct = $('#updContact') ? ($('#updContact').value || '').trim() : '';
@@ -328,6 +352,7 @@
   });
   document.addEventListener('click', function (e) {
     var tg = e.target, lb = tg.closest('#updLang [data-lang]');
+    if (tg.closest('[data-otp-back]')) { U.otpTo = ''; U.err = ''; draw(); return; }
     if (lb) { if (U.view === 'edit') readOpen(); A.state.lang = lb.getAttribute('data-lang'); try { localStorage.setItem('bonyan-hr-registry-draft-v1-lang', A.state.lang); } catch (er) { } if (U.view === 'edit') redrawEdit(); else draw(); return; }
     if (tg.closest('#themeBtn')) { var r = document.documentElement, n = r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; r.setAttribute('data-theme', n); try { localStorage.setItem('bonyan-hr-theme', n); } catch (er) { } return; }
     var tgl = tg.closest('[data-toggle]');

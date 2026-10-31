@@ -1,0 +1,4 @@
+# الخادم يضع سياسة أمان المحتوى المناسبة لكل رد (خصوصًا عرض ملفات PDF)
+<IfModule mod_headers.c>
+  Header always unset Content-Security-Policy
+</IfModule>

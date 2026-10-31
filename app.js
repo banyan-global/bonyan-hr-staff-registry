@@ -2169,9 +2169,12 @@
   }
 
   /* ---------------------------------------------------------- المسودة */
+  /* الأرقام الحساسة لا تُحفظ في مسودة الجهاز (قد يكون جهازًا مشتركًا): الجواز والهويات والأرقام الضريبية والتأمينية والبنكية والراتب */
+  var NO_DRAFT = ['passportNo', 'nationalIdNo', 'permitNo', 'workPermitNo', 'insuranceNo', 'npwp', 'bpjsTk', 'bpjsKes', 'kraPin', 'nssfNo', 'shaNo', 'tin', 'iban', 'accountNo', 'swift', 'salary'];
   var saveDraft = debounce(function () {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify({ data: state.data, step: state.step, maxStep: state.maxStep, checked: state.checked, auto: state.autoName || {}, at: Date.now() }));
+      var safe = {}; Object.keys(state.data).forEach(function (k) { if (NO_DRAFT.indexOf(k) < 0) safe[k] = state.data[k]; });
+      localStorage.setItem(LS_KEY, JSON.stringify({ data: safe, step: state.step, maxStep: state.maxStep, checked: state.checked, auto: state.autoName || {}, at: Date.now() }));
     } catch (e) { }
   }, 400);
   function loadDraft() {

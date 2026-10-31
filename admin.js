@@ -46,7 +46,7 @@
   var TX = {
     ar: {
       eyebrow: 'الموارد البشرية · سري', title: 'لوحة بيانات المنسوبين', lockT: 'صفحة خاصة بالموارد البشرية',
-      lockD: 'أدخل رمز الدخول لعرض بيانات المنسوبين ومرفقاتهم.', code: 'رمز الدخول', show: 'إظهار الرمز', view: 'عرض البيانات',
+      lockD: 'أدخل رمز الدخول لعرض بيانات المنسوبين ومرفقاتهم.', code: 'رمز الدخول', lockE: 'سجّل الدخول ببريدك المعتمد، وسيصلك رمز من ٦ أرقام.', email: 'البريد الإلكتروني', sendCode: 'إرسال رمز الدخول', codeSent: 'أرسلنا رمزًا من ٦ أرقام إلى {to} — صالح ١٠ دقائق.', enter: 'دخول', otherEmail: 'تغيير البريد', resend: 'إعادة إرسال الرمز', badEmail: 'اكتب بريدًا إلكترونيًا صحيحًا.', expiredCode: 'انتهت صلاحية الرمز، اطلب رمزًا جديدًا.', manyCodes: 'طلبت رموزًا كثيرة، حاول بعد ساعة.', sessionEnd: 'انتهت الجلسة، سجّل الدخول من جديد.', logout: 'خروج', forbidden: 'لا تملك صلاحية هذا الإجراء.', show: 'إظهار الرمز', view: 'عرض البيانات',
       demoHint: 'وضع المعاينة: استخدم الرمز {c} لعرض بيانات تجريبية.', checking: 'جارٍ التحقق…', back: 'العودة إلى النموذج',
       bad: 'الرمز غير صحيح', locked: 'أُوقفت المحاولات مؤقتًا لكثرة الأخطاء، حاول بعد ١٥ دقيقة.', notSetup: 'لم يُضبط رمز صفحة البيانات بعد. شغّل الدالة setup في Apps Script.', refreshFail: 'تعذّر التحديث، ما زالت البيانات السابقة معروضة.', stDone: 'مكتمل', stUpd: 'محدَّث', stPend: 'بانتظار المرفقات', net: 'تعذّر الاتصال بالخادم، حاول مرة أخرى.', updated: 'آخر تحديث: {d}', demoTag: 'بيانات تجريبية',
       refresh: 'تحديث', csv: 'تصدير CSV', sheet: 'فتح الجدول', lock: 'قفل',
@@ -62,7 +62,7 @@
     },
     en: {
       eyebrow: 'Human Resources · Confidential', title: 'Staff Data Dashboard', lockT: 'HR-only page',
-      lockD: 'Enter the access code to view staff records and documents.', code: 'Access code', show: 'Show code', view: 'View data',
+      lockD: 'Enter the access code to view staff records and documents.', code: 'Access code', lockE: 'Sign in with your approved email; you will receive a 6-digit code.', email: 'Email', sendCode: 'Send sign-in code', codeSent: 'We sent a 6-digit code to {to} — valid for 10 minutes.', enter: 'Sign in', otherEmail: 'Use another email', resend: 'Resend code', badEmail: 'Enter a valid email address.', expiredCode: 'The code has expired; request a new one.', manyCodes: 'Too many codes requested; try again in an hour.', sessionEnd: 'Your session ended; please sign in again.', logout: 'Sign out', forbidden: 'You do not have permission for this action.', show: 'Show code', view: 'View data',
       demoHint: 'Preview mode: use code {c} to see sample data.', checking: 'Checking…', back: 'Back to the form',
       bad: 'Incorrect code', locked: 'Too many wrong attempts. Try again in 15 minutes.', notSetup: 'The dashboard code is not set yet. Run setup in Apps Script.', refreshFail: 'Refresh failed; showing the previous data.', stDone: 'Complete', stUpd: 'Updated', stPend: 'Awaiting attachments', net: 'Could not reach the server, please try again.', updated: 'Updated: {d}', demoTag: 'Sample data',
       refresh: 'Refresh', csv: 'Export CSV', sheet: 'Open sheet', lock: 'Lock',
@@ -78,7 +78,7 @@
     },
     id: {
       eyebrow: 'SDM · Rahasia', title: 'Dasbor Data Staf', lockT: 'Halaman khusus SDM',
-      lockD: 'Masukkan kode akses untuk melihat data staf dan dokumennya.', code: 'Kode akses', show: 'Tampilkan kode', view: 'Lihat data',
+      lockD: 'Masukkan kode akses untuk melihat data staf dan dokumennya.', code: 'Kode akses', lockE: 'Masuk dengan email yang disetujui; Anda akan menerima kode 6 digit.', email: 'Email', sendCode: 'Kirim kode masuk', codeSent: 'Kami mengirim kode 6 digit ke {to} — berlaku 10 menit.', enter: 'Masuk', otherEmail: 'Ganti email', resend: 'Kirim ulang kode', badEmail: 'Masukkan email yang valid.', expiredCode: 'Kode kedaluwarsa; minta kode baru.', manyCodes: 'Terlalu banyak permintaan kode; coba lagi dalam satu jam.', sessionEnd: 'Sesi berakhir; silakan masuk lagi.', logout: 'Keluar', forbidden: 'Anda tidak memiliki izin untuk tindakan ini.', show: 'Tampilkan kode', view: 'Lihat data',
       demoHint: 'Mode pratinjau: gunakan kode {c} untuk melihat data contoh.', checking: 'Memeriksa…', back: 'Kembali ke formulir',
       bad: 'Kode salah', locked: 'Terlalu banyak percobaan salah. Coba lagi dalam 15 menit.', notSetup: 'Kode dasbor belum diatur. Jalankan setup di Apps Script.', refreshFail: 'Gagal memperbarui; data sebelumnya tetap ditampilkan.', stDone: 'Lengkap', stUpd: 'Diperbarui', stPend: 'Menunggu lampiran', net: 'Tidak dapat terhubung ke server, coba lagi.', updated: 'Diperbarui: {d}', demoTag: 'Data contoh',
       refresh: 'Muat ulang', csv: 'Ekspor CSV', sheet: 'Buka sheet', lock: 'Kunci',
@@ -234,7 +234,7 @@
   function cc2name(cc, fallback) { return (cc && A.cname(cc)) || fallback || cc || '—'; }
   function uniq(arr) { var o = {}; arr.forEach(function (v) { if (v) o[v] = 1; }); return Object.keys(o); }
   function initials(n) { return String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w[0]; }).join(''); }
-  function driveThumb(u) { var m = /\/d\/([\w-]+)|[?&]id=([\w-]+)/.exec(u || ''); return m ? 'https://drive.google.com/thumbnail?id=' + (m[1] || m[2]) + '&sz=w240' : ''; }
+  function driveThumb(u) { if (/\/api\/\?action=file&id=/.test(u || '')) return u; var m = /\/d\/([\w-]+)|[?&]id=([\w-]+)/.exec(u || ''); return m ? 'https://drive.google.com/thumbnail?id=' + (m[1] || m[2]) + '&sz=w240' : ''; }
   function files(v) { return Array.isArray(v) ? v : []; }
   /* الرمز يبقى في الذاكرة فقط أثناء فتح الصفحة؛ لا يُحفظ على الجهاز، ويُطلب من جديد عند كل دخول */
   var memCode = '';
@@ -296,12 +296,13 @@
       ? new Promise(function (res, rej) { setTimeout(function () { code === DEMO_CODE ? res(demoData()) : rej(new Error('bad_code')); }, 650); })
       : A.api({ action: 'list', code: code });
     return p.then(function (j) {
-      S.data = j; S.loading = false; saveCode(code); S.shown = PAGE;
+      S.data = j; S.loading = false; saveCode(code); S.shown = PAGE; if (j.user) S.me = j.user;
       draw();
       return true;
     }).catch(function (e) {
       S.loading = false;
       var m = (e && e.message) || '';
+      if (AUTH && /auth_required/.test(m)) { S.loading = false; S.data = null; S.auth = { step: 'email', email: S.auth.email || '' }; S.err = silent ? x('sessionEnd') : ''; closeDrawer(); draw(); return false; }
       var badCode = /bad_code|الرمز غير صحيح/.test(m);
       var msg = badCode ? x('bad') : (/locked|أُوقفت/.test(m) ? x('locked') : (/not_setup/.test(m) ? x('notSetup') : (/Failed to fetch|NetworkError|HTTP|Load failed/.test(m) ? x('net') : (m || x('bad')))));
       if (silent && S.data && !badCode) { A.toast(x('refreshFail')); var rb = $('[data-adm="refresh"]'); if (rb) rb.classList.remove('busy'); return false; }
@@ -316,13 +317,53 @@
   /* ---------------------------------------------------------- الرسم */
   function draw() {
     var el = S.el; if (!el) return;
-    if (!S.data) { if (S.globe) { S.globe.destroy(); S.globe = null; } el.innerHTML = lockHTML(); var i = $('#admCode'); if (i && !S.loading) setTimeout(function () { i.focus(); }, 60); return; }
+    if (!S.data) { if (S.globe) { S.globe.destroy(); S.globe = null; } el.innerHTML = lockHTML(); var i = $('#admCode') || $('#admEmail'); if (i && !S.loading) setTimeout(function () { i.focus(); }, 60); return; }
     el.innerHTML = dashHTML();
     if (S.tab === 'overview') mountGlobe();
     if (S.tab === 'staff') drawTable();
   }
   var LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path class="shackle" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15.5" r="1.4"/></svg>';
+  /* الدخول ببريد الحساب + رمز من ٦ أرقام يصل إليه (الخادم الجديد) */
+  var AUTH = !A.DEMO && A.CFG.AUTH === 'email';
+  function can(p) { return !AUTH || !S.me || (S.me.perms || []).indexOf(p) > -1; }
+  S.auth = { step: 'email', email: '' };
+  function authErr(m) {
+    if (/bad_code/.test(m)) return x('bad'); if (/code_expired/.test(m)) return x('expiredCode'); if (/locked/.test(m)) return x('locked');
+    if (/too_many_codes/.test(m)) return x('manyCodes'); if (/bad_email/.test(m)) return x('badEmail'); if (/forbidden/.test(m)) return x('forbidden');
+    return /Failed to fetch|NetworkError|HTTP|Load failed/.test(m) || !m ? x('net') : m;
+  }
+  function authLockHTML() {
+    var st = S.auth, codeStep = st.step === 'code', dis = S.loading ? ' disabled' : '';
+    return '<div class="lock-wrap"><form class="lock-card' + (S.err ? ' is-err' : '') + (S.loading ? ' is-busy' : '') + '" id="admLock" autocomplete="on">' +
+      '<span class="lock-ic">' + LOCK_SVG + '</span>' +
+      '<p class="eyebrow">' + esc(x('eyebrow')) + '</p><h1>' + esc(x('lockT')) + '</h1><p class="lead">' + esc(codeStep ? x('codeSent', { to: st.to || st.email }).replace(/[٠-٩]+/g, function (d) { return d; }) : x('lockE')) + '</p>' +
+      (codeStep
+        ? '<label class="lbl" for="admCode">' + esc(x('code')) + '</label><div class="code-row"><input class="inp code-inp" id="admCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9٠-٩]*" dir="ltr" placeholder="••••••"' + dis + '></div>'
+        : '<label class="lbl" for="admEmail">' + esc(x('email')) + '</label><div class="code-row"><input class="inp" id="admEmail" type="email" autocomplete="username email" dir="ltr" value="' + esc(st.email) + '" placeholder="name@example.com"' + dis + '></div>') +
+      '<p class="err" role="alert">' + esc(S.err) + '</p>' +
+      '<button type="submit" class="btn gold big" id="admGo"' + dis + '><span>' + esc(S.loading ? x('checking') : (codeStep ? x('enter') : x('sendCode'))) + '</span>' + (S.loading ? '<i class="spin" aria-hidden="true"></i>' : '<svg class="arr" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>') + '</button>' +
+      (codeStep ? '<p class="note"><button type="button" class="link" data-auth="resend">' + esc(x('resend')) + '</button> · <button type="button" class="link" data-auth="email">' + esc(x('otherEmail')) + '</button></p>' : '') +
+      '<a class="link" href="index.html">' + esc(x('back')) + '</a>' +
+      '</form></div>';
+  }
+  function authSubmit(resend) {
+    var st = S.auth;
+    if (st.step === 'email' || resend) {
+      var em = resend ? st.email : (($('#admEmail') || {}).value || '').trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { S.err = x('badEmail'); draw(); return; }
+      S.loading = true; S.err = ''; st.email = em; draw();
+      A.api({ action: 'authStart', email: em }).then(function (j) { S.loading = false; st.step = 'code'; st.to = j.to || em; draw(); if (resend) A.toast(x('codeSent', { to: st.to })); })
+        .catch(function (e) { S.loading = false; S.err = authErr(e && e.message || ''); draw(); });
+      return;
+    }
+    var code = (($('#admCode') || {}).value || '').replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); }).replace(/\D/g, '');
+    if (code.length !== 6) { S.err = x('bad'); draw(); return; }
+    S.loading = true; S.err = ''; draw();
+    A.api({ action: 'authVerify', email: st.email, code: code }).then(function (j) { S.me = j.user; S.loading = false; load('', false); })
+      .catch(function (e) { S.loading = false; S.err = authErr(e && e.message || ''); draw(); var i = $('#admCode'); if (i) i.select(); });
+  }
   function lockHTML() {
+    if (AUTH) return authLockHTML();
     return '<div class="lock-wrap"><form class="lock-card' + (S.err ? ' is-err' : '') + (S.loading ? ' is-busy' : '') + '" id="admLock" autocomplete="off">' +
       '<span class="lock-ic">' + LOCK_SVG + '</span>' +
       '<p class="eyebrow">' + esc(x('eyebrow')) + '</p><h1>' + esc(x('lockT')) + '</h1><p class="lead">' + esc(x('lockD')) + '</p>' +
@@ -402,6 +443,7 @@
       [nPend, 'kPend', ICON.file, 'warn', 'pend']
     ];
     var tabs = [['overview', 'tabOv', ICON.chart], ['staff', 'tabStaff', ICON.users], ['docs', 'tabDocs', ICON.clock, nExp + nSoon], ['pay', 'tabPay', ICON.money]];
+    if (!can('finance.view')) { tabs = tabs.filter(function (t) { return t[0] !== 'pay'; }); if (S.tab === 'pay') S.tab = 'overview'; }
     if (d.audit) tabs.push(['audit', 'tabAudit', ICON.shield]);
     var ring = pct(done, rows.length);
     return '<section class="adm-hero rise" style="--d:0">' +
@@ -417,10 +459,10 @@
         }).join('') + '</ul>' +
         '<div class="adm-actions">' +
           '<button type="button" class="btn ghost sm" data-adm="refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4"/></svg>' + esc(x('refresh')) + '</button>' +
-          (mailPending().length ? '<button type="button" class="btn ghost sm" data-adm="mailAll"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6"/></svg><span>' + esc(x('mailAll', { n: mailPending().length })) + '</span></button>' : '') +
+          (mailPending().length && can('staff.mail') ? '<button type="button" class="btn ghost sm" data-adm="mailAll"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6"/></svg><span>' + esc(x('mailAll', { n: mailPending().length })) + '</span></button>' : '') +
           '<button type="button" class="btn ghost sm" data-adm="csv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg>' + esc(x('csv')) + '</button>' +
           (d.sheetUrl ? '<a class="btn ghost sm" href="' + esc(d.sheetUrl) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 9h16M4 14.5h16M10 9v11.5"/></svg>' + esc(x('sheet')) + '</a>' : '') +
-          '<button type="button" class="btn ghost sm" data-adm="lock">' + LOCK_SVG + esc(x('lock')) + '</button>' +
+          '<button type="button" class="btn ghost sm" data-adm="lock">' + LOCK_SVG + esc(AUTH ? x('logout') : x('lock')) + '</button>' +
         '</div>' +
       '</section>' +
       '<nav class="adm-tabs rise" style="--d:3" role="tablist">' + tabs.map(function (tb) {
@@ -431,7 +473,7 @@
   function panelHTML() {
     if (S.tab === 'staff') return staffHTML();
     if (S.tab === 'docs') return docsHTML();
-    if (S.tab === 'pay') return payHTML();
+    if (S.tab === 'pay' && can('finance.view')) return payHTML();
     if (S.tab === 'audit') return auditHTML();
     return overviewHTML();
   }
@@ -577,7 +619,7 @@
       host.innerHTML = '<ul class="p-cards">' + page.map(function (r, i) {
         var ph = files(r.photo)[0], th = driveThumb(ph), ds = docState(r);
         return '<li style="--i:' + Math.min(i, 20) + '"><button type="button" class="p-card" data-ref="' + esc(r.ref) + '">' +
-          '<span class="p-top"><span class="av">' + (th ? '<img src="' + esc(th) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<i>' + esc(initials(r.fullNameLatin)) + '</i></span>' + statusChip(r.status) + '</span>' +
+          '<span class="p-top"><span class="av">' + (th ? '<img src="' + esc(th) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '<i>' + esc(initials(r.fullNameLatin)) + '</i></span>' + statusChip(r.status) + '</span>' +
           '<b class="p-name">' + esc(r.fullNameAr || r.fullNameLatin) + '</b><span class="p-latin" dir="ltr">' + esc(r.fullNameLatin) + '</span>' +
           '<span class="p-job">' + esc(r.jobTitle || '—') + '</span><span class="p-ent">' + esc(r.entity || '') + '</span>' +
           '<span class="p-foot"><span class="cty">' + A.flag(r.workCountryCode) + esc(cc2name(r.workCountryCode, r.workCountry)) + '</span>' + (ds === 'exp' || ds === 'd30' || ds === 'd90' ? '<span class="chip ' + (ds === 'exp' ? 'bad' : 'warn') + '">' + esc(x(ds === 'exp' ? 'docExp' : 'docSoon')) + '</span>' : '') + '</span>' +
@@ -590,7 +632,7 @@
       }).join('') + '</tr></thead><tbody id="admRows">' + page.map(function (r, i) {
         var ph = files(r.photo)[0], th = driveThumb(ph);
         return '<tr data-ref="' + esc(r.ref) + '" tabindex="0" style="--i:' + Math.min(i, 20) + '">' +
-          '<td><span class="who"><span class="av">' + (th ? '<img src="' + esc(th) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<i>' + esc(initials(r.fullNameLatin)) + '</i></span><span class="who-t"><b>' + esc(r.fullNameAr || r.fullNameLatin) + '</b><small dir="ltr">' + esc(r.fullNameAr ? r.fullNameLatin : '') + '</small></span></span></td><td>' + statusChip(r.status) + '</td>' +
+          '<td><span class="who"><span class="av">' + (th ? '<img src="' + esc(th) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '<i>' + esc(initials(r.fullNameLatin)) + '</i></span><span class="who-t"><b>' + esc(r.fullNameAr || r.fullNameLatin) + '</b><small dir="ltr">' + esc(r.fullNameAr ? r.fullNameLatin : '') + '</small></span></span></td><td>' + statusChip(r.status) + '</td>' +
           '<td><code dir="ltr">' + esc(r.ref) + '</code></td><td>' + esc(r.entity || '—') + '</td><td>' + esc(r.jobTitle || '—') + '</td>' +
           '<td><span class="cty">' + A.flag(r.workCountryCode) + esc(cc2name(r.workCountryCode, r.workCountry)) + '</span></td>' +
           '<td><span class="cty">' + A.flag(r.nationalityCode) + esc(cc2name(r.nationalityCode, r.nationality)) + '</span></td>' +
@@ -750,17 +792,17 @@
     var cols = {}; (S.data.cols || COLS).forEach(function (c) { cols[c[0]] = c; });
     var ph = files(r.photo)[0], th = driveThumb(ph);
     var h = '<div class="drawer-scrim" data-adm="close"></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drName">' +
-      '<header class="dr-head"><span class="av big">' + (th ? '<img src="' + esc(th) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<i>' + esc(initials(r.fullNameLatin)) + '</i></span>' +
+      '<header class="dr-head"><span class="av big">' + (th ? '<img src="' + esc(th) + '" alt="" referrerpolicy="no-referrer">' : '') + '<i>' + esc(initials(r.fullNameLatin)) + '</i></span>' +
         '<div class="dr-t"><h2 id="drName" dir="ltr">' + esc(r.fullNameLatin) + '</h2><p>' + esc(r.fullNameAr || '') + '</p>' +
         '<div class="dr-chips"><code dir="ltr">' + esc(r.ref) + '</code>' + statusChip(r.status) + '<span class="chip">' + A.flag(r.workCountryCode) + esc(cc2name(r.workCountryCode, r.workCountry)) + '</span></div></div>' +
-        (S.edit === ref ? '' : '<button type="button" class="dr-x dr-edit" data-adm="edit" aria-label="' + esc(x('edit')) + '" title="' + esc(x('edit')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg></button>') +
+        (S.edit === ref || !can('staff.edit') ? '' : '<button type="button" class="dr-x dr-edit" data-adm="edit" aria-label="' + esc(x('edit')) + '" title="' + esc(x('edit')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg></button>') +
         '<button type="button" class="dr-x dr-print" data-adm="print" aria-label="' + esc(x('print')) + '" title="' + esc(x('print')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9M7 17H4.5V9h15v8H17M7 14h10v6.5H7z"/></svg></button>' +
         '<button type="button" class="dr-x" data-adm="close" aria-label="' + esc(x('close')) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>' +
       '<div class="dr-body">' + (S.edit === ref ? editBodyHTML(r, cols) + '</div><footer class="dr-foot"><button type="button" class="btn gold" data-adm="edSave"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>' + esc(x('edSave')) + '</span></button><button type="button" class="btn ghost" data-adm="edCancel">' + esc(x('edCancel')) + '</button></footer></aside>' : '') +
       (S.edit === ref ? '' : (A.card ? '<section class="dr-cardsec"><h3>' + esc(x('cardT')) + '</h3><div class="dr-card-box"><div class="idcard-wrap" id="drCard"></div></div>' +
         '<p class="dr-card-hint">' + esc(x('cardHint')) + '</p><div class="dr-card-act"><button type="button" class="btn ghost sm" data-adm="cardFlip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 4v4.7h-4.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 20v-4.7h4.7"/></svg>' + esc(x('cardFlip')) + '</button>' +
         '<button type="button" class="btn gold sm" data-adm="cardPng"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19.5h14"/></svg><span>' + esc(x('cardPng')) + '</span></button></div></section>' : '') +
-      '<div class="dr-tools"><button type="button" class="btn ghost sm dr-editbtn" data-adm="edit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg>' + esc(x('edOpen')) + '</button>' +
+      '<div class="dr-tools">' + (can('staff.edit') ? '<button type="button" class="btn ghost sm dr-editbtn" data-adm="edit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg>' + esc(x('edOpen')) + '</button>' : '') +
       (A.card && A.card.mailAssets ? '<button type="button" class="btn ghost sm dr-editbtn" data-adm="sendMail"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h17v11h-17zM3.5 7l8.5 6 8.5-6"/></svg><span>' + esc(x('mailBtn')) + '</span></button>' : '') +
       (r.folder ? '<a class="btn gold sm dr-folder" href="' + esc(r.folder) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' + esc(x('folder')) + '</a>' : '') + '</div>');
     if (S.edit !== ref) GROUPS.forEach(function (g) {
@@ -1028,9 +1070,12 @@
   }
   function bind() {
     if (bound) return; bound = true;
+    /* صورة مصغّرة تعذّر تحميلها تُزال (بدل onerror المضمّن، ليتوافق مع سياسة أمان المحتوى) */
+    document.addEventListener('error', function (e) { var t = e.target; if (t && t.tagName === 'IMG' && t.closest && t.closest('.av')) t.remove(); }, true);
     document.addEventListener('submit', function (e) {
       if (e.target.id !== 'admLock') return;
       e.preventDefault();
+      if (AUTH) { authSubmit(false); return; }
       var v = ($('#admCode').value || '').trim();
       if (!v) { S.err = x('bad'); draw(); return; }
       load(v);
@@ -1040,6 +1085,8 @@
       var tg = e.target;
       var eye = tg.closest('#admEye');
       if (eye) { var i = $('#admCode'), on = i.type === 'password'; i.type = on ? 'text' : 'password'; eye.setAttribute('aria-pressed', String(on)); i.focus(); return; }
+      var au = tg.closest('[data-auth]');
+      if (au) { if (au.getAttribute('data-auth') === 'resend') authSubmit(true); else { S.auth = { step: 'email', email: S.auth.email }; S.err = ''; draw(); } return; }
       var act = tg.closest('[data-adm]');
       if (act) {
         var a = act.getAttribute('data-adm');
@@ -1047,7 +1094,7 @@
         else if (a === 'csv') csv();
         else if (a === 'docsCsv') docsCsv();
         else if (a === 'payCsv') payCsv();
-        else if (a === 'lock') { dropCode(); S.data = null; S.err = ''; closeDrawer(); draw(); }
+        else if (a === 'lock') { dropCode(); S.data = null; S.err = ''; closeDrawer(); if (AUTH) { A.api({ action: 'authLogout' }).catch(function () { }); S.auth = { step: 'email', email: S.auth.email }; } draw(); }
         else if (a === 'more') { S.shown += PAGE; drawTable(); }
         else if (a === 'clear') { S.f = { q: '', country: '', nat: '', entity: '', status: '', emp: '', gender: '', doc: '' }; redrawPanel(); }
         else if (a === 'close') { if (S.edit && edCollect().n) { A.toast(x('edDirty')); return; } closeDrawer(); }
@@ -1143,6 +1190,12 @@
     render: function (el) {
       S.el = el; bind();
       if (S.data) { draw(); return; }
+      if (AUTH && !S.checked) {
+        S.checked = true; S.loading = true; draw();
+        A.api({ action: 'authMe' }).then(function (j) { if (j.user) { S.me = j.user; load('', false); } else { S.loading = false; draw(); } })
+          .catch(function () { S.loading = false; draw(); });
+        return;
+      }
       draw();
     },
     leave: function () { if (S.globe) { S.globe.destroy(); S.globe = null; } closeDrawer(); }
