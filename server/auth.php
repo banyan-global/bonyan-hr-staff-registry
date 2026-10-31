@@ -19,12 +19,17 @@ const PERMS = [
     'users.manage' => 'إدارة الحسابات والصلاحيات',
     'backup.run'   => 'النسخ الاحتياطي والتصدير الكامل',
     'requests.approve' => 'اعتماد طلبات المنسوبين',
+    'attendance.view' => 'عرض الحضور والانصراف',
+    'attendance.manage' => 'استيراد الحضور من جهاز البصمة',
+    'announce.manage' => 'نشر التعاميم والإعلانات',
+    'reports.view' => 'مركز التقارير',
+    'settings.manage' => 'إعدادات المنصة (إظهار الأقسام وإخفاؤها)',
     'self.view'    => 'صفحة المنسوب الخاصة (بياناته فقط)',
 ];
 const ROLE_PERMS = [
-    'admin' => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'users.manage', 'backup.run', 'requests.approve'],
-    'hr'    => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'requests.approve'],
-    'ceo'   => ['staff.view', 'finance.view', 'audit.view', 'requests.approve'],
+    'admin' => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'users.manage', 'backup.run', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view', 'settings.manage'],
+    'hr'    => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view'],
+    'ceo'   => ['staff.view', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'reports.view'],
     'viewer'=> ['staff.view'],
     'staff' => ['self.view'],
 ];
@@ -92,7 +97,7 @@ function auth_start(array $b): array {
     if (!$u) $u = ensure_staff_user($email);
     if (!$u || !$u['active']) { usleep(400000); audit_log('', 'طلب رمز لبريد غير مسجّل', mask_email($email)); return $generic; }
     if ($u['locked_until'] && $u['locked_until'] > now()) throw new HttpError('locked', 429);
-    if (rate_hit('mail_code:' . $u['id'], 5, 3600)) throw new HttpError('too_many_codes', 429);
+    if (rate_hit('mail_code:' . $u['id'], 5, 3600)) { usleep(400000); return $generic; } /* الرد نفسه دائمًا (لا يكشف وجود الحساب) */
     $code = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     q('UPDATE login_codes SET used_at=? WHERE user_id=? AND used_at IS NULL', [now(), $u['id']]);
     q('INSERT INTO login_codes (user_id, code_hash, expires_at, ip, created_at) VALUES (?,?,?,?,?)', [$u['id'], code_hash($code, (int)$u['id']), date('Y-m-d H:i:s', time() + 600), client_ip(), now()]);
@@ -110,15 +115,17 @@ function auth_verify(array $b): array {
     $u = q1('SELECT * FROM users WHERE email=?', [$email]);
     if (!$u || !$u['active']) { usleep(700000); throw new HttpError('bad_code', 401); }
     if ($u['locked_until'] && $u['locked_until'] > now()) throw new HttpError('locked', 429);
+    if (rate_count('vfail:' . $u['id'] . ':' . client_ip()) >= 8) throw new HttpError('locked', 429);
     $row = q1('SELECT * FROM login_codes WHERE user_id=? AND used_at IS NULL AND expires_at > ? ORDER BY id DESC LIMIT 1', [$u['id'], now()]);
     $ok = $row && $row['attempts'] < 5 && preg_match('/^\d{6}$/', $code) && hash_equals($row['code_hash'], code_hash($code, (int)$u['id']));
     if (!$ok) {
         if ($row) q('UPDATE login_codes SET attempts=attempts+1 WHERE id=?', [$row['id']]);
-        $fails = (int)$u['fails'] + 1;
-        q('UPDATE users SET fails=?, locked_until=? WHERE id=?', [$fails >= 8 ? 0 : $fails, $fails >= 8 ? date('Y-m-d H:i:s', time() + 900) : null, $u['id']]);
-        audit_log('', 'محاولة دخول خاطئة', ($u['name'] ?: $email) . ($fails >= 8 ? ' · أُوقف الحساب ١٥ دقيقة' : ''), $u['name'] ?: $email);
+        /* الإيقاف المؤقت لهذا الحساب من هذا العنوان فقط، فلا يستطيع أحد إقفال حساب غيره عن بُعد */
+        $many = rate_hit('vfail:' . $u['id'] . ':' . client_ip(), 8, 900);
+        if ($row && $many) q('UPDATE login_codes SET used_at=? WHERE id=?', [now(), $row['id']]);
+        audit_log('', 'محاولة دخول خاطئة', ($u['name'] ?: $email) . ($many ? ' · أُوقفت المحاولات من هذا العنوان ١٥ دقيقة' : ''), $u['name'] ?: $email);
         usleep(700000);
-        throw new HttpError($row ? 'bad_code' : 'code_expired', 401);
+        throw new HttpError($many ? 'locked' : 'bad_code', $many ? 429 : 401);
     }
     q('UPDATE login_codes SET used_at=? WHERE id=?', [now(), $row['id']]);
     open_session($u, '');
@@ -213,7 +220,8 @@ function users_unlock(array $b): array {
 function sessions_revoke(array $b): array {
     $me = require_perm('users.manage');
     q('DELETE FROM sessions WHERE user_id=?', [(int)($b['id'] ?? 0)]);
-    q('DELETE FROM devices WHERE user_id=?', [(int)($b['id'] ?? 0)]); /* والأجهزة المحفوظة أيضًا (البصمات تبقى، وتُلغى من حساب صاحبها) */
+    q('DELETE FROM devices WHERE user_id=?', [(int)($b['id'] ?? 0)]); /* والأجهزة المحفوظة والبصمات أيضًا: إنهاء كامل لكل طرق الدخول */
+    q('DELETE FROM passkeys WHERE user_id=?', [(int)($b['id'] ?? 0)]);
     audit_log('', 'إنهاء جلسات حساب', (string)($b['id'] ?? ''), $me['_label']);
     return ['ok' => true];
 }

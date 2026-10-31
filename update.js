@@ -155,7 +155,10 @@
         '<button type="submit" class="btn gold big" id="updGo"' + (U.busy ? ' disabled' : '') + '>' + esc(U.busy ? x('checking') : x('go')) + '</button>' +
       '</form></div></div>';
   }
+  /* حقول تديرها الموارد البشرية: تظهر للمنسوب ولا يعدّلها */
+  var HR_LOCKED = ['salary', 'currency', 'jobTitle', 'employeeNo', 'entity', 'department', 'manager', 'startDate', 'employmentType', 'contractStatus', 'contractType', 'contractNo', 'contractStart', 'contractEnd', 'officialEmail', 'workOffice'];
   function fieldHTML(k) {
+    if (HR_LOCKED.indexOf(k) > -1) { var lv = U.rec[k] == null ? '' : String(U.rec[k]); return '<label class="upd-f"><span>' + esc(label(k)) + ' <small style="opacity:.7">· تعدّله الموارد البشرية</small></span><input type="text" class="inp" disabled value="' + esc(lv) + '" dir="auto"></label>'; }
     var t = colType(k), v = U.rec[k] == null ? '' : String(U.rec[k]), val = t === 'n' ? moneyRaw(v) : (t === 'd' ? (/^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : '') : v);
     var common = ' class="inp" data-ek="' + k + '" data-orig="' + esc(val) + '"', input, op = options(k);
     if (t === 'd') input = '<input type="date"' + common + ' value="' + esc(val) + '">';

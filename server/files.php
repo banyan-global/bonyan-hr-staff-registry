@@ -67,7 +67,7 @@ function file_serve(): void {
     if (!$allowed) throw new HttpError('auth_required', 401);
     if ($f['archived_at'] && !($u && has_perm($u, 'staff.edit'))) throw new HttpError('not_found', 404);
     /* إثبات الحساب البنكي لا يراه إلا من يملك صلاحية الرواتب */
-    if ($u && $f['kind'] === 'bankProof' && !has_perm($u, 'finance.view')) throw new HttpError('forbidden', 403);
+    if ($u && $f['kind'] === 'bankProof' && !has_perm($u, 'finance.view') && my_staff_ref($u) !== $f['ref']) throw new HttpError('forbidden', 403);
     $bytes = file_bytes($f);
     /* الصور الشخصية تظهر مصغّرة في القوائم؛ لا تُسجَّل كل مرة حتى لا يغرق السجل */
     if ($u && $f['kind'] !== 'photo') audit_log($f['ref'], 'عرض مرفق', $f['name'], $u['_label']);

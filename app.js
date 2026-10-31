@@ -2351,6 +2351,12 @@
       state.submitting = false;
       var nb2 = $('#btnNext'); if (nb2) nb2.disabled = false;
       var msg = (e && e.message) || '';
+      if (/already_registered/.test(msg)) {
+        var AR = { ar: 'هذا الجواز مسجّل لدينا من قبل. لتعديل بياناتك افتح «تحديث بياناتي» وادخل برقمك المرجعي أو بريدك المسجّل، ويصلك رمز تحقق.', en: 'This passport is already registered. To change your details open “Update my details” and sign in with your reference number or registered email; a verification code will be sent to you.', id: 'Paspor ini sudah terdaftar. Untuk mengubah data, buka “Perbarui data saya” dan masuk dengan nomor referensi atau email terdaftar Anda; kode verifikasi akan dikirim.' };
+        overlay(t('m.sending'), 0, AR[state.lang] || AR.ar);
+        setTimeout(function () { location.href = 'update.html?lang=' + state.lang; }, 6000);
+        return;
+      }
       overlay(t('m.sending'), 0, /Failed to fetch|NetworkError|HTTP/.test(msg) || !msg ? t('e.network') : t('e.server', { msg: msg }));
     });
   }

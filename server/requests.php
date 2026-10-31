@@ -78,7 +78,7 @@ const REQ_FORM_INFO = [
     'travel' => 'تكليف بمهمة رسمية: الوجهة والغرض والتواريخ ووسيلة السفر والسكن والسلفة.',
     'cert'   => 'خطاب تعريف بالراتب أو شهادة خبرة موجّه إلى جهة، بالعربية أو الإنجليزية.',
 ];
-const REQ_STEP_ROLES = ['hr', 'ceo', 'admin', 'viewer'];
+const REQ_STEP_ROLES = ['hr', 'ceo', 'admin']; /* «اطلاع فقط» لا يملك صلاحية الاعتماد؛ لشخص بعينه اختر «حساب محدد» */
 function req_flow(): array {
     $saved = json_decode((string)(setting('req_flow') ?: ''), true); $saved = is_array($saved) ? $saved : [];
     $out = [];
@@ -107,6 +107,8 @@ function req_can_decide(array $u, array $r): bool {
     if ($r['status'] !== 'pending') return false;
     $chain = json_decode($r['chain'], true) ?: []; $step = $chain[(int)$r['stage']] ?? null;
     if (!$step) return false;
+    /* لا يعتمد أحد طلبه هو، ولا حتى مدير النظام */
+    if (my_staff_ref($u) === $r['ref']) return false;
     if ($u['role'] === 'admin' && has_perm($u, 'requests.approve')) return true;
     if (!empty($step['user'])) return (int)$step['user'] === (int)$u['id'];
     return has_perm($u, 'requests.approve') && $u['role'] === ($step['role'] ?? '');
@@ -193,6 +195,7 @@ function req_create(array $b): array {
     if ($ref === '' || $ref === $mine) { if (!$mine) throw new HttpError('لا يوجد سجل منسوب لهذا الحساب'); $ref = $mine; $by = $u['name'] ?: $u['email']; }
     else { if (!has_perm($u, 'staff.edit')) throw new HttpError('forbidden', 403); if (!staff_get($ref)) throw new HttpError('not_found', 404); $by = ($u['name'] ?: $u['email']) . ' (نيابة عن المنسوب)'; }
     if (rate_hit('req:' . $u['id'], 30, 86400)) throw new HttpError('too_many', 429);
+    if ($u['role'] === 'staff' && !staff_can_see('reqs')) throw new HttpError('تقديم الطلبات من بوابة المنسوب موقوف حاليًا. تواصل مع الموارد البشرية.');
     if (!req_flow()[$type]['on']) throw new HttpError('هذا النموذج موقوف حاليًا. تواصل مع الموارد البشرية.');
     $data = req_clean($type, is_array($b['data'] ?? null) ? $b['data'] : []);
     $chain = req_new_chain($type);
@@ -212,7 +215,11 @@ function req_list(array $b): array {
     $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
     if (has_perm($u, 'staff.view')) {
         $rows = q('SELECT * FROM requests ORDER BY id DESC LIMIT 500')->fetchAll();
-        return ['ok' => true, 'rows' => array_map(function ($r) use ($u) { return req_row($r, true) + ['canDecide' => req_can_decide($u, $r)]; }, $rows)];
+        $appr = has_perm($u, 'requests.approve');
+        return ['ok' => true, 'rows' => array_map(function ($r) use ($u, $appr) { $cd = req_can_decide($u, $r); $o = req_row($r, true) + ['canDecide' => $cd];
+            /* ملاحظات المنسوب (قد تكون صحية) لا يراها إلا من يعتمد */
+            if (!$appr && !$cd) { unset($o['data']['note']); }
+            return $o; }, $rows)];
     }
     $ref = my_staff_ref($u); if (!$ref) return ['ok' => true, 'rows' => []];
     $rows = q('SELECT * FROM requests WHERE ref=? ORDER BY id DESC', [$ref])->fetchAll();

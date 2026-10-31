@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 5;
+const BHR_SCHEMA_VERSION = 6;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -107,6 +107,18 @@ function migrate(PDO $pdo): void {
         id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, cred_id VARCHAR(255) NOT NULL, pubkey TEXT NOT NULL, alg INT NOT NULL,
         sign_count BIGINT NOT NULL DEFAULT 0, label VARCHAR(120) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, last_used_at DATETIME NULL,
         UNIQUE KEY u_cred (cred_id), KEY k_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    /* ٦) الحضور والانصراف (من ملف جهاز البصمة) والتعاميم */
+    $pdo->exec("CREATE TABLE IF NOT EXISTS attendance (
+        id INT AUTO_INCREMENT PRIMARY KEY, ref VARCHAR(40) NOT NULL, day DATE NOT NULL, in_time TIME NULL, out_time TIME NULL,
+        minutes INT NOT NULL DEFAULT 0, late_min INT NOT NULL DEFAULT 0, early_min INT NOT NULL DEFAULT 0, source VARCHAR(120) NOT NULL DEFAULT '', batch VARCHAR(40) NOT NULL DEFAULT '',
+        created_at DATETIME NOT NULL, UNIQUE KEY u_day (ref, day), KEY k_day (day), KEY k_batch (batch)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS att_batches (
+        id VARCHAR(40) PRIMARY KEY, file_name VARCHAR(120) NOT NULL DEFAULT '', records INT NOT NULL DEFAULT 0, staff INT NOT NULL DEFAULT 0, unmatched INT NOT NULL DEFAULT 0,
+        from_day DATE NULL, to_day DATE NULL, created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS news (
+        id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(160) NOT NULL, body TEXT NOT NULL, kind VARCHAR(20) NOT NULL DEFAULT 'تعميم', pinned TINYINT NOT NULL DEFAULT 0,
+        audience TEXT NULL, expires_at DATE NULL, active TINYINT NOT NULL DEFAULT 1, created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS news_reads (news_id INT NOT NULL, user_id INT NOT NULL, read_at DATETIME NOT NULL, PRIMARY KEY (news_id, user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {

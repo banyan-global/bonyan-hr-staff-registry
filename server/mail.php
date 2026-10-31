@@ -30,7 +30,7 @@ function send_mail(string $to, string $subject, string $html, string $text, stri
     $m->Subject = $subject;
     $m->isHTML(true);
     $m->Body = $html;
-    $m->AltBody = $text;
+    $m->AltBody = $text . (strpos($text, (string)cfg('dev_email')) === false ? mail_signature_text() : '');
     foreach ($inline as $cid => $f) $m->addStringEmbeddedImage($f[0], $cid, $f[2], 'base64', $f[1]);
     if (($s['mode'] ?? cfg('mail_mode', 'smtp')) === 'file') {
         $m->preSend();
@@ -55,7 +55,6 @@ function logo_png(): string { static $b = null; return $b ??= base64_decode((str
 function mail_frame(string $eyebrow, string $title, string $inner, bool $rtl = true): string {
     $dir = $rtl ? 'rtl' : 'ltr'; $al = $rtl ? 'right' : 'left';
     $font = $rtl ? "'Tajawal','IBM Plex Sans Arabic',Tahoma,Arial,sans-serif" : "'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-    $dev = esc_html((string)cfg('dev_email'));
     return '<!doctype html><html lang="' . ($rtl ? 'ar' : 'en') . '" dir="' . $dir . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head>'
         . '<body style="margin:0;padding:0;background:#EDF0F5;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EDF0F5;"><tr><td align="center" style="padding:24px 10px;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="' . $dir . '" style="max-width:520px;background:#FFFFFF;border-radius:20px;overflow:hidden;font-family:' . $font . ';text-align:' . $al . ';box-shadow:0 12px 34px rgba(22,41,74,.13);">'
@@ -64,11 +63,25 @@ function mail_frame(string $eyebrow, string $title, string $inner, bool $rtl = t
         . '<td align="' . ($rtl ? 'left' : 'right') . '" style="vertical-align:middle;"><img src="cid:logo" width="56" alt="Bonyan" style="display:block;width:56px;height:auto;border:0;"></td></tr></table></td></tr>'
         . '<tr><td style="height:3px;line-height:3px;font-size:0;background:#D2B074;">&nbsp;</td></tr>'
         . '<tr><td style="padding:24px 24px 8px;"><h1 style="margin:0 0 10px;font-size:19px;color:' . NAVY . ';font-weight:900;">' . esc_html($title) . '</h1>' . $inner . '</td></tr>'
-        . '<tr><td align="center" style="background:#F6F7FA;border-top:1px solid #E8EBF1;padding:14px 24px 16px;">'
-        . '<a href="mailto:' . $dev . '" style="display:inline-block;padding:4px 11px;border-radius:999px;background:#FFF1E6;border:1px solid #F5C9A3;color:#B4570F;font-size:11.5px;font-weight:800;text-decoration:none;white-space:nowrap;">' . ($rtl ? 'تطوير وتنفيذ أسامة جنيدي' : 'Developed by Osama Junaydi') . '</a>'
-        . '<div style="margin-top:8px;font-size:11px;color:#9AA5B6;">© ' . date('Y') . ' ' . ($rtl ? 'مجموعة بنيان العالمية' : 'Bonyan International Group') . '</div></td></tr>'
+        . '<tr><td style="background:#F6F7FA;border-top:1px solid #E8EBF1;padding:4px 18px 14px;">' . mail_signature($rtl) . '</td></tr>'
         . '</table></td></tr></table></body></html>';
 }
+/* توقيع المطوّر الموحد في رسائل الأنظمة (نفس توقيع أنظمة بنيان الأخرى) */
+function mail_signature(bool $rtl = true): string {
+    $mail = (string)cfg('dev_email'); $system = 'منصة بنيان للموارد البشرية';
+    $href = esc_html('mailto:' . $mail . '?subject=' . rawurlencode('استفسار تقني — ' . $system));
+    $F = "font-family:'IBM Plex Sans Arabic',Tajawal,Tahoma,Arial,sans-serif;";
+    $line = $rtl ? 'رسالة آلية من <b style="color:#14213d">' . $system . '</b>، ولأي استفسار تقني يسعدنا تواصلك عبر البريد أدناه.'
+        : 'Automated message from <b style="color:#14213d">Bonyan HR Platform</b>. For any technical question, reach us at the email below.';
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="' . ($rtl ? 'rtl' : 'ltr') . '" style="border-collapse:collapse;">'
+        . '<tr><td align="center" style="' . $F . 'padding:12px 12px 8px;font-size:12px;line-height:1.9;color:#7a8499">' . $line . '</td></tr>'
+        . '<tr><td align="center" style="padding:0 12px"><table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:#fff4ec;border:1px solid #fcd9bf;border-radius:14px">'
+        . '<tr><td align="center" style="' . $F . 'padding:6px 14px;font-size:12.5px;line-height:1.7;text-align:center"><span style="color:#f97415;font-size:8px;vertical-align:2px">&#9679;</span>&nbsp; '
+        . '<a href="' . $href . '" style="color:#ea580c;font-weight:bold;text-decoration:none;white-space:nowrap">' . ($rtl ? 'م. أسامة جنيدي' : 'Eng. Osama Junaydi') . '</a>'
+        . '<span style="color:#fcd9bf">&nbsp;&nbsp;|&nbsp;&nbsp;</span><a href="' . $href . '" dir="ltr" style="color:#7a8499;font-size:12px;text-decoration:none;white-space:nowrap">' . esc_html($mail) . '</a></td></tr></table></td></tr>'
+        . '<tr><td align="center" style="' . $F . 'padding:9px 12px 0;font-size:11px;color:#a3abba">&copy; ' . date('Y') . ' ' . ($rtl ? 'مجموعة بنيان العالمية' : 'Bonyan International Group') . '</td></tr></table>';
+}
+function mail_signature_text(): string { return "\n\n—\nرسالة آلية من منصة بنيان للموارد البشرية، ولأي استفسار تقني يسعدنا تواصلك عبر البريد أدناه.\nم. أسامة جنيدي | " . cfg('dev_email') . "\n© " . date('Y') . ' مجموعة بنيان العالمية'; }
 function logo_inline(): array { return ['logo' => [logo_png(), 'image/png', 'bonyan.png']]; }
 
 function send_login_code(array $u, string $code): void {

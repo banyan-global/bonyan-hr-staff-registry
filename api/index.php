@@ -14,6 +14,7 @@ require __DIR__ . '/../server/admin.php';
 require __DIR__ . '/../server/export.php';
 require __DIR__ . '/../server/requests.php';
 require __DIR__ . '/../server/passkey.php';
+require __DIR__ . '/../server/hrx.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -66,7 +67,11 @@ try {
         'fileHistory' => fn() => file_history($b), 'fileRestore' => fn() => file_restore($b),
         'backups' => fn() => backups_list(), 'backupNow' => fn() => backup_now(), 'health' => fn() => health(),
         /* طلبات المنسوبين */
-        'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqTrack' => fn() => req_track($b), 'reqForms' => fn() => req_forms(), 'reqFormsSave' => fn() => req_forms_save($b),
+        'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqTrack' => fn() => req_track($b), 'reqForms' => fn() => req_forms(),
+        /* الوحدات المتكاملة */
+        'siteGet' => fn() => site_get(), 'siteSave' => fn() => site_save($b), 'myExtra' => fn() => my_extra(), 'leaveBalances' => fn() => leave_balances(),
+        'attUpload' => fn() => att_upload($b), 'attImport' => fn() => att_import($b), 'attMonth' => fn() => att_month($b), 'attMy' => fn() => att_my($b), 'attUndo' => fn() => att_batch_undo($b),
+        'newsList' => fn() => news_list(), 'newsSave' => fn() => news_save($b), 'newsDelete' => fn() => news_delete($b), 'newsRead' => fn() => news_read($b), 'newsReaders' => fn() => news_readers($b), 'reqFormsSave' => fn() => req_forms_save($b),
         /* تحديث المنسوب لبياناته */
         'selfStart' => fn() => self_start($b), 'selfUpdate' => fn() => self_update($b), 'selfUpload' => fn() => self_upload($b), 'selfFinish' => fn() => self_finish($b),
         /* الاستيراد من النظام القديم (بمفتاح مؤقت) */

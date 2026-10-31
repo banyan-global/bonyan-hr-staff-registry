@@ -36,7 +36,7 @@ function file_restore(array $b): array {
 /* نسخة احتياطية كاملة: قاعدة البيانات (JSON مضغوط) في مجلد التخزين الخاص؛ تُحفظ آخر ٣٠ نسخة */
 function make_backup(string $actor = 'النظام'): array {
     $dump = ['version' => BHR_VERSION, 'at' => now(), 'tables' => []];
-    foreach (['staff', 'files', 'users', 'audit', 'messages', 'settings'] as $t) {
+    foreach (['staff', 'files', 'users', 'audit', 'messages', 'settings', 'requests', 'attendance', 'att_batches', 'news', 'news_reads'] as $t) {
         $rows = q('SELECT * FROM ' . $t)->fetchAll();
         if ($t === 'settings') $rows = array_values(array_filter($rows, function ($r) { return !in_array($r['k'], ['app_secret'], true); }));
         $dump['tables'][$t] = $rows;

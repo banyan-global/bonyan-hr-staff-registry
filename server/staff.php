@@ -7,7 +7,8 @@
 declare(strict_types=1);
 
 const ADMIN_LOCKED = ['ref', 'createdAt', 'updatedAt', 'folder', 'folderId', 'fullNameAr', 'fullNameLatin', 'lang', 'tz'];
-const SELF_LOCKED = ['status'];
+/* ما يديره الموارد البشرية لا يعدّله المنسوب بنفسه (يُتجاهل بصمت إن أُرسل) */
+const SELF_LOCKED = ['status', 'salary', 'currency', 'jobTitle', 'employeeNo', 'entity', 'department', 'manager', 'startDate', 'employmentType', 'contractStatus', 'contractType', 'contractNo', 'contractStart', 'contractEnd', 'officialEmail', 'workOffice'];
 const NAME_PARTS = ['firstNameAr', 'fatherNameAr', 'grandNameAr', 'lastNameAr', 'firstName', 'fatherName', 'grandName', 'lastName'];
 const FINANCE_KEYS = ['salary', 'iban', 'accountNo', 'swift', 'accountHolder', 'bankBranch', 'payOther', 'bankProof'];
 const DEGREE_RANK = ['دكتوراه' => 6, 'ماجستير' => 5, 'بكالوريوس' => 4, 'دبلوم' => 3, 'ثانوي' => 2, 'أخرى' => 1];
@@ -99,10 +100,17 @@ function submit(array $p): array {
     foreach (['firstName', 'lastName', 'passportNo', 'workCountry', 'nationality', 'personalEmail'] as $k) if (empty($raw[$k])) throw new HttpError('حقل مطلوب مفقود: ' . $k);
     named_lock('bhr_submit');
     try {
+        if (mb_strlen((string)$raw['passportNo']) > 30) throw new HttpError('رقم الجواز أطول من المعتاد، تحقق منه');
         $passport = normalize_((string)$raw['passportNo']);
         $old = null; $dup = false;
         $hit = q1('SELECT ref FROM staff WHERE passport_norm=? ORDER BY id LIMIT 1', [$passport]);
+        /* النموذج العام لا يعدّل سجلًا موجودًا أبدًا (حماية من انتحال الهوية وتغيير الحساب البنكي):
+           صاحب السجل يحدّث بياناته من «تحديث بياناتي» برمز يصل إلى بريده المسجّل */
         if ($hit) {
+            audit_log($hit['ref'], 'محاولة تسجيل جديد برقم جواز مسجّل', mask_email((string)$raw['personalEmail']), 'النموذج العام');
+            throw new HttpError('already_registered');
+        }
+        if (false) {
             /* لا يُسمح بتحديث سجل موجود إلا إذا طابق البريد الشخصي أو رقم الجوال المسجّلين مسبقًا */
             $o = staff_get($hit['ref']);
             $oldMail = strtolower(trim((string)($o['data']['personalEmail'] ?? ''))); $oldMob = substr(digits_($o['data']['mobile'] ?? ''), -8);
@@ -382,7 +390,7 @@ function me_get(): array {
     if (!$ref) return ['ok' => true, 'user' => user_public($u), 'record' => null];
     $r = staff_get($ref);
     $byKind = []; foreach (files_of($ref) as $f) if ($f['kind'][0] !== '_') $byKind[$f['kind']][] = $f;
-    $row = display_row($r, $byKind, true);
+    $row = display_row($r, $byKind, staff_can_see('pay')); /* إخفاء الراتب والحساب عن المنسوب من إعدادات المنصة */
     $kids = []; foreach (array_keys(KIDS) as $k) $kids[$k] = $r[$k] ?? [];
     $card = q1("SELECT id FROM files WHERE ref=? AND kind='_card_jpg' AND archived_at IS NULL ORDER BY created_at DESC LIMIT 1", [$ref]);
     audit_log($ref, 'فتح صفحتي', $u['name'] ?: $u['email'], $u['name'] ?: $u['email']);
@@ -394,6 +402,7 @@ function self_start(array $b): array {
     if (!empty($b['me'])) {
         $u = current_user(); $mr = $u ? my_staff_ref($u) : null;
         if (!$mr) throw new HttpError('self_bad', 401);
+        if ($u['role'] === 'staff' && !staff_can_see('update')) throw new HttpError('تحديث البيانات من بوابة المنسوب موقوف حاليًا. تواصل مع الموارد البشرية.');
         $b = ['ref' => $mr, 'k' => self_sig($mr)];
     }
     $ref = strtoupper(preg_replace('/\s+/', '', (string)($b['ref'] ?? '')));

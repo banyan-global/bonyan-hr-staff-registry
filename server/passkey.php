@@ -165,8 +165,15 @@ function pk_auth_data(string $ad, bool $needAttested): array {
 function user_handle(array $u): string { return substr(hash_hmac('sha256', 'uh:' . $u['id'], app_secret(), true), 0, 32); }
 
 /* ---------- ٢) تسجيل بصمة هذا الجهاز (بعد الدخول) ---------- */
+/* عمر الجلسة الحالية بالدقائق (تفعيل البصمة يحتاج دخولًا حديثًا) */
+function session_age_min(): int {
+    $tok = (string)($_COOKIE[SESSION_COOKIE] ?? ''); if (!preg_match('/^[a-f0-9]{64}$/', $tok)) return 99999;
+    $s = q1('SELECT created_at FROM sessions WHERE id=?', [hash('sha256', $tok)]);
+    return $s ? (int)floor((time() - strtotime($s['created_at'])) / 60) : 99999;
+}
 function pk_reg_start(): array {
     $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
+    if (session_age_min() > 30) throw new HttpError('pk_fresh');
     $ch = random_bytes(32); kv_put('pkreg:' . $u['id'], b64u_enc($ch), 300);
     $ex = array_map(fn($c) => ['type' => 'public-key', 'id' => $c], q('SELECT cred_id FROM passkeys WHERE user_id=?', [$u['id']])->fetchAll(PDO::FETCH_COLUMN));
     return ['ok' => true, 'publicKey' => [
