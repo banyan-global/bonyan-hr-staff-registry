@@ -13,6 +13,7 @@ require __DIR__ . '/../server/staff.php';
 require __DIR__ . '/../server/admin.php';
 require __DIR__ . '/../server/export.php';
 require __DIR__ . '/../server/requests.php';
+require __DIR__ . '/../server/passkey.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -55,6 +56,9 @@ try {
         'submit' => fn() => submit((array)($b['payload'] ?? [])), 'upload' => fn() => upload($b), 'finalize' => fn() => finalize($b), 'cardImg' => fn() => card_img($b),
         /* الدخول والحسابات */
         'authStart' => fn() => auth_start($b), 'authVerify' => fn() => auth_verify($b), 'authMe' => fn() => auth_me(), 'authLogout' => fn() => auth_logout(), 'me' => fn() => me_get(),
+        'deviceHello' => fn() => device_hello(), 'deviceLogin' => fn() => device_login(), 'deviceForget' => fn() => device_forget(),
+        'pkLoginStart' => fn() => pk_login_start(), 'pkLoginFinish' => fn() => pk_login_finish($b), 'pkRegStart' => fn() => pk_reg_start(), 'pkRegFinish' => fn() => pk_reg_finish($b),
+        'secList' => fn() => sec_list(), 'secRemove' => fn() => sec_remove($b),
         'usersList' => fn() => users_list(), 'usersSave' => fn() => users_save($b), 'usersUnlock' => fn() => users_unlock($b), 'sessionsRevoke' => fn() => sessions_revoke($b),
         /* لوحة الموارد البشرية */
         'list' => fn() => admin_list(), 'photo' => fn() => photo($b), 'adminUpdate' => fn() => admin_update($b), 'adminUpload' => fn() => admin_upload($b),

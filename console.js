@@ -364,7 +364,7 @@ function startMap(cv, faint) {
       ctx.font = '700 12.5px Tajawal, sans-serif'; ctx.direction = 'rtl'; ctx.textAlign = 'center';
       var placed = [], hit = function (a) { return placed.some(function (b) { return a.x < b.x + b.w + 4 && a.x + a.w + 4 > b.x && a.y < b.y + b.h + 3 && a.y + a.h + 3 > b.y; }) || dotsXY.some(function (d) { return d.x + d.r > a.x && d.x - d.r < a.x + a.w && d.y + d.r > a.y && d.y - d.r < a.y + a.h; }) || a.x < 2 || a.x + a.w > W - 2 || a.y < 2 || a.y + a.h > H - 2; };
       dotsXY.slice().sort(function (a, b) { return counts[b.k] - counts[a.k]; }).forEach(function (d) {
-        var nm = CTRY.filter(function (z) { return z.cc === d.k; })[0].n, lab = nm + '  ' + counts[d.k], tw = ctx.measureText(lab).width + 18, th = 24, gap = d.r + 8;
+        var nm = (CTRY.filter(function (z) { return z.cc === d.k; })[0] || { n: d.k }).n, lab = nm + '  ' + counts[d.k], tw = ctx.measureText(lab).width + 18, th = 24, gap = d.r + 8;
         var C = [[0, -1], [0, 1], [-1, 0], [1, 0], [-1, -1], [1, -1], [-1, 1], [1, 1], [0, -2.2], [0, 2.2], [-1.8, 0], [1.8, 0]], best = null;
         for (var q = 0; q < C.length && !best; q++) { var cx = d.x + C[q][0] * (gap + tw / 2), cy = d.y + C[q][1] * (gap + th / 2), box = { x: cx - tw / 2, y: cy - th / 2, w: tw, h: th, cx: cx, cy: cy }; if (!hit(box)) best = box; }
         if (!best) best = { x: d.x - tw / 2, y: d.y - gap - th, w: tw, h: th, cx: d.x, cy: d.y - gap - th / 2 };
@@ -586,7 +586,7 @@ function loadMe() {
 function boot() {
   screen = 'loading'; render();
   api({ action: 'authMe' }).then(function (j) {
-    if (!j.user) { screen = 'login'; render(); return; }
+    if (!j.user) return devHello().then(function () { screen = 'login'; render(); });
     return enterApp(j.user);
   }).catch(function (e) { screen = 'login'; LG.err = /auth_required/.test(e.message) ? '' : errText(e); render(); });
 }
@@ -602,17 +602,19 @@ function enterApp(u) {
     var qref = (location.search.match(/[?&]ref=([^&#]+)/) || [])[1];
     if (qref) { qref = decodeURIComponent(qref); try { history.replaceState(null, '', location.pathname + '#people'); } catch (e) { } if (role !== 'staff' && byRef(qref)) { cur = qref; ptab = 'over'; TAB.people = 'dir'; filt = { q: '', ent: '', cc: '', st: 'all' }; } }
     route();
+    setTimeout(pkOffer, 900);
   }).catch(function (e) { if (SESSION) { screen = 'login'; LG.err = errText(e); render(); } });
 }
 function resetState() { SESSION = null; ME = null; ME_DATA = null; STAFF = []; ENT = []; CTRY = []; CACHE = {}; CAP = {}; role = 'hr'; cur = ''; ptab = 'over'; filt = { q: '', ent: '', cc: '', st: 'all' }; }
 function logout() {
   api({ action: 'authLogout' }).catch(function () { }).then(function () {
-    resetState(); LG = { step: 'email', mail: '', to: '', err: '', busy: false, tab: 'in' };
+    resetState(); LG = lgNew();
     try { history.replaceState(null, '', location.pathname); } catch (e) { }
-    screen = 'login'; render(); window.scrollTo(0, 0);
+    return devHello();
+  }).then(function () { screen = 'login'; render(); window.scrollTo(0, 0);
   });
 }
-function sessionEnded() { resetState(); LG = { step: 'email', mail: LG.mail || '', to: '', err: 'انتهت الجلسة، سجّل الدخول من جديد.', busy: false, tab: 'in' }; var l = document.getElementById('msgLayer'); if (l) l.remove(); screen = 'login'; render(); }
+function sessionEnded() { resetState(); var m = LG.mail || ''; LG = lgNew(); LG.mail = m; LG.err = 'انتهت الجلسة، سجّل الدخول من جديد.'; var l = document.getElementById('msgLayer'); if (l) l.remove(); devHello().then(function () { screen = 'login'; render(); }); }
 function route() {
   if (!SESSION || screen === 'login' || screen === 'loading' || screen === 'noreg') { render(); return; }
   var h = location.hash.slice(1), a = ALIAS[h]; screen = 'app';
@@ -632,7 +634,7 @@ function render() {
   if (view === 'home') { startMap(document.getElementById('map'), false); tickClocks(); }
 }
 
-var LG = { step: 'email', mail: '', to: '', err: '', busy: false, tab: 'in' };
+var LG = { step: 'email', mail: '', to: '', err: '', busy: false, tab: 'in', remember: true };
 function loginHTML() {
   var f, steps = '<div class="steps s3">' + ['البريد', 'الرمز', 'الدخول'].map(function (l, i) { return '<div class="' + (i <= (LG.step === 'code' ? 1 : 0) ? 'on' : '') + '"><i></i>' + l + '</div>'; }).join('') + '</div>';
   var tabs = '<div class="ltabs" role="group" aria-label="نوع الدخول">' + [['in', 'تسجيل الدخول'], ['new', 'سجّل بياناتك'], ['track', 'متابعة طلب']].map(function (t) { return '<button type="button" data-lt="' + t[0] + '" aria-pressed="' + (LG.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div>';
@@ -640,23 +642,27 @@ function loginHTML() {
   else if (LG.tab === 'new') f = '<h2>سجّل بياناتك في سجل المنسوبين</h2><p class="lp">إن لم تسجّل بياناتك من قبل، عبّئ النموذج مرة واحدة وارفع وثائقك. بعدها تدخل من هنا ببريدك لترى ملفك وبطاقتك وتحدّث بياناتك متى شئت.</p>' +
     '<ul class="lneed">' + [['pass', 'صورة الجواز أو الهوية والإقامة'], ['user', 'صورة شخصية واضحة'], ['bank', 'بيانات الحساب البنكي'], ['clock', 'حوالي ١٠ دقائق، بالعربية أو الإنجليزية أو الإندونيسية']].map(function (x) { return '<li>' + ic(x[0]) + '<span>' + x[1] + '</span></li>'; }).join('') + '</ul>' +
     '<a class="btn goldb" href="register.html">' + ic('edit') + 'ابدأ التسجيل الآن</a><button type="button" class="lnk" data-lt="in">سجّلت من قبل؟ ادخل ببريدك</button>';
+  else if (LG.step === 'email' && DEV && !LG.other) f = quickHTML();
   else if (LG.step === 'email') f = steps + '<h2>أهلًا بك</h2><p class="lp">ادخل ببريدك المسجّل لدينا، وسيصلك رمز دخول من ٦ أرقام. الإدارة والمنسوبون يدخلون من هنا.</p>' +
     '<div class="lf"><label for="lmail">البريد الإلكتروني</label><input id="lmail" class="ltr" style="text-align:left" type="email" autocomplete="username" inputmode="email" spellcheck="false" value="' + esc(LG.mail) + '" placeholder="name@example.com"></div>' +
-    '<div class="lerr" id="lerr" role="alert">' + esc(LG.err) + '</div><button class="btn prim" id="lnext" type="submit"' + (LG.busy ? ' disabled' : '') + '>' + ic('send') + (LG.busy ? 'جارٍ الإرسال…' : 'أرسل رمز الدخول') + '</button>' +
+    '<div class="lerr" id="lerr" role="alert">' + esc(LG.err) + '</div><button class="btn prim" id="lnext" type="submit"' + (LG.busy ? ' disabled' : '') + '>' + ic('send') + (LG.busy ? 'جارٍ الإرسال…' : 'أرسل رمز الدخول') + '</button>' + pkAltHTML() + (DEV ? '<button type="button" class="lnk" id="qback">' + ic('back') + 'العودة إلى الدخول السريع</button>' : '') +
     '<a class="lreg" href="register.html">' + tile('gold', 'plus') + '<span><b>لم تسجّل بياناتك بعد؟</b><small>عبّئ نموذج المنسوبين أولًا، ثم ادخل من هنا</small></span>' + ic('back') + '</a>';
   else f = steps + '<h2>أدخل رمز الدخول</h2><p class="lp">إن كان بريدك مسجّلًا لدينا فقد أرسلنا رمزًا من ٦ أرقام إلى <span class="ltr">' + esc(LG.to || LG.mail) + '</span>، صالحًا ١٠ دقائق ولمرة واحدة.</p>' +
     '<div class="otp" id="otp">' + [0, 1, 2, 3, 4, 5].map(function (i) { return '<input inputmode="numeric" autocomplete="' + (i ? 'off' : 'one-time-code') + '" maxlength="6" aria-label="الرقم ' + (i + 1) + '">'; }).join('') + '</div>' +
+    '<label class="lrem"><input type="checkbox" id="lrem"' + (LG.remember ? ' checked' : '') + '><span><b>تذكّر هذا الجهاز ٣٠ يومًا</b><small>تدخل بعدها بضغطة واحدة دون رمز. لا تفعّله على جهاز مشترك.</small></span></label>' +
     '<div class="lerr" id="lerr" role="alert">' + esc(LG.err) + '</div><button class="btn prim" id="lnext" type="submit"' + (LG.busy ? ' disabled' : '') + '>' + ic('lock') + (LG.busy ? 'جارٍ التحقق…' : 'دخول') + '</button>' +
     '<div class="lrow2"><button type="button" class="lnk" id="lback">تغيير البريد</button><button type="button" class="lnk" id="lresend">إعادة إرسال الرمز</button></div>' +
     '<div class="note lnote">' + ic('info') + '<span>لم يصلك الرمز خلال دقيقتين؟ افحص مجلد الرسائل غير المرغوبة. وإن لم تسجّل بياناتك من قبل <a href="register.html">فسجّلها أولًا من هنا</a>.</span></div>';
   return '<section class="login"><canvas id="lmap" aria-hidden="true"></canvas><div class="lwrap"><form class="lcard" id="lf" novalidate style="margin-top:46px"><div class="lhead"><span class="lt"><img src="' + LOGO + '" alt="بنيان"></span><h1>منصة بنيان للموارد البشرية</h1><p>مجموعة بنيان العالمية</p></div>' + tabs + f + '</form>' +
-    '<div class="lfeat"><div>' + tile('emerald', 'mail') + 'رمز دخول على بريدك</div><div>' + tile('sapphire', 'key') + 'بلا كلمات مرور تُحفظ</div><div>' + tile('garnet', 'lock') + 'قفل بعد المحاولات الخاطئة</div></div><div class="lsig">' + sigHTML() + '</div></div></section>';
+    '<div class="lfeat"><div>' + tile('emerald', 'finger') + 'دخول بالبصمة أو الوجه</div><div>' + tile('sapphire', 'bolt') + 'دخول سريع من جهازك المحفوظ</div><div>' + tile('garnet', 'lock') + 'قفل بعد المحاولات الخاطئة</div></div><div class="lsig">' + sigHTML() + '</div></div></section>';
 }
 function bindLogin() {
   var $ = function (i) { return document.getElementById(i); };
   document.querySelectorAll('[data-lt]').forEach(function (b) { b.onclick = function () { LG.tab = b.dataset.lt; LG.err = ''; render(); }; });
   if (LG.tab === 'track') { bindTrack(); return; }
-  if (!$('lnext')) return;
+  bindQuick();
+  if ($('qback')) $('qback').onclick = function () { LG.other = false; LG.err = ''; render(); };
+  if (!$('lnext')) { if ($('qpk') && !LG.busyPk && !LG.busyDev) $('qpk').focus(); else if ($('qdev') && !LG.busyDev) $('qdev').focus(); return; }
   var otp = $('otp'), ins = otp ? otp.querySelectorAll('input') : [];
   function code() { var c = ''; ins.forEach(function (x) { c += x.value; }); return c; }
   function fill(t) { ins.forEach(function (x, i) { x.value = t[i] || ''; }); (ins[Math.min(t.length, 5)] || ins[5]).focus(); }
@@ -680,8 +686,8 @@ function bindLogin() {
     if (LG.step === 'email') { send(false); return; }
     var c = code(); if (c.length !== 6) { LG.err = 'اكتب الرمز كاملًا (٦ أرقام).'; $('lerr').textContent = LG.err; return; }
     LG.busy = true; LG.err = ''; render();
-    api({ action: 'authVerify', email: LG.mail, code: c }).then(function () { return api({ action: 'authMe' }); }).then(function (j) {
-      LG = { step: 'email', mail: '', to: '', err: '', busy: false, tab: 'in' };
+    api({ action: 'authVerify', email: LG.mail, code: c, remember: !!LG.remember }).then(function () { JUST_IN = true; return api({ action: 'authMe' }); }).then(function (j) {
+      LG = lgNew();
       if (!j.user) throw new Error('auth_required');
       return enterApp(j.user);
     }).catch(function (e) { LG.busy = false; LG.err = errText(e); render(); });
@@ -725,7 +731,7 @@ function topHTML() {
     (role === 'staff' ? '<a class="btn goldb topcta" href="update.html?me=1">' + ic('edit') + '<span>تحديث بياناتي</span></a>' : '') +
     '<button class="ib" id="theme" aria-label="تبديل الوضع الليلي">' + ic('moon') + '</button>' +
     '<div class="bellwrap"><button class="ib" id="bell" aria-label="التنبيهات" aria-expanded="false">' + ic('bell') + (N.length ? '<span class="n">' + N.length + '</span>' : '') + '</button><div class="drop" id="ntf" hidden>' + ntfHTML(N) + '</div></div>' +
-    '<div class="me">' + avt + '<div><b>' + esc(u.name) + '</b><small>' + esc(u.role) + '</small></div><button class="ib out" id="logout" aria-label="تسجيل الخروج" title="تسجيل الخروج">' + ic('out') + '</button></div></header>';
+    '<div class="me"><button type="button" class="mebtn" id="secBtn" title="الدخول والأمان: البصمة والأجهزة المحفوظة" aria-label="الدخول والأمان">' + avt + '<div><b>' + esc(u.name) + '</b><small>' + esc(u.role) + '</small></div></button><button class="ib out" id="logout" aria-label="تسجيل الخروج" title="تسجيل الخروج">' + ic('out') + '</button></div></header>';
 }
 
 /* ---------- clocks (real time zones) ---------- */
@@ -1641,6 +1647,130 @@ function bindTrack() {
   f.onsubmit = function (e) { e.preventDefault(); TRK.no = document.getElementById('trkNo').value.trim(); TRK.mail = document.getElementById('trkMail').value.trim(); TRK.busy = true; TRK.err = ''; TRK.res = null; render();
     api({ action: 'reqTrack', no: TRK.no, email: TRK.mail }).then(function (j) { TRK.busy = false; TRK.res = j; render(); }).catch(function (er) { TRK.busy = false; TRK.err = errText(er); render(); }); };
 }
+
+/* ================= الدخول السريع: جهاز محفوظ + البصمة (مفاتيح المرور) ================= */
+var PK_OK = !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);
+var DEV = null, JUST_IN = false;
+function bufU(b) { var s = '', a = new Uint8Array(b); for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function uBuf(s) { s = String(s).replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var b = atob(s), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a.buffer; }
+function pkErr(e) {
+  var n = (e && e.name) || '', m = (e && e.message) || '';
+  if (n === 'NotAllowedError' || n === 'AbortError') return 'أُلغيت العملية أو انتهت مهلتها. حاول مرة أخرى.';
+  if (n === 'InvalidStateError') return 'هذا الجهاز مفعّلة عليه البصمة لهذا الحساب من قبل.';
+  if (n === 'NotSupportedError' || n === 'SecurityError') return 'هذا المتصفح أو الجهاز لا يدعم الدخول بالبصمة.';
+  return { passkey_unknown: 'هذه البصمة غير مرتبطة بحساب في المنصة. ادخل بالرمز، ثم فعّل البصمة من «الدخول والأمان».', passkey_timeout: 'انتهت مهلة العملية. حاول مرة أخرى.', bad_passkey: 'تعذّر التحقق من البصمة. حاول مرة أخرى أو ادخل بالرمز.',
+    passkey_uv: 'يلزم التحقق بالبصمة أو الوجه أو رمز قفل الجهاز.', passkey_exists: 'هذا الجهاز مفعّلة عليه البصمة من قبل.', passkey_many: 'وصلت إلى الحد الأقصى (١٠ بصمات). احذف واحدة قديمة أولًا.', device_expired: 'انتهت صلاحية حفظ هذا الجهاز. ادخل بالرمز مرة واحدة.' }[m] || errText(e);
+}
+function pkMark(on) { try { if (on) localStorage.setItem('bhr_pk', '1'); else localStorage.removeItem('bhr_pk'); } catch (e) { } }
+function pkMarked() { try { return localStorage.getItem('bhr_pk') === '1'; } catch (e) { return false; } }
+
+/* الدخول بالبصمة: لا يحتاج بريدًا، المفتاح يعرّف صاحبه */
+function pkLogin(btn) {
+  if (!PK_OK) { LG.err = 'هذا المتصفح لا يدعم الدخول بالبصمة.'; render(); return; }
+  LG.err = ''; LG.busyPk = true; render();
+  api({ action: 'pkLoginStart' }).then(function (j) {
+    var o = j.publicKey; o.challenge = uBuf(o.challenge);
+    return navigator.credentials.get({ publicKey: o });
+  }).then(function (c) {
+    if (!c) throw new Error('bad_passkey');
+    return api({ action: 'pkLoginFinish', id: c.id, clientDataJSON: bufU(c.response.clientDataJSON), authenticatorData: bufU(c.response.authenticatorData), signature: bufU(c.response.signature), remember: !!LG.remember });
+  }).then(function () { pkMark(true); JUST_IN = true; return api({ action: 'authMe' }); }).then(function (j) {
+    LG = lgNew(); if (!j.user) throw new Error('auth_required'); return enterApp(j.user);
+  }).catch(function (e) { LG.busyPk = false; LG.err = pkErr(e); render(); });
+}
+/* الدخول السريع من جهاز محفوظ */
+function devLogin() {
+  LG.err = ''; LG.busyDev = true; render();
+  api({ action: 'deviceLogin' }).then(function () { JUST_IN = true; return api({ action: 'authMe' }); }).then(function (j) {
+    LG = lgNew(); if (!j.user) throw new Error('auth_required'); return enterApp(j.user);
+  }).catch(function (e) { LG.busyDev = false; if (/device_expired/.test(e.message)) DEV = null; LG.err = pkErr(e); render(); });
+}
+function devForget() { api({ action: 'deviceForget' }).catch(function () { }).then(function () { DEV = null; LG.other = false; render(); toast('نُسي هذا الجهاز'); }); }
+function devHello() { return api({ action: 'deviceHello' }).then(function (h) { DEV = h.device || null; }, function () { DEV = null; }); }
+function lgNew() { return { step: 'email', mail: '', to: '', err: '', busy: false, tab: 'in', remember: true }; }
+
+/* بطاقة «مرحبًا مجددًا» أعلى نموذج الدخول */
+function quickHTML() {
+  var d = DEV, pk = PK_OK && d.passkey;
+  return '<div class="qback"><span class="qav">' + esc((d.name || '؟').replace(/^(د|أ|م)\.\s*/, '').charAt(0)) + '</span><div><small>مرحبًا مجددًا</small><b>' + esc(d.name) + '</b><span class="ltr">' + esc(d.email) + '</span></div></div>' +
+    '<div class="lerr" id="lerr" role="alert">' + esc(LG.err) + '</div>' +
+    (pk ? '<button class="btn prim qbtn" type="button" id="qpk"' + (LG.busyPk ? ' disabled' : '') + '>' + ic('finger') + (LG.busyPk ? 'بانتظار البصمة…' : 'الدخول بالبصمة') + '</button>' : '') +
+    '<button class="btn ' + (pk ? '' : 'prim ') + 'qbtn" type="button" id="qdev"' + (LG.busyDev ? ' disabled' : '') + '>' + ic('bolt') + (LG.busyDev ? 'جارٍ الدخول…' : 'دخول سريع') + '</button>' +
+    '<div class="lrow2"><button type="button" class="lnk" id="qother">الدخول بحساب آخر</button><button type="button" class="lnk" id="qforget">نسيان هذا الجهاز</button></div>' +
+    '<div class="note lnote">' + ic('shield') + '<span>هذا الجهاز محفوظ لحسابك، فلا يلزمك رمز البريد. إن كان الجهاز مشتركًا فاضغط «نسيان هذا الجهاز».</span></div>';
+}
+function pkAltHTML() {
+  return PK_OK ? '<div class="lor"><span>أو</span></div><button class="btn qbtn" type="button" id="qpk"' + (LG.busyPk ? ' disabled' : '') + '>' + ic('finger') + (LG.busyPk ? 'بانتظار البصمة…' : 'الدخول بالبصمة أو الوجه') + '</button>' : '';
+}
+function bindQuick() {
+  var $ = function (i) { return document.getElementById(i); };
+  if ($('qpk')) $('qpk').onclick = function () { pkLogin(); };
+  if ($('qdev')) $('qdev').onclick = devLogin;
+  if ($('qother')) $('qother').onclick = function () { LG.other = true; LG.err = ''; render(); };
+  if ($('qforget')) $('qforget').onclick = devForget;
+  if ($('lrem')) $('lrem').onchange = function () { LG.remember = $('lrem').checked; };
+}
+
+/* ---------- تفعيل البصمة على هذا الجهاز ---------- */
+function pkRegister() {
+  if (!PK_OK) { toast('هذا المتصفح لا يدعم الدخول بالبصمة'); return Promise.resolve(false); }
+  return api({ action: 'pkRegStart' }).then(function (j) {
+    var o = j.publicKey; o.challenge = uBuf(o.challenge); o.user.id = uBuf(o.user.id);
+    o.excludeCredentials = (o.excludeCredentials || []).map(function (c) { return { type: 'public-key', id: uBuf(c.id) }; });
+    return navigator.credentials.create({ publicKey: o });
+  }).then(function (c) {
+    return api({ action: 'pkRegFinish', clientDataJSON: bufU(c.response.clientDataJSON), attestationObject: bufU(c.response.attestationObject) });
+  }).then(function (j) { pkMark(true); toast('فُعّل الدخول بالبصمة على ' + (j.label || 'هذا الجهاز')); return true; })
+    .catch(function (e) { toast(pkErr(e)); return false; });
+}
+/* عرض التفعيل مرة واحدة بعد الدخول، على الأجهزة التي فيها بصمة أو وجه */
+function pkOffer() {
+  if (!JUST_IN) return; JUST_IN = false;
+  if (!PK_OK || pkMarked() || !SESSION) return;
+  try { if (localStorage.getItem('bhr_pk_no') === String(SESSION.id)) return; } catch (e) { }
+  var chk = PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable ? PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable() : Promise.resolve(false);
+  chk.then(function (ok) {
+    if (!ok || document.getElementById('secLayer') || !SESSION) return;
+    var el = document.createElement('div'); el.id = 'secLayer';
+    el.innerHTML = '<div class="mscrim" data-sclose="1"></div><section class="mdl pkoffer" role="dialog" aria-modal="true" aria-labelledby="pkT"><div class="pkhero">' + ic('finger') + '</div>' +
+      '<h2 id="pkT">ادخل بالبصمة في المرة القادمة</h2><p>فعّل البصمة أو بصمة الوجه على هذا الجهاز، وادخل بلمسة واحدة دون بريد ولا رمز. البصمة لا تغادر جهازك ولا تُحفظ عندنا.</p>' +
+      '<div class="pkbtns"><button class="btn prim" id="pkYes">' + ic('finger') + 'تفعيل الآن</button><button class="btn" id="pkLater">لاحقًا</button></div><button class="lnk" id="pkNever">لا تسألني مجددًا على هذا الجهاز</button></section>';
+    document.body.appendChild(el);
+    var close = function () { el.remove(); };
+    el.querySelector('[data-sclose]').onclick = close; document.getElementById('pkLater').onclick = close;
+    document.getElementById('pkNever').onclick = function () { try { localStorage.setItem('bhr_pk_no', String(SESSION.id)); } catch (e) { } close(); };
+    document.getElementById('pkYes').onclick = function () { var b = this; b.disabled = true; pkRegister().then(function (ok) { if (ok) close(); else b.disabled = false; }); };
+  });
+}
+
+/* ---------- «الدخول والأمان»: البصمات والأجهزة المحفوظة ---------- */
+var SEC = null;
+function secOpen() { SEC = { data: null, err: '' }; drawSec(); api({ action: 'secList' }).then(function (j) { SEC.data = j; drawSec(); }, function (e) { SEC.err = errText(e); drawSec(); }); }
+function drawSec() {
+  var old = document.getElementById('secLayer'); if (old) old.remove();
+  var d = SEC.data, el = document.createElement('div'); el.id = 'secLayer';
+  var when = function (t) { var x = pdt(t); return x ? agoD(x) : '—'; };
+  var body = !d ? '<div class="empty">' + (SEC.err ? esc(SEC.err) : 'جارٍ التحميل…') + '</div>' :
+    '<section class="ast"><h3>' + ic('finger') + 'البصمة والوجه</h3>' +
+      (d.passkeys.length ? '<ul class="slist">' + d.passkeys.map(function (p) { return '<li>' + tile('emerald', 'finger') + '<div><b>' + esc(p.label) + '</b><small>أُضيفت ' + when(p.created) + ' · آخر دخول ' + when(p.used) + '</small></div><button class="btn sm" data-srm="passkey:' + p.id + '">إلغاء</button></li>'; }).join('') + '</ul>'
+        : '<p class="hint">لم تفعّل الدخول بالبصمة بعد. فعّله على جوالك أو حاسوبك لتدخل بلمسة.</p>') +
+      (PK_OK && pkMarked() && d.passkeys.length ? '<p class="hint">' + ic('check') + ' البصمة مفعّلة على هذا الجهاز. <button type="button" class="lnk" id="secAddPk">إضافة مفتاح آخر (جوال أو مفتاح أمان)</button></p>' : PK_OK ? '<button class="btn prim" id="secAddPk">' + ic('plus') + 'تفعيل البصمة على هذا الجهاز</button>' : '<p class="hint">هذا المتصفح لا يدعم البصمة؛ جرّب Chrome أو Safari أو Edge حديثًا.</p>') + '</section>' +
+    '<section class="ast"><h3>' + ic('bolt') + 'الأجهزة المحفوظة للدخول السريع</h3>' +
+      (d.devices.length ? '<ul class="slist">' + d.devices.map(function (v) { return '<li>' + tile(v.current ? 'gold' : 'sapphire', 'shield') + '<div><b>' + esc(v.label) + (v.current ? ' <span class="pill ok"><i></i>هذا الجهاز</span>' : '') + '</b><small>آخر دخول ' + when(v.used) + ' · يبقى محفوظًا حتى ' + fdx(pdate(v.expires)) + '</small></div><button class="btn sm" data-srm="device:' + v.id + '">إزالة</button></li>'; }).join('') + '</ul>'
+        : '<p class="hint">لا أجهزة محفوظة.</p>') +
+      (d.devices.some(function (v) { return v.current; }) ? '' : '<button class="btn" id="secRemember">' + ic('shield') + 'احفظ هذا الجهاز ' + d.deviceDays + ' يومًا</button>') + '</section>' +
+    '<div class="note">' + ic('lock') + '<span>البصمة تبقى داخل جهازك، والمنصة تحفظ مفتاحًا عامًا لا يصلح لغير التحقق. إن فقدت جهازًا فأزله من هنا فورًا.</span></div>';
+  el.innerHTML = '<div class="mscrim" data-sclose="1"></div><section class="mdl secm" role="dialog" aria-modal="true" aria-labelledby="secT"><header class="mh">' + tile('amethyst', 'key') + '<div><h2 id="secT">الدخول والأمان</h2><p>' + esc(SESSION ? SESSION.email : '') + '</p></div><button class="ib mx" data-sclose="1" aria-label="إغلاق">' + ic('plus') + '</button></header><div class="abody">' + body + '</div></section>';
+  document.body.appendChild(el);
+  el.querySelectorAll('[data-sclose]').forEach(function (b) { b.onclick = function () { el.remove(); }; });
+  el.querySelectorAll('[data-srm]').forEach(function (b) { b.onclick = function () { var p = b.dataset.srm.split(':'); b.disabled = true;
+    api({ action: 'secRemove', kind: p[0], id: p[1] }).then(function (j) { SEC.data = j; if (p[0] === 'passkey' && !j.passkeys.length) pkMark(false); drawSec(); toast(p[0] === 'passkey' ? 'أُلغيت البصمة' : 'أُزيل الجهاز'); }, function (e) { b.disabled = false; toast(errText(e)); }); }; });
+  var a = document.getElementById('secAddPk'); if (a) a.onclick = function () { a.disabled = true; pkRegister().then(function () { secOpen(); }); };
+  var r = document.getElementById('secRemember'); if (r) r.onclick = function () { r.disabled = true; api({ action: 'secRemove', kind: 'remember' }).then(function (j) { SEC.data = j; drawSec(); toast('حُفظ هذا الجهاز للدخول السريع'); }, function (e) { r.disabled = false; toast(errText(e)); }); };
+  var f = el.querySelector('.mx'); if (f) f.focus();
+}
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { var l = document.getElementById('secLayer'); if (l) l.remove(); } });
+document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('#secBtn')) secOpen(); });
 
 window.addEventListener('hashchange', route);
 boot();

@@ -3,6 +3,7 @@
  * الحسابات والدخول والصلاحيات
  * - الدخول برمز من ٦ أرقام يصل إلى بريد صاحب الحساب (صالح ١٠ دقائق، ٥ محاولات للرمز الواحد)
  * - قفل لكل حساب على حدة بعد ٨ أخطاء (١٥ دقيقة) + حدّ للطلبات من كل عنوان IP — لا يوجد قفل عام يمكن استغلاله لإيقاف الموارد البشرية
+ * - دخول سريع اختياري: جهاز محفوظ ٣٠ يومًا، أو البصمة/الوجه بمفاتيح المرور (server/passkey.php)
  * - جلسة بملف تعريف آمن (HttpOnly, Secure, SameSite=Strict) تنتهي بعد مدة الخمول أو المدة القصوى
  * - الصلاحيات تُفحص في الخادم لكل عملية
  */
@@ -120,13 +121,8 @@ function auth_verify(array $b): array {
         throw new HttpError($row ? 'bad_code' : 'code_expired', 401);
     }
     q('UPDATE login_codes SET used_at=? WHERE id=?', [now(), $row['id']]);
-    q('UPDATE users SET fails=0, locked_until=NULL, last_login_at=? WHERE id=?', [now(), $u['id']]);
-    $token = bin2hex(random_bytes(32));
-    $hours = (int)cfg('session_hours');
-    q('INSERT INTO sessions (id, user_id, created_at, last_seen_at, expires_at, ip, ua) VALUES (?,?,?,?,?,?,?)',
-        [hash('sha256', $token), $u['id'], now(), now(), date('Y-m-d H:i:s', time() + $hours * 3600), client_ip(), substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255)]);
-    set_session_cookie($token, time() + $hours * 3600);
-    audit_log('', 'تسجيل دخول', $u['name'] ?: $email, $u['name'] ?: $email);
+    open_session($u, '');
+    if (!empty($b['remember'])) device_issue($u); /* «تذكّر هذا الجهاز»: دخول سريع لاحقًا دون رمز */
     return ['ok' => true, 'user' => user_public($u)];
 }
 function set_session_cookie(string $value, int $expires): void {
@@ -217,6 +213,7 @@ function users_unlock(array $b): array {
 function sessions_revoke(array $b): array {
     $me = require_perm('users.manage');
     q('DELETE FROM sessions WHERE user_id=?', [(int)($b['id'] ?? 0)]);
+    q('DELETE FROM devices WHERE user_id=?', [(int)($b['id'] ?? 0)]); /* والأجهزة المحفوظة أيضًا (البصمات تبقى، وتُلغى من حساب صاحبها) */
     audit_log('', 'إنهاء جلسات حساب', (string)($b['id'] ?? ''), $me['_label']);
     return ['ok' => true];
 }

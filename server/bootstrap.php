@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 4;
+const BHR_SCHEMA_VERSION = 5;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -99,6 +99,14 @@ function migrate(PDO $pdo): void {
         status VARCHAR(12) NOT NULL DEFAULT 'pending', stage TINYINT NOT NULL DEFAULT 0, chain TEXT NOT NULL, data TEXT NOT NULL,
         created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL,
         KEY k_ref (ref), KEY k_status (status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    /* ٥) الدخول السريع: الأجهزة المحفوظة ومفاتيح المرور (البصمة) */
+    $pdo->exec("CREATE TABLE IF NOT EXISTS devices (
+        id CHAR(64) PRIMARY KEY, user_id INT NOT NULL, label VARCHAR(120) NOT NULL DEFAULT '', ip VARCHAR(64) NOT NULL DEFAULT '',
+        created_at DATETIME NOT NULL, last_used_at DATETIME NOT NULL, expires_at DATETIME NOT NULL, KEY k_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS passkeys (
+        id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, cred_id VARCHAR(255) NOT NULL, pubkey TEXT NOT NULL, alg INT NOT NULL,
+        sign_count BIGINT NOT NULL DEFAULT 0, label VARCHAR(120) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, last_used_at DATETIME NULL,
+        UNIQUE KEY u_cred (cred_id), KEY k_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {
