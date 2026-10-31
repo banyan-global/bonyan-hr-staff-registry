@@ -810,10 +810,35 @@ VIEWS.home = function () {
   var ents = ENT.map(function (e) { return { e: e, ss: STAFF.filter(function (s) { return s.ent.v === e.v; }) }; });
   var entP = pn('gold', 'building', 'الجهات', nq(nE, 'جهة واحدة', 'جهتان', 'جهات', 'جهة') + ' في السجل', '', '<div class="pb"><div class="ents">' + ents.map(function (x) { var dn2 = x.ss.filter(function (s) { return s.status === 'مكتمل'; }).length;
     return '<button class="ent" style="--ec:' + x.e.c + '" data-ent="' + esc(x.e.v) + '"><div class="lg">' + elogo(x.e) + '</div><h3>' + esc(x.e.n) + '</h3><div class="nb"><b>' + x.ss.length + '</b><span>' + pct(dn2, x.ss.length) + '٪ مكتمل</span></div><div class="tr"><i style="width:' + pct(dn2, x.ss.length) + '%"></i></div></button>'; }).join('') + '</div></div>');
-  var recent = pn('emerald', 'userok', 'أحدث المنسوبين', '', more('الكل', '#people'), '<ul class="lst">' + STAFF.slice(0, 5).map(function (s) { return '<li style="cursor:pointer" data-open="' + esc(s.ref) + '">' + av(s) + '<div><b>' + esc(s.name) + '</b><span class="s">' + esc(s.ent.n) + '، ' + esc(s.c.n) + ' · ' + agoD(s.reg) + '</span></div>' + (s.status === 'مكتمل' ? '<span class="pill ok"><i></i>مكتمل</span>' : '<span class="pill warn"><i></i>ناقص</span>') + '</li>'; }).join('') + '</ul>');
+  var recent = pn('emerald', 'userok', 'أحدث المنسوبين', '', more('الكل', '#people'), '<ul class="lst">' + STAFF.slice(0, 5).map(function (s) { return '<li style="cursor:pointer" data-open="' + esc(s.ref) + '">' + avP(s) + '<div><b>' + esc(s.name) + '</b><span class="s">' + esc(s.ent.n) + '، ' + esc(s.c.n) + ' · ' + agoD(s.reg) + '</span></div>' + (s.status === 'مكتمل' ? '<span class="pill ok"><i></i>مكتمل</span>' : '<span class="pill warn"><i></i>ناقص</span>') + '</li>'; }).join('') + '</ul>');
   var log = can('audit') ? pn('slate', 'history', 'آخر العمليات', '', more('السجل الكامل', '#log'), tlHTML(6)) : natPanel();
   var third = can('users') ? readyPanel() : quickFacts();
-  return hero + kpis + '<div class="grid g21">' + regChart + stDonut + '</div><div class="grid g3">' + quality + geo + docLvl + '</div><div class="grid g21">' + todo + qa + '</div>' + cal + entP + '<div class="grid g3">' + recent + log + third + '</div>';
+  /* الأهم أولًا (نمط صندوق المهام في أنظمة الموارد البشرية): المهام والإجراءات والمناسبات، ثم المؤشرات والرسوم */
+  return hero + kpis + '<div class="grid g21">' + todo + '<div class="stack">' + qa + eventsPanel() + '</div></div>' + '<div class="grid g21">' + regChart + stDonut + '</div><div class="grid g3">' + quality + geo + docLvl + '</div>' + cal + entP + '<div class="grid g3">' + recent + log + third + '</div>';
+};
+function eventsPanel() {
+  var t0 = new Date(TODAY); t0.setHours(0, 0, 0, 0); var E = [];
+  STAFF.forEach(function (s) {
+    if (!s.hire) return;
+    var h = new Date(s.hire); h.setHours(0, 0, 0, 0);
+    var dd = Math.round((h - t0) / DAY);
+    if (dd >= 0 && dd <= 30) E.push({ d: dd, s: s, t: 'يباشر العمل', k: 'teal', i: 'userok' });
+    else if (dd < 0 && dd >= -30) E.push({ d: dd, s: s, t: 'باشر حديثًا · مرحبًا به', k: 'emerald', i: 'userok' });
+    var y = t0.getFullYear() - h.getFullYear(), an = new Date(t0.getFullYear(), h.getMonth(), h.getDate());
+    if (an < t0) { an = new Date(t0.getFullYear() + 1, h.getMonth(), h.getDate()); y++; }
+    var da = Math.round((an - t0) / DAY);
+    if (y >= 1 && da <= 30) E.push({ d: da, s: s, t: 'يُتم ' + (y === 1 ? 'سنته الأولى' : y === 2 ? 'سنتين' : y + (y <= 10 ? ' سنوات' : ' سنة')) + ' معنا', k: 'gold', i: 'gift' });
+  });
+  reqRows().forEach(function (r) {
+    if (r.status !== 'approved' || !r.data || !r.data.from) return; var f = pdate(r.data.from); if (!f) return;
+    var dd = Math.round((f - t0) / DAY), s = byRef(r.ref); if (dd < 0 || dd > 14 || !s) return;
+    E.push({ d: dd, s: s, t: (r.type === 'travel' ? 'يبدأ مهمة سفر إلى ' + (r.data.dest || '') : 'تبدأ إجازته'), k: r.type === 'travel' ? 'sapphire' : 'amethyst', i: r.type === 'travel' ? 'plane' : 'umbrella' });
+  });
+  E.sort(function (a, b) { return Math.abs(a.d) - Math.abs(b.d); });
+  var when = function (d) { return d === 0 ? 'اليوم' : d === 1 ? 'غدًا' : d === -1 ? 'أمس' : d > 0 ? 'بعد ' + (d === 2 ? 'يومين' : dn(d)) : 'قبل ' + (d === -2 ? 'يومين' : dn(-d)); };
+  return pn('gold', 'calendar', 'مناسبات قادمة', 'خلال ٣٠ يومًا', '', E.length ? '<ul class="lst evl">' + E.slice(0, 6).map(function (e) {
+      return '<li data-open="' + esc(e.s.ref) + '" style="cursor:pointer">' + avP(e.s) + '<div><b>' + esc(e.s.name) + '</b><span class="s">' + tile(e.k, e.i, 'xs') + esc(e.t) + '</span></div><span class="when' + (e.d === 0 ? ' now' : '') + '">' + when(e.d) + '</span></li>'; }).join('') + '</ul>'
+    : '<div class="pb"><div class="note">' + ic('calendar') + '<span>لا مناسبات خلال الثلاثين يومًا القادمة. تظهر هنا ذكرى المباشرة والمنضمون الجدد وبدء الإجازات المعتمدة.</span></div></div>');
 };
 function natPanel() {
   var c = {}; STAFF.forEach(function (s) { var k = s.nat || 'غير محددة'; c[k] = (c[k] || 0) + 1; });
@@ -869,29 +894,46 @@ VIEWS.log = function () {
 };
 
 /* ---------- people ---------- */
+var SORTS = [{ v: '', n: 'الأحدث تسجيلًا', ic: 'clock' }, { v: 'name', n: 'الاسم (أ ← ي)', ic: 'user' }, { v: 'docs', n: 'الأقرب انتهاءً للوثائق', ic: 'pass' }, { v: 'gaps', n: 'الأكثر نواقص', ic: 'alert' }, { v: 'svc', n: 'الأقدم خدمة', ic: 'calendar' }];
 function filtered() {
   var q = filt.q.trim().toLowerCase();
-  return STAFF.filter(function (s) {
-    var okSt = filt.st === 'all' || (filt.st === 'done' && s.status === 'مكتمل') || (filt.st === 'gap' && s.status === 'ناقص') || (filt.st === 'exp' && s.worst < 0) || (filt.st === 'mail' && !s.mailed);
+  var L = STAFF.filter(function (s) {
+    var okSt = filt.st === 'all' || (filt.st === 'done' && s.status === 'مكتمل') || (filt.st === 'gap' && s.status === 'ناقص') || (filt.st === 'exp' && s.worst < 0) || (filt.st === 'soon' && s.worst >= 0 && s.worst <= 30) || (filt.st === 'mail' && !s.mailed);
     return okSt && (!filt.ent || s.ent.v === filt.ent) && (!filt.cc || s.c.cc === filt.cc) && (!q || (s.name + ' ' + s.latin + ' ' + s.ref + ' ' + s.phone + ' ' + s.mail + ' ' + s.job).toLowerCase().indexOf(q) >= 0);
   });
+  var k = filt.sort || '';
+  if (k) L = L.slice().sort(function (a, b) {
+    return k === 'name' ? a.name.localeCompare(b.name, 'ar') : k === 'docs' ? a.worst - b.worst : k === 'gaps' ? b.miss.length - a.miss.length || a.worst - b.worst : (a.hire || TODAY) - (b.hire || TODAY);
+  });
+  return L;
+}
+function stPill(x) {
+  var wd = x.worst;
+  return wd < 0 ? '<span class="pill bad"><i></i>وثيقة منتهية</span>' : wd <= 30 ? '<span class="pill warn"><i></i>تنتهي قريبًا</span>' : x.status === 'ناقص' ? '<span class="pill warn"><i></i>ناقص</span>' : '<span class="pill ok"><i></i>مكتمل</span>';
 }
 VIEWS.dir = function () {
   var list = filtered(), s = byRef(cur);
   if (!s || list.indexOf(s) < 0) s = list[0] || null;
   cur = s ? s.ref : '';
-  var C = { all: CNT.tot, done: CNT.done, gap: CNT.gap, exp: CNT.exp };
+  var soon = STAFF.filter(function (x) { return x.worst >= 0 && x.worst <= 30; }).length;
+  var C = { all: CNT.tot, done: CNT.done, gap: CNT.gap, exp: CNT.exp, soon: soon };
   var rows = list.length ? list.map(function (x) {
-    var wd = x.docs.slice().sort(function (a, b) { return a.days - b.days; })[0];
-    return '<button class="prow" data-pick="' + esc(x.ref) + '" aria-current="' + (s && x.ref === s.ref) + '">' + av(x) + '<span><b>' + esc(x.name) + '</b><span class="s">' + esc(x.job) + '، ' + esc(x.ent.n) + '</span></span><span class="fl">' +
-      (wd && wd.days <= 30 ? '<span class="pill ' + st(wd.days) + '"><i></i>' + (wd.days < 0 ? 'وثيقة منتهية' : 'تنتهي قريبًا') + '</span>' : x.status === 'ناقص' ? '<span class="pill warn"><i></i>ناقص</span>' : '<span class="pill ok"><i></i>مكتمل</span>') + '<span class="ref">' + esc(x.ref.replace(/^BNY-HR-/, '')) + '</span></span></button>'; }).join('')
+    return '<button class="prow" data-pick="' + esc(x.ref) + '" aria-current="' + (s && x.ref === s.ref) + '">' + avP(x) + '<span><b>' + esc(x.name) + '</b><span class="s">' + esc(x.job) + '، ' + esc(x.ent.n) + '</span></span><span class="fl">' +
+      stPill(x) + '<span class="ref">' + esc(x.ref.replace(/^BNY-HR-/, '')) + '</span></span></button>'; }).join('')
     : '<div class="empty">' + (STAFF.length ? 'لا أحد يطابق هذه التصفية. جرّب إزالة أحد المرشحات.' : 'لا يوجد منسوبون بعد.') + '</div>';
-  var listH = '<section class="pn"><div class="filters"><input id="fq" placeholder="ابحث بالاسم أو الرقم المرجعي أو الجوال أو البريد" value="' + esc(filt.q) + '" aria-label="بحث">' +
-    ssel('fent', entOpts(true, true), filt.ent, 'كل الجهات', function (v) { filt.ent = v; render(); }, 'الجهة') +
-    ssel('fcc', ctryOpts(), filt.cc, 'كل الدول', function (v) { filt.cc = v; render(); }, 'دولة العمل') + '</div>' +
-    '<div class="seg" role="group" aria-label="الحالة">' + [['all', 'الكل'], ['done', 'مكتمل'], ['gap', 'ناقص'], ['exp', 'وثيقة منتهية']].map(function (x) { return '<button data-st="' + x[0] + '" aria-pressed="' + (filt.st === x[0]) + '">' + x[1] + '<b>' + C[x[0]] + '</b></button>'; }).join('') + '</div>' +
-    '<div class="rows">' + rows + '</div><div class="cnt"><span>' + list.length + ' من ' + CNT.tot + '</span>' + (can('mail') && list.length > 1 ? '<button class="btn sm" data-msgall="1">' + ic('chat') + 'مراسلة ' + list.length + ' منسوبين</button>' : '') + '</div></section>';
-  return ptitle('دليل المنسوبين', CNT.tot + ' منسوبًا. اختر منسوبًا لعرض ملفه وبطاقته ووثائقه.', '') +
+  var E = ENT_MAP[filt.ent], CC = CT_MAP[filt.cc], SO = SORTS.filter(function (o) { return o.v === (filt.sort || ''); })[0];
+  var STN = { done: 'مكتمل', gap: 'ناقص', exp: 'وثيقة منتهية', soon: 'تنتهي خلال ٣٠ يومًا', mail: 'لم تصله رسالة التأكيد' };
+  var bar = '<section class="pn tbar"><div class="fbar">' + fsearch('fq', filt.q, 'ابحث بالاسم أو الرقم المرجعي أو الجوال أو البريد', 'بحث في المنسوبين') +
+    ssel('fent', entOpts(true, true), filt.ent, 'الكل', function (v) { filt.ent = v; render(); }, 'الجهة', 'الجهة') +
+    ssel('fcc', ctryOpts(), filt.cc, 'الكل', function (v) { filt.cc = v; render(); }, 'دولة العمل', 'الدولة') +
+    ssel('fsort', SORTS, filt.sort || '', 'الأحدث تسجيلًا', function (v) { filt.sort = v; render(); }, 'ترتيب القائمة', 'الترتيب') + '</div>' +
+    '<div class="frow"><div class="schips" role="group" aria-label="حالة الملف">' + [['all', 'الكل', ''], ['done', 'مكتمل', 'ok'], ['gap', 'ناقص', 'warn'], ['soon', 'تنتهي قريبًا', 'warn'], ['exp', 'وثيقة منتهية', 'bad']].map(function (x) {
+      return '<button data-st="' + x[0] + '" class="' + x[2] + '" aria-pressed="' + (filt.st === x[0]) + '">' + (x[2] ? '<i></i>' : '') + x[1] + '<b>' + C[x[0]] + '</b></button>'; }).join('') + '</div>' +
+    fchips([[filt.q.trim() ? 'بحث: ' + filt.q.trim() : '', function () { filt.q = ''; }], [E ? 'الجهة: ' + E.n : '', function () { filt.ent = ''; }], [CC ? 'الدولة: ' + CC.n : '', function () { filt.cc = ''; }], [filt.st !== 'all' && STN[filt.st] ? 'الحالة: ' + STN[filt.st] : '', function () { filt.st = 'all'; }]]) +
+    '<span class="fcount"><b>' + list.length + '</b> من ' + CNT.tot + (SO && SO.v ? ' · ' + esc(SO.n) : '') + '</span>' +
+    (can('mail') && list.length > 1 ? '<button class="btn sm" data-msgall="1">' + ic('chat') + 'مراسلة ' + nq(list.length, 'منسوب واحد', 'منسوبَين', 'منسوبين', 'منسوبًا') + '</button>' : '') + '</div></section>';
+  var listH = '<section class="pn plist"><div class="rows">' + rows + '</div></section>';
+  return ptitle('دليل المنسوبين', CNT.tot + ' منسوبًا. اختر منسوبًا لعرض ملفه وبطاقته ووثائقه وطلباته.', '') + bar +
     '<div class="md">' + listH + (s ? profHTML(s) : '<section class="pn prof"><div class="empty">اختر منسوبًا من القائمة.</div></section>') + '</div>';
 };
 function cardHTML(s, tools) {
@@ -936,29 +978,45 @@ function docRows(docs, withNo) {
 }
 function kvHTML(list) { return '<dl class="kv">' + list.filter(function (p) { return p[1] !== '' && p[1] != null; }).map(function (p) { return '<div><dt>' + p[0] + '</dt><dd>' + p[1] + '</dd></div>'; }).join('') + '</dl>'; }
 function ltr(v) { return v ? '<span class="ltr">' + esc(v) + '</span>' : '—'; }
+function completeness(s) { var tot = 4 + s.docs.filter(function (d) { return d.t !== 'العقد'; }).length; return Math.round(Math.max(0, tot - s.miss.length) / tot * 100); }
+function ksec(title, icn, list) { var b = kvHTML(list); return '<section class="ksec"><h3>' + ic(icn) + title + '</h3>' + b + '</section>'; }
 function profHTML(s) {
-  var r = s.r, T = [['over', 'الملف', 'user'], ['docs', 'الوثائق', 'pass'], ['pay', 'المالية', 'wallet'], ['log', 'السجل', 'history']].filter(function (t) { return (t[0] !== 'pay' || can('pay')) && (t[0] !== 'log' || can('audit') || can('mail')); });
+  var r = s.r, myReqs = reqRows().filter(function (x) { return x.ref === s.ref; }), openR = myReqs.filter(function (x) { return x.status === 'pending'; }).length;
+  var T = [['over', 'الملخص', 'card'], ['info', 'البيانات', 'user'], ['docs', 'الوثائق', 'pass', s.docs.filter(function (d) { return d.days <= 30 || !d.file; }).length], ['pay', 'المالية', 'wallet'], ['reqs', 'الطلبات', 'stamp', openR], ['log', 'السجل', 'history']]
+    .filter(function (t) { return (t[0] !== 'pay' || can('pay')) && (t[0] !== 'log' || can('audit') || can('mail')); });
   if (!T.some(function (t) { return t[0] === ptab; })) ptab = 'over';
-  var body = '';
-  if (ptab === 'over') body = kvHTML([['الاسم كما في الجواز', s.latin ? '<span class="ltr">' + esc(s.latin) + '</span>' : '—'], ['الجنسية', esc(s.nat || '—')], ['الجوال', ltr(r.mobile)], ['الواتساب', ltr(r.whatsapp)],
-      ['البريد الرسمي', r.officialEmail ? '<span class="ltr" style="font-size:13.5px">' + esc(r.officialEmail) + '</span>' : '—'], ['البريد الشخصي', r.personalEmail ? '<span class="ltr" style="font-size:13.5px">' + esc(r.personalEmail) + '</span>' : '—'],
-      ['الإدارة', esc(r.department || '—')], ['المدير المباشر', esc(r.manager || '—')], ['تاريخ المباشرة', fdx(s.hire)], ['أعلى مؤهل', esc(r.topDegree || '—')], ['تاريخ التسجيل', fdx(s.reg) + ' <small class="mu">' + agoD(s.reg) + '</small>'],
-      ['آخر تحديث', s.upd ? fd(s.upd) + ' <small class="mu">' + agoD(s.upd) + '</small>' : '—'], ['رسالة التأكيد', s.mailed ? 'أُرسلت إلى بريده' : '<span class="pill mute"><i></i>لم تُرسل</span>']]) +
+  var body = '', pc = completeness(s);
+  if (ptab === 'over') body = '<div class="psum"><div class="cardcol">' + cardHTML(s) + '</div><div class="pside">' +
+      '<div class="meter"><div class="mt"><span>اكتمال الملف</span><b>' + pc + '٪</b></div><div class="bar"><i style="width:' + pc + '%;background:' + (pc === 100 ? 'var(--c-ok)' : pc >= 60 ? 'var(--c-warn)' : 'var(--c-bad)') + '"></i></div></div>' +
+      '<dl class="facts">' + [['sapphire', 'building', 'الجهة', s.ent.full || s.ent.n], ['emerald', 'user', 'المسمى الوظيفي', s.job], ['teal', 'globe', 'دولة العمل', s.c.n], ['gold', 'clock', 'مدة الخدمة', svc(s.hire)], ['amethyst', 'calendar', 'تاريخ المباشرة', s.hire ? fd(s.hire) : '—'], ['slate', 'phone', 'الجوال', s.phone || '—']].map(function (f) {
+        return '<div class="fact">' + tile(f[0], f[1]) + '<div style="min-width:0"><dt>' + f[2] + '</dt><dd' + (f[1] === 'phone' ? ' class="ltr"' : '') + '>' + esc(f[3]) + '</dd></div></div>'; }).join('') + '</dl></div></div>' +
     (s.miss.length ? '<div><h3 class="h3s">نواقص الملف</h3><div class="miss">' + s.miss.map(function (m) { return '<div><span>' + m + '</span>' + (can('mail') ? '<button class="btn sm" data-msggap="' + esc(s.ref) + '">اطلبه من المنسوب</button>' : '') + '</div>'; }).join('') + '</div></div>' : '<div class="note">' + ic('check') + '<span>الملف مكتمل، وكل الوثائق المطلوبة مرفوعة.</span></div>');
+  if (ptab === 'info') body = '<div class="ksecs">' +
+    ksec('الهوية', 'user', [['الاسم بالعربية', esc(s.name)], ['الاسم كما في الجواز', s.latin ? '<span class="ltr">' + esc(s.latin) + '</span>' : '—'], ['الجنسية', esc(s.nat || '—')], ['أعلى مؤهل', esc(r.topDegree || '—')]]) +
+    ksec('التواصل', 'chat', [['الجوال', ltr(r.mobile)], ['الواتساب', ltr(r.whatsapp)], ['البريد الرسمي', r.officialEmail ? '<span class="ltr" style="font-size:13.5px">' + esc(r.officialEmail) + '</span>' : '—'], ['البريد الشخصي', r.personalEmail ? '<span class="ltr" style="font-size:13.5px">' + esc(r.personalEmail) + '</span>' : '—']]) +
+    ksec('الوظيفة', 'building', [['الجهة', esc(s.ent.full || s.ent.n)], ['المسمى', esc(s.job)], ['الإدارة', esc(r.department || '—')], ['المدير المباشر', esc(r.manager || '—')], ['دولة العمل', esc(s.c.n)], ['تاريخ المباشرة', fdx(s.hire)]]) +
+    ksec('السجل في المنصة', 'history', [['الرقم المرجعي', '<span class="ltr">' + esc(s.ref) + '</span>'], ['تاريخ التسجيل', fdx(s.reg) + ' <small class="mu">' + agoD(s.reg) + '</small>'], ['آخر تحديث', s.upd ? fd(s.upd) + ' <small class="mu">' + agoD(s.upd) + '</small>' : '—'], ['رسالة التأكيد', s.mailed ? 'أُرسلت إلى بريده' : '<span class="pill mute"><i></i>لم تُرسل</span>']]) + '</div>';
   if (ptab === 'docs') body = docRows(s.docs, true) + '<div class="note">' + ic('archive') + '<span>عند استبدال وثيقة تنتقل النسخة القديمة إلى الأرشيف ولا تُحذف، ويمكن استرجاعها من التعديل التفصيلي.</span></div>';
   if (ptab === 'pay') body = kvHTML([['الراتب الشهري', s.base ? '<span class="tn">' + n(s.base) + ' ' + esc(curS(s.cur)) + '</span>' : '—'], ['العملة', esc(curN(s.cur))], ['المكافئ التقريبي بالريال', s.base && FX[s.cur] ? '<span class="tn">' + n(sar(s)) + ' ر.س</span>' : '—'],
       ['طريقة الاستلام', esc(r.payMethod || '—')], ['البنك', esc(r.bankName || '—')], ['دولة البنك', esc(r.bankCountry || '—')], ['الحساب', s.iban ? '<span class="ltr">' + s.iban + '</span>' : '<span class="pill bad"><i></i>غير مسجل</span>']]) +
     '<div class="note">' + ic('lock') + '<span>رقم الحساب يظهر مقنّعًا في المنصة. بياناته كاملة في التعديل التفصيلي لمن يملك صلاحية المالية.</span></div>';
+  if (ptab === 'reqs') body = (can('edit') ? '<div class="rqhead"><span>' + (myReqs.length ? nq(myReqs.length, 'طلب واحد', 'طلبان', 'طلبات', 'طلبًا') + (openR ? '، ' + openR + ' قيد الإجراء' : '') : 'لا طلبات لهذا المنسوب بعد') + '</span><a class="btn sm goldb" href="#reqs-new" data-rwref="' + esc(s.ref) + '">' + ic('plus') + 'طلب نيابة عنه</a></div>' : '') +
+    (myReqs.length ? reqListHTML(myReqs, false) : '');
   if (ptab === 'log') body = profLog(s);
-  var foot = (can('edit') ? '<button class="btn prim" data-full="' + esc(s.ref) + '" data-fedit="1">' + ic('edit') + 'تعديل البيانات والمرفقات</button>' : ro()) +
-    (can('mail') ? '<button class="btn goldb" data-msg="' + esc(s.ref) + '">' + ic('chat') + 'مراسلة المنسوب</button>' : '') +
-    '<button class="btn" data-full="' + esc(s.ref) + '">' + ic('doc') + 'الملف الكامل والطباعة</button><a class="btn" href="api/?action=zip&amp;ref=' + encodeURIComponent(s.ref) + '" download>' + ic('folder') + 'تنزيل المرفقات</a>';
-  return '<section class="pn prof" aria-live="polite"><div class="hd"><div><div style="display:flex;gap:14px;align-items:center">' + avP(s) + '<div><h2>' + esc(s.name) + '</h2><span class="ref">' + esc(s.ref) + '</span></div></div>' +
-    '<div class="meta">' + (s.status === 'مكتمل' ? '<span class="pill ok"><i></i>ملف مكتمل</span>' : '<span class="pill warn"><i></i>' + nq(s.miss.length || 1, 'نقص واحد', 'نقصان', 'نواقص', 'نقصًا') + '</span>') + (s.worst < 0 ? '<span class="pill bad"><i></i>وثيقة منتهية</span>' : s.worst <= 30 ? '<span class="pill warn"><i></i>وثيقة تنتهي قريبًا</span>' : '') + '</div>' +
-    '<dl class="facts">' + [['sapphire', 'building', 'الجهة', s.ent.full || s.ent.n], ['emerald', 'user', 'المسمى', s.job], ['teal', 'globe', 'دولة العمل', s.c.n], ['gold', 'clock', 'مدة الخدمة', svc(s.hire)]].map(function (f) { return '<div class="fact">' + tile(f[0], f[1]) + '<div style="min-width:0"><dt>' + f[2] + '</dt><dd>' + esc(f[3]) + '</dd></div></div>'; }).join('') + '</dl></div>' +
-    '<div class="cardcol">' + cardHTML(s) + '</div></div>' +
-    '<div class="ptabs" role="tablist">' + T.map(function (t) { return '<button role="tab" data-ptab="' + t[0] + '" aria-selected="' + (ptab === t[0]) + '">' + ic(t[2]) + t[1] + '</button>'; }).join('') + '</div><div class="pbody">' + body + '</div>' +
-    '<div class="pfoot">' + foot + '</div></section>';
+  var E = s.ent.c || '#1b3050';
+  var menu = '<details class="dmenu"><summary class="btn" aria-label="إجراءات أخرى">' + ic('dots') + '<span>المزيد</span></summary><div class="dpop" role="menu">' +
+    '<button type="button" role="menuitem" data-full="' + esc(s.ref) + '">' + tile('sapphire', 'doc') + '<span><b>الملف الكامل والطباعة</b><small>كل الحقول ونسخة قابلة للطباعة</small></span></button>' +
+    '<button type="button" role="menuitem" data-cardpng="' + esc(s.ref) + '">' + tile('gold', 'card') + '<span><b>تنزيل البطاقة</b><small>صورة PNG بوجهيها</small></span></button>' +
+    '<a role="menuitem" href="api/?action=zip&amp;ref=' + encodeURIComponent(s.ref) + '" download>' + tile('emerald', 'folder') + '<span><b>تنزيل المرفقات</b><small>ملف مضغوط بكل الوثائق</small></span></a>' +
+    '<button type="button" role="menuitem" data-copyref="' + esc(s.ref) + '">' + tile('slate', 'copy') + '<span><b>نسخ الرقم المرجعي</b><small class="ltr">' + esc(s.ref) + '</small></span></button>' +
+    (can('edit') ? '<a role="menuitem" href="#reqs-new" data-rwref="' + esc(s.ref) + '">' + tile('amethyst', 'stamp') + '<span><b>طلب نيابة عنه</b><small>إجازة أو إركاب أو تعريف</small></span></a>' : '') + '</div></details>';
+  var acts = (can('edit') ? '<button class="btn prim" data-full="' + esc(s.ref) + '" data-fedit="1">' + ic('edit') + 'تعديل البيانات</button>' : ro()) +
+    (can('mail') ? '<button class="btn goldb" data-msg="' + esc(s.ref) + '">' + ic('chat') + 'مراسلة</button>' : '') + menu;
+  return '<section class="pn prof" aria-live="polite"><div class="phero" style="--ec:' + esc(E) + '"><div class="pid">' + avP(s) +
+    '<div class="pnm"><h2>' + esc(s.name) + '</h2>' + (s.latin ? '<p class="lat ltr">' + esc(s.latin) + '</p>' : '') + '<p class="job">' + esc(s.job) + ' · ' + esc(s.ent.n) + '</p>' +
+    '<div class="meta"><span class="refc ltr">' + esc(s.ref) + '</span>' + (s.status === 'مكتمل' ? '<span class="pill ok"><i></i>ملف مكتمل</span>' : '<span class="pill warn"><i></i>' + nq(s.miss.length || 1, 'نقص واحد', 'نقصان', 'نواقص', 'نقصًا') + '</span>') + (s.worst < 0 ? '<span class="pill bad"><i></i>وثيقة منتهية</span>' : s.worst <= 30 ? '<span class="pill warn"><i></i>وثيقة تنتهي قريبًا</span>' : '') + (openR ? '<span class="pill info"><i></i>' + openR + ' طلب قيد الإجراء</span>' : '') + '</div></div></div>' +
+    '<div class="pact">' + acts + '</div></div>' +
+    '<div class="ptabs" role="tablist">' + T.map(function (t) { return '<button role="tab" data-ptab="' + t[0] + '" aria-selected="' + (ptab === t[0]) + '">' + ic(t[2]) + t[1] + (t[3] ? '<em>' + t[3] + '</em>' : '') + '</button>'; }).join('') + '</div><div class="pbody">' + body + '</div></section>';
 }
 function profLog(s) {
   var out = '';
@@ -989,7 +1047,7 @@ VIEWS.payroll = function () {
     '</tbody><tfoot><tr><td colspan="2"><b>الإجمالي</b></td><td class="num"><b>' + paid.length + '</b></td><td class="num">—</td><td class="num"><b>' + n(tot) + '</b> <small>ر.س</small></td><td></td></tr></tfoot></table></div>' : '<div class="empty">لا رواتب مسجّلة بعد.</div>';
   var list = STAFF.filter(function (s) { return (PAYF === 'all' || !s.iban) && (!PAYE || s.ent.v === PAYE); }).sort(function (a, b) { return sar(b) - sar(a) || b.base - a.base; });
   var run = '<div class="seg pseg"><button data-pf="all" aria-pressed="' + (PAYF === 'all') + '">الكل<b>' + STAFF.length + '</b></button><button data-pf="nobank" aria-pressed="' + (PAYF === 'nobank') + '">بلا حساب بنكي<b>' + nob.length + '</b></button>' +
-    '<span id="payEnt">' + ssel('payEntS', entOpts(true, true), PAYE, 'كل الجهات', function (v) { PAYE = v; render(); }, 'الجهة') + '</span></div>' +
+    '<span id="payEnt">' + ssel('payEntS', entOpts(true, true), PAYE, 'الكل', function (v) { PAYE = v; render(); }, 'الجهة', 'الجهة') + '</span></div>' +
     '<div class="tw"><table><thead><tr><th>المنسوب</th><th>الجهة</th><th class="num">الراتب الشهري</th><th>العملة</th><th class="num">يعادل بالريال</th><th>طريقة الاستلام</th><th>الحساب البنكي</th></tr></thead><tbody>' +
     (list.length ? list.map(function (s) { return '<tr class="click" data-open="' + esc(s.ref) + '"><td><div class="person">' + av(s) + '<div><b>' + esc(s.name) + '</b><span>' + esc(s.job) + '</span></div></div></td><td>' + esc(s.ent.n) + '</td><td class="num">' + (s.base ? '<b>' + n(s.base) + '</b>' : '—') + '</td><td>' + s.cur + '</td><td class="num">' + (s.base && FX[s.cur] ? n(sar(s)) + ' <small>ر.س</small>' : '—') + '</td><td>' + esc(s.r.payMethod || '—') + '</td><td>' +
       (s.iban ? '<span class="ltr">' + s.iban + '</span>' : '<span class="pill bad"><i></i>غير مسجل</span>' + (can('mail') ? ' <button class="btn sm" data-msgbank="' + esc(s.ref) + '" data-stop="1">اطلبه</button>' : '')) + '</td></tr>'; }).join('') : '<tr><td colspan="7" class="empty">لا أحد في هذه التصفية.</td></tr>') + '</tbody></table></div>';
@@ -1169,6 +1227,8 @@ function bindLive() {
   document.querySelectorAll('.offcard .idcard-wrap').forEach(function (w) { w.onclick = function (e) { var c = w.querySelector('.idcard'); if (c) c.classList.toggle('flipped'); }; w.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); w.onclick(); } }; });
   document.querySelectorAll('[data-cardflip]').forEach(function (el) { el.onclick = function () { var c = el.closest('.offcard').querySelector('.idcard'); if (c) c.classList.toggle('flipped'); }; });
   document.querySelectorAll('[data-cardpng]').forEach(function (el) { el.onclick = function () { var s = byRef(el.dataset.cardpng) || ME; if (s) cardPng(s, el); }; });
+  all('[data-copyref]', function (el) { el.onclick = function () { copyText(el.dataset.copyref).then(function () { toast('نُسخ الرقم المرجعي'); }, function () {}); var d = el.closest('details'); if (d) d.removeAttribute('open'); }; });
+  all('[data-rwref]', function (el) { el.addEventListener('click', function () { RW = { i: 0, type: '', ref: el.dataset.rwref, d: {}, busy: false, err: '' }; TAB.reqs = 'new'; }); });
   all('[data-full]', function (el) { el.onclick = function (e) { e.stopPropagation(); openFull(el.dataset.full, !!el.dataset.fedit); }; });
   all('[data-acedit]', function (el) { el.onclick = function () { acctOpen(+el.dataset.acedit); }; });
   var aq = $('#acq'); if (aq) aq.oninput = function () { ACQ = aq.value; softRender(); };
@@ -1183,14 +1243,43 @@ function bindLive() {
   var th = $('#theme'); if (th) th.addEventListener('click', function () { try { localStorage.setItem('bonyan-hr-theme', document.documentElement.getAttribute('data-theme')); } catch (e) { } });
 }
 
+/* أيقونات إضافية لشريط التصفية والقوائم */
+P.x = '<path d="M6 6l12 12M18 6 6 18"/>';
+P.dots = '<circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/>';
+P.sort = '<path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/>';
+P.filter = '<path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/>';
+P.gift = '<path d="M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7c-1.5-3-5-3.5-5-1.2C7 7 9.5 7 12 7Zm0 0c1.5-3 5-3.5 5-1.2C17 7 14.5 7 12 7Z"/>';
+P.copy = '<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/>';
+P.phone = '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>';
 /* ---------- smart select: search inside the list, groups, descriptions, counts ---------- */
 var SSEL = {};
-function ssel(id, opts, val, ph, onPick, label) {
+function ssel(id, opts, val, ph, onPick, label, pre) {
   SSEL[id] = { opts: opts, onPick: onPick };
-  var cur = opts.filter(function (o) { return o.v === val; })[0];
-  return '<div class="ssel" data-ss="' + id + '"><button type="button" class="ss-btn" id="' + id + '" aria-haspopup="listbox" aria-expanded="false" aria-label="' + esc(label || ph) + '">' +
-    (cur && cur.c ? '<i class="dot" style="background:' + cur.c + '"></i>' : '') + '<span class="' + (cur && cur.v ? '' : 'ph') + '">' + esc(cur ? cur.n : ph) + '</span>' + ic('chev') + '</button></div>';
+  var cur = opts.filter(function (o) { return o.v === val; })[0], on = !!(cur && cur.v);
+  /* pre: عنوان صغير داخل الزر (نمط شريط التصفية) — «الجهة · الكل» */
+  return '<div class="ssel' + (pre ? ' fsel' : '') + (pre && on ? ' on' : '') + '" data-ss="' + id + '"><button type="button" class="ss-btn" id="' + id + '" aria-haspopup="listbox" aria-expanded="false" aria-label="' + esc(label || ph) + '">' +
+    (pre ? '<small class="pre">' + esc(pre) + '</small>' : '') + (cur && cur.c ? '<i class="dot" style="background:' + cur.c + '"></i>' : '') + '<span class="' + (on ? '' : 'ph') + '">' + esc(cur ? cur.n : ph) + '</span>' + ic('chev') + '</button></div>';
 }
+/* ---------- شريط التصفية الموحّد: بحث + قوائم + شرائح المرشحات النشطة ---------- */
+function fsearch(id, val, ph, label) {
+  return '<label class="fsearch">' + ic('search') + '<input id="' + id + '" type="search" placeholder="' + esc(ph) + '" value="' + esc(val || '') + '" aria-label="' + esc(label || ph) + '" autocomplete="off"></label>';
+}
+var FCLR = {};
+function fchips(list) {
+  /* list: [[نص الشريحة, دالة المسح]] */
+  FCLR = {}; var on = list.filter(function (x) { return x && x[0]; });
+  if (!on.length) return '';
+  return '<div class="fchips" aria-label="المرشحات المطبقة">' + on.map(function (x, i) { FCLR[i] = x[1]; return '<button type="button" class="fchip" data-fclr="' + i + '" aria-label="إزالة مرشح ' + esc(x[0]) + '">' + esc(x[0]) + ic('x') + '</button>'; }).join('') +
+    (on.length > 1 ? '<button type="button" class="fclear" data-fclr="all">مسح الكل</button>' : '') + '</div>';
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-fclr]'); if (!b) return;
+  if (b.dataset.fclr === 'all') Object.keys(FCLR).forEach(function (k) { FCLR[k](); }); else if (FCLR[b.dataset.fclr]) FCLR[b.dataset.fclr]();
+  render();
+});
+/* قائمة «المزيد» المنسدلة (details) تُغلق عند النقر خارجها أو Escape */
+document.addEventListener('click', function (e) { document.querySelectorAll('details.dmenu[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); }); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') document.querySelectorAll('details.dmenu[open]').forEach(function (d) { d.removeAttribute('open'); var s = d.querySelector('summary'); if (s) s.focus(); }); });
 function ssOpen(box) {
   ssClose();
   var id = box.dataset.ss, S = SSEL[id]; if (!S) return;
@@ -1472,9 +1561,10 @@ VIEWS.reqs = function () {
   else {
     var q = RF.q.trim().toLowerCase(), list = (t === 'pend' ? pend : all).filter(function (r) { return (!RF.type || r.type === RF.type) && (!RF.st || r.status === RF.st) && (!q || (r.no + ' ' + r.name + ' ' + r.ref + ' ' + reqSum(r)).toLowerCase().indexOf(q) >= 0); });
     var cnt = function (k, v) { return (t === 'pend' ? pend : all).filter(function (r) { return r[k] === v; }).length; };
-    body = '<section class="pn"><div class="filters"><input id="rfq" placeholder="ابحث برقم الطلب أو اسم المنسوب" value="' + esc(RF.q) + '" aria-label="بحث في الطلبات">' +
-      ssel('rft', [{ v: '', n: 'كل الأنواع', ic: 'doc' }].concat(Object.keys(RT2).map(function (k) { return { v: k, n: RT2[k][2], k: cnt('type', k) }; })), RF.type, 'كل الأنواع', function (v) { RF.type = v; render(); }, 'نوع الطلب') +
-      (t === 'all' ? ssel('rfs', [{ v: '', n: 'كل الحالات', ic: 'stamp' }].concat(Object.keys(RST).map(function (k) { return { v: k, n: RST[k][1], k: cnt('status', k) }; })), RF.st, 'كل الحالات', function (v) { RF.st = v; render(); }, 'حالة الطلب') : '') + '</div>' +
+    body = '<section class="pn"><div class="tbar" style="border-bottom:1px solid var(--line-2)"><div class="fbar">' + fsearch('rfq', RF.q, 'ابحث برقم الطلب أو اسم المنسوب', 'بحث في الطلبات') +
+      ssel('rft', [{ v: '', n: 'الكل', ic: 'doc' }].concat(Object.keys(RT2).map(function (k) { return { v: k, n: RT2[k][2], k: cnt('type', k), ic: RT2[k][1] }; })), RF.type, 'الكل', function (v) { RF.type = v; render(); }, 'نوع الطلب', 'نوع الطلب') +
+      (t === 'all' ? ssel('rfs', [{ v: '', n: 'الكل', ic: 'stamp' }].concat(Object.keys(RST).map(function (k) { return { v: k, n: RST[k][1], k: cnt('status', k) }; })), RF.st, 'الكل', function (v) { RF.st = v; render(); }, 'حالة الطلب', 'الحالة') : '') + '</div>' +
+      fchips([[RF.q.trim() ? 'بحث: ' + RF.q.trim() : '', function () { RF.q = ''; }], [RF.type && RT2[RF.type] ? 'النوع: ' + RT2[RF.type][2] : '', function () { RF.type = ''; }], [t === 'all' && RF.st && RST[RF.st] ? 'الحالة: ' + RST[RF.st][1] : '', function () { RF.st = ''; }]]) + '</div>' +
       '<div class="pb">' + (t === 'pend' && !pend.length ? '<div class="note">' + ic('check') + '<span>لا شيء ينتظر قرارك الآن. يصلك بريد عند وصول طلب جديد إلى خطوتك.</span></div>' : reqListHTML(list, false)) + '</div></section>';
   }
   var k = { pending: all.filter(function (r) { return r.status === 'pending'; }).length, approved: all.filter(function (r) { return r.status === 'approved'; }).length, rejected: all.filter(function (r) { return r.status === 'rejected'; }).length };
