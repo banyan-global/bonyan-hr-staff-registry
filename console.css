@@ -1388,6 +1388,24 @@ table.mini th.used { background: var(--gold-wash); }
 .nban > .tile, .setlink > .tile { width: 40px; height: 40px; border-radius: 12px; flex: none; }
 .nban > .tile svg.i, .setlink > .tile svg.i { width: 18px; height: 18px; }
 
+/* ===== توقيع المطوّر (مطابق لتقرير إثيوبيا ونموذج التسجيل) ===== */
+.oj-sign { --oj-accent: #a8792c; display: flex; flex-direction: column; align-items: center; gap: 8px; direction: rtl; font-family: inherit; text-align: center; padding: 14px 0; color: var(--mute); }
+.oj2 { display: inline-flex; flex-direction: column; align-items: center; white-space: nowrap; font-size: 12.5px; line-height: 1.2; color: inherit; background: color-mix(in srgb, var(--oj-accent) 9%, transparent); border: 1px solid color-mix(in srgb, var(--oj-accent) 30%, transparent); border-radius: 22px; padding: 7px 14px; text-decoration: none; transition: background .3s, box-shadow .3s; }
+.oj2-row { display: inline-flex; align-items: center; gap: 8px; }
+.oj2:hover { background: color-mix(in srgb, var(--oj-accent) 16%, transparent); box-shadow: 0 4px 14px color-mix(in srgb, var(--oj-accent) 22%, transparent); }
+.oj2-txt { white-space: nowrap; }
+.oj2 b { color: var(--oj-accent); font-weight: 700; }
+.oj2-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--oj-accent); animation: oj2p 2s infinite; }
+@keyframes oj2p { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--oj-accent) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+.oj2-mail { display: inline-block; max-width: 0; overflow: hidden; opacity: 0; white-space: nowrap; direction: ltr; unicode-bidi: isolate; font-size: 11.5px; border-right: 1px solid color-mix(in srgb, var(--oj-accent) 35%, transparent); transition: max-width .45s, opacity .3s, padding .45s; }
+.oj2:hover .oj2-mail, .oj2:focus-visible .oj2-mail { max-width: 22em; opacity: .85; padding-right: 9px; }
+.oj2-role { display: block; max-height: 0; overflow: hidden; opacity: 0; font-size: 11px; letter-spacing: .2px; transition: max-height .4s, opacity .35s, margin .4s, padding .4s; }
+.oj2:hover .oj2-role, .oj2:focus-visible .oj2-role { max-height: 2em; opacity: .8; margin-top: 5px; padding-top: 5px; border-top: 1px solid color-mix(in srgb, var(--oj-accent) 25%, transparent); }
+.oj2-copy { font-size: 11.5px; opacity: .65; }
+@media (prefers-reduced-motion: reduce) { .oj2-dot { animation: none; } }
+.lsig .oj-sign, :root[data-theme="dark"] .oj-sign { --oj-accent: #e3c485; color: #9fb0c9; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .oj-sign { --oj-accent: #e3c485; color: #9fb0c9; } }
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--bg-0: #162942;

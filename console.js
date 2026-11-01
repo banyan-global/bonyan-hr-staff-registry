@@ -2320,6 +2320,13 @@ function loginGlobe() {
   fetch('api/?action=countries', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) { PUBC = j && j.ok ? j : { countries: {} }; go(); }, function () { PUBC = { countries: {} }; go(); });
 }
 
+/* توقيع المطوّر بنفس صيغة تقرير إثيوبيا ونموذج التسجيل (oj-sign): يظهر البريد والمسمى عند المرور */
+function sigHTML() {
+  return '<div class="oj-sign"><a class="oj2" href="mailto:osama.mo.bonyan@gmail.com?subject=' + encodeURIComponent('استفسار تقني — منصة بنيان للموارد البشرية') + '">' +
+    '<span class="oj2-row"><span class="oj2-dot"></span><span class="oj2-txt">تطوير وتنفيذ <b>أسامة جنيدي</b></span><span class="oj2-mail">osama.mo.bonyan@gmail.com</span></span>' +
+    '<span class="oj2-role">أخصائي بيانات ومطوّر أنظمة</span></a><div class="oj2-copy">© <span class="oj2-year">' + new Date().getFullYear() + '</span> مجموعة بنيان العالمية</div></div>';
+}
+
 window.addEventListener('hashchange', route);
 boot();
 })();
