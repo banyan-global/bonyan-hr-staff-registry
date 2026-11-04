@@ -818,19 +818,25 @@ VIEWS.home = function () {
   if (!D.length) D.push({ j: 'emerald', i: 'check', t: 'لا شيء ينتظرك الآن', s: 'الملفات مكتملة والوثائق سارية.' });
   var todo = pn('garnet', 'bolt', role === 'ceo' ? 'يستحق انتباهك' : 'يحتاج إجراءً منك', 'الأهم أولًا', '', '<ul class="lst">' + D.map(function (d) { return '<li>' + tile(d.j, d.i) + '<div><b>' + d.t + '</b><span class="s">' + d.s + '</span>' + (d.faces && d.faces.length ? '<div class="faces">' + d.faces.slice(0, 7).map(function (s) { return av(s, ' title="' + esc(s.name) + '"'); }).join('') + (d.faces.length > 7 ? '<span class="av" style="background:var(--well);color:var(--mute)">+' + (d.faces.length - 7) + '</span>' : '') + '</div>' : '') + '</div>' + (d.a || '<span></span>') + '</li>'; }).join('') + '</ul>');
   var QA = [['sapphire', 'plus', 'نسخ رابط التسجيل', 'regLink', 'view'], ['emerald', 'chat', 'مراسلة الناقصة ملفاتهم', 'msgGap', 'mail'], ['garnet', 'send', 'تذكير الوثائق', 'remindAll', 'mail'], ['gold', 'excel', 'تصدير Excel', 'excel', 'export'], ['amethyst', 'refresh', 'نسخة احتياطية الآن', 'backupNow', 'drive'], ['teal', 'shield', 'صحة النظام', 'health', 'users']];
-  var qa = pn('teal', 'bolt', 'إجراءات سريعة', '', '', '<div class="pb"><div class="qa">' + QA.map(function (q) { return '<button data-act="' + q[3] + '"' + (can(q[4]) ? '' : ' disabled title="خارج صلاحياتك"') + '>' + tile(q[0], q[1]) + q[2] + '</button>'; }).join('') + '</div></div>');
+  /* لا يظهر إلا ما يملكه المستخدم فعلًا: الصلاحية + القسم الظاهر له (ما يُخفيه النظام لا يظهر أصلًا) */
+  var QV = { backupNow: function () { return can('sys'); }, health: function () { return can('sys'); } };
+  QA = QA.filter(function (q) { return can(q[4]) && (!QV[q[3]] || QV[q[3]]()); });
+  var qa = QA.length ? pn('teal', 'bolt', 'إجراءات سريعة', '', '', '<div class="pb"><div class="qa">' + QA.map(function (q) { return '<button data-act="' + q[3] + '">' + tile(q[0], q[1]) + q[2] + '</button>'; }).join('') + '</div></div>') : '';
   var cal = pn('sapphire', 'calendar', 'تقويم انتهاء الوثائق', 'أربعة أسابيع مضت واثنا عشر أسبوعًا قادمة، وكل مربع وثيقة', more('الوثائق', '#documents'), calHTML());
   var ents = ENT.map(function (e) { return { e: e, ss: STAFF.filter(function (s) { return s.ent.v === e.v; }) }; });
   var entP = pn('gold', 'building', 'الجهات', nq(nE, 'جهة واحدة', 'جهتان', 'جهات', 'جهة') + ' في السجل', '', '<div class="pb"><div class="ents">' + ents.map(function (x) { var dn2 = x.ss.filter(function (s) { return s.status === 'مكتمل'; }).length;
     return '<button class="ent" style="--ec:' + x.e.c + '" data-ent="' + esc(x.e.v) + '"><div class="lg">' + elogo(x.e) + '</div><h3>' + esc(x.e.n) + '</h3><div class="nb"><b>' + x.ss.length + '</b><span>' + pct(dn2, x.ss.length) + '٪ مكتمل</span></div><div class="tr"><i style="width:' + pct(dn2, x.ss.length) + '%"></i></div></button>'; }).join('') + '</div></div>');
   var recent = pn('emerald', 'userok', 'أحدث المنسوبين', '', more('الكل', '#people'), '<ul class="lst">' + STAFF.slice(0, 5).map(function (s) { return '<li style="cursor:pointer" data-open="' + esc(s.ref) + '">' + avP(s) + '<div><b>' + esc(s.name) + '</b><span class="s">' + esc(s.ent.n) + '، ' + esc(s.c.n) + ' · ' + agoD(s.reg) + '</span></div>' + (s.status === 'مكتمل' ? '<span class="pill ok"><i></i>مكتمل</span>' : '<span class="pill warn"><i></i>ناقص</span>') + '</li>'; }).join('') + '</ul>');
-  var log = can('audit') ? pn('slate', 'history', 'آخر العمليات', '', more('السجل الكامل', '#log'), tlHTML(6)) : natPanel();
+  var log = role === 'admin' && can('audit') ? pn('slate', 'history', 'آخر العمليات', '', more('السجل الكامل', '#log'), tlHTML(6)) : '';
   var third = can('users') ? readyPanel() : quickFacts();
-  /* الأهم أولًا (نمط صندوق المهام في أنظمة الموارد البشرية): المهام والإجراءات والمناسبات، ثم المؤشرات والرسوم */
-  var H = function (k) { return S('home', k); }, side = (H('qa') ? qa : '') + (H('events') ? eventsPanel() : '');
-  var row1 = H('todo') && side ? '<div class="grid g21">' + todo + '<div class="stack">' + side + '</div></div>' : H('todo') ? todo : side ? '<div class="grid g2">' + side + '</div>' : '';
-  return (H('hero') ? hero : '') + (H('kpis') ? kpis : '') + row1 + (H('charts') ? '<div class="grid g21">' + regChart + stDonut + '</div>' : '') + (H('quality') ? '<div class="grid g3">' + quality + geo + docLvl + '</div>' : '') +
-    (H('cal') ? cal : '') + (H('ents') ? entP : '') + (H('recent') ? '<div class="grid g3">' + recent + log + third + '</div>' : '');
+  /* صفحة رئيسية مختصرة: لا «يحتاج إجراءً منك» ولا «حركة التسجيل» لأحد، والمناسبات لغير الإدارة والموارد البشرية،
+     وتقويم الوثائق لغير الرئيس التنفيذي، و«آخر العمليات» لمسؤول النظام وحده */
+  var H = function (k) { return S('home', k); };
+  var top = [H('charts') ? stDonut : '', H('qa') ? qa : '', H('events') && role !== 'admin' && role !== 'hr' ? eventsPanel() : ''].filter(Boolean);
+  var row1 = top.length ? '<div class="grid g' + (top.length === 1 ? '1' : top.length) + '">' + top.join('') + '</div>' : '';
+  var low = [recent, log, third].filter(Boolean);
+  return (H('hero') ? hero : '') + (H('kpis') ? kpis : '') + row1 + (H('quality') ? '<div class="grid g3">' + quality + geo + docLvl + '</div>' : '') +
+    (H('cal') && role !== 'ceo' ? cal : '') + (H('ents') ? entP : '') + (H('recent') ? '<div class="grid g' + low.length + '">' + low.join('') + '</div>' : '');
 };
 function eventsPanel() {
   var t0 = new Date(TODAY); t0.setHours(0, 0, 0, 0); var E = [];
@@ -1958,8 +1964,8 @@ var SET_GROUPS = [
     ['reqs', 'تقديم الطلبات', 'طلب إجازة أو إركاب أو تعريف من صفحته', 'stamp'], ['balance', 'رصيد الإجازات', 'المستحق والمستهلك والمتبقي', 'umbrella'], ['att', 'حضوري', 'سجل حضوره وتأخيره', 'finger'],
     ['news', 'التعاميم', 'التعاميم الموجهة إليه', 'bell'], ['update', 'تحديث بياناتي', 'تعديل بياناته ورفع وثائقه بنفسه', 'edit']]],
   ['home', 'لوحة القيادة', 'اللوحات التي تظهر في الصفحة الرئيسية للإدارة.', 'gauge', [
-    ['hero', 'الترحيب والخريطة والساعات', '', 'globe'], ['kpis', 'المؤشرات الأربعة', '', 'chart'], ['todo', 'يحتاج إجراءً منك', '', 'bolt'], ['qa', 'إجراءات سريعة', '', 'plus'], ['events', 'مناسبات قادمة', '', 'calendar'],
-    ['charts', 'حركة التسجيل وحالة الملفات', '', 'pie'], ['quality', 'جودة البيانات والتوزيع والوثائق', '', 'gauge'], ['cal', 'تقويم انتهاء الوثائق', '', 'calendar'], ['ents', 'الجهات', '', 'building'], ['recent', 'أحدث المنسوبين وآخر العمليات', '', 'history']]]
+    ['hero', 'الترحيب والخريطة والساعات', '', 'globe'], ['kpis', 'المؤشرات الأربعة', '', 'chart'], ['qa', 'إجراءات سريعة', '', 'plus'], ['events', 'مناسبات قادمة', 'لا تظهر للإدارة والموارد البشرية', 'calendar'],
+    ['charts', 'حالة الملفات', '', 'pie'], ['quality', 'جودة البيانات والتوزيع والوثائق', '', 'gauge'], ['cal', 'تقويم انتهاء الوثائق', 'لا يظهر للرئيس التنفيذي', 'calendar'], ['ents', 'الجهات', '', 'building'], ['recent', 'أحدث المنسوبين وآخر العمليات', '«آخر العمليات» لمسؤول النظام وحده', 'history']]]
 ];
 function setHTML() {
   if (!SITE) return '<section class="pn"><div class="pb"><div class="empty">جارٍ التحميل…</div></div></section>';
