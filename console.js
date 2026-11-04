@@ -2420,38 +2420,56 @@ function bindGq() {
 }
 /* ======================= نقل المنسوبين بين الجهات (لمن يملك تعديل البيانات) ======================= */
 var EM = null;
-function emOpen(ref) { EM = { to: '', sel: {}, q: '', from: '', busy: false, done: 0 }; if (ref) { EM.sel[ref] = 1; var s = byRef(ref); if (s) EM.q = s.name; } drawEM(); }
+/* خطوتان: ١) اختيار الأسماء ٢) اختيار الجهة ثم النقل */
+function emOpen(ref) { EM = { step: 1, to: '', sel: {}, q: '', from: '', busy: false, done: 0 }; if (ref) { EM.sel[ref] = 1; EM.step = 2; } drawEM(); }
 function emTargets() { return (CFG.ENTITIES || []).filter(function (e) { return e.v !== 'other'; }); }
+function emPicked() { return Object.keys(EM.sel).filter(function (k) { return EM.sel[k] && byRef(k); }); }
 function drawEM() {
   var old = document.getElementById('emLayer'), y = old ? (old.querySelector('.eml') || {}).scrollTop || 0 : 0; if (old) old.remove();
-  var q = gn(EM.q), rows = STAFF.filter(function (s) { return (!EM.from || s.ent.v === EM.from) && (!q || gn(s.name + ' ' + (s.r.fullNameLatin || '') + ' ' + s.ref + ' ' + s.ent.n).indexOf(q) > -1); });
-  var picked = Object.keys(EM.sel).filter(function (k) { return EM.sel[k]; }), tgt = emTargets().filter(function (e) { return e.ar === EM.to; })[0];
-  var froms = ENT.map(function (e) { return '<option value="' + esc(e.v) + '"' + (EM.from === e.v ? ' selected' : '') + '>' + esc(e.n) + ' (' + STAFF.filter(function (s) { return s.ent.v === e.v; }).length + ')</option>'; }).join('');
+  var picked = emPicked(), tgt = emTargets().filter(function (e) { return e.ar === EM.to; })[0], body = '', foot = '';
+  var steps = '<ol class="emsteps"><li class="' + (EM.step === 1 ? 'on' : 'done') + '"><i>1</i>اختر الأسماء</li><li class="' + (EM.step === 2 ? 'on' : '') + '"><i>2</i>اختر الجهة وانقل</li></ol>';
+  var chips = picked.length ? '<div class="emchips">' + picked.slice(0, 40).map(function (r) { var s = byRef(r); return '<span>' + esc(s.name) + (EM.step === 1 ? '<button type="button" data-emun="' + esc(r) + '" aria-label="إزالة ' + esc(s.name) + '">×</button>' : '') + '</span>'; }).join('') + (picked.length > 40 ? '<span>+' + (picked.length - 40) + '</span>' : '') + '</div>' : '';
+  if (EM.step === 1) {
+    var q = gn(EM.q), rows = STAFF.filter(function (s) { return (!EM.from || s.ent.v === EM.from) && (!q || gn(s.name + ' ' + (s.r.fullNameLatin || '') + ' ' + s.ref + ' ' + s.ent.n).indexOf(q) > -1); });
+    var froms = ENT.map(function (e) { return '<option value="' + esc(e.v) + '"' + (EM.from === e.v ? ' selected' : '') + '>' + esc(e.n) + ' (' + STAFF.filter(function (s) { return s.ent.v === e.v; }).length + ')</option>'; }).join('');
+    var allOn = rows.length && rows.every(function (s) { return EM.sel[s.ref]; });
+    body = '<div class="emf"><input id="emQ" type="search" placeholder="ابحث بالاسم أو الرقم المرجعي" value="' + esc(EM.q) + '" autocomplete="off"><select id="emFrom" aria-label="الجهة الحالية"><option value="">كل الجهات</option>' + froms + '</select>' +
+      '<button type="button" class="btn sm" id="emAll"' + (rows.length ? '' : ' disabled') + '>' + (allOn ? 'إلغاء تحديد الظاهرين' : 'تحديد الظاهرين (' + rows.length + ')') + '</button></div>' + chips +
+      '<div class="eml">' + (rows.map(function (s) { var on = !!EM.sel[s.ref];
+        return '<label class="' + (on ? 'on' : '') + '"><input type="checkbox" data-emref="' + esc(s.ref) + '"' + (on ? ' checked' : '') + '>' + av(s) + '<span><b>' + esc(s.name) + '</b><small>' + esc(s.ref) + ' · ' + esc(s.ent.n) + '</small></span></label>'; }).join('') || '<div class="empty" style="padding:18px">لا أحد بهذا البحث.</div>') + '</div>';
+    foot = '<span class="emcnt">' + (picked.length ? 'حدّدت <b>' + picked.length + '</b>' : 'لم تحدّد أحدًا بعد') + '</span><button class="btn" data-emx="1">إلغاء</button><button class="btn goldb" id="emNext"' + (picked.length ? '' : ' disabled') + '>التالي: اختر الجهة ←</button>';
+  } else {
+    var same = tgt ? picked.filter(function (r) { return byRef(r).ent.full === tgt.ar; }).length : 0;
+    body = '<div class="emsum">' + tile('sapphire', 'users') + '<div><b>' + nq(picked.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' سيُنقلون</b>' + chips + '</div></div>' +
+      '<div class="emt">' + emTargets().map(function (e) { var k = ENT_KEY[e.v] || e.v;
+        return '<button type="button" class="' + (EM.to === e.ar ? 'on' : '') + '" data-emto="' + esc(e.ar) + '" style="--ec:' + ((e.colors || [])[0] || '#475569') + '"><span class="lg">' + (ELOGO[k] ? '<img src="' + ELOGO[k] + '" alt="">' : '<i>' + esc(e.ar.charAt(0)) + '</i>') + '</span><b>' + esc(e.ar) + '</b></button>'; }).join('') + '</div>' +
+      (same ? '<div class="note">' + ic('info') + '<span>' + nq(same, 'واحد منهم', 'اثنان منهم', 'منهم', 'منهم') + (same > 2 ? ' ' + same : '') + ' في هذه الجهة أصلًا ولن يتغيّر.</span></div>' : '');
+    foot = '<div class="lerr" role="alert"></div><button class="btn" id="emBack"' + (EM.busy ? ' disabled' : '') + '>→ رجوع إلى الأسماء</button><button class="btn goldb" id="emGo"' + (EM.busy || !EM.to || same === picked.length ? ' disabled' : '') + '>' + (EM.busy ? 'جارٍ النقل… ' + EM.done + ' من ' + (picked.length - same) : tgt ? 'نقل ' + (picked.length - same) + ' إلى «' + esc(tgt.ar) + '»' : 'اختر الجهة') + '</button>';
+  }
   var el = document.createElement('div'); el.id = 'emLayer';
-  el.innerHTML = '<div class="mscrim" data-emx="1"></div><section class="mdl emm" role="dialog" aria-modal="true" aria-labelledby="emT"><header class="mh">' + tile('gold', 'building') + '<div><h2 id="emT">نقل منسوبين بين الجهات</h2><p>اختر الجهة الجديدة، ثم حدّد من تنقلهم. كل نقل يُسجَّل في ملف المنسوب وفي سجل العمليات باسمك.</p></div></header>' +
-    '<div class="emb"><h3>١) الجهة الجديدة</h3><div class="emt">' + emTargets().map(function (e) { var k = ENT_KEY[e.v] || e.v;
-      return '<button type="button" class="' + (EM.to === e.ar ? 'on' : '') + '" data-emto="' + esc(e.ar) + '" style="--ec:' + ((e.colors || [])[0] || '#475569') + '"><span class="lg">' + (ELOGO[k] ? '<img src="' + ELOGO[k] + '" alt="">' : '<i>' + esc(e.ar.charAt(0)) + '</i>') + '</span><b>' + esc(e.ar) + '</b></button>'; }).join('') + '</div>' +
-    '<h3>٢) المنسوبون <small>' + picked.length + ' محدَّد</small></h3><div class="emf"><input id="emQ" type="search" placeholder="ابحث بالاسم أو الرقم المرجعي" value="' + esc(EM.q) + '" autocomplete="off"><select id="emFrom" aria-label="الجهة الحالية"><option value="">كل الجهات الحالية</option>' + froms + '</select>' +
-      '<button type="button" class="btn sm" id="emAll">' + (rows.length && rows.every(function (s) { return EM.sel[s.ref]; }) ? 'إلغاء تحديد الظاهرين' : 'تحديد الظاهرين (' + rows.length + ')') + '</button></div>' +
-    '<div class="eml">' + (rows.map(function (s) { var on = !!EM.sel[s.ref], same = tgt && s.ent.full === tgt.ar;
-      return '<label class="' + (on ? 'on' : '') + '"><input type="checkbox" data-emref="' + esc(s.ref) + '"' + (on ? ' checked' : '') + '>' + av(s) + '<span><b>' + esc(s.name) + '</b><small>' + esc(s.ref) + ' · الآن: ' + esc(s.ent.n) + (same ? ' · <em>في هذه الجهة أصلًا</em>' : '') + '</small></span></label>'; }).join('') || '<div class="empty" style="padding:18px">لا أحد بهذا البحث.</div>') + '</div></div>' +
-    '<footer class="mf"><div class="lerr" role="alert"></div><button class="btn" data-emx="1">إلغاء</button><button class="btn goldb" id="emGo"' + (EM.busy || !EM.to || !picked.length ? ' disabled' : '') + '>' + (EM.busy ? 'جارٍ النقل… ' + EM.done + ' من ' + picked.length : 'نقل ' + (picked.length || '') + (tgt ? ' إلى «' + esc(tgt.ar) + '»' : '')) + '</button></footer></section>';
+  el.innerHTML = '<div class="mscrim" data-emx="1"></div><section class="mdl emm" role="dialog" aria-modal="true" aria-labelledby="emT"><header class="mh">' + tile('gold', 'building') + '<div><h2 id="emT">نقل منسوبين بين الجهات</h2><p>كل نقل يُسجَّل في ملف المنسوب وفي سجل العمليات باسمك.</p></div></header>' +
+    steps + '<div class="emb">' + body + '</div><footer class="mf">' + foot + '</footer></section>';
   document.body.appendChild(el); var L2 = el.querySelector('.eml'); if (L2) L2.scrollTop = y;
+  var on = function (sel, ev, fn) { var n = el.querySelector(sel); if (n) n[ev] = fn; };
   el.querySelectorAll('[data-emx]').forEach(function (b) { b.onclick = function () { if (!EM.busy) el.remove(); }; });
-  el.querySelectorAll('[data-emto]').forEach(function (b) { b.onclick = function () { EM.to = b.dataset.emto; drawEM(); }; });
+  el.querySelectorAll('[data-emun]').forEach(function (b) { b.onclick = function () { EM.sel[b.dataset.emun] = 0; drawEM(); }; });
   el.querySelectorAll('[data-emref]').forEach(function (c) { c.onchange = function () { EM.sel[c.dataset.emref] = c.checked ? 1 : 0; drawEM(); }; });
-  var qi = el.querySelector('#emQ'); qi.oninput = function () { EM.q = qi.value; var p = qi.selectionStart; drawEM(); var n = document.getElementById('emQ'); n.focus(); try { n.setSelectionRange(p, p); } catch (x) { } };
-  el.querySelector('#emFrom').onchange = function () { EM.from = this.value; drawEM(); };
-  el.querySelector('#emAll').onclick = function () { var all = rows.every(function (s) { return EM.sel[s.ref]; }); rows.forEach(function (s) { EM.sel[s.ref] = all ? 0 : 1; }); drawEM(); };
-  el.querySelector('#emGo').onclick = function () {
-    var list = picked.filter(function (r) { var s = byRef(r); return s && s.ent.full !== EM.to; }), to = EM.to, ok = 0, fail = [];
-    if (!list.length) { el.querySelector('.lerr').textContent = 'كل المحددين في هذه الجهة أصلًا.'; return; }
+  el.querySelectorAll('[data-emto]').forEach(function (b) { b.onclick = function () { EM.to = b.dataset.emto; drawEM(); }; });
+  on('#emQ', 'oninput', function () { EM.q = this.value; var p = this.selectionStart; drawEM(); var n = document.getElementById('emQ'); n.focus(); try { n.setSelectionRange(p, p); } catch (x) { } });
+  on('#emFrom', 'onchange', function () { EM.from = this.value; drawEM(); });
+  on('#emAll', 'onclick', function () { var q = gn(EM.q), rows = STAFF.filter(function (s) { return (!EM.from || s.ent.v === EM.from) && (!q || gn(s.name + ' ' + (s.r.fullNameLatin || '') + ' ' + s.ref + ' ' + s.ent.n).indexOf(q) > -1); }), all = rows.every(function (s) { return EM.sel[s.ref]; }); rows.forEach(function (s) { EM.sel[s.ref] = all ? 0 : 1; }); drawEM(); });
+  on('#emNext', 'onclick', function () { EM.step = 2; drawEM(); });
+  on('#emBack', 'onclick', function () { EM.step = 1; drawEM(); });
+  on('#emGo', 'onclick', function () {
+    var to = EM.to, list = emPicked().filter(function (r) { return byRef(r).ent.full !== to; }), ok = 0, fail = [];
+    if (!list.length) return;
     EM.busy = true; EM.done = 0; drawEM();
     (function next(i) {
       if (i >= list.length) { reloadList().then(function () { EM.busy = false; var l = document.getElementById('emLayer'); if (l) l.remove(); toast(fail.length ? 'نُقل ' + ok + '، وتعذّر ' + fail.length : 'نُقل ' + nq(ok, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' إلى «' + to + '»'); softRender(); }); return; }
       api({ action: 'adminUpdate', ref: list[i], changes: { entity: to } }).then(function () { ok++; }, function () { fail.push(list[i]); }).then(function () { EM.done = i + 1; drawEM(); next(i + 1); });
     })(0);
-  };
+  });
+  if (EM.step === 1 && !old) setTimeout(function () { var n = document.getElementById('emQ'); if (n) n.focus(); }, 30);
 }
 document.addEventListener('click', function (e) { var t = e.target.closest && e.target.closest('[data-entmove]'); if (!t || !can('edit')) return; e.preventDefault(); var d = t.closest('details'); if (d) d.open = false; emOpen(t.dataset.entmove || ''); });
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && EM && !EM.busy) { var l = document.getElementById('emLayer'); if (l) l.remove(); } });
