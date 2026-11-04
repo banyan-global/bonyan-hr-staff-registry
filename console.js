@@ -218,7 +218,7 @@ function calHTML() {
 VIEWS.documents = function () {
   var all = []; STAFF.forEach(function (s) { s.docs.forEach(function (d) { all.push({ s: s, d: d }); }); });
   var B = [['bad', 'منتهية', 'garnet', 'alert'], ['warn', 'خلال ٣٠ يومًا', 'gold', 'clock'], ['info', 'خلال ٩٠ يومًا', 'sapphire', 'calendar'], ['ok', 'سارية', 'emerald', 'check'], ['nofile', 'بلا ملف مرفوع', 'slate', 'file']];
-  var by = { bad: [], warn: [], info: [], ok: [], nofile: [] }; all.forEach(function (x) { by[st(x.d.days)].push(x); if (!x.d.file) by.nofile.push(x); });
+  var by = { bad: [], warn: [], info: [], ok: [], nofile: [] }; all.forEach(function (x) { by[st(x.d.days)].push(x); if (!x.d.file && !x.d.opt) by.nofile.push(x); });
   var rows = by[bucket].sort(function (a, b) { return a.d.days - b.d.days; });
   var types = {}; all.forEach(function (x) { var t = types[x.d.t] = types[x.d.t] || { n: 0, bad: 0, warn: 0 }; t.n++; if (x.d.days < 0) t.bad++; else if (x.d.days <= 30) t.warn++; });
   var tbl = rows.length ? '<div class="tw"><table><thead><tr><th>المنسوب</th><th>الوثيقة</th><th>الرقم</th><th>تاريخ الانتهاء</th><th>الحالة</th><th></th></tr></thead><tbody>' +
@@ -519,7 +519,10 @@ function toStaff(r) {
   var female = /^(female|f|أنثى|انثى|perempuan|wanita)$/i.test(String(r.gender || '').trim());
   if (!hasF(r.photo) && !female) miss.push('الصورة الشخصية');
   if (!bank && !/أخرى|other|lain|نقد|cash/i.test(r.payMethod || '')) miss.push('الحساب البنكي');
-  docs.forEach(function (d) { if (!d.file && d.t !== 'العقد') miss.push('صورة ' + d.t); });
+  /* الهوية الوطنية والإقامة: يكفي وجود صورة إحداهما، فلا تُعدّ الأخرى نقصًا */
+  var idOk = hasF(r.nationalIdScan) || hasF(r.permitScan);
+  docs.forEach(function (d) { if (!d.file && idOk && (d.t === 'الهوية الوطنية' || d.t === 'الإقامة')) d.opt = d.t === 'الإقامة' ? 'تكفي صورة الهوية الوطنية' : 'تكفي صورة الإقامة'; });
+  docs.forEach(function (d) { if (!d.file && !d.opt && d.t !== 'العقد') miss.push('صورة ' + d.t); });
   if (!r.officialEmail && !r.personalEmail) miss.push('البريد الإلكتروني');
   if (!r.mobile && !r.whatsapp) miss.push('رقم الجوال');
   var cur = (/[A-Z]{3}/.exec(r.currency || '') || [])[0] || DEFCUR[cc] || 'SAR';
@@ -798,7 +801,7 @@ VIEWS.home = function () {
   var stDonut = pn('amethyst', 'pie', 'حالة الملفات', '', '', '<div class="pb">' + donut(parts, tot, tot, 'منسوبًا') + '<div class="dleg">' + parts.concat([[exp, 'var(--c-bad)', 'منهم بوثيقة منتهية']]).map(function (p) { return '<div><i style="background:' + p[1] + '"></i><span>' + p[2] + '</span><b>' + p[0] + '</b><span class="p">' + pct(p[0], tot) + '٪</span></div>'; }).join('') + '</div></div>');
 
   var docsAll = []; STAFF.forEach(function (s) { s.docs.forEach(function (d) { docsAll.push(d); }); });
-  var docOk = docsAll.length ? docsAll.filter(function (d) { return d.days > 30 && d.file; }).length / docsAll.length : 1;
+  var docOk = docsAll.length ? docsAll.filter(function (d) { return d.days > 30 && (d.file || d.opt); }).length / docsAll.length : 1;
   var quality = pn('emerald', 'gauge', 'جودة البيانات', '', more('التفاصيل', '#people'), '<div class="pb"><div class="gauges">' + gauge(tot ? done / tot : 0, '#22a874', 'اكتمال الملفات') + gauge(docOk, '#3d8ee0', 'سلامة الوثائق') + '</div><div class="mini">' +
     '<div><span>حسابات بنكية مسجلة</span><b>' + pct(tot - CNT.nobank, tot) + '٪</b></div><div><span>صور شخصية مرفوعة</span><b>' + pct(STAFF.filter(function (s) { return s.photo || s.miss.indexOf('الصورة الشخصية') < 0; }).length, tot) + '٪</b></div>' +
     '<div><span>وصلتهم رسالة التأكيد</span><b>' + pct(tot - CNT.mail, tot) + '٪</b></div></div></div>');
@@ -999,10 +1002,10 @@ window.addEventListener('message', function (e) {
 });
 function svc(d) { if (!d) return '—'; var m = Math.round((Date.now() - d) / DAY / 30.4); if (m < 0) return 'لم يباشر بعد'; var y = Math.floor(m / 12), r = m % 12; return ((y ? (y === 1 ? 'سنة' : y === 2 ? 'سنتان' : y + (y <= 10 ? ' سنوات' : ' سنة')) : '') + (y && r ? ' و' : '') + (r ? (r === 1 ? 'شهر' : r === 2 ? 'شهران' : r + ' أشهر') : '')) || 'أقل من شهر'; }
 function docRows(docs, withNo) {
-  return '<div class="docs">' + (docs.length ? docs.map(function (d) { var left = d.days > 9000 ? 1 : Math.max(0, Math.min(1, d.days / (DOC_LIFE[d.t] || 730)));
+  return '<div class="docs" data-fvg>' + (docs.length ? docs.map(function (d) { var left = d.days > 9000 ? 1 : Math.max(0, Math.min(1, d.days / (DOC_LIFE[d.t] || 730)));
     return '<div class="doc"><span class="th">' + ic(d.t === 'العقد' ? 'doc' : 'pass') + '<small>' + (d.file ? 'ملف' : '—') + '</small></span><div><b>' + d.t + '</b><span class="s">' + (withNo && d.no ? '<span class="ltr">' + esc(d.no) + '</span>، ' : '') + (d.exp ? 'تنتهي ' + fd(d.exp) : 'بلا تاريخ انتهاء') + '</span>' +
-      '<div class="life"><i style="width:' + (left * 100) + '%;background:' + STC[st(d.days)] + '"></i></div>' + (d.urls.length ? '<div class="flinks">' + d.urls.map(function (u, i) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + ic('eye') + 'عرض' + (d.urls.length > 1 ? ' ' + (i + 1) : '') + '</a>'; }).join('') + '</div>' : '') + '</div>' +
-      '<span class="pill ' + (d.file ? st(d.days) : 'bad') + '"><i></i>' + (d.file || d.days < 0 ? dl(d.days) : 'الصورة غير مرفوعة') + '</span></div>'; }).join('') : '<div class="empty">لا توجد وثائق مسجّلة.</div>') + '</div>';
+      '<div class="life"><i style="width:' + (left * 100) + '%;background:' + STC[st(d.days)] + '"></i></div>' + (d.urls.length ? '<div class="flinks">' + d.urls.map(function (u, i) { return '<a href="' + esc(u) + '" data-fvt="' + esc(d.t + (d.urls.length > 1 ? ' · ' + (i + 1) : '')) + '">' + ic('eye') + 'عرض' + (d.urls.length > 1 ? ' ' + (i + 1) : '') + '</a>'; }).join('') + '</div>' : '') + '</div>' +
+      (d.opt && d.days >= 0 ? '<span class="pill info"><i></i>' + d.opt + '</span></div>' : '<span class="pill ' + (d.file ? st(d.days) : 'bad') + '"><i></i>' + (d.file || d.days < 0 ? dl(d.days) : 'الصورة غير مرفوعة') + '</span></div>'); }).join('') : '<div class="empty">لا توجد وثائق مسجّلة.</div>') + '</div>';
 }
 function kvHTML(list) { return '<dl class="kv">' + list.filter(function (p) { return p[1] !== '' && p[1] != null; }).map(function (p) { return '<div><dt>' + p[0] + '</dt><dd>' + p[1] + '</dd></div>'; }).join('') + '</dl>'; }
 function ltr(v) { return v ? '<span class="ltr">' + esc(v) + '</span>' : '—'; }
@@ -1010,7 +1013,7 @@ function completeness(s) { var tot = 4 + s.docs.filter(function (d) { return d.t
 function ksec(title, icn, list) { var b = kvHTML(list); return '<section class="ksec"><h3>' + ic(icn) + title + '</h3>' + b + '</section>'; }
 function profHTML(s) {
   var r = s.r, myReqs = reqRows().filter(function (x) { return x.ref === s.ref; }), openR = myReqs.filter(function (x) { return x.status === 'pending'; }).length;
-  var T = [['over', 'الملخص', 'card'], ['info', 'البيانات', 'user'], ['docs', 'الوثائق', 'pass', s.docs.filter(function (d) { return d.days <= 30 || !d.file; }).length], ['pay', 'المالية', 'wallet'], ['reqs', 'الطلبات', 'stamp', openR], ['log', 'السجل', 'history']]
+  var T = [['over', 'الملخص', 'card'], ['info', 'البيانات', 'user'], ['docs', 'الوثائق', 'pass', s.docs.filter(function (d) { return d.days <= 30 || (!d.file && !d.opt); }).length], ['pay', 'المالية', 'wallet'], ['reqs', 'الطلبات', 'stamp', openR], ['log', 'السجل', 'history']]
     .filter(function (t) { return (t[0] !== 'pay' || can('pay')) && (t[0] !== 'log' || can('audit') || can('mail')); });
   if (!T.some(function (t) { return t[0] === ptab; })) ptab = 'over';
   var body = '', pc = completeness(s);
@@ -2532,6 +2535,131 @@ function sigHTML() {
     '<span class="oj2-row"><span class="oj2-dot"></span><span class="oj2-txt">تطوير وتنفيذ <b>أسامة جنيدي</b></span><span class="oj2-mail">osama.mo.bonyan@gmail.com</span></span>' +
     '<span class="oj2-role">أخصائي بيانات ومطوّر أنظمة</span></a><div class="oj2-copy">© <span class="oj2-year">' + new Date().getFullYear() + '</span> مجموعة بنيان العالمية</div></div>';
 }
+
+/* ===== عارض المرفقات داخل المنصة: الصور وملفات PDF تُعرض في طبقة فوق الصفحة بلا نوافذ خارجية ===== */
+var FV = null;
+function fvIsFile(h) { return /[?&]action=file&id=/.test(h || ''); }
+var FVI = {
+  x: '<path d="M6 6l12 12M18 6L6 18"/>', prev: '<path d="M9 6l6 6-6 6"/>', next: '<path d="M15 6l-6 6 6 6"/>',
+  zin: '<circle cx="11" cy="11" r="6.5"/><path d="M11 8v6M8 11h6M16 16l4.5 4.5"/>', zout: '<circle cx="11" cy="11" r="6.5"/><path d="M8 11h6M16 16l4.5 4.5"/>',
+  rot: '<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/>', dl: '<path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/>', fit: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'
+};
+function fvIc(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + FVI[k] + '</svg>'; }
+function fvOpen(items, i) {
+  fvClose();
+  FV = { items: items, i: i, cache: {}, z: 1, r: 0 };
+  var el = document.createElement('div'); el.id = 'fvLayer'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'عارض المرفقات');
+  el.innerHTML = '<div class="fvbar"><div class="fvt"><b id="fvTitle"></b><span id="fvCount"></span></div><div class="fvtools">' +
+    '<button type="button" class="fvb" data-fv="zout" title="تصغير">' + fvIc('zout') + '</button><span class="fvz" id="fvZ" dir="ltr">100%</span><button type="button" class="fvb" data-fv="zin" title="تكبير">' + fvIc('zin') + '</button>' +
+    '<button type="button" class="fvb" data-fv="fit" title="ملاءمة الشاشة">' + fvIc('fit') + '</button><button type="button" class="fvb" data-fv="rot" title="تدوير">' + fvIc('rot') + '</button>' +
+    '<i class="fvsep"></i><button type="button" class="fvb" data-fv="dl" title="تنزيل">' + fvIc('dl') + '</button><button type="button" class="fvb fvx" data-fv="x" title="إغلاق (Esc)">' + fvIc('x') + '</button></div></div>' +
+    '<div class="fvstage" id="fvStage"></div>' +
+    (items.length > 1 ? '<button type="button" class="fvnav fvprev" data-fv="prev" aria-label="السابق">' + fvIc('prev') + '</button><button type="button" class="fvnav fvnext" data-fv="next" aria-label="التالي">' + fvIc('next') + '</button><div class="fvdots" id="fvDots"></div>' : '');
+  document.body.appendChild(el); document.body.classList.add('no-scroll');
+  el.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-fv]');
+    if (b) { fvAct(b.getAttribute('data-fv')); return; }
+    var d = e.target.closest('[data-fvi]'); if (d) { FV.i = +d.getAttribute('data-fvi'); fvShow(); return; }
+    if (e.target === el || e.target.id === 'fvStage' || e.target.classList.contains('fvwrap')) fvClose();
+  });
+  el.querySelector('#fvStage').addEventListener('wheel', function (e) { if (!FV || FV.kind !== 'img' || !(e.ctrlKey || e.metaKey)) return; e.preventDefault(); fvZoom(e.deltaY < 0 ? 1.15 : 1 / 1.15); }, { passive: false });
+  setTimeout(function () { var x = el.querySelector('.fvx'); if (x) x.focus(); }, 30);
+  fvShow();
+}
+function fvClose() {
+  var el = document.getElementById('fvLayer'); if (el) el.remove();
+  if (FV) { Object.keys(FV.cache).forEach(function (k) { var c = FV.cache[k]; if (c && c.url) URL.revokeObjectURL(c.url); }); FV = null; }
+  if (!document.getElementById('fullLayer')) document.body.classList.remove('no-scroll');
+}
+function fvLoad(it) {
+  if (FV.cache[it.u]) return FV.cache[it.u].p;
+  var c = FV.cache[it.u] = {};
+  c.p = fetch(it.u, { credentials: 'same-origin' }).then(function (r) {
+    if (!r.ok) throw new Error(r.status === 404 ? 'الملف غير موجود أو مؤرشف' : r.status === 403 || r.status === 401 ? 'لا تملك صلاحية عرض هذا الملف' : 'تعذّر تحميل الملف');
+    var cd = r.headers.get('Content-Disposition') || '', m = /filename\*=UTF-8''([^;]+)/i.exec(cd);
+    try { c.name = m ? decodeURIComponent(m[1]) : ''; } catch (e) { c.name = ''; }
+    c.type = (r.headers.get('Content-Type') || '').split(';')[0].trim();
+    return r.blob();
+  }).then(function (b) { c.size = b.size; c.url = URL.createObjectURL(c.type && b.type !== c.type ? new Blob([b], { type: c.type }) : b); return c; });
+  return c.p;
+}
+function fvShow() {
+  if (!FV) return;
+  var it = FV.items[FV.i], st = document.getElementById('fvStage'), el = document.getElementById('fvLayer');
+  FV.z = 1; FV.r = 0; FV.kind = '';
+  document.getElementById('fvTitle').textContent = it.t || 'مرفق';
+  document.getElementById('fvCount').textContent = FV.items.length > 1 ? (FV.i + 1) + ' من ' + FV.items.length : '';
+  var dots = document.getElementById('fvDots');
+  if (dots) dots.innerHTML = FV.items.map(function (x, k) { return '<button type="button" data-fvi="' + k + '" class="' + (k === FV.i ? 'on' : '') + '" aria-label="' + esc(x.t || '') + '" title="' + esc(x.t || '') + '"></button>'; }).join('');
+  el.classList.remove('is-img', 'is-pdf'); el.classList.add('loading');
+  st.innerHTML = '<div class="fvload"><i></i><span>جارٍ تحميل الملف…</span></div>';
+  var want = FV.i;
+  fvLoad(it).then(function (c) {
+    if (!FV || FV.i !== want) return;
+    el.classList.remove('loading');
+    if (/^image\//.test(c.type)) {
+      FV.kind = 'img'; el.classList.add('is-img');
+      st.innerHTML = '<div class="fvwrap"><div class="fvbox" id="fvBox"><img id="fvImg" src="' + c.url + '" alt="' + esc(it.t || '') + '" draggable="false"></div></div>';
+      var im = document.getElementById('fvImg'); if (im.complete && im.naturalWidth) fvApply(); else im.onload = fvApply;
+    } else if (c.type === 'application/pdf') {
+      FV.kind = 'pdf'; el.classList.add('is-pdf');
+      st.innerHTML = '<iframe class="fvpdf" src="' + c.url + '#view=FitH" title="' + esc(it.t || 'ملف PDF') + '"></iframe>';
+    } else {
+      st.innerHTML = '<div class="fvnone">' + fvIc('dl') + '<b>' + esc(c.name || it.t || 'ملف') + '</b><span>هذا النوع من الملفات لا يُعرض داخل المتصفح، يمكنك تنزيله.</span><button type="button" class="btn goldb" data-fv="dl">تنزيل الملف</button></div>';
+    }
+    var nx = FV.items[FV.i + 1]; if (nx) fvLoad(nx).catch(function () { });
+  }).catch(function (e) {
+    if (!FV || FV.i !== want) return;
+    delete FV.cache[it.u]; el.classList.remove('loading');
+    st.innerHTML = '<div class="fvnone err">' + fvIc('x') + '<b>' + esc(e.message || 'تعذّر تحميل الملف') + '</b><button type="button" class="btn" data-fv="retry">إعادة المحاولة</button></div>';
+  });
+}
+function fvApply() {
+  var im = document.getElementById('fvImg'), bx = document.getElementById('fvBox'); if (!im || !bx || !im.naturalWidth) return;
+  var wr = bx.parentNode, side = FV.r % 180 !== 0, nw = im.naturalWidth, nh = im.naturalHeight;
+  var vw = side ? nh : nw, vh = side ? nw : nh, aw = wr.clientWidth - 24, ah = wr.clientHeight - 24;
+  var fit = Math.min(1, aw / vw, ah / vh), w = nw * fit * FV.z, h = nh * fit * FV.z;
+  bx.style.width = (side ? h : w) + 'px'; bx.style.height = (side ? w : h) + 'px';
+  im.style.width = w + 'px'; im.style.height = h + 'px'; im.style.transform = 'translate(-50%,-50%) rotate(' + FV.r + 'deg)';
+  wr.classList.toggle('zoomed', FV.z > 1);
+  var z = document.getElementById('fvZ'); if (z) z.textContent = Math.round(FV.z * 100) + '%';
+}
+function fvZoom(f) { FV.z = Math.max(.5, Math.min(5, FV.z * f)); fvApply(); }
+function fvAct(a) {
+  if (!FV) return;
+  var n = FV.items.length;
+  if (a === 'x') fvClose();
+  else if (a === 'next' && n > 1) { FV.i = (FV.i + 1) % n; fvShow(); }
+  else if (a === 'prev' && n > 1) { FV.i = (FV.i - 1 + n) % n; fvShow(); }
+  else if (a === 'retry') fvShow();
+  else if (a === 'zin' && FV.kind === 'img') fvZoom(1.25);
+  else if (a === 'zout' && FV.kind === 'img') fvZoom(1 / 1.25);
+  else if (a === 'fit' && FV.kind === 'img') { FV.z = 1; FV.r = 0; fvApply(); }
+  else if (a === 'rot' && FV.kind === 'img') { FV.r = (FV.r + 90) % 360; fvApply(); }
+  else if (a === 'dl') {
+    var it = FV.items[FV.i];
+    fvLoad(it).then(function (c) { var l = document.createElement('a'); l.href = c.url; l.download = c.name || (it.t || 'مرفق'); document.body.appendChild(l); l.click(); l.remove(); }).catch(function () { toast('تعذّر تنزيل الملف'); });
+  }
+}
+document.addEventListener('click', function (e) {
+  if (e.defaultPrevented || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+  var a = e.target.closest && e.target.closest('a[href]');
+  if (!a || !fvIsFile(a.getAttribute('href')) || a.closest('#fvLayer')) return;
+  e.preventDefault();
+  var box = a.closest('[data-fvg]') || a.parentNode;
+  var links = [].slice.call(box.querySelectorAll('a[href]')).filter(function (x) { return fvIsFile(x.getAttribute('href')); });
+  if (links.indexOf(a) < 0) links = [a];
+  fvOpen(links.map(function (x) { return { u: x.getAttribute('href'), t: x.getAttribute('data-fvt') || x.textContent.trim() }; }), links.indexOf(a));
+}, true);
+window.addEventListener('resize', function () { if (FV && FV.kind === 'img') fvApply(); });
+document.addEventListener('keydown', function (e) {
+  if (!FV) return;
+  if (e.key === 'Escape') { e.stopPropagation(); fvClose(); }
+  else if (e.key === 'ArrowLeft') fvAct('next');
+  else if (e.key === 'ArrowRight') fvAct('prev');
+  else if ((e.key === '+' || e.key === '=') && !e.ctrlKey) fvAct('zin');
+  else if (e.key === '-' && !e.ctrlKey) fvAct('zout');
+}, true);
 
 window.addEventListener('hashchange', route);
 boot();

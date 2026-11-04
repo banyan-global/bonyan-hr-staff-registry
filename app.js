@@ -332,8 +332,8 @@
       { t: 's.files', fields: [
         { k: 'photo', type: 'file', reqFn: C.notFemale, photo: 1, max: 1, hint: 'h.photo', hintKey: function (d) { return d.gender === 'female' ? 'h.photoFemale' : 'h.photo'; }, w: 'full' },
         { k: 'passportScan', type: 'file', req: 1, max: 2 },
-        { k: 'nationalIdScan', type: 'file', reqFn: function (d) { return !C.abroad(d); }, max: 2, hint: 'h.nationalIdScan', labelKey: function (d) { return 'f.nationalIdScan.' + idKind(d); } },
-        { k: 'permitScan', type: 'file', req: 1, max: 2, hint: 'h.permitScan', show: C.needPermit, labelKey: function (d) { return 'f.permitScan.' + permitKind(d); } },
+        { k: 'nationalIdScan', type: 'file', reqFn: function (d) { return !C.abroad(d) && !hasUp('permitScan'); }, max: 2, hint: 'h.nationalIdScan', labelKey: function (d) { return 'f.nationalIdScan.' + idKind(d); } },
+        { k: 'permitScan', type: 'file', reqFn: function (d) { return C.needPermit(d) && !hasUp('nationalIdScan'); }, max: 2, hint: 'h.permitScan', show: C.needPermit, labelKey: function (d) { return 'f.permitScan.' + permitKind(d); } },
         { k: 'workPermitScan', type: 'file', max: 2, show: C.abroadNotSA, labelKey: function (d) { return 'f.workPermitScan.' + permitKind(d); } },
         { k: 'contractFile', type: 'file', req: 1, max: 3, hint: 'h.contractFile', show: C.contract },
         { k: 'contractNone2', type: 'info', text: 'h.contractNone', show: C.noContract, label: 'f.contractFile' },
@@ -526,6 +526,8 @@
   }
 
   /* ---------------------------------------------------------- مكوّنات الحقول */
+  /* الهوية الوطنية والإقامة: يكفي رفع إحداهما */
+  function hasUp(k) { return !!(state.files && state.files[k] && state.files[k].length); }
   function isReq(f, item) { return !!(f.req || (f.reqFn && f.reqFn(state.data, item)) || (f.reqIf && state.data[f.reqIf] && String(state.data[f.reqIf]).trim())); }
   function lblText(f) { return t(f.labelKey ? f.labelKey(state.data) : (f.label || ('f.' + f.k))); }
   function hintText(f) { var k = f.hintKey ? f.hintKey(state.data) : f.hint; return k ? t(k) : ''; }

@@ -1551,6 +1551,56 @@ table.mini th.used { background: var(--gold-wash); }
 .ss-q input { border-radius: 11px; }
 @keyframes fsIn { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
 
+/* ===== عارض المرفقات ===== */
+#fvLayer { position: fixed; inset: 0; z-index: 400; display: flex; flex-direction: column; background: rgba(8, 14, 24, .86); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #fff; animation: fvIn .18s ease-out; }
+@keyframes fvIn { from { opacity: 0; } to { opacity: 1; } }
+#fvLayer .fvbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,0)); position: relative; z-index: 2; }
+#fvLayer .fvt { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+#fvLayer .fvt b { font-size: 15.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#fvLayer .fvt span { font-size: 12.5px; color: rgba(255,255,255,.62); white-space: nowrap; }
+#fvLayer .fvtools { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+#fvLayer .fvb { width: 38px; height: 38px; border-radius: 11px; border: 0; background: rgba(255,255,255,.08); color: #fff; display: grid; place-items: center; cursor: pointer; transition: background .15s, transform .15s; }
+#fvLayer .fvb:hover { background: rgba(255,255,255,.18); }
+#fvLayer .fvb:active { transform: scale(.94); }
+#fvLayer .fvb:focus-visible, #fvLayer .fvnav:focus-visible { outline: 2px solid var(--gold, #c9a45c); outline-offset: 2px; }
+#fvLayer .fvb svg, #fvLayer .fvnav svg, #fvLayer .fvnone svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+#fvLayer .fvx { background: rgba(255,255,255,.14); margin-inline-start: 4px; }
+#fvLayer .fvx:hover { background: #c0392b; }
+#fvLayer .fvsep { width: 1px; height: 22px; background: rgba(255,255,255,.18); margin: 0 6px; }
+#fvLayer .fvz { min-width: 46px; text-align: center; font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.8); font-variant-numeric: tabular-nums; }
+#fvLayer:not(.is-img) [data-fv="zin"], #fvLayer:not(.is-img) [data-fv="zout"], #fvLayer:not(.is-img) [data-fv="fit"], #fvLayer:not(.is-img) [data-fv="rot"], #fvLayer:not(.is-img) .fvz, #fvLayer:not(.is-img) .fvsep { display: none; }
+#fvLayer .fvstage { flex: 1; min-height: 0; position: relative; display: flex; padding: 0 72px 18px; }
+#fvLayer .fvwrap { flex: 1; min-width: 0; overflow: auto; display: flex; scrollbar-color: rgba(255,255,255,.3) transparent; }
+#fvLayer .fvbox { position: relative; margin: auto; flex-shrink: 0; transition: width .18s, height .18s; }
+#fvLayer .fvbox img { position: absolute; top: 50%; left: 50%; max-width: none; border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,.55); background: #fff; user-select: none; transition: transform .22s ease, width .18s, height .18s; }
+#fvLayer .fvwrap.zoomed { cursor: grab; }
+#fvLayer .fvpdf { flex: 1; width: 100%; border: 0; border-radius: 10px; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+#fvLayer .fvload, #fvLayer .fvnone { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; color: rgba(255,255,255,.82); font-size: 14px; max-width: 360px; }
+#fvLayer .fvload i { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.18); border-top-color: var(--gold, #c9a45c); animation: fvSpin .8s linear infinite; }
+@keyframes fvSpin { to { transform: rotate(360deg); } }
+#fvLayer .fvnone > svg { width: 44px; height: 44px; padding: 12px; box-sizing: content-box; border-radius: 16px; background: rgba(255,255,255,.08); }
+#fvLayer .fvnone.err > svg { color: #ff8a7a; }
+#fvLayer .fvnone b { font-size: 15.5px; color: #fff; word-break: break-word; }
+#fvLayer .fvnone .btn { margin-top: 4px; }
+#fvLayer .fvnav { position: absolute; top: 50%; z-index: 2; width: 48px; height: 48px; margin-top: -24px; border-radius: 50%; border: 0; background: rgba(255,255,255,.12); color: #fff; display: grid; place-items: center; cursor: pointer; transition: background .15s; }
+#fvLayer .fvnav:hover { background: rgba(255,255,255,.24); }
+#fvLayer .fvnav svg { width: 22px; height: 22px; }
+#fvLayer .fvprev { right: 14px; }
+#fvLayer .fvnext { left: 14px; }
+#fvLayer .fvdots { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 6px 10px; border-radius: 99px; background: rgba(0,0,0,.35); }
+#fvLayer .fvdots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 99px; background: rgba(255,255,255,.35); cursor: pointer; transition: width .2s, background .2s; }
+#fvLayer .fvdots button.on { width: 22px; background: var(--gold, #c9a45c); }
+#fvLayer.is-pdf .fvstage { padding-bottom: 26px; }
+@media (max-width: 720px) {
+  #fvLayer .fvbar { padding: 8px 10px; flex-wrap: wrap; }
+  #fvLayer .fvt { flex: 1 1 100%; order: 2; }
+  #fvLayer .fvtools { order: 1; margin-inline-start: auto; }
+  #fvLayer .fvb { width: 36px; height: 36px; }
+  #fvLayer .fvstage { padding: 0 8px 30px; }
+  #fvLayer .fvnav { top: auto; bottom: 2px; margin: 0; width: 40px; height: 40px; }
+  #fvLayer [data-fv="fit"] { display: none; }
+}
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--bg-0: #162942;
