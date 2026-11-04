@@ -1437,6 +1437,23 @@ table.mini th.used { background: var(--gold-wash); }
 @media (max-width: 1100px) { .ents2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .ents2 { grid-template-columns: minmax(0, 1fr); gap: 8px; } .ent2 { min-height: 70px; padding: 10px 12px; } .ent2 .lg { width: 44px; height: 44px; border-radius: 12px; } .ent2 .lg img { max-width: 36px; max-height: 32px; } }
 
+/* زر «ترتيب الواجهة» ونافذته */
+.hcbar { display: flex; justify-content: flex-end; margin: -4px 0 12px; }
+#hcLayer { position: fixed; inset: 0; z-index: 92; display: grid; place-items: center; padding: 16px; }
+.mdl.hcm { width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
+.hcl { list-style: none; margin: 0; padding: 4px 20px 12px; overflow: auto; display: grid; gap: 8px; }
+.hcl li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--soft); cursor: grab; transition: background .15s, box-shadow .15s, opacity .15s; }
+.hcl li.full { border-inline-start: 4px solid var(--j-sapphire, #3d8ee0); }
+.hcl li.off { opacity: .55; }
+.hcl li.dg { opacity: .4; }
+.hcl li.ov { box-shadow: 0 0 0 2px var(--j-sapphire, #3d8ee0); }
+.hcl .hg { color: var(--faint); font-weight: 900; letter-spacing: -2px; }
+.hcl .hn { flex: 1; min-width: 0; font-weight: 800; font-size: 14px; }
+.hcl .hn small { display: block; font-weight: 600; font-size: 11.5px; color: var(--mute); margin-top: 2px; }
+.hcl .hb { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line); background: var(--card, #fff); cursor: pointer; font-weight: 900; color: var(--ink); }
+.hcl .hb:disabled { opacity: .35; cursor: default; }
+.mdl.hcm .mf { display: flex; gap: 8px; align-items: center; }
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--bg-0: #162942;

@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 8;
+const BHR_SCHEMA_VERSION = 9;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -135,6 +135,16 @@ function migrate(PDO $pdo): void {
         if (!in_array('audit.view', $p, true)) $add = array_diff($add, ['home.log']);
         $q = array_values(array_unique(array_merge($p, $add)));
         if ($q !== $p) $pdo->prepare('UPDATE users SET perms=? WHERE id=?')->execute([json_encode($q), $u['id']]);
+    }
+    /* ٩) لوحة «بيانات التواصل» صارت صلاحية: تبقى للموارد البشرية والاطلاع (حساباتهم المخصّصة ومصفوفة الأدوار المعدّلة) وتُرفع عن الرئيس التنفيذي */
+    foreach ($pdo->query("SELECT id, perms FROM users WHERE role IN ('hr','viewer') AND perms IS NOT NULL")->fetchAll(PDO::FETCH_ASSOC) as $u) {
+        $p = json_decode((string)$u['perms'], true);
+        if (is_array($p) && !in_array('home.contact', $p, true)) { $p[] = 'home.contact'; $pdo->prepare('UPDATE users SET perms=? WHERE id=?')->execute([json_encode(array_values($p)), $u['id']]); }
+    }
+    $rp = $pdo->query("SELECT v FROM settings WHERE k='role_perms'")->fetchColumn();
+    if ($rp && is_array($m = json_decode((string)$rp, true))) {
+        foreach (['hr', 'viewer'] as $r) if (isset($m[$r]) && is_array($m[$r]) && !in_array('home.contact', $m[$r], true)) $m[$r][] = 'home.contact';
+        $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('role_perms', ?)")->execute([json_encode($m, JSON_UNESCAPED_UNICODE)]);
     }
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }

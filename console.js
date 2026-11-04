@@ -478,7 +478,7 @@ function seed(k, d) { CACHE[k] = { loading: false, at: Date.now(), data: d, err:
 function softRender() { var y = window.scrollY, a = document.activeElement, id = a && a.id, pos = a && a.selectionStart; render(); window.scrollTo(0, y); if (id) { var f = document.getElementById(id); if (f && f.focus) { f.focus(); try { if (pos != null) f.setSelectionRange(pos, pos); } catch (e) { } } } }
 function capsFrom(p) {
   var h = function (x) { return p.indexOf(x) > -1; };
-  return { view: h('staff.view'), edit: h('staff.edit'), files: h('staff.files'), pay: h('finance.view'), mail: h('staff.mail'), export: h('staff.export'), audit: h('audit.view'), override: h('requests.override'), forms: h('requests.forms'), hEv: h('home.events'), hCal: h('home.cal'), hLog: h('home.log'),
+  return { view: h('staff.view'), edit: h('staff.edit'), files: h('staff.files'), pay: h('finance.view'), mail: h('staff.mail'), export: h('staff.export'), audit: h('audit.view'), override: h('requests.override'), forms: h('requests.forms'), hEv: h('home.events'), hCal: h('home.cal'), hLog: h('home.log'), hCon: h('home.contact'),
     users: h('users.manage'), drive: h('backup.run'), sys: h('audit.view') || h('users.manage') || h('backup.run') || h('settings.manage'), approve: h('requests.approve'), leave: false, payedit: false,
     attv: h('attendance.view'), attm: h('attendance.manage'), news: h('announce.manage'), reports: h('reports.view'), settings: h('settings.manage') };
 }
@@ -568,7 +568,7 @@ function loadAll() {
     api({ action: 'siteGet' }).catch(function () { return null; })
   ]).then(function (R) {
     if (R[3]) seed('reqs', R[3].rows);
-    if (R[4]) { SITE = R[4].site; }
+    if (R[4]) { SITE = R[4].site; UI_HOME = (R[4].ui && R[4].ui.home) || null; }
     var j = R[0]; MAILED = j.mailed || {}; ENT_MAP = {}; CT_MAP = {};
     STAFF = (j.rows || []).map(toStaff).sort(function (a, b) { return b.reg - a.reg; });
     rebuildIndex();
@@ -831,15 +831,17 @@ VIEWS.home = function () {
       '<span class="bd"><b class="nm">' + esc(x.e.n) + '</b><span class="mt"><em>' + x.ss.length + '</em> منسوبًا · ' + p + '٪ مكتمل</span><span class="tr"><i style="width:' + p + '%"></i></span></span></button>'; }).join('') + '</div></div>');
   var recent = pn('emerald', 'userok', 'أحدث المنسوبين', '', more('الكل', '#people'), '<ul class="lst">' + STAFF.slice(0, 5).map(function (s) { return '<li style="cursor:pointer" data-open="' + esc(s.ref) + '">' + avP(s) + '<div><b>' + esc(s.name) + '</b><span class="s">' + esc(s.ent.n) + '، ' + esc(s.c.n) + ' · ' + agoD(s.reg) + '</span></div>' + (s.status === 'مكتمل' ? '<span class="pill ok"><i></i>مكتمل</span>' : '<span class="pill warn"><i></i>ناقص</span>') + '</li>'; }).join('') + '</ul>');
   var log = can('hLog') && can('audit') ? pn('slate', 'history', 'آخر العمليات', '', more('السجل الكامل', '#log'), tlHTML(6)) : '';
-  var third = can('users') ? readyPanel() : quickFacts();
-  /* صفحة رئيسية مختصرة: لا «يحتاج إجراءً منك» ولا «حركة التسجيل» لأحد؛ والمناسبات وتقويم الوثائق و«آخر العمليات»
-     تتبع صلاحيات home.* (يعدّلها مدير النظام لكل دور أو لكل موظف) */
+  var third = can('users') ? readyPanel() : can('hCon') ? quickFacts() : '';
+  /* صفحة رئيسية مختصرة يرتّبها كل مستخدم بنفسه (زر «ترتيب الواجهة»)؛ والصلاحيات وإعدادات المنصة تحدد ما يُتاح أصلًا */
   var H = function (k) { return S('home', k); };
-  var top = [H('charts') ? stDonut : '', H('qa') ? qa : '', H('events') && can('hEv') ? eventsPanel() : ''].filter(Boolean);
-  var row1 = top.length ? '<div class="grid g' + (top.length === 1 ? '1' : top.length) + '">' + top.join('') + '</div>' : '';
-  var low = [recent, log, third].filter(Boolean);
-  return (H('hero') ? hero : '') + (H('kpis') ? kpis : '') + (H('ents') ? entP : '') + row1 + (H('quality') ? '<div class="grid g3">' + quality + geo + docLvl + '</div>' : '') +
-    (H('cal') && can('hCal') ? cal : '') + (H('recent') ? '<div class="grid g' + low.length + '">' + low.join('') + '</div>' : '');
+  var B = { hero: H('hero') && hero, kpis: H('kpis') && kpis, ents: H('ents') && entP, quality: H('quality') && quality, geo: H('quality') && geo, doclvl: H('quality') && docLvl,
+    cal: H('cal') && can('hCal') && cal, recent: H('recent') && recent, log: H('recent') && log, third: H('recent') && third, status: H('charts') && stDonut, qa: H('qa') && qa, events: H('events') && can('hEv') && eventsPanel() };
+  HOME_AV = HOME_BLOCKS.filter(function (x) { return B[x[0]]; }).map(function (x) { return x[0]; });
+  var ord = homeOrder(HOME_AV), out = '', buf = [];
+  var flush = function () { /* اللوحات الصغيرة تُرصّ في صفوف متوازنة: ٣ في الصف، و٤ ← ٢ + ٢ */
+    while (buf.length) { var n = buf.length === 4 || buf.length === 2 ? 2 : Math.min(3, buf.length); var r = buf.splice(0, n); out += '<div class="grid g' + (r.length === 1 ? '1' : r.length) + '">' + r.join('') + '</div>'; } };
+  ord.forEach(function (k) { if (HOME_FULL[k]) { flush(); out += B[k]; } else buf.push(B[k]); }); flush();
+  return '<div class="hcbar"><button class="btn sm" id="hcOpen" title="رتّب لوحات صفحتك وأخفِ ما لا تحتاجه">' + ic('grid') + 'ترتيب الواجهة</button></div>' + out;
 };
 function eventsPanel() {
   var t0 = new Date(TODAY); t0.setHours(0, 0, 0, 0); var E = [];
@@ -1394,7 +1396,7 @@ var ROLE_INFO = {
 };
 var PERM_GROUPS = [['بيانات المنسوبين', [['staff.view', 'عرض الملفات والوثائق'], ['staff.edit', 'تعديل البيانات'], ['staff.files', 'رفع المرفقات واستبدالها'], ['staff.export', 'تصدير السجل إلى Excel']]], ['التواصل', [['staff.mail', 'مراسلة المنسوبين بالبريد وواتساب']]],
   ['المالية', [['finance.view', 'الرواتب والحسابات البنكية']]], ['الطلبات', [['requests.approve', 'اعتماد طلبات المنسوبين'], ['requests.override', 'اعتماد أي طلب في أي خطوة (للطوارئ)'], ['requests.forms', 'النماذج الإدارية ومسارات الاعتماد']]], ['الحضور والانصراف', [['attendance.view', 'عرض الحضور والانصراف'], ['attendance.manage', 'استيراد ملف جهاز البصمة']]],
-  ['التعاميم والتقارير', [['announce.manage', 'إصدار التعاميم والإعلانات'], ['reports.view', 'مركز التقارير']]], ['الرقابة', [['audit.view', 'سجل العمليات']]], ['الصفحة الرئيسية', [['home.events', 'لوحة «مناسبات قادمة»'], ['home.cal', 'لوحة «تقويم انتهاء الوثائق»'], ['home.log', 'لوحة «آخر العمليات»']]],
+  ['التعاميم والتقارير', [['announce.manage', 'إصدار التعاميم والإعلانات'], ['reports.view', 'مركز التقارير']]], ['الرقابة', [['audit.view', 'سجل العمليات']]], ['الصفحة الرئيسية', [['home.events', 'لوحة «مناسبات قادمة»'], ['home.cal', 'لوحة «تقويم انتهاء الوثائق»'], ['home.log', 'لوحة «آخر العمليات»'], ['home.contact', 'لوحة «بيانات التواصل»']]],
   ['الإدارة', [['users.manage', 'إدارة الحسابات والصلاحيات'], ['settings.manage', 'إعدادات المنصة (إظهار الأقسام وإخفاؤها)'], ['backup.run', 'النسخ الاحتياطي والتصدير الكامل']]]];
 var TITLE_SUGG = ['مدير الموارد البشرية', 'أخصائي موارد بشرية', 'أخصائية موارد بشرية', 'محاسب الرواتب', 'مشرف جهة', 'مدقق داخلي', 'مساعد إداري', 'مدير تنفيذي'];
 function samePerms(a, b) { return a.slice().sort().join() === b.slice().sort().join(); }
@@ -1893,7 +1895,53 @@ document.addEventListener('click', function (e) { if (e.target.closest && e.targ
 /* ======================================================================
    النظام المتكامل: إعدادات المنصة · الحضور · التعاميم · الهيكل · التقارير · أرصدة الإجازات
    ====================================================================== */
-var SITE = null, MY_BAL = null;
+var SITE = null, MY_BAL = null, UI_HOME = null, HOME_AV = [];
+/* لوحات الصفحة الرئيسية: [المعرّف، الاسم، تأخذ عرض الصفحة كاملًا؟] — بالترتيب الافتراضي */
+var HOME_BLOCKS = [['hero', 'الترحيب والخريطة والساعات', 1], ['kpis', 'المؤشرات الأربعة', 1], ['ents', 'الجهات', 1], ['quality', 'جودة البيانات'], ['geo', 'التوزيع الجغرافي'], ['doclvl', 'الوثائق حسب الحالة'],
+  ['cal', 'تقويم انتهاء الوثائق', 1], ['recent', 'أحدث المنسوبين'], ['log', 'آخر العمليات'], ['third', 'جاهزية النظام / بيانات التواصل'], ['status', 'حالة الملفات'], ['qa', 'إجراءات سريعة'], ['events', 'مناسبات قادمة']];
+var HOME_FULL = {}; HOME_BLOCKS.forEach(function (x) { if (x[2]) HOME_FULL[x[0]] = 1; });
+function homeOrder(av) {
+  var u = UI_HOME || {}, hid = u.hidden || [], seen = {}, o = [];
+  (u.order || []).concat(HOME_BLOCKS.map(function (x) { return x[0]; })).forEach(function (k) { if (!seen[k] && av.indexOf(k) > -1) { seen[k] = 1; if (hid.indexOf(k) < 0) o.push(k); } });
+  return o;
+}
+/* نافذة «ترتيب الواجهة»: سحب وإفلات أو أسهم، وإخفاء/إظهار، ويُحفظ لهذا المستخدم على كل أجهزته */
+var HC = null;
+function hcOpen() {
+  var u = UI_HOME || {}, hid = u.hidden || [], seen = {}, o = [];
+  (u.order || []).concat(HOME_BLOCKS.map(function (x) { return x[0]; })).forEach(function (k) { if (!seen[k] && HOME_AV.indexOf(k) > -1) { seen[k] = 1; o.push(k); } });
+  HC = { order: o, hidden: hid.filter(function (k) { return HOME_AV.indexOf(k) > -1; }), busy: false }; drawHC();
+}
+function hcName(k) { if (k === 'third') return can('users') ? 'جاهزية النظام والأمان' : 'بيانات التواصل'; for (var i = 0; i < HOME_BLOCKS.length; i++) if (HOME_BLOCKS[i][0] === k) return HOME_BLOCKS[i][1]; return k; }
+function drawHC() {
+  var old = document.getElementById('hcLayer'), y = old ? old.querySelector('.hcl').scrollTop : 0; if (old) old.remove();
+  var el = document.createElement('div'); el.id = 'hcLayer';
+  el.innerHTML = '<div class="mscrim" data-hcx="1"></div><section class="mdl hcm" role="dialog" aria-modal="true" aria-labelledby="hcT"><header class="mh">' + tile('sapphire', 'grid') + '<div><h2 id="hcT">ترتيب الواجهة</h2><p>اسحب اللوحة إلى مكانها أو استخدم الأسهم، وأخفِ ما لا تحتاجه. الترتيب لك وحدك ويُحفظ على كل أجهزتك.</p></div></header>' +
+    '<ol class="hcl">' + HC.order.map(function (k, i) { var off = HC.hidden.indexOf(k) > -1;
+      return '<li draggable="true" data-hck="' + k + '" class="' + (off ? 'off' : '') + (HOME_FULL[k] ? ' full' : '') + '"><span class="hg" aria-hidden="true">⋮⋮</span><span class="hn">' + esc(hcName(k)) + '<small>' + (HOME_FULL[k] ? 'بعرض الصفحة' : 'لوحة صغيرة') + (off ? ' · مخفية' : '') + '</small></span>' +
+        '<button type="button" class="hb" data-hcm="-1" data-k="' + k + '"' + (i ? '' : ' disabled') + ' aria-label="أعلى">↑</button><button type="button" class="hb" data-hcm="1" data-k="' + k + '"' + (i < HC.order.length - 1 ? '' : ' disabled') + ' aria-label="أسفل">↓</button>' +
+        '<button type="button" class="sw" role="switch" aria-checked="' + !off + '" data-hct="' + k + '" aria-label="إظهار ' + esc(hcName(k)) + '"></button></li>'; }).join('') + '</ol>' +
+    '<footer class="mf"><button class="btn" id="hcReset"' + (UI_HOME ? '' : ' disabled') + '>الترتيب الافتراضي</button><span style="flex:1"></span><button class="btn" data-hcx="1">إلغاء</button><button class="btn goldb" id="hcSave"' + (HC.busy ? ' disabled' : '') + '>' + (HC.busy ? 'جارٍ الحفظ…' : 'حفظ') + '</button></footer></section>';
+  document.body.appendChild(el); el.querySelector('.hcl').scrollTop = y;
+  var move = function (k, to) { var i = HC.order.indexOf(k); if (i < 0 || to < 0 || to >= HC.order.length) return; HC.order.splice(i, 1); HC.order.splice(to, 0, k); drawHC(); };
+  el.querySelectorAll('[data-hcx]').forEach(function (b) { b.onclick = function () { el.remove(); }; });
+  el.querySelectorAll('[data-hcm]').forEach(function (b) { b.onclick = function () { move(b.dataset.k, HC.order.indexOf(b.dataset.k) + (+b.dataset.hcm)); }; });
+  el.querySelectorAll('[data-hct]').forEach(function (b) { b.onclick = function () { var k = b.dataset.hct, i = HC.hidden.indexOf(k); if (i > -1) HC.hidden.splice(i, 1); else HC.hidden.push(k); drawHC(); }; });
+  var drag = null;
+  el.querySelectorAll('[data-hck]').forEach(function (li) {
+    li.addEventListener('dragstart', function (e) { drag = li.dataset.hck; li.classList.add('dg'); try { e.dataTransfer.setData('text/plain', drag); e.dataTransfer.effectAllowed = 'move'; } catch (x) { } });
+    li.addEventListener('dragend', function () { li.classList.remove('dg'); });
+    li.addEventListener('dragover', function (e) { e.preventDefault(); li.classList.add('ov'); });
+    li.addEventListener('dragleave', function () { li.classList.remove('ov'); });
+    li.addEventListener('drop', function (e) { e.preventDefault(); if (drag && drag !== li.dataset.hck) move(drag, HC.order.indexOf(li.dataset.hck)); });
+  });
+  var done = function (j, msg) { UI_HOME = (j.ui && j.ui.home) || null; el.remove(); toast(msg); if (view === 'home') softRender(); };
+  el.querySelector('#hcReset').onclick = function () { api({ action: 'uiSave', reset: 1 }).then(function (j) { done(j, 'عادت صفحتك إلى الترتيب الافتراضي'); }, function (er) { toast(errText(er)); }); };
+  el.querySelector('#hcSave').onclick = function () { HC.busy = true; drawHC();
+    api({ action: 'uiSave', home: { order: HC.order, hidden: HC.hidden } }).then(function (j) { done(j, 'حُفظ ترتيب صفحتك'); }, function (er) { HC.busy = false; drawHC(); toast(errText(er)); }); };
+}
+document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('#hcOpen')) hcOpen(); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { var l = document.getElementById('hcLayer'); if (l) l.remove(); } });
 function S(g, k) { return !SITE || !SITE[g] || SITE[g][k] !== false; }
 function mod(k) { return S('modules', k); }
 function staffOn(k) { var m = { myreq: 'reqs', reqs: 'reqs', att: 'att', myatt: 'att', news: 'news', mynews: 'news' }[k]; return S('staff', k === 'myreq' ? 'reqs' : k === 'myatt' ? 'att' : k === 'mynews' ? 'news' : k) && (!m || mod(m)); }

@@ -30,13 +30,14 @@ const PERMS = [
     'home.events'  => 'لوحة «مناسبات قادمة» في الرئيسية',
     'home.cal'     => 'لوحة «تقويم انتهاء الوثائق» في الرئيسية',
     'home.log'     => 'لوحة «آخر العمليات» في الرئيسية',
+    'home.contact' => 'لوحة «بيانات التواصل» في الرئيسية',
     'self.view'    => 'صفحة المنسوب الخاصة (بياناته فقط)',
 ];
 const ROLE_PERMS = [
     'admin' => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'users.manage', 'backup.run', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view', 'settings.manage', 'staff.export', 'requests.override', 'requests.forms', 'home.cal', 'home.log'],
-    'hr'    => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view', 'staff.export', 'home.cal'],
+    'hr'    => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view', 'staff.export', 'home.cal', 'home.contact'],
     'ceo'   => ['staff.view', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'announce.manage', 'reports.view', 'staff.export'],
-    'viewer'=> ['staff.view', 'staff.export', 'home.events', 'home.cal'],
+    'viewer'=> ['staff.view', 'staff.export', 'home.events', 'home.cal', 'home.contact'],
     'staff' => ['self.view'],
 ];
 const ROLE_NAMES = ['admin' => 'مدير النظام', 'hr' => 'الموارد البشرية', 'ceo' => 'الرئيس التنفيذي', 'viewer' => 'اطلاع فقط', 'staff' => 'منسوب'];

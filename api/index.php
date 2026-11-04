@@ -69,7 +69,7 @@ try {
         /* طلبات المنسوبين */
         'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqTrack' => fn() => req_track($b), 'reqForms' => fn() => req_forms(),
         /* الوحدات المتكاملة */
-        'siteGet' => fn() => site_get(), 'siteSave' => fn() => site_save($b), 'myExtra' => fn() => my_extra(), 'leaveBalances' => fn() => leave_balances(),
+        'siteGet' => fn() => site_get(), 'uiSave' => fn() => ui_save($b), 'siteSave' => fn() => site_save($b), 'myExtra' => fn() => my_extra(), 'leaveBalances' => fn() => leave_balances(),
         'attUpload' => fn() => att_upload($b), 'attImport' => fn() => att_import($b), 'attMonth' => fn() => att_month($b), 'attMy' => fn() => att_my($b), 'attUndo' => fn() => att_batch_undo($b),
         'newsList' => fn() => news_list(), 'newsSave' => fn() => news_save($b), 'newsDelete' => fn() => news_delete($b), 'newsRead' => fn() => news_read($b), 'newsReaders' => fn() => news_readers($b), 'reqFormsSave' => fn() => req_forms_save($b),
         /* تحديث المنسوب لبياناته */

@@ -23,7 +23,18 @@ function site(): array {
 function site_on(string $g, string $k): bool { return !empty(site()[$g][$k]); }
 /* قسم يخص المنسوب: يجب أن تكون الوحدة مفعّلة وعنصر البوابة ظاهرًا */
 function staff_can_see(string $k): bool { $mod = ['reqs' => 'reqs', 'att' => 'att', 'news' => 'news'][$k] ?? null; return site_on('staff', $k) && (!$mod || site_on('modules', $mod)); }
-function site_get(): array { $u = current_user(); if (!$u) throw new HttpError('auth_required', 401); return ['ok' => true, 'site' => site(), 'canEdit' => has_perm($u, 'settings.manage')]; }
+function site_get(): array { $u = current_user(); if (!$u) throw new HttpError('auth_required', 401); return ['ok' => true, 'site' => site(), 'canEdit' => has_perm($u, 'settings.manage'), 'ui' => ui_get($u)]; }
+/* ترتيب الصفحة الرئيسية لكل مستخدم (يحفظه بنفسه من زر «ترتيب الواجهة»): الترتيب والمخفي فقط، والصلاحيات تبقى هي الحَكَم */
+const UI_HOME_BLOCKS = ['hero', 'kpis', 'ents', 'quality', 'geo', 'doclvl', 'cal', 'recent', 'log', 'third', 'status', 'qa', 'events'];
+function ui_get(array $u): array { $v = json_decode((string)(kv_get('ui:home:' . (int)$u['id']) ?? ''), true); return ['home' => is_array($v) ? $v : null]; }
+function ui_save(array $b): array {
+    $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
+    if (!empty($b['reset'])) { kv_del('ui:home:' . (int)$u['id']); return ['ok' => true, 'ui' => ui_get($u)]; }
+    $h = is_array($b['home'] ?? null) ? $b['home'] : [];
+    $ok = fn($a) => array_values(array_unique(array_filter(array_map('strval', is_array($a) ? $a : []), fn($x) => in_array($x, UI_HOME_BLOCKS, true))));
+    kv_put('ui:home:' . (int)$u['id'], json_encode(['order' => $ok($h['order'] ?? []), 'hidden' => $ok($h['hidden'] ?? [])]));
+    return ['ok' => true, 'ui' => ui_get($u)];
+}
 function site_save(array $b): array {
     $me = require_perm('settings.manage');
     $in = is_array($b['site'] ?? null) ? $b['site'] : [];
