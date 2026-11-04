@@ -838,7 +838,7 @@ VIEWS.home = function () {
   var top = [H('charts') ? stDonut : '', H('qa') ? qa : '', H('events') && can('hEv') ? eventsPanel() : ''].filter(Boolean);
   var row1 = top.length ? '<div class="grid g' + (top.length === 1 ? '1' : top.length) + '">' + top.join('') + '</div>' : '';
   var low = [recent, log, third].filter(Boolean);
-  return (H('hero') ? hero : '') + (H('ents') ? entP : '') + (H('kpis') ? kpis : '') + row1 + (H('quality') ? '<div class="grid g3">' + quality + geo + docLvl + '</div>' : '') +
+  return (H('hero') ? hero : '') + (H('kpis') ? kpis : '') + (H('ents') ? entP : '') + row1 + (H('quality') ? '<div class="grid g3">' + quality + geo + docLvl + '</div>' : '') +
     (H('cal') && can('hCal') ? cal : '') + (H('recent') ? '<div class="grid g' + low.length + '">' + low.join('') + '</div>' : '');
 };
 function eventsPanel() {
