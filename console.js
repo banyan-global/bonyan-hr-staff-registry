@@ -829,10 +829,10 @@ VIEWS.home = function () {
   var recent = pn('emerald', 'userok', 'أحدث المنسوبين', '', more('الكل', '#people'), '<ul class="lst">' + STAFF.slice(0, 5).map(function (s) { return '<li style="cursor:pointer" data-open="' + esc(s.ref) + '">' + avP(s) + '<div><b>' + esc(s.name) + '</b><span class="s">' + esc(s.ent.n) + '، ' + esc(s.c.n) + ' · ' + agoD(s.reg) + '</span></div>' + (s.status === 'مكتمل' ? '<span class="pill ok"><i></i>مكتمل</span>' : '<span class="pill warn"><i></i>ناقص</span>') + '</li>'; }).join('') + '</ul>');
   var log = role === 'admin' && can('audit') ? pn('slate', 'history', 'آخر العمليات', '', more('السجل الكامل', '#log'), tlHTML(6)) : '';
   var third = can('users') ? readyPanel() : quickFacts();
-  /* صفحة رئيسية مختصرة: لا «يحتاج إجراءً منك» ولا «حركة التسجيل» لأحد، والمناسبات لغير الإدارة والموارد البشرية،
+  /* صفحة رئيسية مختصرة: لا «يحتاج إجراءً منك» ولا «حركة التسجيل» لأحد، والمناسبات لغير الإدارة والموارد البشرية والرئيس التنفيذي،
      وتقويم الوثائق لغير الرئيس التنفيذي، و«آخر العمليات» لمسؤول النظام وحده */
   var H = function (k) { return S('home', k); };
-  var top = [H('charts') ? stDonut : '', H('qa') ? qa : '', H('events') && role !== 'admin' && role !== 'hr' ? eventsPanel() : ''].filter(Boolean);
+  var top = [H('charts') ? stDonut : '', H('qa') ? qa : '', H('events') && ['admin', 'hr', 'ceo'].indexOf(role) < 0 ? eventsPanel() : ''].filter(Boolean);
   var row1 = top.length ? '<div class="grid g' + (top.length === 1 ? '1' : top.length) + '">' + top.join('') + '</div>' : '';
   var low = [recent, log, third].filter(Boolean);
   return (H('hero') ? hero : '') + (H('kpis') ? kpis : '') + row1 + (H('quality') ? '<div class="grid g3">' + quality + geo + docLvl + '</div>' : '') +
@@ -1964,7 +1964,7 @@ var SET_GROUPS = [
     ['reqs', 'تقديم الطلبات', 'طلب إجازة أو إركاب أو تعريف من صفحته', 'stamp'], ['balance', 'رصيد الإجازات', 'المستحق والمستهلك والمتبقي', 'umbrella'], ['att', 'حضوري', 'سجل حضوره وتأخيره', 'finger'],
     ['news', 'التعاميم', 'التعاميم الموجهة إليه', 'bell'], ['update', 'تحديث بياناتي', 'تعديل بياناته ورفع وثائقه بنفسه', 'edit']]],
   ['home', 'لوحة القيادة', 'اللوحات التي تظهر في الصفحة الرئيسية للإدارة.', 'gauge', [
-    ['hero', 'الترحيب والخريطة والساعات', '', 'globe'], ['kpis', 'المؤشرات الأربعة', '', 'chart'], ['qa', 'إجراءات سريعة', '', 'plus'], ['events', 'مناسبات قادمة', 'لا تظهر للإدارة والموارد البشرية', 'calendar'],
+    ['hero', 'الترحيب والخريطة والساعات', '', 'globe'], ['kpis', 'المؤشرات الأربعة', '', 'chart'], ['qa', 'إجراءات سريعة', '', 'plus'], ['events', 'مناسبات قادمة', 'لا تظهر للإدارة والموارد البشرية والرئيس التنفيذي', 'calendar'],
     ['charts', 'حالة الملفات', '', 'pie'], ['quality', 'جودة البيانات والتوزيع والوثائق', '', 'gauge'], ['cal', 'تقويم انتهاء الوثائق', 'لا يظهر للرئيس التنفيذي', 'calendar'], ['ents', 'الجهات', '', 'building'], ['recent', 'أحدث المنسوبين وآخر العمليات', '«آخر العمليات» لمسؤول النظام وحده', 'history']]]
 ];
 function setHTML() {
