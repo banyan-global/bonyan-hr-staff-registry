@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 7;
+const BHR_SCHEMA_VERSION = 8;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -123,6 +123,18 @@ function migrate(PDO $pdo): void {
     foreach ($pdo->query("SELECT id, perms FROM users WHERE role='ceo' AND perms IS NOT NULL")->fetchAll(PDO::FETCH_ASSOC) as $u) {
         $p = json_decode((string)$u['perms'], true);
         if (is_array($p) && !in_array('announce.manage', $p, true)) { $p[] = 'announce.manage'; $pdo->prepare('UPDATE users SET perms=? WHERE id=?')->execute([json_encode(array_values($p)), $u['id']]); }
+    }
+    /* ٨) صلاحيات أدق (التصدير، تجاوز المسار، النماذج، لوحات الرئيسية): الحسابات المخصّصة تأخذ ما كان لها فعلًا قبلها */
+    $NEW8 = ['admin' => ['staff.export', 'requests.override', 'requests.forms', 'home.cal', 'home.log'], 'hr' => ['staff.export', 'home.cal'], 'ceo' => ['staff.export'], 'viewer' => ['staff.export', 'home.events', 'home.cal']];
+    foreach ($pdo->query("SELECT id, role, perms FROM users WHERE perms IS NOT NULL")->fetchAll(PDO::FETCH_ASSOC) as $u) {
+        $p = json_decode((string)$u['perms'], true); if (!is_array($p) || !isset($NEW8[$u['role']])) continue;
+        $add = $NEW8[$u['role']];
+        if (!in_array('staff.view', $p, true)) $add = array_diff($add, ['staff.export']);
+        if (!in_array('users.manage', $p, true)) $add = array_diff($add, ['requests.forms']);
+        if (!in_array('requests.approve', $p, true)) $add = array_diff($add, ['requests.override']);
+        if (!in_array('audit.view', $p, true)) $add = array_diff($add, ['home.log']);
+        $q = array_values(array_unique(array_merge($p, $add)));
+        if ($q !== $p) $pdo->prepare('UPDATE users SET perms=? WHERE id=?')->execute([json_encode($q), $u['id']]);
     }
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }

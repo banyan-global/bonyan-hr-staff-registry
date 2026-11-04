@@ -478,7 +478,7 @@ function seed(k, d) { CACHE[k] = { loading: false, at: Date.now(), data: d, err:
 function softRender() { var y = window.scrollY, a = document.activeElement, id = a && a.id, pos = a && a.selectionStart; render(); window.scrollTo(0, y); if (id) { var f = document.getElementById(id); if (f && f.focus) { f.focus(); try { if (pos != null) f.setSelectionRange(pos, pos); } catch (e) { } } } }
 function capsFrom(p) {
   var h = function (x) { return p.indexOf(x) > -1; };
-  return { view: h('staff.view'), edit: h('staff.edit'), files: h('staff.files'), pay: h('finance.view'), mail: h('staff.mail'), export: h('staff.view'), audit: h('audit.view'),
+  return { view: h('staff.view'), edit: h('staff.edit'), files: h('staff.files'), pay: h('finance.view'), mail: h('staff.mail'), export: h('staff.export'), audit: h('audit.view'), override: h('requests.override'), forms: h('requests.forms'), hEv: h('home.events'), hCal: h('home.cal'), hLog: h('home.log'),
     users: h('users.manage'), drive: h('backup.run'), sys: h('audit.view') || h('users.manage') || h('backup.run') || h('settings.manage'), approve: h('requests.approve'), leave: false, payedit: false,
     attv: h('attendance.view'), attm: h('attendance.manage'), news: h('announce.manage'), reports: h('reports.view'), settings: h('settings.manage') };
 }
@@ -824,19 +824,22 @@ VIEWS.home = function () {
   var qa = QA.length ? pn('teal', 'bolt', 'إجراءات سريعة', '', '', '<div class="pb"><div class="qa">' + QA.map(function (q) { return '<button data-act="' + q[3] + '">' + tile(q[0], q[1]) + q[2] + '</button>'; }).join('') + '</div></div>') : '';
   var cal = pn('sapphire', 'calendar', 'تقويم انتهاء الوثائق', 'أربعة أسابيع مضت واثنا عشر أسبوعًا قادمة، وكل مربع وثيقة', more('الوثائق', '#documents'), calHTML());
   var ents = ENT.map(function (e) { return { e: e, ss: STAFF.filter(function (s) { return s.ent.v === e.v; }) }; });
-  var entP = pn('gold', 'building', 'الجهات', nq(nE, 'جهة واحدة', 'جهتان', 'جهات', 'جهة') + ' في السجل', '', '<div class="pb"><div class="ents">' + ents.map(function (x) { var dn2 = x.ss.filter(function (s) { return s.status === 'مكتمل'; }).length;
-    return '<button class="ent" style="--ec:' + x.e.c + '" data-ent="' + esc(x.e.v) + '"><div class="lg">' + elogo(x.e) + '</div><h3>' + esc(x.e.n) + '</h3><div class="nb"><b>' + x.ss.length + '</b><span>' + pct(dn2, x.ss.length) + '٪ مكتمل</span></div><div class="tr"><i style="width:' + pct(dn2, x.ss.length) + '%"></i></div></button>'; }).join('') + '</div></div>');
+  /* الجهات أولًا: بطاقات أفقية متساوية، مرتبة بعدد المنسوبين، موزّعة على صفوف متوازنة (٧ ← ٤ + ٣) */
+  var eCols = nE <= 4 ? Math.max(nE, 1) : Math.ceil(nE / Math.ceil(nE / 4));
+  var entP = pn('gold', 'building', 'الجهات', nq(nE, 'جهة واحدة', 'جهتان', 'جهات', 'جهة') + ' · ' + nq(tot, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا'), more('دليل المنسوبين', '#people'), '<div class="pb"><div class="ents2" style="--cols:' + eCols + '">' + ents.map(function (x, i) { var dn2 = x.ss.filter(function (s) { return s.status === 'مكتمل'; }).length, p = pct(dn2, x.ss.length), lg = elogo(x.e);
+    return '<button class="ent2" style="--ec:' + x.e.c + '" data-ent="' + esc(x.e.v) + '" title="عرض منسوبي ' + esc(x.e.n) + '"><span class="lg">' + (lg && lg.indexOf('<img') > -1 ? lg : '<span class="ini">' + esc((x.e.n || '؟').trim().charAt(0)) + '</span>') + '</span>' +
+      '<span class="bd"><b class="nm">' + esc(x.e.n) + '</b><span class="mt"><em>' + x.ss.length + '</em> منسوبًا · ' + p + '٪ مكتمل</span><span class="tr"><i style="width:' + p + '%"></i></span></span></button>'; }).join('') + '</div></div>');
   var recent = pn('emerald', 'userok', 'أحدث المنسوبين', '', more('الكل', '#people'), '<ul class="lst">' + STAFF.slice(0, 5).map(function (s) { return '<li style="cursor:pointer" data-open="' + esc(s.ref) + '">' + avP(s) + '<div><b>' + esc(s.name) + '</b><span class="s">' + esc(s.ent.n) + '، ' + esc(s.c.n) + ' · ' + agoD(s.reg) + '</span></div>' + (s.status === 'مكتمل' ? '<span class="pill ok"><i></i>مكتمل</span>' : '<span class="pill warn"><i></i>ناقص</span>') + '</li>'; }).join('') + '</ul>');
-  var log = role === 'admin' && can('audit') ? pn('slate', 'history', 'آخر العمليات', '', more('السجل الكامل', '#log'), tlHTML(6)) : '';
+  var log = can('hLog') && can('audit') ? pn('slate', 'history', 'آخر العمليات', '', more('السجل الكامل', '#log'), tlHTML(6)) : '';
   var third = can('users') ? readyPanel() : quickFacts();
-  /* صفحة رئيسية مختصرة: لا «يحتاج إجراءً منك» ولا «حركة التسجيل» لأحد، والمناسبات لغير الإدارة والموارد البشرية والرئيس التنفيذي،
-     وتقويم الوثائق لغير الرئيس التنفيذي، و«آخر العمليات» لمسؤول النظام وحده */
+  /* صفحة رئيسية مختصرة: لا «يحتاج إجراءً منك» ولا «حركة التسجيل» لأحد؛ والمناسبات وتقويم الوثائق و«آخر العمليات»
+     تتبع صلاحيات home.* (يعدّلها مدير النظام لكل دور أو لكل موظف) */
   var H = function (k) { return S('home', k); };
-  var top = [H('charts') ? stDonut : '', H('qa') ? qa : '', H('events') && ['admin', 'hr', 'ceo'].indexOf(role) < 0 ? eventsPanel() : ''].filter(Boolean);
+  var top = [H('charts') ? stDonut : '', H('qa') ? qa : '', H('events') && can('hEv') ? eventsPanel() : ''].filter(Boolean);
   var row1 = top.length ? '<div class="grid g' + (top.length === 1 ? '1' : top.length) + '">' + top.join('') + '</div>' : '';
   var low = [recent, log, third].filter(Boolean);
-  return (H('hero') ? hero : '') + (H('kpis') ? kpis : '') + row1 + (H('quality') ? '<div class="grid g3">' + quality + geo + docLvl + '</div>' : '') +
-    (H('cal') && role !== 'ceo' ? cal : '') + (H('ents') ? entP : '') + (H('recent') ? '<div class="grid g' + low.length + '">' + low.join('') + '</div>' : '');
+  return (H('hero') ? hero : '') + (H('ents') ? entP : '') + (H('kpis') ? kpis : '') + row1 + (H('quality') ? '<div class="grid g3">' + quality + geo + docLvl + '</div>' : '') +
+    (H('cal') && can('hCal') ? cal : '') + (H('recent') ? '<div class="grid g' + low.length + '">' + low.join('') + '</div>' : '');
 };
 function eventsPanel() {
   var t0 = new Date(TODAY); t0.setHours(0, 0, 0, 0); var E = [];
@@ -1092,7 +1095,7 @@ VIEWS.system = function () {
     (t === 'acc' ? sub(VIEWS.accounts) : t === 'log' ? sub(VIEWS.log) : sub(VIEWS.data));
 };
 var PERM_ROWS = [['staff.view', 'users'], ['staff.edit', 'edit'], ['staff.files', 'file'], ['staff.mail', 'mail'], ['finance.view', 'wallet'], ['audit.view', 'history'], ['requests.approve', 'stamp'], ['users.manage', 'key'], ['backup.run', 'archive']];
-var ACQ = '';
+var ACQ = '', RPE = null;
 VIEWS.accounts = function () {
   var c = need('users', function () { return api({ action: 'usersList' }); }, 60000), d = c.data;
   if (!d) return pn('emerald', 'key', 'الموظفون والصلاحيات', '', '', '<div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ التحميل…') + '</div></div>');
@@ -1110,12 +1113,19 @@ VIEWS.accounts = function () {
   var table = '<div class="pb acbar"><input id="acq" type="search" placeholder="ابحث بالاسم أو البريد أو الدور" value="' + esc(ACQ) + '" aria-label="بحث في الموظفين"><button class="btn goldb" data-act="acctNew">' + ic('plus') + 'إضافة موظف</button></div>' +
     '<div class="tw"><table class="actab"><thead><tr><th>الموظف</th><th>الدور</th><th>الصلاحيات</th><th>الحالة</th><th>التنبيهات</th><th></th></tr></thead><tbody>' + (rows || '<tr><td colspan="6" class="empty">لا أحد بهذا البحث.</td></tr>') + '</tbody></table></div>';
   var cols = Object.keys(rp);
-  var matrix = '<div class="tw"><table class="matrix"><thead><tr><th>الصلاحية</th>' + cols.map(function (k) { return '<th>' + esc(roles[k] || k) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-    PERM_GROUPS.map(function (g) { return '<tr class="mg"><td colspan="' + (cols.length + 1) + '">' + g[0] + '</td></tr>' + g[1].map(function (p) { return '<tr><td><span class="pcell">' + esc(p[1]) + '</span></td>' + cols.map(function (k) { var on = rp[k].indexOf(p[0]) > -1; return '<td><span class="pm ' + (on ? 'y' : 'n') + '" aria-label="' + (on ? 'نعم' : 'لا') + '">' + (on ? ic('check') : '—') + '</span></td>'; }).join('') + '</tr>'; }).join(''); }).join('') +
-    '</tbody></table></div><div class="calnote"><span>الصلاحيات تُفحص في الخادم مع كل عملية. ولتخصيص صلاحيات موظف بعينه افتح «تعديل» عند اسمه.</span></div>';
+  if (!RPE || RPE.src !== rp) RPE = { src: rp, map: JSON.parse(JSON.stringify(rp)), busy: false };
+  var dirty = JSON.stringify(RPE.map) !== JSON.stringify(rp), def = d.roleDefaults || {};
+  var matrix = '<div class="pb rpbar"><span>' + ic('info') + (dirty ? '<b>لديك تعديلات لم تُحفظ.</b> ' : '') + 'اضغط أي خانة لتمنح الدور الصلاحية أو تسحبها، ثم احفظ. يسري التعديل فورًا على كل حساب يتبع صلاحيات دوره؛ أما الحسابات «المخصّصة» فتبقى كما هي.</span>' +
+      (d.roleCustom ? '<button class="btn sm" id="rpReset"' + (RPE.busy ? ' disabled' : '') + '>استعادة الافتراضي</button>' : '') + (dirty ? '<button class="btn sm" id="rpUndo">تراجع</button>' : '') +
+      '<button class="btn goldb sm" id="rpSave"' + (dirty && !RPE.busy ? '' : ' disabled') + '>' + (RPE.busy ? 'جارٍ الحفظ…' : 'حفظ الصلاحيات') + '</button></div>' +
+    '<div class="tw"><table class="matrix rpe"><thead><tr><th>الصلاحية</th>' + cols.map(function (k) { return '<th>' + esc(roles[k] || k) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    PERM_GROUPS.map(function (g) { return '<tr class="mg"><td colspan="' + (cols.length + 1) + '">' + g[0] + '</td></tr>' + g[1].map(function (p) { return '<tr><td><span class="pcell">' + esc(p[1]) + '</span></td>' + cols.map(function (k) {
+      var on = RPE.map[k].indexOf(p[0]) > -1, ch = on !== (rp[k].indexOf(p[0]) > -1), lock = k === 'admin' && p[0] === 'users.manage';
+      return '<td><button type="button" class="pm ' + (on ? 'y' : 'n') + (ch ? ' ch' : '') + '" data-rpk="' + k + '" data-rpp="' + p[0] + '"' + (lock ? ' disabled title="تبقى لمدير النظام دائمًا حتى لا يُغلق النظام"' : '') + ' aria-pressed="' + on + '" aria-label="' + esc(p[1]) + ' — ' + esc(roles[k] || k) + '">' + (on ? ic('check') : '—') + '</button></td>'; }).join('') + '</tr>'; }).join(''); }).join('') +
+    '</tbody></table></div><div class="calnote"><span>الصلاحيات تُفحص في الخادم مع كل عملية، وكل تعديل يُسجَّل باسمك في سجل العمليات. ولتخصيص صلاحيات موظف بعينه افتح «تعديل» عند اسمه.</span></div>';
   return '<div class="tabs2">' + [['sapphire', 'users', cnt.all, 'موظفًا بحساب إداري'], ['emerald', 'check', cnt.on, 'حسابًا مفعّلًا'], ['garnet', 'lock', cnt.off, 'حسابًا موقوفًا'], ['gold', 'bell', cnt.notify, 'تصلهم التنبيهات'], ['teal', 'userok', d.staffAccounts || 0, 'منسوبًا دخل صفحته']].map(function (x) { return '<div class="stat">' + tile(x[0], x[1]) + '<div><b>' + x[2] + '</b><span>' + x[3] + '</span></div></div>'; }).join('') + '</div>' +
     pn('emerald', 'key', 'الموظفون', 'من يدخل المنصة، وبأي دور، وبأي صلاحيات', '', table) +
-    pn('sapphire', 'shield', 'مصفوفة الصلاحيات حسب الدور', 'ما يستطيعه كل دور افتراضيًا', '', matrix) +
+    pn('sapphire', 'shield', 'مصفوفة الصلاحيات حسب الدور', 'ما يستطيعه كل دور افتراضيًا — قابلة للتعديل', '', matrix) +
     '<div class="tabs2 polrow" aria-label="سياسة الدخول">' + [['sapphire', 'mail', 'بلا كلمة مرور', 'رمز من ٦ أرقام على البريد في كل دخول'], ['emerald', 'clock', '١٠ دقائق', 'صلاحية رمز الدخول، لمرة واحدة'], ['garnet', 'lock', '٨ محاولات', 'ثم يُقفل الحساب ١٥ دقيقة'], ['gold', 'history', '١٢ ساعة', 'أقصى مدة للجلسة، وتنتهي بعد ساعتين بلا نشاط']]
       .map(function (p) { return '<div class="stat">' + tile(p[0], p[1]) + '<div><b>' + p[2] + '</b><span>' + p[3] + '</span></div></div>'; }).join('') + '</div>';
 };
@@ -1382,9 +1392,9 @@ var ROLE_INFO = {
   ceo: ['sapphire', 'eye', 'اطلاع كامل على البيانات والرواتب والسجل دون تعديل'],
   viewer: ['slate', 'eye', 'عرض بيانات المنسوبين فقط، دون الرواتب ودون تعديل']
 };
-var PERM_GROUPS = [['بيانات المنسوبين', [['staff.view', 'عرض الملفات والوثائق'], ['staff.edit', 'تعديل البيانات'], ['staff.files', 'رفع المرفقات واستبدالها']]], ['التواصل', [['staff.mail', 'مراسلة المنسوبين بالبريد وواتساب']]],
-  ['المالية', [['finance.view', 'الرواتب والحسابات البنكية']]], ['الطلبات', [['requests.approve', 'اعتماد طلبات المنسوبين']]], ['الحضور والانصراف', [['attendance.view', 'عرض الحضور والانصراف'], ['attendance.manage', 'استيراد ملف جهاز البصمة']]],
-  ['التعاميم والتقارير', [['announce.manage', 'إصدار التعاميم والإعلانات'], ['reports.view', 'مركز التقارير']]], ['الرقابة', [['audit.view', 'سجل العمليات']]],
+var PERM_GROUPS = [['بيانات المنسوبين', [['staff.view', 'عرض الملفات والوثائق'], ['staff.edit', 'تعديل البيانات'], ['staff.files', 'رفع المرفقات واستبدالها'], ['staff.export', 'تصدير السجل إلى Excel']]], ['التواصل', [['staff.mail', 'مراسلة المنسوبين بالبريد وواتساب']]],
+  ['المالية', [['finance.view', 'الرواتب والحسابات البنكية']]], ['الطلبات', [['requests.approve', 'اعتماد طلبات المنسوبين'], ['requests.override', 'اعتماد أي طلب في أي خطوة (للطوارئ)'], ['requests.forms', 'النماذج الإدارية ومسارات الاعتماد']]], ['الحضور والانصراف', [['attendance.view', 'عرض الحضور والانصراف'], ['attendance.manage', 'استيراد ملف جهاز البصمة']]],
+  ['التعاميم والتقارير', [['announce.manage', 'إصدار التعاميم والإعلانات'], ['reports.view', 'مركز التقارير']]], ['الرقابة', [['audit.view', 'سجل العمليات']]], ['الصفحة الرئيسية', [['home.events', 'لوحة «مناسبات قادمة»'], ['home.cal', 'لوحة «تقويم انتهاء الوثائق»'], ['home.log', 'لوحة «آخر العمليات»']]],
   ['الإدارة', [['users.manage', 'إدارة الحسابات والصلاحيات'], ['settings.manage', 'إعدادات المنصة (إظهار الأقسام وإخفاؤها)'], ['backup.run', 'النسخ الاحتياطي والتصدير الكامل']]]];
 var TITLE_SUGG = ['مدير الموارد البشرية', 'أخصائي موارد بشرية', 'أخصائية موارد بشرية', 'محاسب الرواتب', 'مشرف جهة', 'مدقق داخلي', 'مساعد إداري', 'مدير تنفيذي'];
 function samePerms(a, b) { return a.slice().sort().join() === b.slice().sort().join(); }
@@ -1927,7 +1937,7 @@ function sideHTML() {
     G = [['العمل اليومي', [
       { v: 'home', n: 'لوحة القيادة', d: 'ملخص اليوم وما يحتاج إجراء', j: 'emerald', i: 'grid' },
       { v: 'people', n: 'المنسوبون', d: 'الملفات والوثائق والبطاقات', j: 'sapphire', i: 'users', b: CNT.exp, s: [['staff', 'دليل المنسوبين', view === 'people' && TAB.people === 'dir' && filt.st === 'all', CNT.tot], ['gaps', 'الملفات الناقصة', view === 'people' && TAB.people === 'dir' && filt.st === 'gap', CNT.gap], ['documents', 'الوثائق', view === 'people' && TAB.people === 'docs', CNT.exp, 1]].concat(mod('org') ? [['org', 'الهيكل التنظيمي', view === 'people' && TAB.people === 'org']] : []) },
-      allowed('reqs') ? { v: 'reqs', n: 'الطلبات', d: 'إجازات وإركاب وتعريفات', j: 'amethyst', i: 'stamp', b: pend, s: [['reqs-pend', 'بانتظار اعتمادي', view === 'reqs' && TAB.reqs === 'pend', pend, 1], ['reqs-all', 'كل الطلبات', view === 'reqs' && TAB.reqs === 'all']].concat(mod('forms') || can('settings') ? [['forms', 'النماذج الإدارية', view === 'reqs' && TAB.reqs === 'forms']] : []).concat(can('edit') ? [['reqs-new', 'طلب نيابة عن منسوب', view === 'reqs' && TAB.reqs === 'new']] : []) } : null,
+      allowed('reqs') ? { v: 'reqs', n: 'الطلبات', d: 'إجازات وإركاب وتعريفات', j: 'amethyst', i: 'stamp', b: pend, s: [['reqs-pend', 'بانتظار اعتمادي', view === 'reqs' && TAB.reqs === 'pend', pend, 1], ['reqs-all', 'كل الطلبات', view === 'reqs' && TAB.reqs === 'all']].concat(mod('forms') || can('settings') || can('forms') ? [['forms', 'النماذج الإدارية', view === 'reqs' && TAB.reqs === 'forms']] : []).concat(can('edit') ? [['reqs-new', 'طلب نيابة عن منسوب', view === 'reqs' && TAB.reqs === 'new']] : []) } : null,
       allowed('att') ? { v: 'att', n: 'الحضور والانصراف', d: 'من ملف جهاز البصمة', j: 'teal', i: 'finger', s: [['att-month', 'السجل الشهري', view === 'att' && TAB.att === 'month']].concat(can('attm') ? [['att-imp', 'استيراد ملف البصمة', view === 'att' && TAB.att === 'imp']] : []) } : null,
       allowed('news') ? { v: 'news', n: 'التعاميم والإعلانات', d: 'تصل المنسوبين في صفحاتهم', j: 'gold', i: 'bell' } : null].filter(Boolean)],
       ['الإدارة', [
@@ -2295,6 +2305,18 @@ function bindReports() {
 }
 
 /* ======================= ربط كل ما سبق ======================= */
+/* مصفوفة صلاحيات الأدوار: منح/سحب ثم حفظ (لمدير النظام) */
+document.addEventListener('click', function (e) {
+  var t = e.target.closest && e.target.closest('[data-rpk], #rpSave, #rpUndo, #rpReset'); if (!t || !RPE || !can('users')) return;
+  if (t.dataset.rpk) { var L = RPE.map[t.dataset.rpk], p = t.dataset.rpp, i = L.indexOf(p); if (i > -1) L.splice(i, 1); else L.push(p); softRender(); return; }
+  if (t.id === 'rpUndo') { RPE = null; softRender(); return; }
+  var reset = t.id === 'rpReset';
+  if (reset && !confirm('إعادة صلاحيات كل الأدوار إلى إعدادات النظام الأصلية؟')) return;
+  RPE.busy = true; softRender();
+  api(reset ? { action: 'rolePermsSave', reset: 1 } : { action: 'rolePermsSave', map: RPE.map }).then(function (j) {
+    RPE = null; seed('users', j); toast(reset ? 'أُعيدت صلاحيات الأدوار إلى الافتراضي' : 'حُفظت صلاحيات الأدوار، وتسري على الحسابات التابعة لأدوارها فورًا'); softRender();
+  }, function (er) { RPE.busy = false; toast(errText(er)); softRender(); });
+});
 function bindHrx() {
   bindSet(); bindAtt(); bindNews(); bindReports();
   var oq = document.getElementById('orgq'); if (oq) oq.oninput = function () { ORG.q = oq.value; softRender(); };

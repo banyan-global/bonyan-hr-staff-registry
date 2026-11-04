@@ -60,7 +60,7 @@ try {
         'deviceHello' => fn() => device_hello(), 'deviceLogin' => fn() => device_login(), 'deviceForget' => fn() => device_forget(),
         'pkLoginStart' => fn() => pk_login_start(), 'pkLoginFinish' => fn() => pk_login_finish($b), 'pkRegStart' => fn() => pk_reg_start(), 'pkRegFinish' => fn() => pk_reg_finish($b),
         'secList' => fn() => sec_list(), 'secRemove' => fn() => sec_remove($b),
-        'usersList' => fn() => users_list(), 'usersSave' => fn() => users_save($b), 'usersUnlock' => fn() => users_unlock($b), 'sessionsRevoke' => fn() => sessions_revoke($b),
+        'usersList' => fn() => users_list(), 'rolePermsSave' => fn() => role_perms_save($b), 'usersSave' => fn() => users_save($b), 'usersUnlock' => fn() => users_unlock($b), 'sessionsRevoke' => fn() => sessions_revoke($b),
         /* لوحة الموارد البشرية */
         'list' => fn() => admin_list(), 'photo' => fn() => photo($b), 'adminUpdate' => fn() => admin_update($b), 'adminUpload' => fn() => admin_upload($b),
         'adminMail' => fn() => admin_mail($b), 'message' => fn() => admin_message($b), 'messageWa' => fn() => message_wa($b), 'messages' => fn() => messages_list($b), 'audit' => fn() => audit_list($b),

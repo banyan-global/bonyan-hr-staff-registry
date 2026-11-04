@@ -109,13 +109,13 @@ function req_can_decide(array $u, array $r): bool {
     if (!$step) return false;
     /* لا يعتمد أحد طلبه هو، ولا حتى مدير النظام */
     if (my_staff_ref($u) === $r['ref']) return false;
-    if ($u['role'] === 'admin' && has_perm($u, 'requests.approve')) return true;
+    if (has_perm($u, 'requests.override')) return true;
     if (!empty($step['user'])) return (int)$step['user'] === (int)$u['id'];
     return has_perm($u, 'requests.approve') && $u['role'] === ($step['role'] ?? '');
 }
 function req_forms(): array {
     $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
-    $flow = req_flow(); $isAdmin = has_perm($u, 'users.manage'); $forms = [];
+    $flow = req_flow(); $isAdmin = has_perm($u, 'requests.forms'); $forms = [];
     $cnt = []; foreach (q('SELECT type, status, COUNT(*) n FROM requests GROUP BY type, status')->fetchAll() as $r) $cnt[$r['type']][$r['status']] = (int)$r['n'];
     foreach (REQ_TYPES as $t => $T) {
         $steps = array_map(function ($s) {
@@ -129,7 +129,7 @@ function req_forms(): array {
     return ['ok' => true, 'forms' => $forms, 'roles' => array_intersect_key(ROLE_NAMES, array_flip(REQ_STEP_ROLES)), 'canEdit' => $isAdmin];
 }
 function req_forms_save(array $b): array {
-    $me = require_perm('users.manage');
+    $me = require_perm('requests.forms');
     $t = (string)($b['type'] ?? ''); if (!isset(REQ_TYPES[$t])) throw new HttpError('نوع النموذج غير معروف');
     $in = is_array($b['steps'] ?? null) ? $b['steps'] : [];
     if (!$in) throw new HttpError('أضف خطوة اعتماد واحدة على الأقل');

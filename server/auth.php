@@ -24,13 +24,19 @@ const PERMS = [
     'announce.manage' => 'نشر التعاميم والإعلانات',
     'reports.view' => 'مركز التقارير',
     'settings.manage' => 'إعدادات المنصة (إظهار الأقسام وإخفاؤها)',
+    'staff.export' => 'تصدير السجل إلى Excel',
+    'requests.override' => 'اعتماد أي طلب في أي خطوة (للطوارئ)',
+    'requests.forms' => 'النماذج الإدارية ومسارات الاعتماد',
+    'home.events'  => 'لوحة «مناسبات قادمة» في الرئيسية',
+    'home.cal'     => 'لوحة «تقويم انتهاء الوثائق» في الرئيسية',
+    'home.log'     => 'لوحة «آخر العمليات» في الرئيسية',
     'self.view'    => 'صفحة المنسوب الخاصة (بياناته فقط)',
 ];
 const ROLE_PERMS = [
-    'admin' => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'users.manage', 'backup.run', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view', 'settings.manage'],
-    'hr'    => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view'],
-    'ceo'   => ['staff.view', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'announce.manage', 'reports.view'],
-    'viewer'=> ['staff.view'],
+    'admin' => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'users.manage', 'backup.run', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view', 'settings.manage', 'staff.export', 'requests.override', 'requests.forms', 'home.cal', 'home.log'],
+    'hr'    => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view', 'staff.export', 'home.cal'],
+    'ceo'   => ['staff.view', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'announce.manage', 'reports.view', 'staff.export'],
+    'viewer'=> ['staff.view', 'staff.export', 'home.events', 'home.cal'],
     'staff' => ['self.view'],
 ];
 const ROLE_NAMES = ['admin' => 'مدير النظام', 'hr' => 'الموارد البشرية', 'ceo' => 'الرئيس التنفيذي', 'viewer' => 'اطلاع فقط', 'staff' => 'منسوب'];
@@ -72,9 +78,36 @@ function seed_users(): void {
         audit_log('', 'إنشاء حساب', $email . ' · ' . ROLE_NAMES[$role], 'النظام');
     }
 }
+/* صلاحيات الدور الافتراضية: يعدّلها مدير النظام من «مصفوفة الصلاحيات»، وإلا فالمضمّنة في النظام */
+const EDITABLE_ROLES = ['admin', 'hr', 'ceo', 'viewer'];
+function role_perms_map(): array {
+    $o = json_decode((string)setting('role_perms', ''), true); $m = [];
+    foreach (EDITABLE_ROLES as $r) $m[$r] = is_array($o) && isset($o[$r]) && is_array($o[$r]) ? array_values(array_intersect(array_keys(PERMS), $o[$r])) : ROLE_PERMS[$r];
+    return $m;
+}
+function role_perms(string $role): array { return in_array($role, EDITABLE_ROLES, true) ? role_perms_map()[$role] : (ROLE_PERMS[$role] ?? []); }
+function role_perms_save(array $b): array {
+    $me = require_perm('users.manage');
+    $old = role_perms_map();
+    if (!empty($b['reset'])) { q("DELETE FROM settings WHERE k='role_perms'"); $new = role_perms_map(); }
+    else {
+        $in = is_array($b['map'] ?? null) ? $b['map'] : []; $new = $old;
+        foreach (EDITABLE_ROLES as $r) if (isset($in[$r]) && is_array($in[$r])) $new[$r] = array_values(array_intersect(array_keys(PERMS), array_map('strval', $in[$r])));
+        if (!in_array('users.manage', $new['admin'], true)) throw new HttpError('دور «مدير النظام» يجب أن يبقى بصلاحية إدارة الحسابات والصلاحيات، حتى لا يُغلق النظام على الجميع');
+        if (!$me['perms'] && !in_array('users.manage', $new[$me['role']] ?? [], true)) throw new HttpError('cannot_lock_self');
+        setting_set('role_perms', json_encode($new, JSON_UNESCAPED_UNICODE));
+    }
+    $ch = [];
+    foreach (EDITABLE_ROLES as $r) {
+        $add = array_diff($new[$r], $old[$r]); $del = array_diff($old[$r], $new[$r]);
+        if ($add || $del) $ch[] = ROLE_NAMES[$r] . ': ' . implode('، ', array_merge(array_map(fn($p) => '+' . PERMS[$p], $add), array_map(fn($p) => '−' . PERMS[$p], $del)));
+    }
+    audit_log('', !empty($b['reset']) ? 'استعادة صلاحيات الأدوار الافتراضية' : 'تعديل صلاحيات الأدوار', $ch ? implode(' | ', $ch) : 'بلا تغيير', $me['_label']);
+    return users_list();
+}
 function user_perms(array $u): array {
     $p = $u['perms'] ? json_decode((string)$u['perms'], true) : null;
-    $list = is_array($p) ? $p : (ROLE_PERMS[$u['role']] ?? []);
+    $list = is_array($p) ? $p : role_perms((string)$u['role']);
     return array_values(array_intersect(array_keys(PERMS), $list));
 }
 function user_public(array $u): array {
@@ -178,8 +211,8 @@ function users_list(): array {
     require_perm('users.manage');
     $rows = q("SELECT * FROM users WHERE role <> 'staff' ORDER BY id")->fetchAll();
     $staffN = (int)q1("SELECT COUNT(*) n FROM users WHERE role = 'staff'")['n'];
-    $roles = ROLE_NAMES; unset($roles['staff']); $rp = ROLE_PERMS; unset($rp['staff']);
-    return ['ok' => true, 'users' => array_map('user_public', $rows), 'staffAccounts' => $staffN, 'perms' => PERMS, 'roles' => $roles, 'rolePerms' => $rp];
+    $roles = ROLE_NAMES; unset($roles['staff']); $def = ROLE_PERMS; unset($def['staff']);
+    return ['ok' => true, 'users' => array_map('user_public', $rows), 'staffAccounts' => $staffN, 'perms' => PERMS, 'roles' => $roles, 'rolePerms' => role_perms_map(), 'roleDefaults' => $def, 'roleCustom' => setting('role_perms', '') !== ''];
 }
 function users_save(array $b): array {
     $me = require_perm('users.manage');
@@ -190,7 +223,7 @@ function users_save(array $b): array {
     $perms = isset($b['perms']) && is_array($b['perms']) ? array_values(array_intersect(array_keys(PERMS), $b['perms'])) : null;
     $id = (int)($b['id'] ?? 0);
     $active = isset($b['active']) ? (int)(bool)$b['active'] : 1;
-    if ($id === (int)$me['id'] && (!$active || ($perms !== null && !in_array('users.manage', $perms, true)) || ($perms === null && !in_array('users.manage', ROLE_PERMS[$role], true))))
+    if ($id === (int)$me['id'] && (!$active || ($perms !== null && !in_array('users.manage', $perms, true)) || ($perms === null && !in_array('users.manage', role_perms($role), true))))
         throw new HttpError('cannot_lock_self');
     $permsJson = $perms === null ? null : json_encode($perms);
     $dup = q1('SELECT id FROM users WHERE email=? AND id<>?', [$email, $id]);

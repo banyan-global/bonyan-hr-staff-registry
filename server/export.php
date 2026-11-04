@@ -73,7 +73,7 @@ function send_download(string $bin, string $name, string $mime): void {
 
 /* ============================================================ تنزيل Excel كامل */
 function export_xlsx(): void {
-    $u = require_perm('staff.view');
+    $u = require_perm('staff.export');
     $fin = has_perm($u, 'finance.view');
     $cols = array_values(array_filter(staff_cols(), function ($c) { return $c[0] !== 'folderId' && $c[0] !== 'folder'; }));
     $files = files_by_ref();
