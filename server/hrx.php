@@ -361,3 +361,40 @@ function my_extra(): array {
     if ($ref && staff_can_see('balance')) $o['balance'] = leave_balance($ref);
     return $o;
 }
+
+/* ============================================================ تصحيح بيانات الجهات لمرة واحدة (نوفمبر 2026)
+   ١) «عفوى…» من «financial administration» إلى «بنيان الإنسانية»
+   ٢) «أكاديمية بنيان» ← «جامعة بنيان العالمية بنات»، وتُنقل إليها منسوبات «جامعة بنيان العالمية»
+   كل نقل يُسجَّل في سجل العمليات باسم «النظام» */
+function ent_norm(string $s): string {
+    $s = preg_replace('/[\x{064B}-\x{065F}\x{0640}]/u', '', mb_strtolower(trim($s)));
+    return preg_replace('/\s+/u', ' ', strtr($s, ['أ' => 'ا', 'إ' => 'ا', 'آ' => 'ا', 'ى' => 'ي', 'ة' => 'ه']));
+}
+function data_fix_entities_2611(): void {
+    if (setting('fix:ent2611', '') !== '') return;
+    try { named_lock('fix_ent2611', 5); } catch (Throwable $e) { return; }
+    try {
+        if (setting('fix:ent2611', '') !== '') return;
+        $UNI = array_map('ent_norm', ['جامعة بنيان العالمية', 'Bonyan International University', 'Universitas Internasional Bonyan', 'bonyan-university']);
+        $ACAD = array_map('ent_norm', ['أكاديمية بنيان', 'Bonyan Academy', 'Akademi Bonyan', 'bonyan-academy']);
+        $FEM = array_map('ent_norm', ['أنثى', 'female', 'f', 'perempuan', 'wanita']); $MALE = array_map('ent_norm', ['ذكر', 'male', 'm', 'laki-laki', 'pria']);
+        $NAMES = array_map('ent_norm', ['إيمان', 'مايسة', 'هدى', 'حنان', 'سمر', 'نور', 'جومان', 'ralim', 'iman', 'eman', 'maysa', 'maisa', 'huda', 'hoda', 'hanan', 'samar', 'nour', 'noor', 'nur', 'joman', 'juman']);
+        $moved = [];
+        foreach (q('SELECT id, ref, data FROM staff')->fetchAll() as $r) {
+            $d = json_decode($r['data'], true); if (!is_array($d)) continue;
+            $ent = ent_norm((string)($d['entity'] ?? '')); $g = ent_norm((string)($d['gender'] ?? ''));
+            $ar = ent_norm((string)($d['fullNameAr'] ?? '')); $la = ent_norm((string)($d['fullNameLatin'] ?? ''));
+            $first = [explode(' ', $ar)[0] ?? '', explode(' ', $la)[0] ?? ''];
+            $to = null;
+            if ($ent === 'financial administration' && (mb_strpos($ar, 'عفو') === 0 || mb_strpos($la, 'afwa') === 0 || mb_strpos($la, 'afwah') === 0)) $to = 'بنيان الإنسانية';
+            elseif (in_array($ent, $ACAD, true)) $to = 'جامعة بنيان العالمية بنات';
+            elseif (in_array($ent, $UNI, true) && (in_array($g, $FEM, true) || (!in_array($g, $MALE, true) && array_intersect($first, $NAMES)))) $to = 'جامعة بنيان العالمية بنات';
+            if (!$to) continue;
+            $from = (string)($d['entity'] ?? ''); $d['entity'] = $to;
+            q('UPDATE staff SET data=?, updated_at=? WHERE id=?', [json_encode($d, JSON_UNESCAPED_UNICODE), now(), $r['id']]);
+            audit_log($r['ref'], 'نقل إلى جهة أخرى', ($d['fullNameAr'] ?? $d['fullNameLatin'] ?? '') . ' · من «' . $from . '» إلى «' . $to . '»', 'النظام');
+            $moved[] = $r['ref'];
+        }
+        setting_set('fix:ent2611', json_encode(['at' => now(), 'moved' => $moved]));
+    } finally { named_unlock('fix_ent2611'); }
+}

@@ -39,7 +39,9 @@ window.APP_CONFIG = {
     { v: 'bonyan-waqf', ar: 'وقف بنيان', en: 'Bonyan Endowment', id: 'Wakaf Bonyan', logo: 'waqf', colors: ['#05603a', '#022417', '#E2BE8A'] },
     { v: 'afaq', ar: 'آفاق للتعريف بالإسلام', en: 'Afaq for Introducing Islam', id: 'Afaq Pengenalan Islam', logo: 'afaq', colors: ['#6a2531', '#25101a', '#CDD4E3'] },
     { v: 'bonyan-distance', ar: 'بنيان للتعليم عن بعد', en: 'Bonyan Distance Learning', id: 'Bonyan Pendidikan Jarak Jauh', logo: 'distance', mark: 'distanceMark', colors: ['#33568a', '#172540', '#E8AC82'] },
-    { v: 'bonyan-academy', ar: 'أكاديمية بنيان', en: 'Bonyan Academy', id: 'Akademi Bonyan', logo: 'academy', mark: 'academyMark', colors: ['#465679', '#1d2438', '#E6B193'] },
+    /* «أكاديمية بنيان» صارت «جامعة بنيان العالمية بنات» (نوفمبر 2026) */
+    { v: 'bonyan-university-women', ar: 'جامعة بنيان العالمية بنات', en: 'Bonyan International University (Women)', id: 'Universitas Internasional Bonyan (Putri)', logo: 'university', colors: ['#7a3352', '#2a1220', '#E9B7C8'] },
+    { v: 'bonyan-kenya', ar: 'بنيان كينيا', en: 'Bonyan Kenya', id: 'Bonyan Kenya', logo: 'kenya', colors: ['#562670', '#24102f', '#D2B8E6'] },
     { v: 'bonyan-research', ar: 'مركز بنيان للأبحاث', en: 'Bonyan Research Center', id: 'Pusat Riset Bonyan', logo: 'research', mark: 'researchMark', colors: ['#265746', '#0f241d', '#E0C290'] },
     { v: 'taqat', ar: 'طاقات', en: 'Taqat', id: 'Taqat', logo: 'taqat', colors: ['#1c6340', '#0b2a1a', '#DCD08A'] },
     { v: 'bonyan-maqraa', ar: 'مقرأة بنيان', en: 'Bonyan Maqraa', id: 'Maqraa Bonyan', logo: 'maqraa', mark: 'maqraaMark', colors: ['#5a3a2a', '#232b3d', '#C2CFE6'] },

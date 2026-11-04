@@ -1454,6 +1454,36 @@ table.mini th.used { background: var(--gold-wash); }
 .hcl .hb:disabled { opacity: .35; cursor: default; }
 .mdl.hcm .mf { display: flex; gap: 8px; align-items: center; }
 
+/* القوائم المنسدلة: عنوان صغير أعلى اليمين، والقيمة تحته بمحاذاة اليمين، والسهم في المنتصف */
+.fsel .ss-btn { height: 54px; padding: 6px 14px; row-gap: 2px; }
+.fsel .ss-btn .pre, .fsel .ss-btn > span { display: block !important; justify-self: stretch; text-align: start !important; }
+.ss-btn > span { justify-content: flex-start; }
+/* «ph» هنا تعني النص المؤقت للقائمة، لا رأس اللوحة: نُلغي ما يرثه من .ph */
+.ss-btn > span.ph { padding: 0 !important; margin: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; min-height: 0 !important; }
+.fsel .ss-btn .pre { font-size: 11.5px; color: var(--mute); line-height: 1.3; }
+.fsel .ss-btn > span { font-size: 14.5px; line-height: 1.35; }
+.fsel .ss-btn > svg.i { align-self: center; width: 18px; height: 18px; }
+.fsearch input { height: 54px; }
+.ss-btn { min-height: 46px; border-radius: 13px; transition: border-color .15s, box-shadow .15s, background .15s; }
+.ss-btn:hover { border-color: rgba(185, 143, 69, .55); }
+.ss-btn > span { text-align: start; }
+.ss-pop { border-radius: 16px; max-width: min(420px, calc(100vw - 24px)); }
+.ss-o b { line-height: 1.4; }
+/* القوائم الأصلية (select) بنفس الشكل في كل المنصة */
+.shell select, .mdl select { appearance: none; -webkit-appearance: none; height: 46px; border-radius: 13px; border: 1px solid var(--line); background-color: var(--soft); color: var(--ink); font: inherit; font-size: 14px;
+  padding-inline: 14px 38px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a96a8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-size: 16px; background-position: left 14px center; cursor: pointer; }
+.shell select:focus, .mdl select:focus { outline: none; border-color: #d5a95f; box-shadow: 0 0 0 4px rgba(227, 196, 133, .25); }
+/* نتائج البحث العام */
+#hits { max-height: min(70vh, 560px); overflow: auto; }
+#hits button.act { background: var(--soft); box-shadow: inset 3px 0 0 #d5a95f; }
+#hits .ref { display: block; font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hits button > span:last-child { min-width: 0; flex: 1; }
+#hits .gpi { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: var(--soft); color: var(--mute); flex: none; }
+#hits .gpi .i { width: 17px; height: 17px; }
+#hits .gall { border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; margin-top: 4px; color: var(--gold-ink, #8a6c2e); }
+#hits .gall .i { width: 18px; height: 18px; flex: none; }
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--bg-0: #162942;

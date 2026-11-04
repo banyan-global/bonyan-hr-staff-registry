@@ -33,6 +33,7 @@ function same_origin(): bool {
 }
 
 try {
+    try { data_fix_entities_2611(); } catch (Throwable $e) { }
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     if ($method === 'GET') {
         $a = (string)($_GET['action'] ?? '');

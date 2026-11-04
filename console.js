@@ -91,7 +91,8 @@ var ENT0 = [
   { v: 'hum', n: 'بنيان الإنسانية', c: '#7d2a2f' }, { v: 'waqf', n: 'وقف بنيان', c: '#05603a' },
   { v: 'afaq', n: 'آفاق للتعريف بالإسلام', c: '#6a2531' }, { v: 'acad', n: 'أكاديمية بنيان', c: '#465679' },
   { v: 'maarif', n: 'كلية المعارف', c: '#2f339a' }, { v: 'kafaa', n: 'كفاءة تقنية', c: '#4b3cc0' },
-  { v: 'tamkeen', n: 'دار التمكين', c: '#163061' }, { v: 'tedu', n: 'تمكين التعليم', c: '#5b3d76' }
+  { v: 'tamkeen', n: 'دار التمكين', c: '#163061' }, { v: 'tedu', n: 'تمكين التعليم', c: '#5b3d76' },
+  { v: 'uniw', n: 'جامعة بنيان العالمية بنات', c: '#7a3352' }, { v: 'kenya', n: 'بنيان كينيا', c: '#562670' }, { v: 'taqat', n: 'طاقات', c: '#1c6340' }
 ];
 var ENT = [], CTRY = [], STAFF = [];
 /* أسعار صرف تقريبية إلى الريال السعودي (للمقارنة فقط، لا للصرف) */
@@ -486,7 +487,7 @@ function can(p) { return role !== 'staff' && !!CAP[p]; }
 function firstOf(name) { var w = String(name || '').trim().split(/\s+/); return /^(د|أ|م|ا|م\.|د\.|أ\.)\.?$/.test(w[0]) && w[1] ? w[0] + ' ' + w[1] : w[0] || ''; }
 
 /* ---------- mapping server rows to the console model ---------- */
-var ENT_KEY = { bonyan: 'bonyan', 'bonyan-university': 'uni', 'bonyan-humanitarian': 'hum', 'bonyan-waqf': 'waqf', afaq: 'afaq', 'bonyan-academy': 'acad', almaarif: 'maarif', 'kafaa-tech': 'kafaa', 'dar-altamkeen': 'tamkeen', 'tamkeen-education': 'tedu' };
+var ENT_KEY = { bonyan: 'bonyan', 'bonyan-university': 'uni', 'bonyan-humanitarian': 'hum', 'bonyan-waqf': 'waqf', afaq: 'afaq', 'bonyan-academy': 'acad', almaarif: 'maarif', 'kafaa-tech': 'kafaa', 'dar-altamkeen': 'tamkeen', 'tamkeen-education': 'tedu', 'bonyan-university-women': 'uniw', 'bonyan-kenya': 'kenya', taqat: 'taqat' };
 function nk(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
 var ENT_IDX = {}; (CFG.ENTITIES || []).forEach(function (e) { [e.v, e.ar, e.en, e.id].forEach(function (x) { if (x) ENT_IDX[nk(x)] = e; }); });
 var ENT_MAP = {}, CT_MAP = {}, CNAME = {}, CDIAL = {};
@@ -2365,7 +2366,59 @@ document.addEventListener('click', function (e) {
     RPE = null; seed('users', j); toast(reset ? 'أُعيدت صلاحيات الأدوار إلى الافتراضي' : 'حُفظت صلاحيات الأدوار، وتسري على الحسابات التابعة لأدوارها فورًا'); softRender();
   }, function (er) { RPE.busy = false; toast(errText(er)); softRender(); });
 });
+/* ======================= البحث العام أعلى الصفحة =======================
+   يبحث في المنسوبين (الاسم بالعربي واللاتيني، الرقم المرجعي، الجوال وواتساب، البريد، الجواز والهوية، الرقم الوظيفي، الجهة، الدولة، المسمى)
+   وفي أقسام المنصة الظاهرة لك؛ يتجاهل الهمزات والتشكيل والأرقام العربية، ويعمل بالأسهم وEnter */
+function gn(s) {
+  return String(s == null ? '' : s).toLowerCase().replace(/[ً-ٟـ]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي')
+    .replace(/[٠-٩]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'.indexOf(d); }).replace(/\s+/g, ' ').trim();
+}
+function bindGq() {
+  var gq = document.getElementById('gq'), hits = document.getElementById('hits'); if (!gq || !hits) return;
+  var items = [], sel = -1;
+  var all = function (raw) { filt = { q: raw, ent: '', cc: '', st: 'all' }; cur = ''; TAB.people = 'dir'; hits.hidden = true; if (view === 'people') render(); else location.hash = 'people'; };
+  var go = function (it) { hits.hidden = true; gq.blur(); if (it.k === 's') openRec(it.v); else if (it.k === 'p') location.hash = it.v.replace(/^#/, ''); else all(it.v); };
+  var mark = function () { [].forEach.call(hits.querySelectorAll('[data-gi]'), function (b) { var on = +b.dataset.gi === sel; b.classList.toggle('act', on); if (on) b.scrollIntoView({ block: 'nearest' }); }); };
+  var run = function () {
+    var raw = gq.value.trim(), q = gn(raw); items = []; sel = -1;
+    if (!q) { hits.hidden = true; return; }
+    var toks = q.split(' '), qd = q.replace(/\D/g, '');
+    var res = STAFF.map(function (s) {
+      var r = s.r || {}, hay = gn([s.name, r.fullNameLatin, s.ref, s.job, s.ent && s.ent.n, s.c && s.c.n, r.officialEmail, r.personalEmail, r.passportNo, r.employeeNo, r.nationalIdNo, r.department, r.jobTitle].join(' ')),
+        dig = [s.phone, r.whatsapp, r.phone, r.mobile].join(' ').replace(/\D/g, '');
+      var hit = toks.every(function (t) { return hay.indexOf(t) > -1; }) || (qd.length >= 4 && dig.indexOf(qd) > -1);
+      if (!hit) return null;
+      var nm = gn(s.name + ' ' + (r.fullNameLatin || ''));
+      return { s: s, sc: nm.indexOf(q) === 0 ? 0 : (' ' + nm).indexOf(' ' + q) > -1 ? 1 : nm.indexOf(q) > -1 ? 2 : 3 };
+    }).filter(Boolean).sort(function (a, b) { return a.sc - b.sc || a.s.name.localeCompare(b.s.name, 'ar'); });
+    var seen = {}, pages = [].slice.call(document.querySelectorAll('.side a[href^="#"]')).map(function (a) { var b = a.querySelector('b') || a.querySelector('span') || a; return { h: a.getAttribute('href'), t: (b.textContent || '').trim() }; })
+      .filter(function (p) { if (!p.t || seen[p.h] || gn(p.t).indexOf(q) < 0) return false; seen[p.h] = 1; return true; }).slice(0, 4);
+    var H = '';
+    if (res.length) {
+      H += '<div class="dh"><span>المنسوبون</span><span>' + res.length + '</span></div>';
+      res.slice(0, 7).forEach(function (x) { var s = x.s; items.push({ k: 's', v: s.ref });
+        H += '<button type="button" data-gi="' + (items.length - 1) + '">' + av(s) + '<span><b>' + esc(s.name) + '</b><span class="ref">' + esc(s.ref) + ' · ' + esc(s.ent ? s.ent.n : '') + (s.job ? ' · ' + esc(s.job) : '') + '</span></span></button>'; });
+    }
+    if (pages.length) {
+      H += '<div class="dh"><span>أقسام المنصة</span></div>';
+      pages.forEach(function (p) { items.push({ k: 'p', v: p.h }); H += '<button type="button" data-gi="' + (items.length - 1) + '"><span class="gpi">' + ic('grid') + '</span><span><b>' + esc(p.t) + '</b></span></button>'; });
+    }
+    if (res.length > 7 || (res.length && can('view'))) { items.push({ k: 'a', v: raw }); H += '<button type="button" class="gall" data-gi="' + (items.length - 1) + '">' + ic('search') + '<span><b>عرض كل النتائج (' + res.length + ') في دليل المنسوبين</b></span></button>'; }
+    if (!items.length) H = '<div class="empty" style="padding:18px">لا نتائج لـ «' + esc(raw) + '». جرّب جزءًا من الاسم، أو الرقم المرجعي، أو آخر أرقام الجوال.</div>';
+    hits.innerHTML = H; hits.hidden = false;
+    hits.querySelectorAll('[data-gi]').forEach(function (b) { b.onmousedown = function (e) { e.preventDefault(); go(items[+b.dataset.gi]); }; b.onmouseenter = function () { sel = +b.dataset.gi; mark(); }; });
+  };
+  gq.oninput = run;
+  gq.onfocus = function () { if (gq.value.trim()) run(); };
+  gq.onkeydown = function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { if (!items.length) return; e.preventDefault(); sel = (sel + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; mark(); }
+    else if (e.key === 'Enter') { e.preventDefault(); var raw = gq.value.trim(); if (!raw) return; if (sel > -1) go(items[sel]); else if (items.length === 1 || (items[0] && items[0].k === 's' && items.filter(function (x) { return x.k === 's'; }).length === 1)) go(items[0]); else all(raw); }
+    else if (e.key === 'Escape') { hits.hidden = true; gq.blur(); }
+  };
+  gq.onblur = function () { setTimeout(function () { hits.hidden = true; }, 150); };
+}
 function bindHrx() {
+  bindGq();
   bindSet(); bindAtt(); bindNews(); bindReports();
   var oq = document.getElementById('orgq'); if (oq) oq.oninput = function () { ORG.q = oq.value; softRender(); };
 }
