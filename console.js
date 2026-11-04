@@ -2433,8 +2433,11 @@ function drawEM() {
     var q = gn(EM.q), rows = STAFF.filter(function (s) { return (!EM.from || s.ent.v === EM.from) && (!q || gn(s.name + ' ' + (s.r.fullNameLatin || '') + ' ' + s.ref + ' ' + s.ent.n).indexOf(q) > -1); });
     var froms = ENT.map(function (e) { return '<option value="' + esc(e.v) + '"' + (EM.from === e.v ? ' selected' : '') + '>' + esc(e.n) + ' (' + STAFF.filter(function (s) { return s.ent.v === e.v; }).length + ')</option>'; }).join('');
     var allOn = rows.length && rows.every(function (s) { return EM.sel[s.ref]; });
-    body = '<div class="emf"><input id="emQ" type="search" placeholder="ابحث بالاسم أو الرقم المرجعي" value="' + esc(EM.q) + '" autocomplete="off"><select id="emFrom" aria-label="الجهة الحالية"><option value="">كل الجهات</option>' + froms + '</select>' +
-      '<button type="button" class="btn sm" id="emAll"' + (rows.length ? '' : ' disabled') + '>' + (allOn ? 'إلغاء تحديد الظاهرين' : 'تحديد الظاهرين (' + rows.length + ')') + '</button></div>' + chips +
+    /* «تحديد الكل» يظهر فقط بعد التضييق ببحث أو بجهة، حتى لا يُحدَّد السجل كله بالخطأ */
+    var narrowed = !!(EM.from || q);
+    body = '<div class="emf"><input id="emQ" type="search" placeholder="ابحث بالاسم أو الرقم المرجعي" value="' + esc(EM.q) + '" autocomplete="off">' +
+      '<label class="emfrom"><span>اعرض منسوبي</span><select id="emFrom" aria-label="اعرض منسوبي جهة معيّنة"><option value="">كل الجهات</option>' + froms + '</select></label></div>' +
+      (narrowed && rows.length > 1 ? '<div class="emall"><span>' + rows.length + ' ظاهرون ' + (EM.from ? 'من «' + esc((ENT.filter(function (e) { return e.v === EM.from; })[0] || {}).n || '') + '»' : 'بهذا البحث') + '</span><button type="button" class="btn sm" id="emAll">' + (allOn ? 'إلغاء تحديدهم' : 'تحديدهم كلهم') + '</button></div>' : '') + chips +
       '<div class="eml">' + (rows.map(function (s) { var on = !!EM.sel[s.ref];
         return '<label class="' + (on ? 'on' : '') + '"><input type="checkbox" data-emref="' + esc(s.ref) + '"' + (on ? ' checked' : '') + '>' + av(s) + '<span><b>' + esc(s.name) + '</b><small>' + esc(s.ref) + ' · ' + esc(s.ent.n) + '</small></span></label>'; }).join('') || '<div class="empty" style="padding:18px">لا أحد بهذا البحث.</div>') + '</div>';
     foot = '<span class="emcnt">' + (picked.length ? 'حدّدت <b>' + picked.length + '</b>' : 'لم تحدّد أحدًا بعد') + '</span><button class="btn" data-emx="1">إلغاء</button><button class="btn goldb" id="emNext"' + (picked.length ? '' : ' disabled') + '>التالي: اختر الجهة ←</button>';

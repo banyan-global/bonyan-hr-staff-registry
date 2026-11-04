@@ -1534,6 +1534,12 @@ table.mini th.used { background: var(--gold-wash); }
   #menuBtn[aria-pressed="false"] { background: var(--gold-wash); border-color: rgba(185, 143, 69, .5); }
 }
 
+.emfrom { flex: 1 1 220px; display: flex; align-items: center; gap: 8px; }
+.emfrom span { flex: none; font-size: 12.5px; font-weight: 800; color: var(--mute); }
+.emfrom select { flex: 1; min-width: 0; }
+.emall { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 12px; background: var(--soft); font-size: 13px; color: var(--mute); }
+.emall span { flex: 1; }
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--bg-0: #162942;
