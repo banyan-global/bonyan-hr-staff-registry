@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 6;
+const BHR_SCHEMA_VERSION = 7;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -119,6 +119,11 @@ function migrate(PDO $pdo): void {
         id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(160) NOT NULL, body TEXT NOT NULL, kind VARCHAR(20) NOT NULL DEFAULT 'تعميم', pinned TINYINT NOT NULL DEFAULT 0,
         audience TEXT NULL, expires_at DATE NULL, active TINYINT NOT NULL DEFAULT 1, created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $pdo->exec("CREATE TABLE IF NOT EXISTS news_reads (news_id INT NOT NULL, user_id INT NOT NULL, read_at DATETIME NOT NULL, PRIMARY KEY (news_id, user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    /* ٧) الرئيس التنفيذي يصدر التعاميم: تُضاف الصلاحية لحساباته ذات الصلاحيات المخصّصة أيضًا */
+    foreach ($pdo->query("SELECT id, perms FROM users WHERE role='ceo' AND perms IS NOT NULL")->fetchAll(PDO::FETCH_ASSOC) as $u) {
+        $p = json_decode((string)$u['perms'], true);
+        if (is_array($p) && !in_array('announce.manage', $p, true)) { $p[] = 'announce.manage'; $pdo->prepare('UPDATE users SET perms=? WHERE id=?')->execute([json_encode(array_values($p)), $u['id']]); }
+    }
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {

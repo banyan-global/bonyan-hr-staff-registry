@@ -29,7 +29,7 @@ const PERMS = [
 const ROLE_PERMS = [
     'admin' => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'users.manage', 'backup.run', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view', 'settings.manage'],
     'hr'    => ['staff.view', 'staff.edit', 'staff.files', 'staff.mail', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'attendance.manage', 'announce.manage', 'reports.view'],
-    'ceo'   => ['staff.view', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'reports.view'],
+    'ceo'   => ['staff.view', 'finance.view', 'audit.view', 'requests.approve', 'attendance.view', 'announce.manage', 'reports.view'],
     'viewer'=> ['staff.view'],
     'staff' => ['self.view'],
 ];
