@@ -1526,6 +1526,14 @@ table.mini th.used { background: var(--gold-wash); }
 .emcnt { flex: 1; font-size: 13px; color: var(--mute); }
 .emcnt b { color: var(--ink); font-size: 15px; }
 
+/* إخفاء القائمة الجانبية في الشاشات الكبيرة من زر القائمة */
+@media (min-width: 901px) {
+  body.side-off .shell { grid-template-columns: minmax(0, 1fr); }
+  body.side-off .shell > .side { display: none; }
+  #menuBtn { display: inline-grid !important; }
+  #menuBtn[aria-pressed="false"] { background: var(--gold-wash); border-color: rgba(185, 143, 69, .5); }
+}
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--bg-0: #162942;

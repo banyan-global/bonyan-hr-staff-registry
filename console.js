@@ -2473,8 +2473,24 @@ function drawEM() {
 }
 document.addEventListener('click', function (e) { var t = e.target.closest && e.target.closest('[data-entmove]'); if (!t || !can('edit')) return; e.preventDefault(); var d = t.closest('details'); if (d) d.open = false; emOpen(t.dataset.entmove || ''); });
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && EM && !EM.busy) { var l = document.getElementById('emLayer'); if (l) l.remove(); } });
+/* زر القائمة: في الجوال يفتح القائمة الجانبية، وفي الشاشات الكبيرة يُخفيها أو يُظهرها لتتسع الصفحة (ويُحفظ الاختيار) */
+function sideOffGet() { try { return localStorage.getItem('bhr_side_off') === '1'; } catch (e) { return false; } }
+document.body.classList.toggle('side-off', sideOffGet());
+function bindMenuBtn() {
+  var b = document.getElementById('menuBtn'); if (!b) return;
+  var wide = function () { return window.matchMedia('(min-width: 901px)').matches; };
+  var lab = function () { if (wide()) { var off = document.body.classList.contains('side-off'); b.setAttribute('aria-pressed', String(!off)); b.title = off ? 'إظهار القائمة الجانبية' : 'إخفاء القائمة الجانبية لتتسع الصفحة'; b.setAttribute('aria-label', b.title); } else { b.removeAttribute('aria-pressed'); b.title = 'القائمة'; b.setAttribute('aria-label', 'القائمة'); } };
+  var mobile = b.onclick;
+  b.onclick = function (e) {
+    if (!wide()) { if (mobile) mobile.call(b, e); return; }
+    var off = !document.body.classList.contains('side-off'); document.body.classList.toggle('side-off', off);
+    try { localStorage.setItem('bhr_side_off', off ? '1' : '0'); } catch (x) { }
+    lab(); window.dispatchEvent(new Event('resize'));
+  };
+  lab();
+}
 function bindHrx() {
-  bindGq();
+  bindGq(); bindMenuBtn();
   bindSet(); bindAtt(); bindNews(); bindReports();
   var oq = document.getElementById('orgq'); if (oq) oq.oninput = function () { ORG.q = oq.value; softRender(); };
 }
