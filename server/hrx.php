@@ -370,8 +370,27 @@ function ent_norm(string $s): string {
     $s = preg_replace('/[\x{064B}-\x{065F}\x{0640}]/u', '', mb_strtolower(trim($s)));
     return preg_replace('/\s+/u', ' ', strtr($s, ['أ' => 'ا', 'إ' => 'ا', 'آ' => 'ا', 'ى' => 'ي', 'ة' => 'ه']));
 }
+/* ٣) تسمية الجامعة بفرعيها: «(بنين)» و«(بنات)» — تُحدَّث القيم المخزّنة مرة واحدة */
+function data_fix_entities_2611b(): void {
+    if (setting('fix:ent2611b', '') !== '') return;
+    try { named_lock('fix_ent2611b', 5); } catch (Throwable $e) { return; }
+    try {
+        if (setting('fix:ent2611b', '') !== '') return;
+        $MAP = [];
+        foreach (['جامعة بنيان العالمية', 'Bonyan International University', 'Universitas Internasional Bonyan', 'bonyan-university'] as $x) $MAP[ent_norm($x)] = 'جامعة بنيان العالمية (بنين)';
+        foreach (['جامعة بنيان العالمية بنات', 'أكاديمية بنيان', 'Bonyan Academy', 'bonyan-academy'] as $x) $MAP[ent_norm($x)] = 'جامعة بنيان العالمية (بنات)';
+        $n = 0;
+        foreach (q('SELECT id, ref, data FROM staff')->fetchAll() as $r) {
+            $d = json_decode($r['data'], true); if (!is_array($d)) continue;
+            $to = $MAP[ent_norm((string)($d['entity'] ?? ''))] ?? null; if (!$to || ($d['entity'] ?? '') === $to) continue;
+            $d['entity'] = $to; q('UPDATE staff SET data=?, updated_at=? WHERE id=?', [json_encode($d, JSON_UNESCAPED_UNICODE), now(), $r['id']]); $n++;
+        }
+        if ($n) audit_log('', 'إعادة تسمية جهة', 'جامعة بنيان العالمية ← (بنين) و(بنات) · ' . $n . ' سجلًا', 'النظام');
+        setting_set('fix:ent2611b', json_encode(['at' => now(), 'n' => $n]));
+    } finally { named_unlock('fix_ent2611b'); }
+}
 function data_fix_entities_2611(): void {
-    if (setting('fix:ent2611', '') !== '') return;
+    if (setting('fix:ent2611', '') !== '') { data_fix_entities_2611b(); return; }
     try { named_lock('fix_ent2611', 5); } catch (Throwable $e) { return; }
     try {
         if (setting('fix:ent2611', '') !== '') return;
@@ -397,4 +416,5 @@ function data_fix_entities_2611(): void {
         }
         setting_set('fix:ent2611', json_encode(['at' => now(), 'moved' => $moved]));
     } finally { named_unlock('fix_ent2611'); }
+    data_fix_entities_2611b();
 }

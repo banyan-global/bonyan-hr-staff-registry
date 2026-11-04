@@ -2382,7 +2382,7 @@
   };
   /* بطاقة منسوب من سجل الجدول (كما تعيده لوحة الموارد البشرية): تُحوَّل قيمه إلى صيغة النموذج مؤقتًا ثم تُعاد الحالة كما كانت */
   function recToData(r) {
-    var ent = CFG.ENTITIES.filter(function (e) { return [e.ar, e.en, e.id].indexOf(r.entity) > -1; })[0];
+    var ent = CFG.ENTITIES.filter(function (e) { return [e.ar, e.en, e.id].concat(e.old || []).indexOf(r.entity) > -1; })[0];
     var g = /أنثى|female|perempuan/i.test(r.gender || '') ? 'female' : (/ذكر|male|laki/i.test(r.gender || '') ? 'male' : '');
     return {
       firstNameAr: r.firstNameAr, fatherNameAr: r.fatherNameAr, grandNameAr: r.grandNameAr, lastNameAr: r.lastNameAr,

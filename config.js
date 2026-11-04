@@ -33,14 +33,15 @@ window.APP_CONFIG = {
         colors: [لون البطاقة الأساسي، اللون الداكن، لون الإبراز] من هوية الجهة */
   ENTITIES: [
     { v: 'bonyan', ar: 'شركة بنيان للتدريب المحدودة', en: 'Bonyan Training Company Ltd.', id: 'Bonyan Training Company Ltd.', logo: 'main', colors: ['#2B3155', '#191D38', '#D9B67F'] },
-    { v: 'bonyan-university', ar: 'جامعة بنيان العالمية', en: 'Bonyan International University', id: 'Universitas Internasional Bonyan', logo: 'university', colors: ['#6b3624', '#1f2f4d', '#E7B08F'] },
+    { v: 'bonyan-remote', ar: 'شركة بنيان للتدريب (عن بعد)', en: 'Bonyan Training Company (Remote)', id: 'Bonyan Training Company (Jarak Jauh)', logo: 'main', colors: ['#2f5d8a', '#132a40', '#BFD6EC'] },
+    { v: 'bonyan-university', ar: 'جامعة بنيان العالمية (بنين)', old: ['جامعة بنيان العالمية'], en: 'Bonyan International University (Men)', id: 'Universitas Internasional Bonyan (Putra)', logo: 'university', colors: ['#6b3624', '#1f2f4d', '#E7B08F'] },
     { v: 'bonyan-humanitarian', ar: 'بنيان الإنسانية', en: 'Bonyan Humanitarian', id: 'Bonyan Kemanusiaan', logo: 'humanitarian', mark: 'humanitarianMark', colors: ['#7d2a2f', '#2c1215', '#EDB9B6'] },
     { v: 'dar-altamkeen', ar: 'دار التمكين', en: 'Dar Al-Tamkeen', id: 'Dar Al-Tamkeen', logo: 'darAltamkeen', colors: ['#163061', '#0a1630', '#D2C4B1'] },
     { v: 'bonyan-waqf', ar: 'وقف بنيان', en: 'Bonyan Endowment', id: 'Wakaf Bonyan', logo: 'waqf', colors: ['#05603a', '#022417', '#E2BE8A'] },
     { v: 'afaq', ar: 'آفاق للتعريف بالإسلام', en: 'Afaq for Introducing Islam', id: 'Afaq Pengenalan Islam', logo: 'afaq', colors: ['#6a2531', '#25101a', '#CDD4E3'] },
     { v: 'bonyan-distance', ar: 'بنيان للتعليم عن بعد', en: 'Bonyan Distance Learning', id: 'Bonyan Pendidikan Jarak Jauh', logo: 'distance', mark: 'distanceMark', colors: ['#33568a', '#172540', '#E8AC82'] },
     /* «أكاديمية بنيان» صارت «جامعة بنيان العالمية بنات» (نوفمبر 2026) */
-    { v: 'bonyan-university-women', ar: 'جامعة بنيان العالمية بنات', en: 'Bonyan International University (Women)', id: 'Universitas Internasional Bonyan (Putri)', logo: 'university', colors: ['#7a3352', '#2a1220', '#E9B7C8'] },
+    { v: 'bonyan-university-women', ar: 'جامعة بنيان العالمية (بنات)', old: ['جامعة بنيان العالمية بنات', 'أكاديمية بنيان', 'Bonyan Academy', 'bonyan-academy'], en: 'Bonyan International University (Women)', id: 'Universitas Internasional Bonyan (Putri)', logo: 'university', colors: ['#7a3352', '#2a1220', '#E9B7C8'] },
     { v: 'bonyan-kenya', ar: 'بنيان كينيا', en: 'Bonyan Kenya', id: 'Bonyan Kenya', logo: 'kenya', colors: ['#562670', '#24102f', '#D2B8E6'] },
     { v: 'bonyan-research', ar: 'مركز بنيان للأبحاث', en: 'Bonyan Research Center', id: 'Pusat Riset Bonyan', logo: 'research', mark: 'researchMark', colors: ['#265746', '#0f241d', '#E0C290'] },
     { v: 'taqat', ar: 'طاقات', en: 'Taqat', id: 'Taqat', logo: 'taqat', colors: ['#1c6340', '#0b2a1a', '#DCD08A'] },

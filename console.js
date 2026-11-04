@@ -87,12 +87,12 @@ var role = 'hr', ME = null;
 /* ---------- demo data ---------- */
 /* ---------- reference data (live) ---------- */
 var ENT0 = [
-  { v: 'bonyan', n: 'شركة بنيان للتدريب', c: '#2B3155' }, { v: 'uni', n: 'جامعة بنيان العالمية', c: '#6b3624' },
+  { v: 'bonyan', n: 'شركة بنيان للتدريب', c: '#2B3155' }, { v: 'uni', n: 'جامعة بنيان العالمية (بنين)', c: '#6b3624' },
   { v: 'hum', n: 'بنيان الإنسانية', c: '#7d2a2f' }, { v: 'waqf', n: 'وقف بنيان', c: '#05603a' },
   { v: 'afaq', n: 'آفاق للتعريف بالإسلام', c: '#6a2531' }, { v: 'acad', n: 'أكاديمية بنيان', c: '#465679' },
   { v: 'maarif', n: 'كلية المعارف', c: '#2f339a' }, { v: 'kafaa', n: 'كفاءة تقنية', c: '#4b3cc0' },
   { v: 'tamkeen', n: 'دار التمكين', c: '#163061' }, { v: 'tedu', n: 'تمكين التعليم', c: '#5b3d76' },
-  { v: 'uniw', n: 'جامعة بنيان العالمية بنات', c: '#7a3352' }, { v: 'kenya', n: 'بنيان كينيا', c: '#562670' }, { v: 'taqat', n: 'طاقات', c: '#1c6340' }
+  { v: 'uniw', n: 'جامعة بنيان العالمية (بنات)', c: '#7a3352' }, { v: 'remote', n: 'شركة بنيان للتدريب (عن بعد)', c: '#2f5d8a' }, { v: 'kenya', n: 'بنيان كينيا', c: '#562670' }, { v: 'taqat', n: 'طاقات', c: '#1c6340' }
 ];
 var ENT = [], CTRY = [], STAFF = [];
 /* أسعار صرف تقريبية إلى الريال السعودي (للمقارنة فقط، لا للصرف) */
@@ -487,9 +487,9 @@ function can(p) { return role !== 'staff' && !!CAP[p]; }
 function firstOf(name) { var w = String(name || '').trim().split(/\s+/); return /^(د|أ|م|ا|م\.|د\.|أ\.)\.?$/.test(w[0]) && w[1] ? w[0] + ' ' + w[1] : w[0] || ''; }
 
 /* ---------- mapping server rows to the console model ---------- */
-var ENT_KEY = { bonyan: 'bonyan', 'bonyan-university': 'uni', 'bonyan-humanitarian': 'hum', 'bonyan-waqf': 'waqf', afaq: 'afaq', 'bonyan-academy': 'acad', almaarif: 'maarif', 'kafaa-tech': 'kafaa', 'dar-altamkeen': 'tamkeen', 'tamkeen-education': 'tedu', 'bonyan-university-women': 'uniw', 'bonyan-kenya': 'kenya', taqat: 'taqat' };
+var ENT_KEY = { bonyan: 'bonyan', 'bonyan-university': 'uni', 'bonyan-humanitarian': 'hum', 'bonyan-waqf': 'waqf', afaq: 'afaq', 'bonyan-academy': 'acad', almaarif: 'maarif', 'kafaa-tech': 'kafaa', 'dar-altamkeen': 'tamkeen', 'tamkeen-education': 'tedu', 'bonyan-university-women': 'uniw', 'bonyan-remote': 'remote', 'bonyan-kenya': 'kenya', taqat: 'taqat' };
 function nk(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
-var ENT_IDX = {}; (CFG.ENTITIES || []).forEach(function (e) { [e.v, e.ar, e.en, e.id].forEach(function (x) { if (x) ENT_IDX[nk(x)] = e; }); });
+var ENT_IDX = {}; (CFG.ENTITIES || []).forEach(function (e) { [e.v, e.ar, e.en, e.id].concat(e.old || []).forEach(function (x) { if (x) ENT_IDX[nk(x)] = e; }); });
 var ENT_MAP = {}, CT_MAP = {}, CNAME = {}, CDIAL = {};
 (window.COUNTRIES || []).forEach(function (c) { CNAME[c[0]] = c[1]; CDIAL[c[0]] = String(c[4] || '').replace(/\D/g, ''); });
 function entOf(name) {
@@ -827,7 +827,7 @@ VIEWS.home = function () {
   var ents = ENT.map(function (e) { return { e: e, ss: STAFF.filter(function (s) { return s.ent.v === e.v; }) }; });
   /* الجهات أولًا: بطاقات أفقية متساوية، مرتبة بعدد المنسوبين، موزّعة على صفوف متوازنة (٧ ← ٤ + ٣) */
   var eCols = nE <= 4 ? Math.max(nE, 1) : Math.ceil(nE / Math.ceil(nE / 4));
-  var entP = pn('gold', 'building', 'الجهات', nq(nE, 'جهة واحدة', 'جهتان', 'جهات', 'جهة') + ' · ' + nq(tot, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا'), more('دليل المنسوبين', '#people'), '<div class="pb"><div class="ents2" style="--cols:' + eCols + '">' + ents.map(function (x, i) { var dn2 = x.ss.filter(function (s) { return s.status === 'مكتمل'; }).length, p = pct(dn2, x.ss.length), lg = elogo(x.e);
+  var entP = pn('gold', 'building', 'الجهات', nq(nE, 'جهة واحدة', 'جهتان', 'جهات', 'جهة') + ' · ' + nq(tot, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا'), (can('edit') ? '<button type="button" class="btn sm" data-entmove="">' + ic('users') + 'نقل بين الجهات</button> ' : '') + more('دليل المنسوبين', '#people'), '<div class="pb"><div class="ents2" style="--cols:' + eCols + '">' + ents.map(function (x, i) { var dn2 = x.ss.filter(function (s) { return s.status === 'مكتمل'; }).length, p = pct(dn2, x.ss.length), lg = elogo(x.e);
     return '<button class="ent2" style="--ec:' + x.e.c + '" data-ent="' + esc(x.e.v) + '" title="عرض منسوبي ' + esc(x.e.n) + '"><span class="lg">' + (lg && lg.indexOf('<img') > -1 ? lg : '<span class="ini">' + esc((x.e.n || '؟').trim().charAt(0)) + '</span>') + '</span>' +
       '<span class="bd"><b class="nm">' + esc(x.e.n) + '</b><span class="mt"><em>' + x.ss.length + '</em> منسوبًا · ' + p + '٪ مكتمل</span><span class="tr"><i style="width:' + p + '%"></i></span></span></button>'; }).join('') + '</div></div>');
   var recent = pn('emerald', 'userok', 'أحدث المنسوبين', '', more('الكل', '#people'), '<ul class="lst">' + STAFF.slice(0, 5).map(function (s) { return '<li style="cursor:pointer" data-open="' + esc(s.ref) + '">' + avP(s) + '<div><b>' + esc(s.name) + '</b><span class="s">' + esc(s.ent.n) + '، ' + esc(s.c.n) + ' · ' + agoD(s.reg) + '</span></div>' + (s.status === 'مكتمل' ? '<span class="pill ok"><i></i>مكتمل</span>' : '<span class="pill warn"><i></i>ناقص</span>') + '</li>'; }).join('') + '</ul>');
@@ -1037,6 +1037,7 @@ function profHTML(s) {
     '<button type="button" role="menuitem" data-cardpng="' + esc(s.ref) + '">' + tile('gold', 'card') + '<span><b>تنزيل البطاقة</b><small>صورة PNG بوجهيها</small></span></button>' +
     '<a role="menuitem" href="api/?action=zip&amp;ref=' + encodeURIComponent(s.ref) + '" download>' + tile('emerald', 'folder') + '<span><b>تنزيل المرفقات</b><small>ملف مضغوط بكل الوثائق</small></span></a>' +
     '<button type="button" role="menuitem" data-copyref="' + esc(s.ref) + '">' + tile('slate', 'copy') + '<span><b>نسخ الرقم المرجعي</b><small class="ltr">' + esc(s.ref) + '</small></span></button>' +
+    (can('edit') ? '<button type="button" role="menuitem" data-entmove="' + esc(s.ref) + '">' + tile('gold', 'building') + '<span><b>تغيير الجهة</b><small>نقله إلى جهة عمل أخرى</small></span></button>' : '') +
     (can('edit') ? '<a role="menuitem" href="#reqs-new" data-rwref="' + esc(s.ref) + '">' + tile('amethyst', 'stamp') + '<span><b>طلب نيابة عنه</b><small>إجازة أو إركاب أو تعريف</small></span></a>' : '') + '</div></details>';
   var acts = (can('edit') ? '<button class="btn prim" data-full="' + esc(s.ref) + '" data-fedit="1">' + ic('edit') + 'تعديل البيانات</button>' : ro()) +
     (can('mail') ? '<button class="btn goldb" data-msg="' + esc(s.ref) + '">' + ic('chat') + 'مراسلة</button>' : '') + menu;
@@ -2417,6 +2418,43 @@ function bindGq() {
   };
   gq.onblur = function () { setTimeout(function () { hits.hidden = true; }, 150); };
 }
+/* ======================= نقل المنسوبين بين الجهات (لمن يملك تعديل البيانات) ======================= */
+var EM = null;
+function emOpen(ref) { EM = { to: '', sel: {}, q: '', from: '', busy: false, done: 0 }; if (ref) { EM.sel[ref] = 1; var s = byRef(ref); if (s) EM.q = s.name; } drawEM(); }
+function emTargets() { return (CFG.ENTITIES || []).filter(function (e) { return e.v !== 'other'; }); }
+function drawEM() {
+  var old = document.getElementById('emLayer'), y = old ? (old.querySelector('.eml') || {}).scrollTop || 0 : 0; if (old) old.remove();
+  var q = gn(EM.q), rows = STAFF.filter(function (s) { return (!EM.from || s.ent.v === EM.from) && (!q || gn(s.name + ' ' + (s.r.fullNameLatin || '') + ' ' + s.ref + ' ' + s.ent.n).indexOf(q) > -1); });
+  var picked = Object.keys(EM.sel).filter(function (k) { return EM.sel[k]; }), tgt = emTargets().filter(function (e) { return e.ar === EM.to; })[0];
+  var froms = ENT.map(function (e) { return '<option value="' + esc(e.v) + '"' + (EM.from === e.v ? ' selected' : '') + '>' + esc(e.n) + ' (' + STAFF.filter(function (s) { return s.ent.v === e.v; }).length + ')</option>'; }).join('');
+  var el = document.createElement('div'); el.id = 'emLayer';
+  el.innerHTML = '<div class="mscrim" data-emx="1"></div><section class="mdl emm" role="dialog" aria-modal="true" aria-labelledby="emT"><header class="mh">' + tile('gold', 'building') + '<div><h2 id="emT">نقل منسوبين بين الجهات</h2><p>اختر الجهة الجديدة، ثم حدّد من تنقلهم. كل نقل يُسجَّل في ملف المنسوب وفي سجل العمليات باسمك.</p></div></header>' +
+    '<div class="emb"><h3>١) الجهة الجديدة</h3><div class="emt">' + emTargets().map(function (e) { var k = ENT_KEY[e.v] || e.v;
+      return '<button type="button" class="' + (EM.to === e.ar ? 'on' : '') + '" data-emto="' + esc(e.ar) + '" style="--ec:' + ((e.colors || [])[0] || '#475569') + '"><span class="lg">' + (ELOGO[k] ? '<img src="' + ELOGO[k] + '" alt="">' : '<i>' + esc(e.ar.charAt(0)) + '</i>') + '</span><b>' + esc(e.ar) + '</b></button>'; }).join('') + '</div>' +
+    '<h3>٢) المنسوبون <small>' + picked.length + ' محدَّد</small></h3><div class="emf"><input id="emQ" type="search" placeholder="ابحث بالاسم أو الرقم المرجعي" value="' + esc(EM.q) + '" autocomplete="off"><select id="emFrom" aria-label="الجهة الحالية"><option value="">كل الجهات الحالية</option>' + froms + '</select>' +
+      '<button type="button" class="btn sm" id="emAll">' + (rows.length && rows.every(function (s) { return EM.sel[s.ref]; }) ? 'إلغاء تحديد الظاهرين' : 'تحديد الظاهرين (' + rows.length + ')') + '</button></div>' +
+    '<div class="eml">' + (rows.map(function (s) { var on = !!EM.sel[s.ref], same = tgt && s.ent.full === tgt.ar;
+      return '<label class="' + (on ? 'on' : '') + '"><input type="checkbox" data-emref="' + esc(s.ref) + '"' + (on ? ' checked' : '') + '>' + av(s) + '<span><b>' + esc(s.name) + '</b><small>' + esc(s.ref) + ' · الآن: ' + esc(s.ent.n) + (same ? ' · <em>في هذه الجهة أصلًا</em>' : '') + '</small></span></label>'; }).join('') || '<div class="empty" style="padding:18px">لا أحد بهذا البحث.</div>') + '</div></div>' +
+    '<footer class="mf"><div class="lerr" role="alert"></div><button class="btn" data-emx="1">إلغاء</button><button class="btn goldb" id="emGo"' + (EM.busy || !EM.to || !picked.length ? ' disabled' : '') + '>' + (EM.busy ? 'جارٍ النقل… ' + EM.done + ' من ' + picked.length : 'نقل ' + (picked.length || '') + (tgt ? ' إلى «' + esc(tgt.ar) + '»' : '')) + '</button></footer></section>';
+  document.body.appendChild(el); var L2 = el.querySelector('.eml'); if (L2) L2.scrollTop = y;
+  el.querySelectorAll('[data-emx]').forEach(function (b) { b.onclick = function () { if (!EM.busy) el.remove(); }; });
+  el.querySelectorAll('[data-emto]').forEach(function (b) { b.onclick = function () { EM.to = b.dataset.emto; drawEM(); }; });
+  el.querySelectorAll('[data-emref]').forEach(function (c) { c.onchange = function () { EM.sel[c.dataset.emref] = c.checked ? 1 : 0; drawEM(); }; });
+  var qi = el.querySelector('#emQ'); qi.oninput = function () { EM.q = qi.value; var p = qi.selectionStart; drawEM(); var n = document.getElementById('emQ'); n.focus(); try { n.setSelectionRange(p, p); } catch (x) { } };
+  el.querySelector('#emFrom').onchange = function () { EM.from = this.value; drawEM(); };
+  el.querySelector('#emAll').onclick = function () { var all = rows.every(function (s) { return EM.sel[s.ref]; }); rows.forEach(function (s) { EM.sel[s.ref] = all ? 0 : 1; }); drawEM(); };
+  el.querySelector('#emGo').onclick = function () {
+    var list = picked.filter(function (r) { var s = byRef(r); return s && s.ent.full !== EM.to; }), to = EM.to, ok = 0, fail = [];
+    if (!list.length) { el.querySelector('.lerr').textContent = 'كل المحددين في هذه الجهة أصلًا.'; return; }
+    EM.busy = true; EM.done = 0; drawEM();
+    (function next(i) {
+      if (i >= list.length) { reloadList().then(function () { EM.busy = false; var l = document.getElementById('emLayer'); if (l) l.remove(); toast(fail.length ? 'نُقل ' + ok + '، وتعذّر ' + fail.length : 'نُقل ' + nq(ok, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' إلى «' + to + '»'); softRender(); }); return; }
+      api({ action: 'adminUpdate', ref: list[i], changes: { entity: to } }).then(function () { ok++; }, function () { fail.push(list[i]); }).then(function () { EM.done = i + 1; drawEM(); next(i + 1); });
+    })(0);
+  };
+}
+document.addEventListener('click', function (e) { var t = e.target.closest && e.target.closest('[data-entmove]'); if (!t || !can('edit')) return; e.preventDefault(); var d = t.closest('details'); if (d) d.open = false; emOpen(t.dataset.entmove || ''); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && EM && !EM.busy) { var l = document.getElementById('emLayer'); if (l) l.remove(); } });
 function bindHrx() {
   bindGq();
   bindSet(); bindAtt(); bindNews(); bindReports();
