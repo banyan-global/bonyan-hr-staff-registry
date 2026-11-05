@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 9;
+const BHR_SCHEMA_VERSION = 10;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -145,6 +145,30 @@ function migrate(PDO $pdo): void {
     if ($rp && is_array($m = json_decode((string)$rp, true))) {
         foreach (['hr', 'viewer'] as $r) if (isset($m[$r]) && is_array($m[$r]) && !in_array('home.contact', $m[$r], true)) $m[$r][] = 'home.contact';
         $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('role_perms', ?)")->execute([json_encode($m, JSON_UNESCAPED_UNICODE)]);
+    }
+    /* ١٠) نظام الإجازات بآلية النظام السابق: المسؤول المباشر ثم المدير العام، وأسماء الأنواع الستة */
+    if ((int)$v < 10) {
+        $fl = json_decode((string)($pdo->query("SELECT v FROM settings WHERE k='req_flow'")->fetchColumn() ?: ''), true);
+        if (is_array($fl) && isset($fl['leave'])) {
+            $fl['leave']['steps'] = [['kind' => 'manager', 'v' => '', 'label' => 'المسؤول المباشر'], ['kind' => 'role', 'v' => 'admin', 'label' => 'المدير العام']];
+            $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('req_flow', ?)")->execute([json_encode($fl, JSON_UNESCAPED_UNICODE)]);
+        }
+        $ren = ['اعتيادية' => 'اعتيادية (سنوية)', 'اضطرارية' => 'طارئة (اضطرارية)'];
+        foreach ($pdo->query("SELECT id, data FROM requests WHERE type='leave'")->fetchAll(PDO::FETCH_ASSOC) as $x) {
+            $d = json_decode((string)$x['data'], true); if (!is_array($d) || !isset($ren[$d['kind'] ?? ''])) continue;
+            $d['kind'] = $ren[$d['kind']]; $pdo->prepare('UPDATE requests SET data=? WHERE id=?')->execute([json_encode($d, JSON_UNESCAPED_UNICODE), $x['id']]);
+        }
+        $st = json_decode((string)($pdo->query("SELECT v FROM settings WHERE k='site'")->fetchColumn() ?: ''), true);
+        if (is_array($st) && isset($st['leave']['kinds']) && is_array($st['leave']['kinds'])) {
+            $st['leave']['kinds'] = array_values(array_unique(array_map(fn($k) => $ren[$k] ?? $k, $st['leave']['kinds'])));
+            $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('site', ?)")->execute([json_encode($st, JSON_UNESCAPED_UNICODE)]);
+        }
+        /* قائمة المسؤولين المباشرين تبدأ بـ«النظام» (حساب مدير النظام) كما في النظام السابق، ويضيف مدير النظام البقية من المنصة */
+        if (!$pdo->query("SELECT COUNT(*) FROM settings WHERE k='leave_sups'")->fetchColumn()) {
+            $a = $pdo->query("SELECT email FROM users WHERE role='admin' AND active=1 ORDER BY id LIMIT 1")->fetchColumn();
+            $list = $a ? [['id' => bin2hex(random_bytes(4)), 'name' => 'النظام', 'email' => strtolower((string)$a), 'title' => 'مدير النظام']] : [];
+            $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('leave_sups', ?)")->execute([json_encode($list, JSON_UNESCAPED_UNICODE)]);
+        }
     }
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }

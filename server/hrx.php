@@ -10,7 +10,7 @@ const SITE_DEFAULTS = [
     'modules' => ['reqs' => true, 'forms' => true, 'payroll' => true, 'att' => true, 'news' => true, 'org' => true, 'reports' => true],
     'home' => ['hero' => true, 'kpis' => true, 'todo' => true, 'qa' => true, 'events' => true, 'charts' => true, 'quality' => true, 'cal' => true, 'ents' => true, 'recent' => true, 'log' => true],
     'staff' => ['card' => true, 'docs' => true, 'pay' => true, 'reqs' => true, 'balance' => true, 'att' => true, 'news' => true, 'update' => true],
-    'leave' => ['annual' => 30, 'prorate' => true, 'kinds' => ['اعتيادية']],
+    'leave' => ['annual' => 30, 'prorate' => true, 'kinds' => ['اعتيادية (سنوية)']],
     'work' => ['start' => '08:00', 'end' => '16:00', 'grace' => 15, 'weekend' => [5, 6]],
 ];
 function site(): array {
@@ -18,6 +18,7 @@ function site(): array {
     $s = json_decode((string)(setting('site') ?: ''), true); $s = is_array($s) ? $s : [];
     $c = SITE_DEFAULTS;
     foreach ($c as $g => $vals) if (isset($s[$g]) && is_array($s[$g])) foreach ($vals as $k => $def) if (array_key_exists($k, $s[$g])) $c[$g][$k] = $s[$g][$k];
+    $c['leave']['kinds'] = array_values(array_unique(array_map(fn($k) => leave_kind_norm((string)$k), (array)$c['leave']['kinds'])));
     return $c;
 }
 function site_on(string $g, string $k): bool { return !empty(site()[$g][$k]); }
@@ -45,7 +46,7 @@ function site_save(array $b): array {
         $o['leave']['annual'] = max(0, min(90, (int)($L['annual'] ?? 30)));
         $o['leave']['prorate'] = !empty($L['prorate']);
         $kinds = array_values(array_intersect(LEAVE_KINDS, (array)($L['kinds'] ?? [])));
-        $o['leave']['kinds'] = $kinds ?: ['اعتيادية'];
+        $o['leave']['kinds'] = $kinds ?: ['اعتيادية (سنوية)'];
     }
     if (isset($in['work'])) {
         $W = $in['work']; $t = fn($v, $d) => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string)$v) ? (string)$v : $d;
@@ -72,7 +73,7 @@ function leave_balance(string $ref, ?array $rec = null): array {
     $used = 0; $pend = 0; $byKind = [];
     foreach (q("SELECT status, data FROM requests WHERE ref=? AND type='leave' AND status IN ('approved','pending')", [$ref])->fetchAll() as $r) {
         $d = json_decode($r['data'], true) ?: []; if (substr((string)($d['from'] ?? ''), 0, 4) !== (string)$y) continue;
-        $days = (int)($d['days'] ?? 0); $k = (string)($d['kind'] ?? '');
+        $days = (int)($d['days'] ?? 0); $k = leave_kind_norm((string)($d['kind'] ?? ''));
         if ($r['status'] === 'approved') $byKind[$k] = ($byKind[$k] ?? 0) + $days;
         if (!in_array($k, $L['kinds'], true)) continue;
         if ($r['status'] === 'approved') $used += $days; else $pend += $days;

@@ -1601,6 +1601,37 @@ table.mini th.used { background: var(--gold-wash); }
   #fvLayer [data-fv="fit"] { display: none; }
 }
 
+/* ===== نظام الإجازات: المسؤولون المباشرون وحقول النموذج ===== */
+#supLayer { position: fixed; inset: 0; z-index: 92; display: grid; place-items: center; padding: 16px; }
+#supLayer .mdl.supm { width: min(760px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
+#supLayer .abody { overflow: auto; padding: 16px 20px; display: grid; gap: 14px; }
+.suplist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.suplist .empty { padding: 18px; text-align: center; color: var(--mute); border: 1px dashed var(--line); border-radius: 14px; }
+.suprow { display: grid; grid-template-columns: 34px minmax(0, 1.25fr) minmax(0, .9fr) minmax(0, 1.25fr) 38px; gap: 8px; align-items: center; padding: 8px; border: 1px solid var(--line-2); border-radius: 14px; background: var(--panel); }
+.suprow input, .supm .suppaste textarea { height: 42px; border: 1px solid var(--line); border-radius: 11px; padding: 0 11px; background: var(--panel); color: var(--ink); font: inherit; font-size: 14px; min-width: 0; }
+.suprow input:focus, .supm textarea:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px color-mix(in srgb, var(--navy) 14%, transparent); }
+.suprow .del { color: var(--c-bad); width: 38px; height: 38px; }
+.supadd { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.suppaste { border: 1px solid var(--line-2); border-radius: 14px; padding: 10px 14px; background: color-mix(in srgb, var(--gold-wash) 50%, var(--panel)); }
+.suppaste summary { cursor: pointer; font-weight: 800; display: flex; gap: 8px; align-items: center; color: var(--ink); }
+.suppaste summary .i { width: 16px; height: 16px; }
+.suppaste p { font-size: 13px; color: var(--mute); margin: 8px 0; }
+.supm .suppaste textarea { width: 100%; height: auto; min-height: 110px; padding: 10px 12px; resize: vertical; margin-bottom: 8px; }
+.fsub { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 14px; color: var(--ink); padding-top: 6px; border-top: 1px dashed var(--line); margin-top: 4px; }
+.fsub .i { width: 17px; height: 17px; color: var(--gold-ink); }
+.fhint { display: block; margin-top: 6px; font-size: 12.5px; color: var(--mute); }
+.note.warn { background: color-mix(in srgb, var(--c-warn) 12%, var(--panel)); border-color: color-mix(in srgb, var(--c-warn) 35%, transparent); }
+.feemail { margin-top: 6px; height: 42px; border: 1px solid var(--line); border-radius: 11px; padding: 0 11px; background: var(--panel); color: var(--ink); font: inherit; font-size: 14px; }
+.sappr .chg { color: var(--mute); line-height: 1.7; }
+.sappr .chg s { color: var(--c-bad); }
+.sappr .chg b { color: var(--c-ok, #1f8f6a); }
+@media (max-width: 640px) {
+  .suprow { grid-template-columns: 30px minmax(0, 1fr) 38px; }
+  .suprow input { grid-column: 2; }
+  .suprow .del { grid-column: 3; grid-row: 1; }
+  .supadd { grid-template-columns: 1fr; }
+}
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--bg-0: #162942;
