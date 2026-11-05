@@ -81,7 +81,9 @@ function req_leave_overlap(string $ref, array $o, string $exceptNo = ''): void {
 function req_next_no(string $type): string {
     $p = REQ_TYPES[$type][0] . '-' . date('Y') . '-';
     $r = q1('SELECT no FROM requests WHERE no LIKE ? ORDER BY no DESC LIMIT 1', [$p . '%']);
-    return $p . str_pad((string)((int)($r ? substr($r['no'], -4) : 0) + 1), 4, '0', STR_PAD_LEFT);
+    /* لا يُعاد استعمال رقم طلب محذوف (حتى لا تعمل روابطه القديمة على طلب جديد) */
+    $floor = json_decode((string)(setting('req_seq_floor') ?: ''), true); $floor = is_array($floor) ? (int)($floor[$p] ?? 0) : 0;
+    return $p . str_pad((string)(max((int)($r ? substr($r['no'], -4) : 0), $floor) + 1), 4, '0', STR_PAD_LEFT);
 }
 function req_staff_email(?array $s): string { if (!$s) return ''; $e = trim((string)(($s['data']['officialEmail'] ?? '') ?: ($s['data']['personalEmail'] ?? ''))); return filter_var($e, FILTER_VALIDATE_EMAIL) ? $e : ''; }
 function req_row(array $r, bool $full = true): array {
@@ -546,6 +548,24 @@ function req_cancel(array $b): array {
     q("UPDATE requests SET status='cancelled', updated_at=? WHERE id=?", [now(), $r['id']]);
     audit_log($r['ref'], 'إلغاء ' . REQ_TYPES[$r['type']][1], $r['no'], $u['_label']);
     return ['ok' => true];
+}
+/* حذف طلب نهائيًا من النظام: لمدير النظام فقط، ويبقى أثره في سجل العمليات */
+function req_delete(array $b): array {
+    $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
+    if (($u['role'] ?? '') !== 'admin') throw new HttpError('حذف الطلبات لمدير النظام فقط', 403);
+    $no = (string)($b['no'] ?? '');
+    named_lock('req_dec');
+    try {
+        $r = q1('SELECT * FROM requests WHERE no=?', [$no]); if (!$r) throw new HttpError('الطلب غير موجود أو حُذف مسبقًا', 404);
+        if (preg_match('/^(.*-)(\d{4})$/', $r['no'], $m)) {
+            $floor = json_decode((string)(setting('req_seq_floor') ?: ''), true); $floor = is_array($floor) ? $floor : [];
+            $floor[$m[1]] = max((int)($floor[$m[1]] ?? 0), (int)$m[2]); setting_set('req_seq_floor', json_encode($floor));
+        }
+        q('DELETE FROM requests WHERE id=?', [$r['id']]);
+        $s = staff_get($r['ref']);
+        audit_log($r['ref'], 'حذف ' . REQ_TYPES[$r['type']][1] . ' نهائيًا', $r['no'] . ' · ' . ($s ? staff_name($s) . ' · ' : '') . (REQ_ST[$r['status']] ?? $r['status']) . ' · ' . req_summary($r), $u['_label']);
+        return ['ok' => true, 'no' => $r['no']];
+    } finally { named_unlock('req_dec'); }
 }
 /* متابعة بلا دخول: رقم الطلب + البريد المسجّل في ملف المنسوب */
 function req_track(array $b): array {

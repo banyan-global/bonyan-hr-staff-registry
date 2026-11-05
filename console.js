@@ -1455,6 +1455,7 @@ function drawAcct() {
   setTimeout(function () { $('acName').focus(); }, 30);
 }
 
+if (typeof P !== 'undefined' && !P.trash) P.trash = '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12.5A2 2 0 0 0 9 21h6a2 2 0 0 0 2-1.5L18 7M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>';
 /* ======================================================================
    Requests (leave · travel · salary letter) and the new sidebar
    ====================================================================== */
@@ -1686,12 +1687,18 @@ function reqOpen(no, fresh) {
     '<div class="rqbody"><div class="rqtrack">' + reqTrail(r) + '</div>' + reqSheetHTML(r) + '</div>' +
     '<footer class="mf">' + (r.canDecide ? '<div class="rqdec"><textarea id="rqNote" rows="2" maxlength="600" placeholder="ملاحظة للمنسوب (إلزامية عند الرفض)"></textarea><div class="lerr" id="rqErr" role="alert"></div></div><button class="btn" data-rqdec="reject">' + ic('alert') + 'رفض</button>' + (r.canEdit ? '<button class="btn" id="rqEdit">' + ic('edit') + 'تعديل ثم اعتماد</button>' : '') + '<button class="btn goldb" data-rqdec="approve">' + ic('check') + 'اعتماد</button>'
       : (r.status === 'pending' && (own || can('edit')) ? '<button class="btn" id="rqCancel">إلغاء الطلب</button>' : '') + '<span class="sp"></span>') +
+    (SESSION && SESSION.role === 'admin' ? '<button class="btn rqdel" id="rqDel" title="حذف الطلب من النظام نهائيًا (لمدير النظام)">' + ic('trash') + 'حذف الطلب</button>' : '') +
     '<button class="btn" id="rqPrint">' + ic('dl') + 'طباعة أو حفظ PDF</button></footer></section>';
   document.body.appendChild(el); document.body.classList.add('no-scroll');
   var close = function () { el.remove(); document.body.classList.remove('no-scroll'); };
   el.querySelectorAll('[data-rqclose]').forEach(function (b) { b.onclick = close; });
   document.getElementById('rqPrint').onclick = function () { document.body.classList.add('print-sheet'); window.print(); setTimeout(function () { document.body.classList.remove('print-sheet'); }, 500); };
   var eb = document.getElementById('rqEdit'); if (eb) eb.onclick = function () { reqEditForm(r, el, close); };
+  var dx = document.getElementById('rqDel'); if (dx) dx.onclick = function () {
+    if (dx.dataset.sure !== '1') { dx.dataset.sure = '1'; dx.classList.add('sure'); dx.innerHTML = ic('trash') + 'تأكيد الحذف النهائي؟'; setTimeout(function () { if (dx.isConnected && dx.dataset.sure === '1') { dx.dataset.sure = ''; dx.classList.remove('sure'); dx.innerHTML = ic('trash') + 'حذف الطلب'; } }, 5000); return; }
+    dx.disabled = true;
+    api({ action: 'reqDelete', no: r.no }).then(function () { seed('reqs', reqRows().filter(function (x) { return x.no !== r.no; })); close(); softRender(); toast('حُذف الطلب ' + r.no + ' من النظام'); }).catch(function (e) { dx.disabled = false; toast(errText(e)); });
+  };
   var c = document.getElementById('rqCancel'); if (c) c.onclick = function () { c.disabled = true; api({ action: 'reqCancel', no: r.no }).then(function () { r.status = 'cancelled'; r.statusName = 'ملغى'; seed('reqs', reqRows()); close(); softRender(); toast('أُلغي الطلب ' + r.no); }).catch(function (e) { c.disabled = false; toast(errText(e)); }); };
   el.querySelectorAll('[data-rqdec]').forEach(function (b) { b.onclick = function () {
     var ok = b.dataset.rqdec === 'approve', note = document.getElementById('rqNote').value.trim(), err = document.getElementById('rqErr');
