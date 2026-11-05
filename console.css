@@ -1632,6 +1632,11 @@ table.mini th.used { background: var(--gold-wash); }
   .supadd { grid-template-columns: 1fr; }
 }
 
+/* حقول التاريخ والقوائم الموحّدة داخل النماذج: بنفس مقاس وألوان الحقول */
+.fld .fs-btn { height: 46px; min-height: 46px; border: 1px solid var(--line); border-radius: 13px; background: var(--soft); font-size: 14.5px; padding-inline: 12px 8px; }
+.fld .fs-btn:hover:not(:disabled) { border-color: rgba(185, 143, 69, .55); }
+.fld .fs-btn:focus-visible, .fld .fs-btn.fs-open { border-color: var(--gold-d); box-shadow: 0 0 0 4px rgba(227, 196, 133, .3); }
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--bg-0: #162942;
