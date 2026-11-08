@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 11;
+const BHR_SCHEMA_VERSION = 12;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -190,6 +190,10 @@ function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS applicants (
         id INT AUTO_INCREMENT PRIMARY KEY, job_id INT NOT NULL, name VARCHAR(160) NOT NULL, email VARCHAR(190) NOT NULL, phone VARCHAR(40) NOT NULL DEFAULT '', data TEXT NOT NULL,
         status VARCHAR(12) NOT NULL DEFAULT 'new', cv_file VARCHAR(255) NOT NULL DEFAULT '', review TEXT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, KEY k_job (job_id), KEY k_mail (email))" . $T11);
+    /* ١٢) اشتراكات تنبيهات الجوال (Web Push) */
+    $pdo->exec("CREATE TABLE IF NOT EXISTS push_subs (
+        id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, endpoint VARCHAR(600) NOT NULL, p256dh VARCHAR(120) NOT NULL, auth VARCHAR(60) NOT NULL, ua VARCHAR(200) NOT NULL DEFAULT '',
+        created_at DATETIME NOT NULL, KEY k_user (user_id))" . $T11);
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {

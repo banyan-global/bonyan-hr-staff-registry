@@ -62,9 +62,9 @@ function site_save(array $b): array {
         $o['work']['mobileRefs'] = array_values(array_filter(array_map('strval', (array)($W['mobileRefs'] ?? [])), fn($r) => (bool)preg_match('/^[A-Z0-9-]{4,40}$/', $r)));
         $sites = [];
         foreach (array_slice((array)($W['sites'] ?? []), 0, 30) as $x) {
-            $nm = mb_substr(safe_text($x['name'] ?? ''), 0, 80); $la = (float)($x['lat'] ?? 0); $lo = (float)($x['lng'] ?? 0); $rad = max(30, min(5000, (int)($x['radius'] ?? 150)));
-            if ($nm === '' || abs($la) > 90 || abs($lo) > 180 || ($la == 0 && $lo == 0)) throw new HttpError('أكمل اسم كل موقع وإحداثياته');
-            $sites[] = ['name' => $nm, 'lat' => round($la, 6), 'lng' => round($lo, 6), 'radius' => $rad];
+            $nm = mb_substr(safe_text($x['name'] ?? ''), 0, 80); $la = (float)($x['lat'] ?? 0); $lo = (float)($x['lng'] ?? 0); $rad = max(20, min(5000, (int)($x['radius'] ?? 50)));
+            if ($nm === '' || abs($la) > 90 || abs($lo) > 180 || ($la == 0 && $lo == 0)) throw new HttpError('أكمل اسم كل مقر وإحداثياته');
+            $sites[] = ['name' => $nm, 'entity' => mb_substr(safe_text($x['entity'] ?? ''), 0, 120), 'lat' => round($la, 6), 'lng' => round($lo, 6), 'radius' => $rad];
         }
         $o['work']['sites'] = $sites;
         if ($o['work']['mobile'] !== 'off' && !$sites) throw new HttpError('أضف موقع عمل واحدًا على الأقل قبل تفعيل الحضور من الجوال');

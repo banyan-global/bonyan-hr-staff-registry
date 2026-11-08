@@ -72,7 +72,7 @@ try {
         /* طلبات المنسوبين */
         'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqDelete' => fn() => req_delete($b), 'payMonth' => fn() => pay_month($b),
         'actList' => fn() => act_list($b), 'actSave' => fn() => act_save($b), 'actDecide' => fn() => act_decide($b), 'actAck' => fn() => act_ack($b), 'actVoid' => fn() => act_void($b),
-        'attToday' => fn() => att_today($b), 'attCheck' => fn() => att_check($b), 'attFix' => fn() => att_fix($b),
+        'pushSub' => fn() => push_sub($b), 'pushUnsub' => fn() => push_unsub($b), 'attToday' => fn() => att_today($b), 'attCheck' => fn() => att_check($b), 'attFix' => fn() => att_fix($b),
         'evList' => fn() => ev_list($b), 'evSave' => fn() => ev_save($b), 'evAck' => fn() => ev_ack($b), 'evDelete' => fn() => ev_delete($b),
         'jobList' => fn() => job_list($b), 'jobSave' => fn() => job_save($b), 'jobsPublic' => fn() => jobs_public($b), 'jobApply' => fn() => job_apply($b), 'appSet' => fn() => app_set($b),
         'cusList' => fn() => cus_list($b), 'cusSave' => fn() => cus_save($b), 'cusReturn' => fn() => cus_return($b), 'cusAck' => fn() => cus_ack($b), 'reqTrack' => fn() => req_track($b), 'reqForms' => fn() => req_forms(), 'reqSupsSave' => fn() => req_sups_save($b), 'reqAct' => fn() => req_act($b), 'reqActDo' => fn() => req_act_do($b),
@@ -88,6 +88,9 @@ try {
     $a = (string)($b['action'] ?? '');
     if (!isset($map[$a])) throw new HttpError('unknown action');
     out($map[$a]());
+    /* تنبيهات الحضور بلا مهمة مجدولة: تُفحص بعد إرسال الرد، مرة كل ٤ دقائق على الأكثر */
+    if (function_exists('litespeed_finish_request')) litespeed_finish_request(); elseif (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+    try { att_push_tick(); } catch (Throwable $e) { }
 } catch (HttpError $e) {
     out(['ok' => false, 'error' => $e->getMessage()], $e->status >= 500 ? $e->status : 200);
 } catch (Throwable $e) {

@@ -3180,12 +3180,12 @@ setHTML = function () {
     '<div class="fld"><label for="stProb">فترة التجربة (يوم)</label><input id="stProb" type="number" min="0" max="180" value="' + esc(W.probation) + '"><small class="fhint">تظهر نهايتها مع الوثائق قبل حلولها بشهر</small></div>' +
     '<div class="fld wide"><div class="qgrid">' + qk.map(function (k) { return '<label><span>' + esc(k) + '</span><input type="number" min="0" max="180" data-quota="' + esc(k) + '" value="' + esc(L.quotas[k] || 0) + '"><small>يوم</small></label>'; }).join('') + '</div></div></div></div>');
   var mm = [['off', 'موقوف', 'البصمة فقط'], ['listed', 'لمنسوبين محددين', 'العمل الميداني أو عن بعد'], ['all', 'للجميع', 'كل المنسوبين']];
-  var mp = pn('teal', 'pin', 'الحضور من الجوال', 'يسجّل المنسوب حضوره وانصرافه من صفحته داخل نطاق موقع العمل، بجانب جهاز البصمة', '', '<div class="pb"><div class="form">' +
+  var mp = pn('teal', 'pin', 'البصمة من الجوال', 'يبصم المنسوب من جواله داخل نطاق مقر جهته، ويصله تنبيه عند بداية الدوام، وإن غادر النطاق أثناء الدوام يُطلب منه استئذان أو يُحتسب انصرافه', '', '<div class="pb"><div class="form">' +
     '<div class="fld wide"><label>من يسجّل من الجوال</label><div class="seg2">' + mm.map(function (x) { return '<button type="button" data-mob="' + x[0] + '" aria-pressed="' + (W.mobile === x[0]) + '">' + x[1] + '<small>' + x[2] + '</small></button>'; }).join('') + '</div></div>' +
     (W.mobile === 'listed' ? '<div class="fld wide"><label>المنسوبون المسموح لهم</label>' + ssel('stMobAdd', staffOpts().filter(function (o) { return W.mobileRefs.indexOf(o.v) < 0; }), '', 'أضف منسوبًا', function (v) { SD.work.mobileRefs.push(v); softRender(); }, 'إضافة منسوب') +
       '<div class="chipsel">' + W.mobileRefs.map(function (r) { var s = byRef(r); return '<button type="button" data-mobdel="' + esc(r) + '" aria-pressed="true">' + esc(s ? s.name : r) + ' ×</button>'; }).join('') + '</div></div>' : '') +
-    '<div class="fld wide"><label>مواقع العمل</label><div class="sites">' + W.sites.map(function (x, i) { return '<div class="siter"><input data-site="' + i + '.name" value="' + esc(x.name) + '" placeholder="اسم الموقع"><input data-site="' + i + '.lat" value="' + esc(x.lat) + '" dir="ltr" placeholder="خط العرض"><input data-site="' + i + '.lng" value="' + esc(x.lng) + '" dir="ltr" placeholder="خط الطول"><input data-site="' + i + '.radius" type="number" min="30" max="5000" value="' + esc(x.radius) + '" dir="ltr" title="النطاق بالمتر"><button type="button" class="ib" data-sitehere="' + i + '" title="موقعي الحالي" aria-label="استخدام موقعي الحالي">' + ic('pin') + '</button><button type="button" class="ib del" data-sitedel="' + i + '" aria-label="حذف الموقع">' + ic('x') + '</button></div>'; }).join('') +
-    '</div><button type="button" class="btn sm" id="siteAdd">' + ic('plus') + 'إضافة موقع</button><small class="fhint">الإحداثيات من خرائط جوجل (اضغط مطوّلًا على المكان)، أو افتح هذه الصفحة في الموقع واضغط «موقعي الحالي». النطاق بالمتر حول الموقع.</small></div></div></div>');
+    '<div class="fld wide"><label>مقرات الجهات (نقطة مركزية لكل مقر)</label><div class="sites">' + W.sites.map(function (x, i) { return '<div class="siter"><input data-site="' + i + '.name" value="' + esc(x.name) + '" placeholder="اسم المقر"><select data-site="' + i + '.entity" aria-label="الجهة"><option value="">كل الجهات</option>' + ENT.map(function (e) { return '<option' + (e.n === x.entity ? ' selected' : '') + '>' + esc(e.n) + '</option>'; }).join('') + '</select><input data-site="' + i + '.lat" value="' + esc(x.lat) + '" dir="ltr" placeholder="خط العرض"><input data-site="' + i + '.lng" value="' + esc(x.lng) + '" dir="ltr" placeholder="خط الطول"><input data-site="' + i + '.radius" type="number" min="30" max="5000" value="' + esc(x.radius) + '" dir="ltr" title="النطاق بالمتر"><button type="button" class="ib" data-sitehere="' + i + '" title="موقعي الحالي" aria-label="استخدام موقعي الحالي">' + ic('pin') + '</button><button type="button" class="ib del" data-sitedel="' + i + '" aria-label="حذف الموقع">' + ic('x') + '</button></div>'; }).join('') +
+    '</div><button type="button" class="btn sm" id="siteAdd">' + ic('plus') + 'إضافة مقر</button><small class="fhint">لكل جهة مقرها: يُقبل حضور منسوبيها داخل النطاق حوله فقط (50 م افتراضيًا). المقر بلا جهة يصلح لمن لا مقر لجهته. الإحداثيات من خرائط جوجل (اضغط مطوّلًا على المكان)، أو اضغط «موقعي الحالي» وأنت في المقر.</small></div></div></div>');
   return h.replace('<div class="setbar', '<div class="grid g2">' + qp + mp + '</div><div class="setbar');
 };
 var _bindSet0 = bindSet;
@@ -3198,11 +3198,11 @@ bindSet = function () {
   document.querySelectorAll('[data-quota]').forEach(function (x) { x.onchange = function () { SD.leave.quotas[x.dataset.quota] = +x.value || 0; re(); }; });
   document.querySelectorAll('[data-mob]').forEach(function (b) { b.onclick = function () { SD.work.mobile = b.dataset.mob; re(); }; });
   document.querySelectorAll('[data-mobdel]').forEach(function (b) { b.onclick = function () { SD.work.mobileRefs = SD.work.mobileRefs.filter(function (r) { return r !== b.dataset.mobdel; }); re(); }; });
-  document.querySelectorAll('[data-site]').forEach(function (x) { x.onchange = function () { var p = x.dataset.site.split('.'); SD.work.sites[+p[0]][p[1]] = p[1] === 'name' ? x.value : +x.value; re(); }; });
+  document.querySelectorAll('[data-site]').forEach(function (x) { x.onchange = function () { var p = x.dataset.site.split('.'); SD.work.sites[+p[0]][p[1]] = p[1] === 'name' || p[1] === 'entity' ? x.value : +x.value; re(); }; });
   document.querySelectorAll('[data-sitedel]').forEach(function (b) { b.onclick = function () { SD.work.sites.splice(+b.dataset.sitedel, 1); re(); }; });
   document.querySelectorAll('[data-sitehere]').forEach(function (b) { b.onclick = function () { if (!navigator.geolocation) return toast('المتصفح لا يدعم تحديد الموقع'); b.disabled = true;
     navigator.geolocation.getCurrentPosition(function (p) { var x = SD.work.sites[+b.dataset.sitehere]; x.lat = +p.coords.latitude.toFixed(6); x.lng = +p.coords.longitude.toFixed(6); re(); toast('أُخذ موقعك الحالي بدقة ' + Math.round(p.coords.accuracy) + ' م'); }, function () { b.disabled = false; toast('تعذّر تحديد موقعك؛ فعّل خدمة الموقع'); }, { enableHighAccuracy: true, timeout: 15000 }); }; });
-  if (g('siteAdd')) g('siteAdd').onclick = function () { SD.work.sites.push({ name: '', lat: '', lng: '', radius: 150 }); re(); };
+  if (g('siteAdd')) g('siteAdd').onclick = function () { SD.work.sites.push({ name: '', entity: '', lat: '', lng: '', radius: 50 }); re(); };
 };
 
 /* ---------- صفحة «حضوري»: التسجيل من الجوال ---------- */
@@ -3210,7 +3210,7 @@ var _myatt0 = VIEWS.myatt;
 VIEWS.myatt = function () {
   var h = _myatt0(), c = need('attToday', function () { return api({ action: 'attToday' }); }, 30000), d = c.data;
   if (!d || !d.on) return h;
-  var done = d.in && d.out, card = '<section class="pn mobck"><div class="mck">' + tile('teal', 'pin') + '<div><h2>' + (done ? 'سجّلت حضورك وانصرافك اليوم' : d.in ? 'حاضر منذ ' + d.in : 'لم تسجّل حضورك اليوم') + '</h2><p>' + (d.weekend ? 'اليوم عطلة نهاية الأسبوع. ' : '') + 'يُسجَّل من الجوال داخل نطاق مواقع العمل: ' + esc(d.sites.map(function (x) { return x.name; }).join('، ') || '—') + '.</p>' +
+  var done = d.in && d.out, card = '<section class="pn mobck"><div class="mck">' + tile('teal', 'pin') + '<div><h2>' + (done ? 'سجّلت حضورك وانصرافك اليوم' : d.in ? 'حاضر منذ ' + d.in : 'لم تسجّل حضورك اليوم') + '</h2><p>' + (d.weekend ? 'اليوم عطلة نهاية الأسبوع. ' : '') + 'تُقبل البصمة من جوالك داخل نطاق مقر جهتك، وإن غادرت النطاق أثناء الدوام يُطلب منك استئذان أو يُحتسب انصرافك.</p>' +
     (d.in ? '<div class="mtimes"><span>الحضور <b class="ltr">' + d.in + '</b></span><span>الانصراف <b class="ltr">' + (d.out || '—') + '</b></span></div>' : '') + '<div class="lerr" id="mckErr" role="alert"></div></div>' +
     '<button class="btn ' + (d.in ? 'prim' : 'goldb') + ' big" id="mckBtn">' + ic('finger') + (d.in ? (d.out ? 'تحديث الانصراف' : 'تسجيل الانصراف') : 'تسجيل الحضور') + '</button></div></section>';
   return h.replace('<div class="grid g4">', card + '<div class="grid g4">');
@@ -3219,7 +3219,7 @@ function mobCheck(b) {
   var err = document.getElementById('mckErr'); if (!navigator.geolocation) { err.textContent = 'المتصفح لا يدعم تحديد الموقع.'; return; }
   b.disabled = true; var t0 = b.innerHTML; b.innerHTML = ic('pin') + 'جارٍ تحديد موقعك…'; err.textContent = '';
   navigator.geolocation.getCurrentPosition(function (p) {
-    api({ action: 'attCheck', lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }).then(function (j) { seed('attToday', j); Object.keys(CACHE).forEach(function (k) { if (k.indexOf('myatt:') === 0) delete CACHE[k]; }); softRender(); toast((j.kind === 'in' ? 'سُجّل حضورك' : 'سُجّل انصرافك') + ' في ' + j.site); })
+    api({ action: 'attCheck', lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }).then(function (j) { seed('attToday', j); GEO.out = 0; GEO.permSent = false; Object.keys(CACHE).forEach(function (k) { if (k.indexOf('myatt:') === 0) delete CACHE[k]; }); softRender(); toast((j.kind === 'in' ? 'سُجّل حضورك' : 'سُجّل انصرافك') + ' في ' + j.site); })
       .catch(function (e) { b.disabled = false; b.innerHTML = t0; err.textContent = errText(e); });
   }, function (e) { b.disabled = false; b.innerHTML = t0; err.textContent = e && e.code === 1 ? 'اسمح للمنصة بالوصول إلى موقعك من إعدادات المتصفح، ثم حاول مرة أخرى.' : 'تعذّر تحديد موقعك. فعّل خدمة الموقع وحاول مرة أخرى.'; }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
 }
@@ -3435,6 +3435,113 @@ bindHrx = function () {
   document.querySelectorAll('[data-cus-ret]').forEach(function (b) { b.onclick = function () { var x = cd.rows.filter(function (r) { return r.id === +b.dataset.cusRet; })[0]; if (x) cusReturn(x); }; });
   document.querySelectorAll('[data-cus-ed]').forEach(function (b) { b.onclick = function () { var x = cd.rows.filter(function (r) { return r.id === +b.dataset.cusEd; })[0]; if (x) cusForm(x); }; });
   document.querySelectorAll('[data-cus-ack]').forEach(function (b) { b.onclick = function () { b.disabled = true; api({ action: 'cusAck', id: +b.dataset.cusAck }).then(function (j) { cd.rows = cd.rows.map(function (r) { return r.id === j.row.id ? j.row : r; }); softRender(); toast('سُجّل إقرارك باستلام العهدة'); }).catch(function (e) { b.disabled = false; toast(errText(e)); }); }; });
+};
+
+/* ======================================================================
+   ربط البصمة بالجوال ومقر الجهة: تنبيه بداية الدوام، ومراقبة النطاق أثناء الدوام
+   ====================================================================== */
+ALIAS['myatt-ck'] = ['myatt']; ALIAS['myatt-perm'] = ['myatt']; ALIAS['myatt-out'] = ['myatt'];
+var GEO = { watch: null, out: 0, timer: null, asked: false, pend: '', last: null, exitAt: 0 };
+(function () { var h = location.hash.slice(1); if (/^myatt-(ck|perm|out)$/.test(h)) GEO.pend = h.slice(6); window.addEventListener('hashchange', function () { var x = location.hash.slice(1); if (/^myatt-(ck|perm|out)$/.test(x)) GEO.pend = x.slice(6); }); })();
+function geoD(a1, o1, a2, o2) { var R = 6371000, r = Math.PI / 180, dp = (a2 - a1) * r, dl = (o2 - o1) * r, h = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(a1 * r) * Math.cos(a2 * r) * Math.sin(dl / 2) * Math.sin(dl / 2); return 2 * R * Math.asin(Math.min(1, Math.sqrt(h))); }
+function attT() { var c = CACHE.attToday; return c && c.data; }
+function inWork(d) { var n = new Date(), m = n.getHours() * 60 + n.getMinutes(), f = function (t) { var p = String(t || '').split(':'); return +p[0] * 60 + +p[1]; }; return !d.weekend && m >= f(d.start) && m < f(d.end); }
+/* تفعيل التنبيهات: عامل الخدمة + اشتراك Web Push */
+function pushOn(btn) {
+  var d = attT(); if (!('serviceWorker' in navigator) || !('PushManager' in window)) { toast(/iP(hone|ad)/.test(navigator.userAgent) ? 'على الآيفون: أضف المنصة إلى الشاشة الرئيسية من زر المشاركة، ثم افتحها منها وفعّل التنبيهات' : 'المتصفح لا يدعم التنبيهات؛ استخدم Chrome'); return; }
+  if (btn) btn.disabled = true;
+  Notification.requestPermission().then(function (p) {
+    if (p !== 'granted') throw new Error('لم تسمح بالتنبيهات. فعّلها من إعدادات المتصفح للمنصة.');
+    return navigator.serviceWorker.register('sw.js').then(function () { return navigator.serviceWorker.ready; });
+  }).then(function (reg) {
+    var k = d.vapid.replace(/-/g, '+').replace(/_/g, '/'), raw = atob(k + '==='.slice((k.length + 3) % 4)), key = new Uint8Array(raw.length); for (var i = 0; i < raw.length; i++) key[i] = raw.charCodeAt(i);
+    return reg.pushManager.getSubscription().then(function (s) { return s || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }); });
+  }).then(function (s) { var j = s.toJSON(); return api({ action: 'pushSub', endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }); })
+    .then(function () { d.push = true; softRender(); toast('فُعّلت التنبيهات على هذا الجهاز'); })
+    .catch(function (e) { if (btn) btn.disabled = false; toast(e && e.message ? e.message : errText(e)); });
+}
+function geoNote(title, body, actions) {
+  try { if (Notification.permission === 'granted' && navigator.serviceWorker) navigator.serviceWorker.getRegistration().then(function (r) { if (r) r.showNotification(title, { body: body, icon: 'icon-192.png', dir: 'rtl', lang: 'ar', tag: 'att-exit', renotify: true, requireInteraction: true, data: { url: '#myatt' }, actions: actions || [] }); }); } catch (e) { }
+}
+/* مراقبة النطاق أثناء الدوام (تعمل والمنصة مفتوحة على الجوال) */
+function geoStart() {
+  var d = attT(); if (role !== 'staff' || !d || !d.on || !navigator.geolocation) return geoStop();
+  var need = d.in && !d.out && inWork(d) && d.sites.length;
+  if (!need) return geoStop();
+  if (GEO.watch !== null) return;
+  var go = function () { GEO.watch = navigator.geolocation.watchPosition(geoTick, function () { }, { enableHighAccuracy: true, maximumAge: 30000, timeout: 60000 }); };
+  if (navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name: 'geolocation' }).then(function (p) { if (p.state === 'granted') go(); }, go); else go();
+}
+function geoStop() { if (GEO.watch !== null) { navigator.geolocation.clearWatch(GEO.watch); GEO.watch = null; } }
+function geoTick(p) {
+  var d = attT(); if (!d || !d.in || d.out || !inWork(d)) return geoStop();
+  var c = p.coords; if (c.accuracy > 120) return;
+  var best = d.sites.reduce(function (b, x) { var m = geoD(c.latitude, c.longitude, x.lat, x.lng); return !b || m < b.m ? { s: x, m: m } : b; }, null); if (!best) return;
+  GEO.last = { lat: c.latitude, lng: c.longitude, acc: c.accuracy, m: best.m, s: best.s };
+  var outside = best.m > best.s.radius + Math.min(c.accuracy / 2, 25);
+  if (outside) { GEO.out++; if (GEO.out >= 2 && !document.getElementById('exLayer') && !GEO.permSent) geoExit(best); }
+  else { GEO.out = 0; if (GEO.timer) { clearTimeout(GEO.timer); GEO.timer = null; } var L = document.getElementById('exLayer'); if (L) { L.close(); toast('عدت إلى نطاق المقر'); } }
+}
+function geoExit(best) {
+  GEO.exitAt = Date.now();
+  geoNote('خرجت من نطاق المقر', 'أنت على بُعد ' + Math.round(best.m) + ' م من ' + best.s.name + '. قدّم استئذانًا لمسؤولك المباشر أو سجّل انصرافك، وإلا يُحتسب انصرافًا بعد ١٠ دقائق.', [{ action: 'perm', title: 'طلب استئذان' }, { action: 'out', title: 'تسجيل انصراف' }]);
+  exitDlg(best);
+  if (GEO.timer) clearTimeout(GEO.timer);
+  GEO.timer = setTimeout(function () { var g = GEO.last; if (!g || g.m <= g.s.radius + 25 || GEO.permSent) return; geoCheckout(true); }, 10 * 60 * 1000);
+}
+function geoCheckout(auto, btn) {
+  var g = GEO.last; if (!g) return;
+  if (btn) btn.disabled = true;
+  api({ action: 'attCheck', lat: g.lat, lng: g.lng, acc: g.acc, exit: 1, auto: auto ? 1 : 0 }).then(function (j) { seed('attToday', j); geoStop(); if (GEO.timer) { clearTimeout(GEO.timer); GEO.timer = null; } var L = document.getElementById('exLayer'); if (L) L.close(); Object.keys(CACHE).forEach(function (k) { if (k.indexOf('myatt:') === 0) delete CACHE[k]; }); softRender(); toast(auto ? 'احتُسب انصرافك لمغادرتك نطاق المقر' : 'سُجّل انصرافك'); if (auto) geoNote('احتُسب انصرافك', 'غادرت نطاق المقر دون استئذان، فسُجّل انصرافك تلقائيًا.'); })
+    .catch(function (e) { if (btn) btn.disabled = false; toast(errText(e)); });
+}
+function exitDlg(best) {
+  var sups = (formsData() || {}).sups || [], last = reqRows().filter(function (r) { return ME && r.ref === ME.ref && r.data && r.data.supervisor; })[0], sup = last ? last.data.supervisor : '';
+  var now = new Date(), hhmm = function (d) { return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }, back = new Date(now.getTime() + 3600000);
+  var d = attT(), endM = String(d.end || '16:00'); if (hhmm(back) > endM) back = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +endM.slice(0, 2), +endM.slice(3, 5));
+  var F = { sup: sup, to: hhmm(back), why: '' };
+  var el = layer('exLayer', { tile: tile('garnet', 'pin'), t: 'خرجت من نطاق المقر', p: 'على بُعد ' + Math.round(best.m) + ' م من ' + esc(best.s.name) },
+    '<div class="note warn">' + ic('alert') + '<span>أنت خارج نطاق ' + best.s.radius + ' م من المقر أثناء الدوام. اختر أحد الأمرين، وإن لم تختر ولم تعد إلى المقر يُحتسب انصرافك بعد <b>١٠ دقائق</b>.</span></div>' +
+    '<div class="exopts"><div class="exo"><h3>' + ic('clock') + 'طلب استئذان من المسؤول المباشر</h3><div class="form">' +
+    (sups.length ? '<div class="fld wide"><label>المسؤول المباشر <i class="rq">*</i></label>' + ssel('exSup', sups.map(function (x) { return { v: x.id, n: x.name, d: x.title || '', ic: 'user' }; }), F.sup, 'اختر مسؤولك المباشر', function (v) { F.sup = v; }, 'المسؤول المباشر') + '</div>' : '') +
+    fldH('ex_to', 'أعود حتى الساعة', '<input id="ex_to" type="time" dir="ltr" value="' + F.to + '">', true) + fldH('ex_why', 'السبب', '<input id="ex_why" maxlength="300" placeholder="مثال: مراجعة جهة حكومية">', true, true) +
+    '</div><div class="lerr" id="exErr" role="alert"></div><button class="btn goldb" id="exPerm">' + ic('send') + 'إرسال الاستئذان</button></div>' +
+    '<div class="exo"><h3>' + ic('out') + 'انتهى عملي اليوم</h3><p>يُسجَّل انصرافك الآن بوقت المغادرة.</p><button class="btn prim" id="exOut">' + ic('finger') + 'تسجيل انصرافي الآن</button></div></div>', '', 'anm');
+  el.querySelector('#exOut').onclick = function () { geoCheckout(false, this); };
+  el.querySelector('#exPerm').onclick = function () {
+    var b = this, er = el.querySelector('#exErr'), to = el.querySelector('#ex_to').value, why = el.querySelector('#ex_why').value.trim(), from = hhmm(new Date());
+    if (why.length < 3) { er.textContent = 'اكتب سبب الاستئذان'; return; } if (!to || to <= from) { er.textContent = 'وقت العودة يجب أن يكون بعد الآن'; return; } if (sups.length && !F.sup) { er.textContent = 'اختر مسؤولك المباشر'; return; }
+    b.disabled = true; var t = new Date(), day = t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2) + '-' + ('0' + t.getDate()).slice(-2);
+    api({ action: 'reqCreate', type: 'perm', data: { kind: 'خروج أثناء الدوام', day: day, fromT: from, toT: to, reason: why + ' (عند مغادرة نطاق المقر)', supervisor: F.sup } }).then(function (j) {
+      GEO.permSent = true; if (GEO.timer) { clearTimeout(GEO.timer); GEO.timer = null; } var rows = reqRows().slice(); j.request.mine = true; rows.unshift(j.request); seed('reqs', rows);
+      el.close(); toast('أُرسل الاستئذان ' + j.request.no + ' لمسؤولك المباشر، ولن يُحتسب انصرافك'); softRender();
+    }).catch(function (e) { b.disabled = false; er.textContent = errText(e); });
+  };
+}
+/* بطاقة «حضوري»: المقر وحالة التنبيهات */
+var _myatt1 = VIEWS.myatt;
+VIEWS.myatt = function () {
+  var h = _myatt1(), d = attT(); if (!d || !d.on) return h;
+  var pushOk = d.push && typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  var extra = '<div class="mlink">' + (d.sites.length ? '<span>' + ic('pin') + 'مقرك: <b>' + esc(d.sites.map(function (x) { return x.name; }).join('، ')) + '</b> · النطاق ' + d.sites[0].radius + ' م</span>' : '<span class="tbad">' + ic('alert') + 'لم يُحدَّد مقر لجهتك بعد</span>') +
+    (pushOk ? '<span class="tok">' + ic('bell') + 'التنبيهات مفعّلة</span>' : '<button class="btn sm goldb" id="pushOn">' + ic('bell') + 'فعّل تنبيه بداية الدوام</button>') +
+    (GEO.watch !== null ? '<span class="tok">' + ic('eye') + 'متابعة النطاق تعمل</span>' : '') + '</div>';
+  return h.replace('<div class="lerr" id="mckErr"', extra + '<div class="lerr" id="mckErr"');
+};
+var _bindHrx1 = bindHrx;
+bindHrx = function () {
+  _bindHrx1();
+  if (role !== 'staff') return;
+  var c = need('attToday', function () { return api({ action: 'attToday' }); }, 60000);
+  if (c.data && c.data.on && c.data.in && !c.data.out) formsData();
+  var pb = document.getElementById('pushOn'); if (pb) pb.onclick = function () { pushOn(pb); };
+  if (c.data) {
+    geoStart();
+    var mb = document.getElementById('mckBtn'); if (mb && GEO.pulse > Date.now()) mb.classList.add('pulse');
+    if (GEO.pend && view === 'myatt') { var a = GEO.pend; GEO.pend = '';
+      if (a === 'ck') { GEO.pulse = Date.now() + 5000; var b0 = document.getElementById('mckBtn'); if (b0) b0.scrollIntoView({ block: 'center' }); }
+      if ((a === 'perm' || a === 'out') && GEO.last) { if (a === 'out') geoCheckout(false); else exitDlg({ m: GEO.last.m, s: GEO.last.s }); } }
+  }
 };
 
 window.addEventListener('hashchange', route);

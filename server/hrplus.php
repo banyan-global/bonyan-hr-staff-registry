@@ -277,6 +277,13 @@ function geo_m(float $a1, float $o1, float $a2, float $o2): float {
     $R = 6371000; $p1 = deg2rad($a1); $p2 = deg2rad($a2); $dp = deg2rad($a2 - $a1); $dl = deg2rad($o2 - $o1);
     $h = sin($dp / 2) ** 2 + cos($p1) * cos($p2) * sin($dl / 2) ** 2; return 2 * $R * asin(min(1, sqrt($h)));
 }
+/* مقرات المنسوب: مقر جهته (وما لم تُحدَّد له جهة يصلح للجميع) */
+function att_sites_for(string $ref): array {
+    $s = staff_get($ref); $ent = mb_strtolower(trim((string)($s['data']['entity'] ?? '')));
+    $all = (array)site()['work']['sites'];
+    $mine = array_values(array_filter($all, fn($x) => trim((string)($x['entity'] ?? '')) !== '' && mb_strtolower(trim((string)$x['entity'])) === $ent));
+    return $mine ?: array_values(array_filter($all, fn($x) => trim((string)($x['entity'] ?? '')) === ''));
+}
 function att_mobile_ok(string $ref): bool { $W = site()['work']; return $W['mobile'] === 'all' || ($W['mobile'] === 'listed' && in_array($ref, (array)$W['mobileRefs'], true)); }
 /* سجل اليوم للمنسوب (للزر في صفحته) */
 function att_today(array $b): array {
@@ -284,7 +291,8 @@ function att_today(array $b): array {
     $r = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, date('Y-m-d')]);
     $W = site()['work'];
     return ['ok' => true, 'on' => att_mobile_ok($ref), 'in' => $r ? substr((string)$r['in_time'], 0, 5) : '', 'out' => $r && $r['out_time'] ? substr((string)$r['out_time'], 0, 5) : '', 'source' => $r['source'] ?? '',
-        'sites' => array_map(fn($x) => ['name' => $x['name'], 'radius' => $x['radius'], 'lat' => $x['lat'], 'lng' => $x['lng']], $W['sites']), 'weekend' => in_array((int)date('w'), $W['weekend'], true), 'now' => date('H:i')];
+        'sites' => array_map(fn($x) => ['name' => $x['name'], 'radius' => $x['radius'], 'lat' => $x['lat'], 'lng' => $x['lng']], att_sites_for($ref)), 'weekend' => in_array((int)date('w'), $W['weekend'], true), 'now' => date('H:i'),
+        'start' => $W['start'], 'end' => $W['end'], 'grace' => (int)$W['grace'], 'push' => (bool)q1('SELECT id FROM push_subs WHERE user_id=? LIMIT 1', [(int)$u['id']]), 'vapid' => vapid()['pub']];
 }
 function att_check(array $b): array {
     $u = hrp_me(); $ref = my_staff_ref($u); if (!$ref) throw new HttpError('لا يوجد سجل منسوب لهذا الحساب');
@@ -294,14 +302,18 @@ function att_check(array $b): array {
     if (($la == 0 && $lo == 0) || abs($la) > 90 || abs($lo) > 180) throw new HttpError('تعذّر قراءة موقعك. فعّل خدمة الموقع في الجوال وحاول مرة أخرى.');
     if ($acc > 300) throw new HttpError('دقة الموقع ضعيفة (' . round($acc) . ' م). اخرج إلى مكان مفتوح أو فعّل «الموقع الدقيق» وحاول مرة أخرى.');
     $best = null;
-    foreach (site()['work']['sites'] as $x) { $d = geo_m($la, $lo, (float)$x['lat'], (float)$x['lng']); if (!$best || $d < $best[1]) $best = [$x, $d]; }
-    if (!$best) throw new HttpError('لم تُضَف مواقع العمل بعد');
-    if ($best[1] > $best[0]['radius'] + min($acc, 100)) throw new HttpError('أنت على بُعد ' . round($best[1]) . ' م من «' . $best[0]['name'] . '». يُسجَّل الحضور داخل نطاق ' . $best[0]['radius'] . ' م من موقع العمل.');
+    foreach (att_sites_for($ref) as $x) { $d = geo_m($la, $lo, (float)$x['lat'], (float)$x['lng']); if (!$best || $d < $best[1]) $best = [$x, $d]; }
+    if (!$best) throw new HttpError('لم يُحدَّد مقر لجهتك بعد. تواصل مع الموارد البشرية.');
+    $exit = !empty($b['exit']);
+    /* هامش الدقة: نصف دقة القراءة بحد أقصى 25 م، حتى لا يُقبل من خارج النطاق بقراءة ضعيفة */
+    if (!$exit && $best[1] > $best[0]['radius'] + min($acc / 2, 25)) throw new HttpError('أنت على بُعد ' . round($best[1]) . ' م من «' . $best[0]['name'] . '». تُقبل البصمة داخل ' . $best[0]['radius'] . ' م من المقر فقط.');
     $day = date('Y-m-d'); $t = date('H:i:s'); $W = site()['work'];
     named_lock('att:' . $ref);
     try {
         $r = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, $day]);
         $src = 'الجوال · ' . $best[0]['name'] . ' · ' . round($best[1]) . ' م';
+        if ($exit && (!$r || $r['out_time'])) throw new HttpError('لا يوجد حضور مفتوح اليوم لتسجيل انصرافه');
+        if ($exit) $src = 'انصراف عند مغادرة النطاق' . (!empty($b['auto']) ? ' (تلقائي)' : '') . ' · ' . round($best[1]) . ' م من ' . $best[0]['name'];
         if (!$r) {
             [$m, $late, $early] = att_calc(substr($t, 0, 5), '', $W);
             q('INSERT INTO attendance (ref, day, in_time, out_time, minutes, late_min, early_min, source, batch, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)', [$ref, $day, $t, null, 0, $late, 0, $src, 'mobile', now()]);
@@ -309,11 +321,11 @@ function att_check(array $b): array {
         } else {
             if ($r['out_time'] && substr((string)$r['out_time'], 0, 5) === date('H:i')) throw new HttpError('سُجّل انصرافك للتو');
             [$m, $late, $early] = att_calc(substr((string)$r['in_time'], 0, 5), substr($t, 0, 5), $W);
-            q('UPDATE attendance SET out_time=?, minutes=?, late_min=?, early_min=?, source=? WHERE id=?', [$t, $m, $late, $early, mb_substr($r['source'] . ' | انصراف: ' . $best[0]['name'], 0, 120), $r['id']]);
+            q('UPDATE attendance SET out_time=?, minutes=?, late_min=?, early_min=?, source=? WHERE id=?', [$t, $m, $late, $early, mb_substr($r['source'] . ' | ' . ($exit ? $src : 'انصراف: ' . $best[0]['name']), 0, 120), $r['id']]);
             $kind = 'out';
         }
     } finally { named_unlock('att:' . $ref); }
-    audit_log($ref, $kind === 'in' ? 'تسجيل حضور من الجوال' : 'تسجيل انصراف من الجوال', $best[0]['name'] . ' · ' . round($best[1]) . ' م · دقة ' . round($acc) . ' م', hrp_label($u));
+    audit_log($ref, $kind === 'in' ? 'تسجيل حضور من الجوال' : ($exit ? 'انصراف عند مغادرة نطاق المقر' . (!empty($b['auto']) ? ' (تلقائي)' : '') : 'تسجيل انصراف من الجوال'), $best[0]['name'] . ' · ' . round($best[1]) . ' م · دقة ' . round($acc) . ' م', hrp_label($u));
     return ['ok' => true, 'kind' => $kind, 'site' => $best[0]['name'], 'dist' => round($best[1])] + att_today([]);
 }
 /* تصحيح يوم حضور بسبب مكتوب (يُحفظ في سجل العمليات بالقيم السابقة والجديدة) */
@@ -493,4 +505,77 @@ function cv_serve(): void {
     $p = storage_dir() . '/' . $a['cv_file']; if (!is_file($p)) throw new HttpError('file_missing', 404);
     header('Content-Type: application/pdf'); header('Content-Disposition: inline; filename="cv-' . (int)$a['id'] . '.pdf"'); header('X-Content-Type-Options: nosniff'); header('Cache-Control: private, no-store');
     readfile($p); exit;
+}
+
+/* ============================================================ تنبيهات الجوال (Web Push بمعيار VAPID) */
+if (!function_exists('b64u')) { function b64u(string $s): string { return rtrim(strtr(base64_encode($s), '+/', '-_'), '='); } }
+if (!function_exists('b64u_dec')) { function b64u_dec(string $s): string { return (string)base64_decode(strtr($s, '-_', '+/') . str_repeat('=', (4 - strlen($s) % 4) % 4)); } }
+function ec_pub_pem(string $raw): string { return "-----BEGIN PUBLIC KEY-----\n" . chunk_split(base64_encode(hex2bin('3059301306072a8648ce3d020106082a8648ce3d030107034200') . $raw), 64, "\n") . "-----END PUBLIC KEY-----\n"; }
+function ec_raw_pub($key): string { $d = openssl_pkey_get_details($key); return "\x04" . str_pad($d['ec']['x'], 32, "\0", STR_PAD_LEFT) . str_pad($d['ec']['y'], 32, "\0", STR_PAD_LEFT); }
+/* مفتاحا VAPID يُنشآن مرة واحدة ويُحفظان في الإعدادات (الخاص لا يغادر الخادم) */
+function vapid(): array {
+    static $v = null; if ($v) return $v;
+    $x = json_decode((string)(setting('vapid') ?: ''), true);
+    if (!is_array($x) || empty($x['priv'])) {
+        $k = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]); openssl_pkey_export($k, $pem);
+        $x = ['priv' => $pem, 'pub' => b64u(ec_raw_pub($k))]; setting_set('vapid', json_encode($x));
+    }
+    return $v = $x;
+}
+function der_to_raw(string $der): string {
+    $o = 3; $lr = ord($der[$o]); $r = substr($der, $o + 1, $lr); $o += 1 + $lr + 1; $ls = ord($der[$o]); $s = substr($der, $o + 1, $ls);
+    return str_pad(ltrim($r, "\0"), 32, "\0", STR_PAD_LEFT) . str_pad(ltrim($s, "\0"), 32, "\0", STR_PAD_LEFT);
+}
+function vapid_jwt(string $aud): string {
+    $h = b64u(json_encode(['typ' => 'JWT', 'alg' => 'ES256'])); $c = b64u(json_encode(['aud' => $aud, 'exp' => time() + 43200, 'sub' => rtrim((string)cfg('site_url'), '/')]));
+    openssl_sign($h . '.' . $c, $sig, vapid()['priv'], OPENSSL_ALGO_SHA256); return $h . '.' . $c . '.' . b64u(der_to_raw($sig));
+}
+/* تشفير الرسالة (RFC 8291 · aes128gcm) */
+function push_encrypt(string $payload, string $uaPub, string $auth): string {
+    $as = openssl_pkey_new(['curve_name' => 'prime256v1', 'private_key_type' => OPENSSL_KEYTYPE_EC]); $asPub = ec_raw_pub($as);
+    $ecdh = openssl_pkey_derive(openssl_pkey_get_public(ec_pub_pem($uaPub)), $as, 32); if ($ecdh === false) throw new RuntimeException('ecdh');
+    $ikm = hash_hmac('sha256', "WebPush: info\0" . $uaPub . $asPub . "\x01", hash_hmac('sha256', $ecdh, $auth, true), true);
+    $salt = random_bytes(16); $prk = hash_hmac('sha256', $ikm, $salt, true);
+    $cek = substr(hash_hmac('sha256', "Content-Encoding: aes128gcm\0\x01", $prk, true), 0, 16); $nonce = substr(hash_hmac('sha256', "Content-Encoding: nonce\0\x01", $prk, true), 0, 12);
+    $ct = openssl_encrypt($payload . "\x02", 'aes-128-gcm', $cek, OPENSSL_RAW_DATA, $nonce, $tag);
+    return $salt . pack('N', 4096) . chr(65) . $asPub . $ct . $tag;
+}
+function push_send_one(array $sub, array $msg): int {
+    $u = parse_url((string)$sub['endpoint']); if (($u['scheme'] ?? '') !== 'https' || empty($u['host'])) return 400;
+    $body = push_encrypt(json_encode($msg, JSON_UNESCAPED_UNICODE), b64u_dec((string)$sub['p256dh']), b64u_dec((string)$sub['auth']));
+    $ch = curl_init((string)$sub['endpoint']);
+    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/octet-stream', 'Content-Encoding: aes128gcm', 'TTL: 3600', 'Urgency: high', 'Authorization: vapid t=' . vapid_jwt($u['scheme'] . '://' . $u['host']) . ', k=' . vapid()['pub']]]);
+    curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+    if ($code === 404 || $code === 410) q('DELETE FROM push_subs WHERE id=?', [$sub['id']]);
+    return $code;
+}
+function push_to_user(int $uid, array $msg): int { $n = 0; foreach (q('SELECT * FROM push_subs WHERE user_id=?', [$uid])->fetchAll() as $s) { try { if (push_send_one($s, $msg) < 300) $n++; } catch (Throwable $e) { } } return $n; }
+function push_sub(array $b): array {
+    $u = hrp_me(); $e = (string)($b['endpoint'] ?? ''); $k = (string)($b['p256dh'] ?? ''); $a = (string)($b['auth'] ?? '');
+    if (!preg_match('~^https://[^\s]{10,500}$~', $e) || strlen(b64u_dec($k)) !== 65 || strlen(b64u_dec($a)) < 16) throw new HttpError('اشتراك تنبيهات غير صالح');
+    q('DELETE FROM push_subs WHERE endpoint=?', [$e]);
+    q('INSERT INTO push_subs (user_id, endpoint, p256dh, auth, ua, created_at) VALUES (?,?,?,?,?,?)', [(int)$u['id'], $e, $k, $a, mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200), now()]);
+    $n = push_to_user((int)$u['id'], ['title' => 'فُعّلت تنبيهات الحضور', 'body' => 'سيصلك تنبيه عند بداية الدوام لتسجيل حضورك، وعند نهايته.', 'url' => '#myatt']);
+    return ['ok' => true, 'sent' => $n];
+}
+function push_unsub(array $b): array { $u = hrp_me(); q('DELETE FROM push_subs WHERE user_id=? AND endpoint=?', [(int)$u['id'], (string)($b['endpoint'] ?? '')]); return ['ok' => true]; }
+/* جولة التنبيهات: عند بداية الدوام لمن لم يسجّل حضوره، وعند نهايته لمن لم يسجّل انصرافه (مرة في اليوم لكل منهما) */
+function att_push_tick(bool $force = false): array {
+    $W = site()['work']; $out = ['start' => 0, 'end' => 0];
+    if ($W['mobile'] === 'off' || in_array((int)date('w'), $W['weekend'], true)) return $out;
+    if (!$force) { if (kv_get('attpush:last') !== null) return $out; kv_put('attpush:last', '1', 240); }
+    $now = (int)date('H') * 60 + (int)date('i'); $mn = fn($t) => (int)substr($t, 0, 2) * 60 + (int)substr($t, 3, 2);
+    $inStart = $now >= $mn($W['start']) - 10 && $now <= $mn($W['start']) + max(30, (int)$W['grace']); $inEnd = $now >= $mn($W['end']) && $now <= $mn($W['end']) + 45;
+    if (!$inStart && !$inEnd) return $out;
+    $day = date('Y-m-d');
+    foreach (q("SELECT DISTINCT p.user_id, u.staff_ref FROM push_subs p JOIN users u ON u.id=p.user_id WHERE u.active=1 AND u.staff_ref IS NOT NULL")->fetchAll() as $x) {
+        $ref = (string)$x['staff_ref']; if (!att_mobile_ok($ref)) continue;
+        $lv = false; foreach (q("SELECT data FROM requests WHERE ref=? AND status='approved' AND type IN ('leave','travel')", [$ref])->fetchAll() as $r) { $d = json_decode($r['data'], true) ?: []; if (($d['from'] ?? '') <= $day && ($d['to'] ?? '') >= $day) { $lv = true; break; } }
+        if ($lv) continue;
+        $a = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, $day]);
+        if ($inStart && !$a && kv_get('attpush:s:' . $ref . ':' . $day) === null) { kv_put('attpush:s:' . $ref . ':' . $day, '1', 86400); if (push_to_user((int)$x['user_id'], ['title' => 'بداية الدوام', 'body' => 'اضغط لتسجيل حضورك من مقر جهتك.', 'url' => '#myatt-ck', 'tag' => 'att-in'])) $out['start']++; }
+        if ($inEnd && $a && !$a['out_time'] && kv_get('attpush:e:' . $ref . ':' . $day) === null) { kv_put('attpush:e:' . $ref . ':' . $day, '1', 86400); if (push_to_user((int)$x['user_id'], ['title' => 'نهاية الدوام', 'body' => 'لا تنسَ تسجيل انصرافك قبل مغادرة المقر.', 'url' => '#myatt-ck', 'tag' => 'att-out'])) $out['end']++; }
+    }
+    return $out;
 }
