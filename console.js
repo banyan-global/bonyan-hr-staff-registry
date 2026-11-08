@@ -1560,7 +1560,7 @@ function rwPrefill() {
 function rwBody() {
   if (RW.i === 0) {
     var T = RW_TYPES.filter(function (t) { return (formsData() ? !!formOf(t[0]) : ['leave', 'travel', 'cert'].indexOf(t[0]) > -1) && !(t[5] && role === 'staff'); });
-    return (role !== 'staff' ? '<div class="fld wide"><label for="rwRefS">المنسوب <i class="rq">*</i></label>' + ssel('rwRefS', STAFF.map(function (s) { return { v: s.ref, n: s.name, d: s.ref + ' · ' + s.ent.n, c: s.ent.c }; }), RW.ref, 'اختر المنسوب', function (v) { RW.ref = v; render(); }, 'المنسوب') + '</div>' : '') +
+    return (role !== 'staff' ? '<div class="fld wide"><label for="rwRefS">' + (RW.type === 'hire' ? 'صاحب الاحتياج (مدير الإدارة أو المسؤول عنها)' : 'المنسوب') + ' <i class="rq">*</i></label>' + ssel('rwRefS', STAFF.map(function (s) { return { v: s.ref, n: s.name, d: s.ref + ' · ' + s.ent.n, c: s.ent.c }; }), RW.ref, 'اختر المنسوب', function (v) { if (v !== RW.ref) RW.d = {}; RW.ref = v; RW.err = ''; render(); }, 'المنسوب') + (RW.type === 'hire' ? '<small class="fhint">يصله إشعار بكل خطوة في مسار الاحتياج.</small>' : '') + '</div>' : '') +
       '<div class="ccards" role="radiogroup" aria-label="نوع الطلب">' + T.filter(function (t) { return formOn(t[0]); }).map(function (t) { return '<button type="button" class="ccard" role="radio" data-rwtype="' + t[0] + '" aria-checked="' + (RW.type === t[0]) + '"><span class="ti" style="background:' + t[3] + '">' + ic(t[4]) + '</span><b>' + t[1] + '</b><small>' + t[2] + '</small></button>'; }).join('') + '</div>';
   }
   if (RW.i === 1) {
@@ -1580,7 +1580,7 @@ function rwBody() {
     if (RW.type === 'travel') return '<div class="form">' + rwField('rw_dest', 'الوجهة', rwIn('dest', 'text', 'مثال: جاكرتا، إندونيسيا'), true) + rwField('tk', 'وسيلة السفر', rwSeg('transport', ['طيران', 'بري', 'لا يلزم']), true) +
       rwField('rw_from', 'تاريخ السفر', rwIn('from', 'date'), true) + rwField('rw_to', 'تاريخ العودة', rwIn('to', 'date'), true) +
       rwField('rw_purpose', 'الغرض من المهمة', '<textarea id="rw_purpose" data-rw="purpose" maxlength="1500" placeholder="مثال: زيارة إشرافية لمراكز التدريب">' + esc(RW.d.purpose || '') + '</textarea>', true, true) +
-      '<div class="fld"><label class="ck"><input type="checkbox" data-rwck="hotel"' + (RW.d.hotel ? ' checked' : '') + '> أحتاج سكنًا</label></div>' + rwField('rw_advance', 'سلفة مصاريف (ر.س)', rwIn('advance', 'number', '0', ' min="0"')) + '</div>';
+      '<div class="fld"><label class="ck"><input type="checkbox" data-rwck="hotel"' + (RW.d.hotel ? ' checked' : '') + '> أحتاج سكنًا</label></div>' + rwField('rw_advance', 'سلفة مصاريف (ر.س)', rwIn('advance', 'text', '0', ' inputmode="decimal" dir="ltr" data-num="1"')) + '</div>';
     return '<div class="form">' + rwField('ck', 'نوع الخطاب', rwSeg('kind', ['تعريف بالراتب', 'شهادة خبرة', 'تعريف بدون راتب']), true, true) +
       rwField('rw_to', 'الجهة الموجّه إليها', rwIn('to', 'text', 'مثال: البنك الأهلي، سفارة إندونيسيا'), true) + rwField('cl', 'لغة الخطاب', rwSeg('lang', ['العربية', 'الإنجليزية']), true) +
       rwField('rw_note', 'ملاحظات', '<textarea id="rw_note" data-rw="note" maxlength="800" placeholder="اختياري">' + esc(RW.d.note || '') + '</textarea>', false, true) + '</div>';
@@ -1606,7 +1606,8 @@ function rwHTML() {
     '<aside class="wside" aria-label="تقدم الطلب"><div class="wsh">' + tile('gold', 'stamp') + '<div><b>طلب جديد</b><small>' + (s ? esc(s.name) : 'يصلك رقم الطلب فور الإرسال') + '</small></div></div><ol class="wsteps">' + RW_STEPS.map(function (x, k) { return '<li class="' + (k < RW.i ? 'done' : k === RW.i ? 'on' : '') + '"><span><b>' + x[0] + '</b><small>' + x[1] + '</small></span><i>' + (k < RW.i ? '✓' : k + 1) + '</i></li>'; }).join('') + '</ol>' +
     '<div class="wsum"><small>اختيارك</small><b>' + esc(sum) + '</b></div><div class="whelp">' + ic('info') + '<span>' + flowText(RW.type) + '</span></div>' + (RW.type === 'leave' && s && (role !== 'staff' || staffOn('balance')) ? balHTML(lbal(s.ref), true) : '') + '</aside></div>';
 }
-function rwSync() { document.querySelectorAll('[data-rw]').forEach(function (e) { RW.d[e.dataset.rw] = e.value; }); var a = document.getElementById('rwAgree'); if (a) RW.d.agree = a.checked; }
+function asciiD(v) { return String(v == null ? '' : v).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; }).replace(/٫/g, '.').replace(/٬/g, ''); }
+function rwSync() { document.querySelectorAll('[data-rw]').forEach(function (e) { RW.d[e.dataset.rw] = e.dataset.num || e.type === 'tel' ? asciiD(e.value).trim() : e.value; }); var a = document.getElementById('rwAgree'); if (a) RW.d.agree = a.checked; }
 function rwValidate() {
   var d = RW.d;
   if (RW.i === 0) { if (role !== 'staff' && !RW.ref) return 'اختر المنسوب أولًا'; if (!RW.type) return 'اختر نوع الطلب'; }
@@ -1617,7 +1618,7 @@ function rwValidate() {
       if (String(d.reason || '').trim().length < 3) return 'اكتب سبب الإجازة (3 أحرف على الأقل)';
       if (rwNeedSup() && !d.supervisor) return 'اختر المسؤول المباشر';
       if (!String(d.substitute || '').trim() || !String(d.subTitle || '').trim()) return 'اكتب اسم الموظف البديل ومسماه الوظيفي';
-      if (String(d.contact || '').replace(/\D/g, '').length < 6) return 'اكتب رقم تواصل صحيحًا مع رمز الدولة';
+      if (asciiD(d.contact).replace(/\D/g, '').length < 6) return 'اكتب رقم تواصل صحيحًا مع رمز الدولة';
     }
     if (RW.type === 'travel') { if (!String(d.dest || '').trim() || !String(d.purpose || '').trim()) return 'اكتب الوجهة والغرض من المهمة'; if (!rwDays()) return 'تحقق من تاريخي السفر والعودة'; }
     if (RW.type === 'cert') { if (!d.kind) return 'اختر نوع الخطاب'; if (!String(d.to || '').trim()) return 'اكتب الجهة الموجّه إليها الخطاب'; }
@@ -1630,7 +1631,9 @@ function rwBind() {
   f.querySelectorAll('[data-rwtype]').forEach(function (b) { b.onclick = function () { rwSync(); if (RW.type !== b.dataset.rwtype) RW.d = {}; RW.type = b.dataset.rwtype; RW.err = ''; render(); }; });
   f.querySelectorAll('[data-rwseg]').forEach(function (b) { b.onclick = function () { rwSync(); RW.d[b.dataset.rwseg] = b.dataset.v; RW.err = ''; render(); }; });
   f.querySelectorAll('[data-rwck]').forEach(function (c) { c.onchange = function () { RW.d[c.dataset.rwck] = c.checked; }; });
-  f.querySelectorAll('input[type=date][data-rw],input[type=time][data-rw],input[type=month][data-rw],[data-rwlive]').forEach(function (c) { c.onchange = function () { rwSync(); softRender(); }; });
+  f.querySelectorAll('input[type=date][data-rw],input[type=month][data-rw]').forEach(function (c) { c.onchange = function () { rwSync(); softRender(); }; });
+  /* الوقت والأرقام: تحديث الحساب فقط دون إعادة رسم الصفحة، حتى لا يضيع المؤشر أثناء الكتابة */
+  f.querySelectorAll('input[type=time][data-rw],[data-rwlive]').forEach(function (c) { c.oninput = c.onchange = function () { rwSync(); var x = document.getElementById('rwExtra'); if (x && typeof rwExtra === 'function') x.innerHTML = rwExtra(); var sb = document.querySelector('.wsum b'); if (sb && rwFields()) sb.textContent = RT2[RW.type][2] + rwExtraTxt(); }; });
   document.getElementById('rwBack').onclick = function () { rwSync(); if (RW.i) { RW.i--; RW.err = ''; render(); } };
   f.onsubmit = function (e) {
     e.preventDefault(); rwSync(); var err = rwValidate(); if (err) { RW.err = err; render(); return; }
@@ -1643,7 +1646,7 @@ function rwBind() {
       RW = { i: 0, type: '', ref: '', d: {}, busy: false, err: '' };
       if (role === 'staff') { TAB.myreq = 'list'; location.hash = 'myreq'; } else { TAB.reqs = 'all'; }
       render(); reqOpen(j.request.no, true);
-    }).catch(function (e2) { RW.busy = false; RW.err = errText(e2); render(); });
+    }).catch(function (e2) { RW.busy = false; RW.err = errText(e2); if (RW.i === RW_STEPS.length - 1 && !/too_many|locked|auth/.test(String(e2 && e2.message))) RW.i = 1; render(); });
   };
 }
 
@@ -1696,7 +1699,7 @@ function reqSheetHTML(r) {
   var note = r.view && ['leave', 'travel', 'cert'].indexOf(r.type) < 0 ? (r.view || []).filter(function (x) { return x[3]; }).map(function (x) { return x[0] + ': ' + x[1]; }).join('\n') : d.reason || d.note || d.purpose;
   return '<div class="sheet" id="reqSheet"><div class="shead"><div class="sorg"><span class="seal"><img src="' + LOGO + '" alt=""></span><div><b>مجموعة بنيان العالمية</b><small>Bonyan International Group</small><em>إدارة الموارد البشرية</em></div></div><div class="smeta">رمز النموذج<b>' + esc(r.form) + '</b>الإصدار 1.0<span>رقم المعاملة</span><b>' + esc(r.no) + '</b></div></div>' +
     '<div class="stitle"><h3>' + esc(r.typeName) + '</h3><p>قُدّم ' + fdx(pdt(r.createdAt)) + ' بواسطة ' + esc(r.createdBy || r.name) + '</p></div>' +
-    '<div class="sbar">بيانات المنسوب</div>' + kv([['الاسم', r.name], ['الرقم المرجعي', r.ref], ['الجهة', st.entity], ['المسمى', st.jobTitle], ['الإدارة', st.department], ['المدير المباشر', st.manager]]) +
+    '<div class="sbar">بيانات المنسوب</div>' + kv([['الاسم', r.name], ['الرقم المرجعي', r.ref], ['الجهة', st.entity], ['المسمى', st.jobTitle], ['الإدارة', st.department], ['المدير المباشر', st.manager || d.supName || '']]) +
     '<div class="sbar">تفاصيل الطلب</div>' + det + (note ? '<div class="snote">' + esc(note) + '</div>' : '') +
     '<div class="sbar">الاعتماد والتوقيعات</div><div class="tw"><table class="sappr"><thead><tr><th>م</th><th>الجهة</th><th>الاسم</th><th>القرار</th><th>التاريخ</th></tr></thead><tbody>' +
     r.chain.map(function (c, i) { var dec = c.decision === 'approve' ? '<span class="pill ok"><i></i>موافق</span>' : c.decision === 'edit' ? '<span class="pill ok"><i></i>عدّل ووافق</span>' : c.decision === 'reject' ? '<span class="pill bad"><i></i>غير موافق</span>' : r.status === 'pending' && i === r.stage ? '<span class="pill warn"><i></i>بانتظار القرار</span>' : r.status === 'cancelled' ? '<span class="pill mute"><i></i>ألغي الطلب</span>' : '<span class="pill mute"><i></i>—</span>';
@@ -1795,7 +1798,7 @@ function formOn(t) { var f = formOf(t); return !f || f.on; }
 function flowText(t) {
   var f = formOf(t); if (!t) return 'اختر نوع الطلب، وسيظهر هنا مسار اعتماده.';
   if (!f) return 'يمر الطلب بمسار اعتماد، ويصلك بريد عند كل خطوة.';
-  return 'يمر الطلب على: ' + f.steps.map(function (s) { return s.label; }).join(' ثم ') + '، ويصلك بريد عند كل خطوة.';
+  return 'يمر الطلب على: ' + f.steps.map(function (s) { return esc(s.label); }).join(' ثم ') + '، ويصلك بريد عند كل خطوة.';
 }
 function formsHTML() {
   var c = need('reqForms', function () { return api({ action: 'reqForms' }); }, 120000), d = c.data;
@@ -1825,14 +1828,15 @@ var FE = null;
 function feOpen(t) {
   var f = formOf(t); if (!f) return;
   FE = { type: t, name: f.name, on: f.on, steps: f.steps.map(function (s) { return { kind: s.kind, v: s.v, label: s.label }; }), err: '', busy: false };
-  need('users', function () { return api({ action: 'usersList' }); }, 60000);
+  var cu = need('users', function () { return api({ action: 'usersList' }); }, 60000);
   drawFE();
+  if (!cu.data) api({ action: 'usersList' }).then(function (j) { seed('users', j); if (FE && document.getElementById('feLayer')) { sync(); drawFE(); } }, function () { });
 }
 function feOpts() {
   var d = formsData(), U = (CACHE.users && CACHE.users.data && CACHE.users.data.users) || [];
   var R = Object.keys(d.roles).map(function (k) { var n = U.filter(function (u) { return u.active && u.role === k && u.perms.indexOf('requests.approve') > -1; }).length;
     return { v: 'role:' + k, n: d.roles[k], d: CACHE.users && CACHE.users.data ? (n ? n + ' حساب يملك صلاحية الاعتماد' : 'لا يوجد حساب بهذا الدور يملك صلاحية الاعتماد') : 'كل حساب بهذا الدور', ic: 'users', g: 'حسب الدور' }; });
-  var P = U.filter(function (u) { return u.active; }).map(function (u) { return { v: 'user:' + u.id, n: u.name || u.email, d: (u.title || u.roleName) + ' · ' + u.email, ic: 'user', g: 'حساب محدد بالاسم' }; });
+  var P = U.filter(function (u) { return u.active && u.role !== 'staff'; }).map(function (u) { return { v: 'user:' + u.id, n: u.name || u.email, d: (u.title || u.roleName) + ' · ' + u.email, ic: 'user', g: 'حساب محدد بالاسم' }; });
   var X = (FE && (FE.type === 'leave' || (formOf(FE.type) || {}).mgrOk) ? [{ v: 'manager:', n: 'المسؤول المباشر', d: 'يختاره المنسوب عند التقديم من قائمة المسؤولين المباشرين', ic: 'users', g: 'خطوات خاصة' }] : [])
     .concat([{ v: 'person:', n: 'شخص بالبريد الإلكتروني', d: 'لمن ليس له حساب في المنصة؛ يعتمد من رابط يصله بالبريد', ic: 'mail', g: 'خطوات خاصة' }]);
   return X.concat(R, P);
@@ -1883,7 +1887,7 @@ function drawFE() {
 }
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && document.getElementById('feLayer') && !document.querySelector('.ss-pop')) { document.getElementById('feLayer').remove(); FE = null; } });
 
-/* ---------- المسؤولون المباشرون (يختار المنسوب منهم عند طلب الإجازة) ---------- */
+/* ---------- المسؤولون المباشرون (يختار المنسوب منهم عند تقديم الطلبات) ---------- */
 var SUP = null;
 function supOpen() {
   var d = formsData(); if (!d) return;
@@ -1901,7 +1905,7 @@ function drawSup() {
       '<input data-sp="' + i + ':title" value="' + esc(x.title) + '" placeholder="الصفة (اختياري)" aria-label="الصفة">' +
       '<input data-sp="' + i + ':email" value="' + esc(x.email) + '" type="email" dir="ltr" placeholder="name@example.com" aria-label="البريد">' +
       '<button type="button" class="ib del" data-spdel="' + i + '" aria-label="حذف">' + ic('x') + '</button></li>'; }).join('') : '<li class="empty">لا يوجد مسؤولون بعد. أضف من المنسوبين أو الصق القائمة.</li>';
-  el.innerHTML = '<div class="mscrim" data-spclose="1"></div><section class="mdl fem supm" role="dialog" aria-modal="true" aria-labelledby="supT"><header class="mh">' + tile('emerald', 'users') + '<div><h2 id="supT">المسؤولون المباشرون</h2><p>يختار المنسوب مسؤوله من هذه القائمة عند طلب الإجازة، فيصله الطلب أولًا</p></div><button class="ib mx" data-spclose="1" aria-label="إغلاق">' + ic('plus') + '</button></header>' +
+  el.innerHTML = '<div class="mscrim" data-spclose="1"></div><section class="mdl fem supm" role="dialog" aria-modal="true" aria-labelledby="supT"><header class="mh">' + tile('emerald', 'users') + '<div><h2 id="supT">المسؤولون المباشرون</h2><p>يختار المنسوب مسؤوله من هذه القائمة عند تقديم أي طلب خطوته الأولى «المسؤول المباشر»، فيصله الطلب أولًا</p></div><button class="ib mx" data-spclose="1" aria-label="إغلاق">' + ic('plus') + '</button></header>' +
     '<div class="abody"><ol class="suplist">' + rows + '</ol>' +
     '<div class="supadd"><div class="fef"><label>إضافة من سجل المنسوبين</label>' + ssel('supPick', opts, '', 'ابحث باسم المنسوب', function (v) { supSync(); var s = byRef(v); if (s) SUP.list.push({ id: '', name: s.name, title: s.job !== '—' ? s.job : '', email: s.mail }); drawSup(); }, 'إضافة من المنسوبين') + '</div>' +
     '<button type="button" class="btn" id="supNew">' + ic('plus') + 'إضافة يدويًا</button></div>' +
@@ -2868,7 +2872,7 @@ function rwSchemaBody() {
     else if (kind === 'time') h += rwField(id, lab, rwIn(k, 'time', '', ' dir="ltr" step="300"'), req);
     else if (kind === 'month') { var now = ymNow(), ms = []; for (var i = 0; i < 12; i++) ms.push(ymAdd(now, i));
       h += '<div class="fld"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, ms.map(function (m) { return { v: m, n: fmonth(m), ic: 'calendar' }; }), d[k] || '', 'اختر الشهر', function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab) + '</div>'; }
-    else if (kind === 'int' || kind === 'money') h += rwField(id, lab, rwIn(k, 'number', kind === 'money' ? '0' : '', ' dir="ltr" inputmode="' + (kind === 'int' ? 'numeric' : 'decimal') + '" data-rwlive="1"' + (opt ? ' min="' + opt[0] + '" max="' + opt[1] + '"' : '')), req);
+    else if (kind === 'int' || kind === 'money') h += rwField(id, lab, rwIn(k, 'text', opt ? (kind === 'money' ? 'مثال: ' + Math.max(opt[0], 1000) : 'من ' + opt[0] + ' إلى ' + opt[1]) : '', ' dir="ltr" inputmode="' + (kind === 'int' ? 'numeric' : 'decimal') + '" data-rwlive="1" data-num="1" autocomplete="off"'), req);
     else if (kind === 'reqref') { var ro = rwRefOpts(opt || []);
       h += '<div class="fld wide"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + (ro.length ? ssel(id, [{ v: '', n: 'بدون ربط', ic: 'x' }].concat(ro), d[k] || '', 'اختر الإجازة أو المهمة التي عدت منها', function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab)
         : '<div class="note">' + ic('info') + '<span>' + ((opt || []).indexOf('resign') > -1 ? 'لا يوجد طلب استقالة معتمد لهذا المنسوب؛ يمكن المتابعة دون ربط.' : 'لا توجد إجازة أو مهمة معتمدة لربطها. إن كانت مباشرة بعد تعيين جديد فاختر «تعيين جديد».') + '</span></div>') + '</div>'; }
@@ -2877,16 +2881,16 @@ function rwSchemaBody() {
   if (rwNeedSup()) { var sups = (formsData() || {}).sups || [], fl = formOf(RW.type), nx = fl && fl.steps[1] ? fl.steps[1].label : '';
     h += '<div class="fld wide"><label>المسؤول المباشر <i class="rq">*</i></label>' + (sups.length ? ssel('rwSup', sups.map(function (x) { return { v: x.id, n: x.name, d: x.title || '', ic: 'user' }; }), d.supervisor || '', 'اختر مسؤولك المباشر', function (v) { rwSync(); RW.d.supervisor = v; RW.err = ''; render(); }, 'المسؤول المباشر')
       : '<div class="note warn">' + ic('alert') + '<span>لم تُضَف قائمة المسؤولين المباشرين بعد. تواصل مع الموارد البشرية.</span></div>') + '<small class="fhint">يصله الطلب أولًا ليعتمده أو يرفضه' + (nx ? '، ثم ينتقل إلى ' + esc(nx) : '') + '.</small></div>'; }
-  var ex = rwExtra(); if (ex) h += '<div class="fld wide">' + ex + '</div>';
+  h += '<div class="fld wide" id="rwExtra">' + rwExtra() + '</div>';
   return h + '</div>';
 }
 /* ما تحسبه المنصة مباشرة أثناء التعبئة (المدة، القسط، التأخر عن العودة…) */
 function rwCalc() {
   var d = RW.d, t = RW.type, o = {};
-  if (t === 'perm' || t === 'ot') { var a = tmins(d.fromT), b = tmins(d.toT); if (a != null && b != null) { var m = b - a; if (t === 'ot' && m <= 0) m += 1440; o.mins = m; } }
+  if (t === 'perm' || t === 'ot') { var a = tmins(d.fromT), b = tmins(d.toT); if (a != null && b != null) { var m = b - a; if (t === 'ot' && m < 0) m += 1440; o.mins = m; } }
   if (t === 'loan') { var am = +d.amount || 0, k = +d.months || 0; if (am > 0 && k > 0) { o.inst = Math.round(am / k * 100) / 100; if (d.start) o.end = ymAdd(d.start, k - 1); } }
   if (t === 'resume' && d.link && d.day) { var r = reqByNo(d.link), to = r && r.data ? pdate(r.data.to) : null, dy = pdate(d.day);
-    if (to && dy) { var late = 0, x = new Date(to.getTime() + DAY), we = (S('work', 'weekend') || [5, 6]); for (; x < dy; x = new Date(x.getTime() + DAY)) if (we.indexOf(x.getDay()) < 0) late++; o.late = late; o.before = dy < to; } }
+    if (to && dy) { var late = 0, x = new Date(to.getTime() + DAY), we = SITE && SITE.work && Array.isArray(SITE.work.weekend) ? SITE.work.weekend : [5, 6]; for (; x < dy; x = new Date(x.getTime() + DAY)) if (we.indexOf(x.getDay()) < 0) late++; o.late = late; o.before = dy < to; } }
   if (t === 'train' && d.from && d.to) { var f1 = pdate(d.from), f2 = pdate(d.to); if (f1 && f2 && f2 >= f1) o.days = Math.round((f2 - f1) / DAY) + 1; }
   return o;
 }
@@ -2894,7 +2898,7 @@ function rwExtra() {
   var c = rwCalc(), t = RW.type;
   if ((t === 'perm' || t === 'ot') && c.mins != null) return c.mins > 0 ? '<div class="note">' + ic('clock') + '<span>المدة <b>' + hm(c.mins) + '</b>' + (t === 'perm' && c.mins > 300 ? ' — أطول من المسموح (5 ساعات)؛ قدّم طلب إجازة بدلًا منه.' : t === 'perm' ? '. يبرّر الاستئذان المعتمد التأخير أو الخروج في كشف الحضور.' : '. تُحتسب الساعة الإضافية بأجر الساعة × 1.5.') + '</span></div>' : '<div class="note warn">' + ic('alert') + '<span>وقت النهاية يجب أن يكون بعد وقت البداية.</span></div>';
   if (t === 'loan' && c.inst) return '<div class="note">' + ic('coins') + '<span>القسط الشهري <b>' + n(c.inst) + ' ر.س</b>' + (c.end ? ' من ' + fmonth(RW.d.start) + ' حتى ' + fmonth(c.end) : '') + '. تظهر الأقساط في استقطاعات الرواتب كل شهر.</span></div>';
-  if (t === 'resume' && c.late != null) return c.before ? '<div class="note warn">' + ic('alert') + '<span>تاريخ المباشرة قبل نهاية الإجازة المرتبطة.</span></div>' : '<div class="note' + (c.late ? ' warn' : '') + '">' + ic(c.late ? 'alert' : 'check') + '<span>' + (c.late ? 'تأخرت عن العودة <b>' + dn(c.late) + '</b> عمل، تُخصم من رصيدك السنوي بعد الاعتماد.' : 'عدت في موعدك. شكرًا لك.') + '</span></div>';
+  if (t === 'resume' && c.late != null) return c.before ? '<div class="note warn">' + ic('alert') + '<span>تاريخ المباشرة قبل نهاية الإجازة أو المهمة المرتبطة.</span></div>' : '<div class="note' + (c.late ? ' warn' : '') + '">' + ic(c.late ? 'alert' : 'check') + '<span>' + (c.late ? 'تأخرت عن العودة <b>' + dn(c.late) + '</b> عمل، تُخصم من رصيدك السنوي بعد الاعتماد.' : 'عدت في موعدك. شكرًا لك.') + '</span></div>';
   if (t === 'train' && c.days) return '<div class="note">' + ic('calendar') + '<span>مدة البرنامج <b>' + dn(c.days) + '</b></span></div>';
   return '';
 }
@@ -2903,12 +2907,21 @@ function rwSchemaCheck() {
   var d = RW.d, F = rwFields(), c = rwCalc();
   for (var i = 0; i < F.length; i++) { var f = F[i], v = d[f[0]];
     if (f[3] && (v === '' || v == null)) return (f[2] === 'seg' || f[2] === 'month' || f[2] === 'reqref' ? 'اختر ' : 'اكتب ') + f[1];
+    if ((f[2] === 'int' || f[2] === 'money') && v !== '' && v != null && !(f[2] === 'int' ? /^\d+$/ : /^\d+(\.\d{1,2})?$/).test(String(v))) return 'اكتب ' + f[1] + ' بالأرقام فقط' + (f[2] === 'int' ? ' (عدد صحيح)' : '');
     if ((f[2] === 'int' || f[2] === 'money') && v !== '' && v != null && f[4] && (+v < f[4][0] || +v > f[4][1])) return f[1] + ': القيمة بين ' + n(f[4][0]) + ' و' + n(f[4][1]);
     if (f[2] === 'area' && f[3] && String(v || '').trim().length < (f[4] ? f[4][0] : 3)) return 'اكتب ' + f[1] + ' (' + (f[4] ? f[4][0] : 3) + ' أحرف على الأقل)'; }
   if ((RW.type === 'perm' || RW.type === 'ot') && !(c.mins > 0)) return 'وقت النهاية يجب أن يكون بعد وقت البداية';
   if (RW.type === 'perm' && c.mins > 300) return 'الاستئذان خمس ساعات على الأكثر؛ للمدة الأطول قدّم طلب إجازة';
   if (RW.type === 'resume' && d.kind !== 'تعيين جديد' && !d.link) return 'اختر الإجازة أو المهمة التي عدت منها';
-  if (RW.type === 'resume' && c.before) return 'تاريخ المباشرة قبل نهاية الإجازة المرتبطة';
+  if (RW.type === 'resume' && c.before) return 'تاريخ المباشرة قبل نهاية الإجازة أو المهمة المرتبطة';
+  var today = ymd(new Date()), ago45 = ymd(new Date(Date.now() - 45 * DAY)), we2 = SITE && SITE.work && Array.isArray(SITE.work.weekend) ? SITE.work.weekend : [5, 6];
+  if ((RW.type === 'perm' || RW.type === 'ot') && d.day && d.day < ago45) return 'التاريخ أقدم من 45 يومًا؛ تواصل مع الموارد البشرية';
+  if (RW.type === 'perm' && d.day && we2.indexOf(pdate(d.day).getDay()) > -1) return 'هذا اليوم عطلة نهاية أسبوع؛ لا يلزم استئذان';
+  if (RW.type === 'ot' && c.mins > 720) return 'العمل الإضافي 12 ساعة على الأكثر في اليوم';
+  if (RW.type === 'resume' && d.day && d.day > today) return 'تاريخ المباشرة لا يكون في المستقبل؛ قدّم الإشعار يوم مباشرتك أو بعده';
+  if (RW.type === 'resign' && d.lastDay && d.lastDay < today) return 'آخر يوم عمل لا يكون في الماضي';
+  if (RW.type === 'hire' && d.needBy && d.needBy < today) return 'تاريخ الاحتياج لا يكون في الماضي';
+  for (var j = 0; j < F.length; j++) { var g = F[j], gv = d[g[0]]; if ((g[2] === 'text') && g[3] && g[4] && String(gv || '').trim().length < g[4][0]) return 'اكتب ' + g[1] + ' (' + g[4][0] + ' أحرف على الأقل)'; }
   if (RW.type === 'train' && d.from && d.to && !c.days) return 'تاريخ النهاية يجب أن يكون في يوم البداية أو بعده';
   if (rwNeedSup() && !d.supervisor) return 'اختر المسؤول المباشر';
   return '';

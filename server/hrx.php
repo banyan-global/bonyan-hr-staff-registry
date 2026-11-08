@@ -96,10 +96,10 @@ function leave_quota_left(string $ref, string $kind, string $exceptNo = ''): ?ar
     }
     return ['quota' => $q, 'used' => $used, 'pending' => $pend, 'left' => max(0, $q - $used - $pend)];
 }
-function leave_quota_check(string $ref, array $o): void {
+function leave_quota_check(string $ref, array $o, string $exceptNo = ''): void {
     $k = (string)$o['kind'];
     if ($k === 'أمومة') { $s = staff_get($ref); if ($s && preg_match('/^(male|m|ذكر|laki-laki|pria)$/iu', trim((string)($s['data']['gender'] ?? '')))) throw new HttpError('إجازة الأمومة للمنسوبات فقط'); }
-    $x = leave_quota_left($ref, $k); if (!$x) return;
+    $x = leave_quota_left($ref, $k, $exceptNo); if (!$x) return;
     if ((int)$o['days'] > $x['left'] && in_array($k, LEAVE_STRICT, true))
         throw new HttpError('رصيد إجازة «' . $k . '» لهذا العام ' . $x['quota'] . ' يومًا، والمتاح منه ' . $x['left'] . ' يومًا' . ($x['pending'] ? ' (منها ' . $x['pending'] . ' قيد الاعتماد)' : '') . '. قلّل المدة أو اختر نوعًا آخر.');
 }
@@ -307,7 +307,7 @@ function att_month_rows(string $ym, ?string $only = null): array {
     $perm = []; $ot = [];
     foreach (q("SELECT ref, type, data FROM requests WHERE status='approved' AND type IN ('perm','ot')" . ($only ? ' AND ref=?' : ''), $only ? [$only] : [])->fetchAll() as $r) {
         $d = json_decode($r['data'], true) ?: []; $day = (string)($d['day'] ?? ''); if ($day < $from || $day > $to) continue;
-        if ($r['type'] === 'perm') $perm[$r['ref']][$day][] = (string)($d['kind'] ?? '');
+        if ($r['type'] === 'perm') $perm[$r['ref']][$day][] = ['k' => (string)($d['kind'] ?? ''), 'from' => (string)($d['fromT'] ?? ''), 'to' => (string)($d['toT'] ?? '')];
         else $ot[$r['ref']] = ($ot[$r['ref']] ?? 0) + (int)($d['mins'] ?? 0);
     }
     $workDays = []; for ($t = strtotime($from); $t <= strtotime($last); $t += 86400) if (!in_array((int)date('w', $t), $W['weekend'], true)) $workDays[] = date('Y-m-d', $t);
@@ -317,14 +317,20 @@ function att_month_rows(string $ym, ?string $only = null): array {
         $days = $by[$ref] ?? []; $lv = $leave[$ref] ?? []; $pm = $perm[$ref] ?? [];
         $pres = count($days); $late = 0; $lateMin = 0; $early = 0; $mins = 0; $absent = []; $excused = 0;
         foreach ($days as $d) {
-            $k = $pm[$d['day']] ?? []; $exL = in_array('تأخر صباحي', $k, true) || in_array('خروج أثناء الدوام', $k, true); $exE = in_array('خروج مبكر', $k, true) || in_array('خروج أثناء الدوام', $k, true);
+            /* يُبرَّر التأخير إن كان الحضور قبل نهاية الاستئذان (مع السماحية)، والخروج المبكر إن كان الخروج بعد بدايته */
+            $mn = fn($t) => $t ? ((int)substr($t, 0, 2)) * 60 + (int)substr($t, 3, 2) : null; $g = (int)$W['grace'];
+            $in = $mn(substr((string)$d['in_time'], 0, 5)); $out = $mn(substr((string)$d['out_time'], 0, 5)); $exL = false; $exE = false;
+            foreach ($pm[$d['day']] ?? [] as $p) {
+                if ($p['k'] === 'تأخر صباحي' && $in !== null && $in <= $mn($p['to']) + $g) $exL = true;
+                if ($p['k'] === 'خروج مبكر' && $out !== null && $out >= $mn($p['from']) - $g) $exE = true;
+            }
             if ($d['late_min'] > 0) { if ($exL) $excused++; else { $late++; $lateMin += (int)$d['late_min']; } }
             if ($d['early_min'] > 0) { if ($exE) $excused++; else $early++; }
             $mins += (int)$d['minutes'];
         }
         foreach ($workDays as $wd) if (!isset($days[$wd]) && !isset($lv[$wd])) $absent[] = $wd;
         $out[$ref] = ['present' => $pres, 'late' => $late, 'lateMin' => $lateMin, 'early' => $early, 'hours' => round($mins / 60, 1), 'absent' => count($absent), 'absentDays' => $absent, 'leaveDays' => count($lv),
-            'excused' => $excused, 'perms' => array_sum(array_map('count', $pm)), 'otHours' => round(($ot[$ref] ?? 0) / 60, 1), 'permDays' => $only ? $pm : null,
+            'excused' => $excused, 'perms' => array_sum(array_map('count', $pm)), 'otHours' => round(($ot[$ref] ?? 0) / 60, 1), 'permDays' => $only ? array_map(fn($a) => array_map(fn($p) => $p['k'] . ' ' . $p['from'] . '–' . $p['to'], $a), $pm) : null,
             'days' => $only ? array_values(array_map(fn($d) => ['day' => $d['day'], 'in' => substr((string)$d['in_time'], 0, 5), 'out' => substr((string)$d['out_time'], 0, 5), 'late' => (int)$d['late_min'], 'early' => (int)$d['early_min'], 'mins' => (int)$d['minutes'], 'src' => (string)$d['source']], $days)) : null,
             'leave' => $only ? $lv : null];
     }

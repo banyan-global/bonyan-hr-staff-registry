@@ -264,6 +264,10 @@ function cus_ack(array $b): array {
 /* ============================================================ ما يحدث بعد الاعتماد النهائي لبعض الطلبات */
 function req_on_approved(array $r, string $actor): void {
     $d = json_decode($r['data'], true) ?: [];
+    if ($r['type'] === 'resign') {
+        $s = staff_get($r['ref']); $nm = $s ? staff_name($s) : $r['ref'];
+        foreach (hr_recipients() as $to) hrp_mail($to, 'اعتُمدت استقالة ' . $nm . ' · ' . $r['no'], 'اعتُمدت استقالة ' . $nm . '. الخطوة التالية: افتح إخلاء الطرف من «الطلبات ← طلب نيابة عن منسوب ← إخلاء طرف»، واربطه بهذه الاستقالة.', [['آخر يوم عمل', (string)($d['lastDay'] ?? '')], ['العهد غير المسلّمة', (string)count(custody_open($r['ref']))]], 'reqs-new', 'فتح إخلاء الطرف');
+    }
     if ($r['type'] === 'clear') {
         $s = staff_get($r['ref']); if (!$s) return;
         $s['data']['serviceStatus'] = 'منتهية خدمته'; $s['data']['serviceEnd'] = (string)($d['lastDay'] ?? ''); $s['data']['endReason'] = (string)($d['why'] ?? '');
