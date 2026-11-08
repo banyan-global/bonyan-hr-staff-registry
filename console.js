@@ -513,9 +513,6 @@ function toStaff(r) {
     if (!exp && !no && !f) return;
     docs.push({ t: D[0], exp: exp, no: no, file: f, urls: urls(r[D[3]]), days: exp ? daysTo(exp) : 99999 });
   });
-  /* نهاية فترة التجربة (من تاريخ المباشرة) تظهر مع الوثائق قبل حلولها بشهر */
-  var st0 = pdate(r.startDate), prob = SITE && SITE.work && SITE.work.probation != null ? +SITE.work.probation : 90;
-  if (st0 && prob > 0 && !r.serviceStatus) { var pe = new Date(st0.getTime() + prob * 864e5), pd0 = daysTo(pe); if (pd0 >= 0 && pd0 <= 30) docs.push({ t: 'فترة التجربة', exp: pe, no: '', file: false, opt: pd0 === 0 ? 'تنتهي اليوم' : 'متبقٍ ' + dn(pd0), urls: [], days: pd0, life: prob }); }
   var name = String(r.fullNameAr || '').trim() || String(r.fullNameLatin || '').trim() || r.ref, bank = String(r.iban || r.accountNo || '').replace(/\s+/g, '');
   var miss = [];
   /* الصورة الشخصية اختيارية للمنسوبات: لا تُعدّ نقصًا */
@@ -1005,8 +1002,8 @@ window.addEventListener('message', function (e) {
 });
 function svc(d) { if (!d) return '—'; var m = Math.round((Date.now() - d) / DAY / 30.4); if (m < 0) return 'لم يباشر بعد'; var y = Math.floor(m / 12), r = m % 12; return ((y ? (y === 1 ? 'سنة' : y === 2 ? 'سنتان' : y + (y <= 10 ? ' سنوات' : ' سنة')) : '') + (y && r ? ' و' : '') + (r ? (r === 1 ? 'شهر' : r === 2 ? 'شهران' : r + ' أشهر') : '')) || 'أقل من شهر'; }
 function docRows(docs, withNo) {
-  return '<div class="docs" data-fvg>' + (docs.length ? docs.map(function (d) { var left = d.days > 9000 ? 1 : Math.max(0, Math.min(1, d.days / (d.life || DOC_LIFE[d.t] || 730)));
-    return '<div class="doc"><span class="th">' + ic(d.t === 'العقد' ? 'doc' : d.t === 'فترة التجربة' ? 'clock' : 'pass') + '<small>' + (d.t === 'فترة التجربة' ? 'تجربة' : d.file ? 'ملف' : '—') + '</small></span><div><b>' + d.t + '</b><span class="s">' + (withNo && d.no ? '<span class="ltr">' + esc(d.no) + '</span>، ' : '') + (d.exp ? 'تنتهي ' + fd(d.exp) : 'بلا تاريخ انتهاء') + '</span>' +
+  return '<div class="docs" data-fvg>' + (docs.length ? docs.map(function (d) { var left = d.days > 9000 ? 1 : Math.max(0, Math.min(1, d.days / (DOC_LIFE[d.t] || 730)));
+    return '<div class="doc"><span class="th">' + ic(d.t === 'العقد' ? 'doc' : 'pass') + '<small>' + (d.file ? 'ملف' : '—') + '</small></span><div><b>' + d.t + '</b><span class="s">' + (withNo && d.no ? '<span class="ltr">' + esc(d.no) + '</span>، ' : '') + (d.exp ? 'تنتهي ' + fd(d.exp) : 'بلا تاريخ انتهاء') + '</span>' +
       '<div class="life"><i style="width:' + (left * 100) + '%;background:' + STC[st(d.days)] + '"></i></div>' + (d.urls.length ? '<div class="flinks">' + d.urls.map(function (u, i) { return '<a href="' + esc(u) + '" data-fvt="' + esc(d.t + (d.urls.length > 1 ? ' · ' + (i + 1) : '')) + '">' + ic('eye') + 'عرض' + (d.urls.length > 1 ? ' ' + (i + 1) : '') + '</a>'; }).join('') + '</div>' : '') + '</div>' +
       (d.opt && d.days >= 0 ? '<span class="pill info"><i></i>' + d.opt + '</span></div>' : '<span class="pill ' + (d.file ? st(d.days) : 'bad') + '"><i></i>' + (d.file || d.days < 0 ? dl(d.days) : 'الصورة غير مرفوعة') + '</span></div>'); }).join('') : '<div class="empty">لا توجد وثائق مسجّلة.</div>') + '</div>';
 }
@@ -3177,7 +3174,6 @@ setHTML = function () {
   var qk = LKINDS.filter(function (k) { return L.kinds.indexOf(k) < 0 && k !== 'بدون راتب' && k !== 'أخرى'; });
   var qp = pn('emerald', 'umbrella', 'أرصدة الأنواع الأخرى والترحيل', 'لكل نوع رصيد سنوي مستقل لا يُخصم من السنوية؛ صفر يعني بلا حد', '', '<div class="pb"><div class="form">' +
     '<div class="fld"><label for="stCarry">أقصى ما يُرحَّل من السنوية للعام التالي (يوم)</label><input id="stCarry" type="number" min="0" max="60" value="' + esc(L.carry || 0) + '"><small class="fhint">صفر: لا ترحيل</small></div>' +
-    '<div class="fld"><label for="stProb">فترة التجربة (يوم)</label><input id="stProb" type="number" min="0" max="180" value="' + esc(W.probation) + '"><small class="fhint">تظهر نهايتها مع الوثائق قبل حلولها بشهر</small></div>' +
     '<div class="fld wide"><div class="qgrid">' + qk.map(function (k) { return '<label><span>' + esc(k) + '</span><input type="number" min="0" max="180" data-quota="' + esc(k) + '" value="' + esc(L.quotas[k] || 0) + '"><small>يوم</small></label>'; }).join('') + '</div></div></div></div>');
   var mm = [['off', 'موقوف', 'البصمة فقط'], ['listed', 'لمنسوبين محددين', 'العمل الميداني أو عن بعد'], ['all', 'للجميع', 'كل المنسوبين']];
   var mp = pn('teal', 'pin', 'البصمة من الجوال', 'يبصم المنسوب من جواله داخل نطاق مقر جهته، ويصله تنبيه عند بداية الدوام، وإن غادر النطاق أثناء الدوام يُطلب منه استئذان أو يُحتسب انصرافه', '', '<div class="pb"><div class="form">' +
@@ -3194,7 +3190,6 @@ bindSet = function () {
   var re = function () { softRender(); };
   var g = function (id) { return document.getElementById(id); };
   if (g('stCarry')) g('stCarry').onchange = function () { SD.leave.carry = +this.value || 0; re(); };
-  if (g('stProb')) g('stProb').onchange = function () { SD.work.probation = +this.value || 0; re(); };
   document.querySelectorAll('[data-quota]').forEach(function (x) { x.onchange = function () { SD.leave.quotas[x.dataset.quota] = +x.value || 0; re(); }; });
   document.querySelectorAll('[data-mob]').forEach(function (b) { b.onclick = function () { SD.work.mobile = b.dataset.mob; re(); }; });
   document.querySelectorAll('[data-mobdel]').forEach(function (b) { b.onclick = function () { SD.work.mobileRefs = SD.work.mobileRefs.filter(function (r) { return r !== b.dataset.mobdel; }); re(); }; });
