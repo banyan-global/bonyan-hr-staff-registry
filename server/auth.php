@@ -116,14 +116,14 @@ function user_public(array $u): array {
         'roleName' => ROLE_NAMES[$u['role']] ?? $u['role'], 'perms' => user_perms($u), 'active' => (bool)$u['active'], 'notify' => user_notify($u),
         'lastLogin' => $u['last_login_at'] ? substr($u['last_login_at'], 0, 16) : '', 'locked' => $u['locked_until'] && $u['locked_until'] > now(), 'owner' => is_owner($u)];
 }
-/* مالك المنصة: البريد المحدد في الإعدادات (owner)، وإلا أول حساب «مدير النظام» أُنشئ فيها. وحده يزيل المرفقات من الملفات */
+/* مالك المنصة: وحده يزيل المرفقات من الملفات.
+ * يُعرف بالبريد في ملف الإعدادات الخاص (owner)، وإلا بالبصمة أدناه (sha256 لبريده؛ المستودع عام فلا يُكتب البريد صريحًا) */
+const OWNER_SHA256 = 'b3b359e56a9ee6e70f409dedbad1d999eab6f84022218bd57e7aa8693402d6a9';
 function is_owner(array $u): bool {
     if (empty($u['id']) || empty($u['active'])) return false;
+    $mail = strtolower(trim((string)$u['email']));
     $o = strtolower(trim((string)cfg('owner', '')));
-    if ($o !== '') return strtolower((string)$u['email']) === $o;
-    static $first = null;
-    if ($first === null) { $r = q1("SELECT id FROM users WHERE role='admin' ORDER BY id LIMIT 1"); $first = $r ? (int)$r['id'] : 0; }
-    return $u['role'] === 'admin' && (int)$u['id'] === $first;
+    return $o !== '' ? hash_equals($o, $mail) : hash_equals(OWNER_SHA256, hash('sha256', $mail));
 }
 /* هل يصله تنبيه «تسجيل جديد» والتنبيه الأسبوعي؟ (اختيار صريح، وإلا حسب الدور) */
 function user_notify(array $u): bool { return isset($u['notify']) && $u['notify'] !== null ? (bool)$u['notify'] : in_array($u['role'], ['admin', 'hr'], true); }

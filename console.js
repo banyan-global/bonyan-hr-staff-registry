@@ -3649,6 +3649,46 @@ bindHrx = function () {
   } catch (e) { }
 })();
 
+/* ---------- إزالة المرفقات: لمالك المنصة وحده، بجانب زر «عرض» ---------- */
+function isOwner() { return !!(SESSION && SESSION.owner === true); }
+function fileIdOf(u) { var m = String(u || '').match(/[?&]id=([a-f0-9]{32})/); return m ? m[1] : ''; }
+function frmBtn(u) {
+  var id = isOwner() ? fileIdOf(u) : '';
+  return id ? '<button type="button" class="frm" data-frm="' + id + '" title="إزالة المرفق" aria-label="إزالة المرفق">' + ic('trash') + '<span>تأكيد الإزالة</span></button>' : '';
+}
+var OTHER_FILES = [['photo', 'الصورة الشخصية', 'user'], ['degreeFile', 'المؤهل العلمي', 'doc'], ['certFiles', 'الشهادات والدورات', 'doc'], ['bankProof', 'إثبات الحساب البنكي', 'bank']];
+var _docRows = docRows;
+docRows = function (docs, withNo) {
+  var h = _docRows(docs, withNo);
+  if (!isOwner()) return h;
+  h = h.replace(/(<a href="([^"]+)" data-fvt="[^"]*">[\s\S]*?<\/a>)/g, function (m, a, u) { return a + frmBtn(u.replace(/&amp;/g, '&')); });
+  /* بقية المرفقات (ومنها الصورة الشخصية) تظهر هنا للمالك فقط ليزيلها */
+  var s = (STAFF || []).filter(function (x) { return x.docs === docs; })[0];
+  if (!s || !withNo) return h;
+  var rows = OTHER_FILES.map(function (o) {
+    var us = urls(s.r[o[0]]); if (!us.length) return '';
+    return '<div class="doc"><span class="th">' + ic(o[2]) + '<small>ملف</small></span><div><b>' + o[1] + '</b><div class="flinks">' + us.map(function (u, i) {
+      return '<a href="' + esc(u) + '" data-fvt="' + esc(o[1] + (us.length > 1 ? ' · ' + (i + 1) : '')) + '">' + ic('eye') + 'عرض' + (us.length > 1 ? ' ' + (i + 1) : '') + '</a>' + frmBtn(u);
+    }).join('') + '</div></div></div>';
+  }).join('');
+  return h + (rows ? '<h4 class="frm-h">' + ic('archive') + 'مرفقات أخرى</h4><div class="docs" data-fvg>' + rows + '</div>' : '');
+};
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-frm]'); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  if (!b.classList.contains('arm')) {
+    [].forEach.call(document.querySelectorAll('.frm.arm'), function (o) { o.classList.remove('arm'); });
+    b.classList.add('arm'); clearTimeout(b._t); b._t = setTimeout(function () { b.classList.remove('arm'); }, 4000);
+    return;
+  }
+  clearTimeout(b._t); b.disabled = true; b.classList.add('busy');
+  api({ action: 'fileRemove', id: b.getAttribute('data-frm') }).then(function () {
+    Object.keys(CACHE).forEach(function (k) { if (/^(aud|msg):/.test(k) || k === 'audit') delete CACHE[k]; });
+    return reloadList();
+  }).then(function () { softRender(); toast('أُزيل المرفق من الملف، وسُجّل في سجل العمليات'); })
+    .catch(function (er) { b.disabled = false; b.classList.remove('busy', 'arm'); toast('تعذّرت الإزالة: ' + ((er && er.message) || '')); });
+}, true);
+
 window.addEventListener('hashchange', route);
 boot();
 })();

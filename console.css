@@ -1953,3 +1953,12 @@ html[dir="ltr"] .side-card-box > .idcard-wrap {transform-origin: top left;}
   .wside > p, .wside .wnote { font-size: 12px; line-height: 1.7; }
 }
 td > .mv { display: contents; }
+
+/* زر إزالة المرفق (مالك المنصة) */
+.flinks { align-items: center; }
+.frm { display: inline-flex; align-items: center; gap: 5px; height: 26px; min-width: 26px; padding: 0 6px; border-radius: 9px; border: 1px solid transparent; background: transparent; color: var(--faint); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; transition: background .2s, color .2s, padding .2s; }
+.frm .i { width: 15px; height: 15px; } .frm span { display: none; white-space: nowrap; }
+.frm:hover, .frm:focus-visible { color: #c0392b; background: rgba(192, 57, 43, .08); border-color: rgba(192, 57, 43, .22); }
+.frm.arm { color: #fff; background: #c0392b; border-color: #c0392b; padding: 0 10px; } .frm.arm span { display: inline; }
+.frm.busy { opacity: .6; pointer-events: none; }
+.frm-h { display: flex; align-items: center; gap: 8px; margin: 18px 4px 8px; font-size: 14px; color: var(--ink-2, var(--ink)); } .frm-h .i { width: 17px; height: 17px; color: var(--gold-ink); }
