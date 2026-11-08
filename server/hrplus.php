@@ -571,7 +571,8 @@ function att_push_tick(bool $force = false): array {
     if (!$force) { if (kv_get('attpush:last') !== null) return $out; kv_put('attpush:last', '1', 240); }
     $now = (int)date('H') * 60 + (int)date('i'); $mn = fn($t) => (int)substr($t, 0, 2) * 60 + (int)substr($t, 3, 2);
     $inStart = $now >= $mn($W['start']) - 10 && $now <= $mn($W['start']) + max(30, (int)$W['grace']); $inEnd = $now >= $mn($W['end']) && $now <= $mn($W['end']) + 45;
-    if (!$inStart && !$inEnd) return $out;
+    $every = (int)($W['checkEvery'] ?? 60); $inWork = $now > $mn($W['start']) + max(30, (int)$W['grace']) && $now < $mn($W['end']) - 15;
+    if (!$inStart && !$inEnd && !($every > 0 && $inWork)) return $out;
     $day = date('Y-m-d');
     foreach (q("SELECT DISTINCT p.user_id, u.staff_ref FROM push_subs p JOIN users u ON u.id=p.user_id WHERE u.active=1 AND u.staff_ref IS NOT NULL")->fetchAll() as $x) {
         $ref = (string)$x['staff_ref']; if (!att_mobile_ok($ref)) continue;
@@ -579,6 +580,11 @@ function att_push_tick(bool $force = false): array {
         if ($lv) continue;
         $a = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, $day]);
         if ($inStart && !$a && kv_get('attpush:s:' . $ref . ':' . $day) === null) { kv_put('attpush:s:' . $ref . ':' . $day, '1', 86400); if (push_to_user((int)$x['user_id'], ['title' => 'بداية الدوام', 'body' => 'اضغط لتسجيل حضورك من مقر جهتك.', 'url' => '#myatt-ck', 'tag' => 'att-in'])) $out['start']++; }
+        /* تأكيد التواجد أثناء الدوام: يفتح المنسوب التنبيه فيتحقق الجوال من وجوده داخل نطاق المقر */
+        if ($every > 0 && $inWork && $a && !$a['out_time']) {
+            $slot = intdiv($now - $mn(substr((string)$a['in_time'], 0, 5)), $every);
+            if ($slot >= 1 && kv_get('attpush:p:' . $ref . ':' . $day . ':' . $slot) === null) { kv_put('attpush:p:' . $ref . ':' . $day . ':' . $slot, '1', 86400); if (push_to_user((int)$x['user_id'], ['title' => 'تأكيد التواجد في المقر', 'body' => 'اضغط ليتحقق جوالك من وجودك في نطاق المقر.', 'url' => '#myatt-chk', 'tag' => 'att-chk'])) $out['check'] = ($out['check'] ?? 0) + 1; }
+        }
         if ($inEnd && $a && !$a['out_time'] && kv_get('attpush:e:' . $ref . ':' . $day) === null) { kv_put('attpush:e:' . $ref . ':' . $day, '1', 86400); if (push_to_user((int)$x['user_id'], ['title' => 'نهاية الدوام', 'body' => 'لا تنسَ تسجيل انصرافك قبل مغادرة المقر.', 'url' => '#myatt-ck', 'tag' => 'att-out'])) $out['end']++; }
     }
     return $out;

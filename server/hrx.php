@@ -12,7 +12,7 @@ const SITE_DEFAULTS = [
     'staff' => ['card' => true, 'docs' => true, 'pay' => true, 'reqs' => true, 'balance' => true, 'att' => true, 'news' => true, 'update' => true, 'myhr' => true],
     'leave' => ['annual' => 30, 'prorate' => true, 'kinds' => ['اعتيادية (سنوية)'], 'carry' => 0,
         'quotas' => ['مرضية' => 30, 'طارئة (اضطرارية)' => 5, 'أمومة' => 70, 'حج' => 10, 'زواج' => 5, 'وفاة قريب' => 5, 'دراسة / تدريب' => 0, 'تعويضية' => 0]],
-    'work' => ['start' => '08:00', 'end' => '16:00', 'grace' => 15, 'weekend' => [5, 6], 'probation' => 90, 'mobile' => 'off', 'mobileRefs' => [], 'sites' => []],
+    'work' => ['start' => '08:00', 'end' => '16:00', 'grace' => 15, 'weekend' => [5, 6], 'probation' => 90, 'mobile' => 'off', 'mobileRefs' => [], 'sites' => [], 'checkEvery' => 60],
 ];
 function site(): array {
     static $c = null; if ($c !== null) return $c;
@@ -59,6 +59,7 @@ function site_save(array $b): array {
         $o['work']['weekend'] = array_values(array_unique(array_filter(array_map('intval', (array)($W['weekend'] ?? [])), fn($d) => $d >= 0 && $d <= 6)));
         $o['work']['probation'] = max(0, min(180, (int)($W['probation'] ?? 90)));
         $o['work']['mobile'] = in_array($W['mobile'] ?? 'off', ['off', 'all', 'listed'], true) ? $W['mobile'] : 'off';
+        $o['work']['checkEvery'] = in_array((int)($W['checkEvery'] ?? 60), [0, 30, 60, 90, 120], true) ? (int)($W['checkEvery'] ?? 60) : 60;
         $o['work']['mobileRefs'] = array_values(array_filter(array_map('strval', (array)($W['mobileRefs'] ?? [])), fn($r) => (bool)preg_match('/^[A-Z0-9-]{4,40}$/', $r)));
         $sites = [];
         foreach (array_slice((array)($W['sites'] ?? []), 0, 30) as $x) {

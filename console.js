@@ -3193,6 +3193,7 @@ setHTML = function () {
     '<div class="fld wide"><label>من يسجّل من الجوال</label><div class="seg2">' + mm.map(function (x) { return '<button type="button" data-mob="' + x[0] + '" aria-pressed="' + (W.mobile === x[0]) + '">' + x[1] + '<small>' + x[2] + '</small></button>'; }).join('') + '</div></div>' +
     (W.mobile === 'listed' ? '<div class="fld wide"><label>المنسوبون المسموح لهم</label>' + ssel('stMobAdd', staffOpts().filter(function (o) { return W.mobileRefs.indexOf(o.v) < 0; }), '', 'أضف منسوبًا', function (v) { SD.work.mobileRefs.push(v); softRender(); }, 'إضافة منسوب') +
       '<div class="chipsel">' + W.mobileRefs.map(function (r) { var s = byRef(r); return '<button type="button" data-mobdel="' + esc(r) + '" aria-pressed="true">' + esc(s ? s.name : r) + ' ×</button>'; }).join('') + '</div></div>' : '') +
+    '<div class="fld wide"><label>تأكيد التواجد أثناء الدوام</label><div class="seg2">' + [[0, 'لا'], [30, 'كل نصف ساعة'], [60, 'كل ساعة'], [120, 'كل ساعتين']].map(function (x) { return '<button type="button" data-chk="' + x[0] + '" aria-pressed="' + ((W.checkEvery == null ? 60 : +W.checkEvery) === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div><small class="fhint">يصل المنسوب تنبيه، فإذا فتحه تحقق جواله من وجوده داخل نطاق المقر، وإن كان خارجه طُلب منه استئذان أو احتُسب انصرافه.</small></div>' +
     '<div class="fld wide"><label>مقرات الجهات (نقطة مركزية لكل مقر)</label><div class="sites">' + W.sites.map(function (x, i) { return '<div class="siter"><input data-site="' + i + '.name" value="' + esc(x.name) + '" placeholder="اسم المقر"><select data-site="' + i + '.entity" aria-label="الجهة"><option value="">كل الجهات</option>' + ENT.map(function (e) { return '<option' + (e.n === x.entity ? ' selected' : '') + '>' + esc(e.n) + '</option>'; }).join('') + '</select><input data-site="' + i + '.lat" value="' + esc(x.lat) + '" dir="ltr" placeholder="خط العرض"><input data-site="' + i + '.lng" value="' + esc(x.lng) + '" dir="ltr" placeholder="خط الطول"><input data-site="' + i + '.radius" type="number" min="30" max="5000" value="' + esc(x.radius) + '" dir="ltr" title="النطاق بالمتر"><button type="button" class="ib" data-sitehere="' + i + '" title="موقعي الحالي" aria-label="استخدام موقعي الحالي">' + ic('pin') + '</button><button type="button" class="ib del" data-sitedel="' + i + '" aria-label="حذف الموقع">' + ic('x') + '</button></div>'; }).join('') +
     '</div><button type="button" class="btn sm" id="siteAdd">' + ic('plus') + 'إضافة مقر</button><small class="fhint">لكل جهة مقرها: يُقبل حضور منسوبيها داخل النطاق حوله فقط (50 م افتراضيًا). المقر بلا جهة يصلح لمن لا مقر لجهته. الإحداثيات من خرائط جوجل (اضغط مطوّلًا على المكان)، أو اضغط «موقعي الحالي» وأنت في المقر.</small></div></div></div>');
   return h.replace('<div class="setbar', '<div class="grid g2">' + qp + mp + '</div><div class="setbar');
@@ -3205,6 +3206,7 @@ bindSet = function () {
   if (g('stCarry')) g('stCarry').onchange = function () { SD.leave.carry = +this.value || 0; re(); };
   document.querySelectorAll('[data-quota]').forEach(function (x) { x.onchange = function () { SD.leave.quotas[x.dataset.quota] = +x.value || 0; re(); }; });
   document.querySelectorAll('[data-mob]').forEach(function (b) { b.onclick = function () { SD.work.mobile = b.dataset.mob; re(); }; });
+  document.querySelectorAll('[data-chk]').forEach(function (b) { b.onclick = function () { SD.work.checkEvery = +b.dataset.chk; re(); }; });
   document.querySelectorAll('[data-mobdel]').forEach(function (b) { b.onclick = function () { SD.work.mobileRefs = SD.work.mobileRefs.filter(function (r) { return r !== b.dataset.mobdel; }); re(); }; });
   document.querySelectorAll('[data-site]').forEach(function (x) { x.onchange = function () { var p = x.dataset.site.split('.'); SD.work.sites[+p[0]][p[1]] = p[1] === 'name' || p[1] === 'entity' ? x.value : +x.value; re(); }; });
   document.querySelectorAll('[data-sitedel]').forEach(function (b) { b.onclick = function () { SD.work.sites.splice(+b.dataset.sitedel, 1); re(); }; });
@@ -3550,6 +3552,65 @@ bindHrx = function () {
       if (a === 'ck') { GEO.pulse = Date.now() + 5000; var b0 = document.getElementById('mckBtn'); if (b0) b0.scrollIntoView({ block: 'center' }); }
       if ((a === 'perm' || a === 'out') && GEO.last) { if (a === 'out') geoCheckout(false); else exitDlg({ m: GEO.last.m, s: GEO.last.s }); } }
   }
+};
+
+/* ======================================================================
+   تثبيت التطبيق وتفعيل التنبيهات والموقع: إلزامي لمن تُفعَّل له البصمة من الجوال
+   ====================================================================== */
+var INST = { evt: null, done: false };
+window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); INST.evt = e; gateDraw(); });
+window.addEventListener('appinstalled', function () { INST.done = true; INST.evt = null; gateDraw(); });
+ALIAS['myatt-chk'] = ['myatt'];
+(function () { var h = location.hash.slice(1); if (h === 'myatt-chk') GEO.pend = 'chk'; window.addEventListener('hashchange', function () { if (location.hash.slice(1) === 'myatt-chk') GEO.pend = 'chk'; }); })();
+function isPhone() { return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.matchMedia && matchMedia('(pointer: coarse)').matches && window.screen.width < 900); }
+function isIOS() { return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+function standalone() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
+var GATE = { geo: null };
+function gateNeed() { var d = attT(); return role === 'staff' && d && d.on && isPhone(); }
+function gateState() {
+  var d = attT() || {};
+  return { inst: standalone() || INST.done, push: !!(d.push && typeof Notification !== 'undefined' && Notification.permission === 'granted'), geo: GATE.geo === 'granted' };
+}
+function gateDraw() {
+  var L = document.getElementById('gateLayer');
+  if (!gateNeed()) { if (L) L.remove(); return; }
+  var st = gateState(); if (st.inst && st.push && st.geo) { if (L) { L.remove(); toast('اكتمل التفعيل. البصمة من الجوال جاهزة'); } return; }
+  var ios = isIOS(), canPrompt = !!INST.evt;
+  var step = function (ok, n, t, body, btn) { return '<li class="' + (ok ? 'ok' : '') + '"><i>' + (ok ? ic('check') : n) + '</i><div><b>' + t + '</b>' + (ok ? '<small>تم</small>' : body + (btn || '')) + '</div></li>'; };
+  var instBody = st.inst ? '' : ios ? '<small>اضغط زر المشاركة ' + '<span class="shr">⎙</span>' + ' أسفل سفاري، ثم «إضافة إلى الشاشة الرئيسية»، ثم افتح «بنيان HR» من الشاشة الرئيسية وأكمل منه.</small>'
+    : canPrompt ? '<small>يُضاف إلى الشاشة الرئيسية كتطبيق، ويعمل منه الحضور والتنبيهات.</small>' : '<small>من قائمة المتصفح ⋮ اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»، ثم افتحه من الشاشة الرئيسية.</small>';
+  var html = '<div class="gate"><div class="gcard"><span class="glogo"><img src="' + LOGO + '" alt=""></span><h2>فعّل البصمة من جوالك</h2><p>هذه الخطوات إلزامية لتسجيل حضورك وانصرافك من المقر، ولا تأخذ أكثر من دقيقة.</p><ol class="gsteps">' +
+    step(st.inst, 1, 'ثبّت تطبيق «بنيان HR»', instBody, !st.inst && canPrompt ? '<button class="btn goldb" id="gInst">' + ic('dl') + 'تثبيت التطبيق</button>' : '') +
+    step(st.push, 2, 'فعّل التنبيهات', '<small>يصلك تنبيه عند بداية الدوام ونهايته، وللتأكد من وجودك في المقر أثناءه.</small>', !st.push ? '<button class="btn ' + (st.inst || !ios ? 'goldb' : '') + '" id="gPush"' + (ios && !st.inst ? ' disabled' : '') + '>' + ic('bell') + 'تفعيل التنبيهات</button>' : '') +
+    step(st.geo, 3, 'اسمح بتحديد الموقع', '<small>' + (GATE.geo === 'denied' ? 'رُفض الإذن. افتح إعدادات المتصفح أو التطبيق ← الأذونات ← الموقع ← «السماح».' : 'يُستخدم للتحقق من وجودك داخل نطاق مقر جهتك فقط أثناء الدوام.') + '</small>', !st.geo ? '<button class="btn goldb" id="gGeo">' + ic('pin') + 'السماح بالموقع</button>' : '') +
+    '</ol><small class="gnote">' + ic('info') + 'لا يُتتبَّع موقعك خارج وقت الدوام، ولا يُحفظ إلا عند البصمة.</small></div></div>';
+  if (!L) { L = document.createElement('div'); L.id = 'gateLayer'; L.setAttribute('role', 'dialog'); L.setAttribute('aria-modal', 'true'); document.body.appendChild(L); }
+  L.innerHTML = html;
+  var g = function (id) { return L.querySelector('#' + id); };
+  if (g('gInst')) g('gInst').onclick = function () { var e = INST.evt; if (!e) return; e.prompt(); e.userChoice.then(function (c) { if (c.outcome === 'accepted') INST.done = true; INST.evt = null; gateDraw(); }); };
+  if (g('gPush')) g('gPush').onclick = function () { pushOn(this); var t = setInterval(function () { if (gateState().push) { clearInterval(t); gateDraw(); } }, 800); setTimeout(function () { clearInterval(t); gateDraw(); }, 20000); };
+  if (g('gGeo')) g('gGeo').onclick = function () { var b = this; b.disabled = true; navigator.geolocation.getCurrentPosition(function () { GATE.geo = 'granted'; gateDraw(); geoStart(); }, function (er) { GATE.geo = er && er.code === 1 ? 'denied' : null; b.disabled = false; gateDraw(); }, { enableHighAccuracy: true, timeout: 20000 }); };
+}
+function gateCheck() {
+  if (!gateNeed()) return gateDraw();
+  if (GATE.geo === null && navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name: 'geolocation' }).then(function (p) { GATE.geo = p.state === 'granted' ? 'granted' : p.state === 'denied' ? 'denied' : ''; gateDraw(); p.onchange = function () { GATE.geo = p.state; gateDraw(); }; }, function () { GATE.geo = ''; gateDraw(); });
+  else gateDraw();
+}
+/* التحقق من التواجد عند فتح تنبيه «تأكيد التواجد» */
+function geoCheckOnce() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(function (p) {
+    geoTick(p); geoTick(p);
+    var g = GEO.last; if (g && g.m <= g.s.radius + Math.min(p.coords.accuracy / 2, 25)) toast('أنت داخل نطاق ' + g.s.name + '. شكرًا لك');
+  }, function () { toast('تعذّر تحديد موقعك؛ فعّل خدمة الموقع'); }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+}
+var _bindHrx2 = bindHrx;
+bindHrx = function () {
+  _bindHrx2();
+  if (role !== 'staff') return;
+  if ('serviceWorker' in navigator && !GATE.sw) { GATE.sw = 1; navigator.serviceWorker.register('sw.js').catch(function () { }); }
+  if (attT()) gateCheck();
+  if (GEO.pend === 'chk' && view === 'myatt' && attT()) { GEO.pend = ''; geoCheckOnce(); }
 };
 
 window.addEventListener('hashchange', route);

@@ -1843,3 +1843,15 @@ html[dir="ltr"] .side-card-box > .idcard-wrap {transform-origin: top left;}
 .exo { border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: var(--soft); display: grid; gap: 10px; align-content: start; }
 .exo h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 6px; } .exo p { margin: 0; color: var(--mute); font-size: 13px; } .exo .form { gap: 10px; }
 @media (max-width: 640px) { .exopts { grid-template-columns: 1fr; } }
+#gateLayer { position: fixed; inset: 0; z-index: 200; background: radial-gradient(120% 60% at 100% 0%, rgba(227,196,133,.16), transparent 60%), linear-gradient(185deg, #1b3463, #13264a 45%, #0a172e); overflow-y: auto; }
+.gate { min-height: 100%; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)); }
+.gcard { width: min(460px, 100%); background: var(--panel); color: var(--ink); border-radius: 26px; padding: 22px 20px; box-shadow: 0 30px 60px -30px rgba(0,0,0,.7); text-align: center; }
+.glogo { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 10px; border-radius: 18px; background: #13264a; border: 1px solid rgba(227,196,133,.35); } .glogo img { width: 42px; }
+.gcard h2 { margin: 0 0 6px; font-size: 21px; font-weight: 900; } .gcard > p { margin: 0 0 14px; color: var(--mute); font-size: 14px; }
+.gsteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; text-align: start; }
+.gsteps li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--soft); }
+.gsteps li > i { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 900; background: linear-gradient(140deg, #f6dda2, #d5a95f); color: #2c1d05; }
+.gsteps li.ok > i { background: var(--j-emerald); color: #fff; } .gsteps li.ok { opacity: .75; } .gsteps li > i .i { width: 18px; height: 18px; }
+.gsteps b { display: block; font-size: 15px; } .gsteps small { display: block; color: var(--mute); font-size: 12.5px; line-height: 1.7; margin: 2px 0 8px; } .gsteps li.ok small { color: var(--ok); margin: 0; }
+.gsteps .btn { width: 100%; height: 46px; } .shr { display: inline-block; font-weight: 900; }
+.gnote { display: flex; gap: 6px; align-items: flex-start; justify-content: center; margin-top: 12px; color: var(--faint); font-size: 12px; } .gnote .i { width: 14px; height: 14px; flex: none; margin-top: 3px; }
