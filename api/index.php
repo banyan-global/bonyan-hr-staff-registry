@@ -67,7 +67,7 @@ try {
         /* لوحة الموارد البشرية */
         'list' => fn() => admin_list(), 'photo' => fn() => photo($b), 'adminUpdate' => fn() => admin_update($b), 'adminUpload' => fn() => admin_upload($b),
         'adminMail' => fn() => admin_mail($b), 'message' => fn() => admin_message($b), 'messageWa' => fn() => message_wa($b), 'messages' => fn() => messages_list($b), 'audit' => fn() => audit_list($b),
-        'fileHistory' => fn() => file_history($b), 'fileRestore' => fn() => file_restore($b),
+        'fileHistory' => fn() => file_history($b), 'fileRestore' => fn() => file_restore($b), 'fileRemove' => fn() => file_remove($b),
         'backups' => fn() => backups_list(), 'backupNow' => fn() => backup_now(), 'health' => fn() => health(),
         /* طلبات المنسوبين */
         'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqDelete' => fn() => req_delete($b), 'payMonth' => fn() => pay_month($b),

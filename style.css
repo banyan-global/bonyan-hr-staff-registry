@@ -1477,3 +1477,17 @@ html.embed .drawer-scrim { display: none; }
 html.embed .drawer { width: 100%; border: 0; box-shadow: none; }
 html.embed .drawer-scrim { display: block; }
 html.embed .drawer { width: min(920px, 100%); }
+
+/* إزالة مرفق (لمالك المنصة) */
+.file-it { display: inline-flex; align-items: center; gap: 4px; margin: 2px 0 2px 6px; }
+.file-rm { display: inline-flex; align-items: center; gap: 6px; height: 30px; min-width: 30px; padding: 0 7px; border-radius: 999px; border: 1px solid transparent; background: transparent; color: var(--muted, #7a8599); font: inherit; font-size: .78rem; font-weight: 800; cursor: pointer; transition: background .2s, color .2s, border-color .2s, padding .2s; }
+.file-rm svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.file-rm span { display: none; white-space: nowrap; }
+.file-rm:hover, .file-rm:focus-visible { color: #c0392b; background: rgba(192, 57, 43, .08); border-color: rgba(192, 57, 43, .25); }
+.file-rm.arm { color: #fff; background: #c0392b; border-color: #c0392b; padding: 0 12px; }
+.file-rm.arm span { display: inline; }
+.file-rm.busy { opacity: .6; pointer-events: none; }
+@media (max-width: 560px) {
+  .dr-chips code { white-space: nowrap; font-size: .78rem; }
+  .dr-head .dr-t h2 { font-size: 1.15rem; line-height: 1.35; overflow-wrap: anywhere; }
+}

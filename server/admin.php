@@ -18,7 +18,7 @@ function file_history(array $b): array {
     $ref = (string)($b['ref'] ?? '');
     $out = array_map(function ($f) {
         return ['id' => $f['id'], 'kind' => $f['kind'], 'title' => $f['kind'][0] === '_' ? 'بطاقة المنسوب' : col_title($f['kind']), 'name' => $f['name'], 'size' => (int)$f['size'],
-            'at' => substr($f['created_at'], 0, 16), 'by' => $f['created_by'], 'archivedAt' => $f['archived_at'] ? substr($f['archived_at'], 0, 16) : '', 'archivedBy' => (string)$f['archived_by'], 'url' => file_url($f['id'])];
+            'at' => substr($f['created_at'], 0, 16), 'by' => $f['created_by'], 'archivedAt' => $f['archived_at'] ? substr($f['archived_at'], 0, 16) : '', 'archivedBy' => (string)$f['archived_by'], 'removed' => file_removed($f), 'url' => file_url($f['id'])];
     }, files_of($ref, null, true));
     return ['ok' => true, 'files' => $out];
 }
@@ -27,10 +27,36 @@ function file_restore(array $b): array {
     $f = q1('SELECT * FROM files WHERE id=?', [(string)($b['id'] ?? '')]);
     if (!$f || !$f['archived_at']) throw new HttpError('not_found', 404);
     if (!has_perm($u, 'finance.view') && in_array($f['kind'], FINANCE_KEYS, true)) throw new HttpError('forbidden', 403);
+    if (file_removed($f) && !is_owner($u)) throw new HttpError('هذا المرفق أزاله مالك المنصة، ولا يعيده غيره', 403);
     q('UPDATE files SET archived_at=?, archived_by=? WHERE ref=? AND kind=? AND archived_at IS NULL', [now(), $u['_label'], $f['ref'], $f['kind']]);
     q('UPDATE files SET archived_at=NULL, archived_by=NULL WHERE id=?', [$f['id']]);
     audit_log($f['ref'], 'استرجاع مرفق من الأرشيف', $u['_label'] . ' · ' . $f['name'], $u['_label']);
     return ['ok' => true];
+}
+
+/* إزالة مرفق من ملف المنسوب — لمالك المنصة وحده.
+ * لا يُمسح الملف من التخزين: يُنقل إلى الأرشيف بعلامة «إزالة» فيختفي من الملف والبطاقة والقوائم،
+ * ولا يعيده إلا المالك نفسه، ويُسجَّل في سجل العمليات */
+const FILE_REMOVED_MARK = 'إزالة · ';
+function file_removed(array $f): bool { return $f['archived_at'] && strncmp((string)$f['archived_by'], FILE_REMOVED_MARK, strlen(FILE_REMOVED_MARK)) === 0; }
+function file_remove(array $b): array {
+    $u = current_user();
+    if (!$u || !is_owner($u)) throw new HttpError('إزالة المرفقات لمالك المنصة فقط', 403);
+    $id = (string)($b['id'] ?? '');
+    if (!preg_match('/^[a-f0-9]{32}$/', $id)) throw new HttpError('not_found', 404);
+    $f = q1('SELECT * FROM files WHERE id=?', [$id]);
+    if (!$f || $f['archived_at']) throw new HttpError('المرفق غير موجود أو أُزيل من قبل', 404);
+    q('UPDATE files SET archived_at=?, archived_by=? WHERE id=? AND archived_at IS NULL', [now(), FILE_REMOVED_MARK . $u['_label'], $id]);
+    /* صورة البطاقة المحفوظة تحمل الصورة الشخصية، فتُزال معها */
+    if ($f['kind'] === 'photo') q("UPDATE files SET archived_at=?, archived_by=? WHERE ref=? AND kind LIKE '\\_card%' AND archived_at IS NULL", [now(), FILE_REMOVED_MARK . $u['_label'], $f['ref']]);
+    /* إن لم يبق في الخانة ملف، يُفرَّغ أي رابط قديم محفوظ فيها (من النظام السابق) حتى لا يعود للظهور */
+    if ($f['kind'][0] !== '_' && !files_of($f['ref'], $f['kind'])) {
+        $r = staff_get($f['ref']);
+        if ($r && trim((string)($r['data'][$f['kind']] ?? '')) !== '') { $r['data'][$f['kind']] = ''; staff_put($r); }
+    }
+    $title = $f['kind'][0] === '_' ? 'بطاقة المنسوب' : col_title($f['kind']);
+    audit_log($f['ref'], 'إزالة مرفق', $title . ' · ' . $f['name'] . (trim((string)($b['reason'] ?? '')) !== '' ? ' · السبب: ' . mb_substr(trim((string)$b['reason']), 0, 200) : ''), $u['_label']);
+    return ['ok' => true, 'kind' => $f['kind'], 'ref' => $f['ref']];
 }
 
 /* نسخة احتياطية كاملة: قاعدة البيانات (JSON مضغوط) في مجلد التخزين الخاص؛ تُحفظ آخر ٣٠ نسخة */

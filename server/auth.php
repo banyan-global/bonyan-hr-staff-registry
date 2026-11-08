@@ -114,7 +114,16 @@ function user_perms(array $u): array {
 function user_public(array $u): array {
     return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'title' => $u['title'], 'role' => $u['role'],
         'roleName' => ROLE_NAMES[$u['role']] ?? $u['role'], 'perms' => user_perms($u), 'active' => (bool)$u['active'], 'notify' => user_notify($u),
-        'lastLogin' => $u['last_login_at'] ? substr($u['last_login_at'], 0, 16) : '', 'locked' => $u['locked_until'] && $u['locked_until'] > now()];
+        'lastLogin' => $u['last_login_at'] ? substr($u['last_login_at'], 0, 16) : '', 'locked' => $u['locked_until'] && $u['locked_until'] > now(), 'owner' => is_owner($u)];
+}
+/* مالك المنصة: البريد المحدد في الإعدادات (owner)، وإلا أول حساب «مدير النظام» أُنشئ فيها. وحده يزيل المرفقات من الملفات */
+function is_owner(array $u): bool {
+    if (empty($u['id']) || empty($u['active'])) return false;
+    $o = strtolower(trim((string)cfg('owner', '')));
+    if ($o !== '') return strtolower((string)$u['email']) === $o;
+    static $first = null;
+    if ($first === null) { $r = q1("SELECT id FROM users WHERE role='admin' ORDER BY id LIMIT 1"); $first = $r ? (int)$r['id'] : 0; }
+    return $u['role'] === 'admin' && (int)$u['id'] === $first;
 }
 /* هل يصله تنبيه «تسجيل جديد» والتنبيه الأسبوعي؟ (اختيار صريح، وإلا حسب الدور) */
 function user_notify(array $u): bool { return isset($u['notify']) && $u['notify'] !== null ? (bool)$u['notify'] : in_array($u['role'], ['admin', 'hr'], true); }

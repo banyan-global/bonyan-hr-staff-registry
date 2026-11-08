@@ -56,7 +56,7 @@
       search: 'ابحث بالاسم أو الرقم المرجعي أو الجواز أو الجوال…', fCountry: 'دولة العمل', fEntity: 'الجهة', fStatus: 'الحالة',
       results: '{n} نتيجة', clear: 'مسح التصفية', more: 'عرض المزيد', empty: 'لا توجد نتائج مطابقة.', none: 'لا توجد بيانات بعد. ستظهر هنا بعد أول استمارة مكتملة.',
       cName: 'المنسوب', cRef: 'الرقم المرجعي', cEnt: 'الجهة', cJob: 'المسمى', cWork: 'دولة العمل', cNat: 'الجنسية', cMobile: 'الجوال', cPass: 'انتهاء الجواز', cStatus: 'الحالة',
-      folder: 'مجلد المرفقات', close: 'إغلاق', file: 'ملف {n}', openFile: 'عرض الملف', noFile: 'لا يوجد',
+      folder: 'مجلد المرفقات', close: 'إغلاق', file: 'ملف {n}', openFile: 'عرض الملف', rmFile: 'إزالة المرفق', rmSure: 'تأكيد الإزالة', rmDone: 'أُزيل المرفق من الملف. تجده في سجل العمليات، ولا يعيده غيرك.', rmFail: 'تعذّرت الإزالة', noFile: 'لا يوجد',
       g: { id: 'البيانات الشخصية', docs: 'الوثائق الرسمية', contact: 'التواصل والعنوان', em: 'الطوارئ', job: 'الوظيفة والعقد', edu: 'المؤهلات والخبرات', fin: 'الراتب والبيانات المالية', files: 'المرفقات', sys: 'بيانات السجل' },
       quals: 'المؤهلات', exp: 'الخبرات', langs: 'اللغات', expired: 'منتهية', soon: 'خلال {n} يومًا'
     },
@@ -72,7 +72,7 @@
       search: 'Search by name, reference, passport or mobile…', fCountry: 'Work country', fEntity: 'Entity', fStatus: 'Status',
       results: '{n} results', clear: 'Clear filters', more: 'Show more', empty: 'No matching results.', none: 'No data yet. Records appear here after the first completed form.',
       cName: 'Staff member', cRef: 'Reference', cEnt: 'Entity', cJob: 'Job title', cWork: 'Work country', cNat: 'Nationality', cMobile: 'Mobile', cPass: 'Passport expiry', cStatus: 'Status',
-      folder: 'Documents folder', close: 'Close', file: 'File {n}', openFile: 'Open file', noFile: 'None',
+      folder: 'Documents folder', close: 'Close', file: 'File {n}', openFile: 'Open file', rmFile: 'Remove attachment', rmSure: 'Confirm removal', rmDone: 'Attachment removed from the file. It is logged, and only you can bring it back.', rmFail: 'Could not remove', noFile: 'None',
       g: { id: 'Personal details', docs: 'Official documents', contact: 'Contact & address', em: 'Emergency', job: 'Job & contract', edu: 'Qualifications & experience', fin: 'Salary & payment', files: 'Documents', sys: 'Record' },
       quals: 'Qualifications', exp: 'Experience', langs: 'Languages', expired: 'Expired', soon: 'In {n} days'
     },
@@ -88,7 +88,7 @@
       search: 'Cari nama, nomor referensi, paspor atau ponsel…', fCountry: 'Negara kerja', fEntity: 'Lembaga', fStatus: 'Status',
       results: '{n} hasil', clear: 'Hapus filter', more: 'Tampilkan lagi', empty: 'Tidak ada hasil yang cocok.', none: 'Belum ada data. Data muncul setelah formulir pertama selesai.',
       cName: 'Staf', cRef: 'Referensi', cEnt: 'Lembaga', cJob: 'Jabatan', cWork: 'Negara kerja', cNat: 'Kewarganegaraan', cMobile: 'Ponsel', cPass: 'Paspor berakhir', cStatus: 'Status',
-      folder: 'Folder dokumen', close: 'Tutup', file: 'Berkas {n}', openFile: 'Buka berkas', noFile: 'Tidak ada',
+      folder: 'Folder dokumen', close: 'Tutup', file: 'Berkas {n}', openFile: 'Buka berkas', rmFile: 'Hapus lampiran', rmSure: 'Konfirmasi penghapusan', rmDone: 'Lampiran dihapus dari berkas. Tercatat di log, dan hanya Anda yang dapat mengembalikannya.', rmFail: 'Gagal menghapus', noFile: 'Tidak ada',
       g: { id: 'Data pribadi', docs: 'Dokumen resmi', contact: 'Kontak & alamat', em: 'Darurat', job: 'Pekerjaan & kontrak', edu: 'Kualifikasi & pengalaman', fin: 'Gaji & pembayaran', files: 'Dokumen', sys: 'Catatan' },
       quals: 'Kualifikasi', exp: 'Pengalaman', langs: 'Bahasa', expired: 'Kedaluwarsa', soon: 'Dalam {n} hari'
     }
@@ -946,6 +946,36 @@
   }
 
   /* ---------------------------------------------------------- التفاصيل */
+  /* إزالة مرفق: لمالك المنصة وحده، بضغطتين (الثانية للتأكيد) */
+  function isOwner() { return AUTH && S.me && S.me.owner === true; }
+  function fileId(u) { var m = String(u || '').match(/[?&]id=([a-f0-9]{32})/); return m ? m[1] : ''; }
+  function fileRmWrap(link, u) {
+    var id = isOwner() ? fileId(u) : '';
+    if (!id) return link;
+    return '<span class="file-it">' + link + '<button type="button" class="file-rm" data-adm="fileRm" data-fid="' + id + '" title="' + esc(x('rmFile')) + '" aria-label="' + esc(x('rmFile')) + '">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5"/></svg><span>' + esc(x('rmSure')) + '</span></button></span>';
+  }
+  function fileRm(btn) {
+    if (!btn.classList.contains('arm')) {
+      $$('.file-rm.arm').forEach(function (o) { o.classList.remove('arm'); });
+      btn.classList.add('arm'); clearTimeout(btn._t);
+      btn._t = setTimeout(function () { btn.classList.remove('arm'); }, 4000);
+      return;
+    }
+    clearTimeout(btn._t); btn.disabled = true; btn.classList.add('busy');
+    var ref = S.open;
+    A.api({ action: 'fileRemove', id: btn.getAttribute('data-fid') }).then(function (j) {
+      if (j && j.kind === 'photo') delete PHOTOS[ref];
+      return load(readCode(), true);
+    }).then(function () {
+      toParent({ type: 'saved', ref: ref });
+      if ((S.data.rows || []).some(function (v) { return v.ref === ref; })) openDrawer(ref);
+      A.toast(x('rmDone'));
+    }).catch(function (e) {
+      btn.disabled = false; btn.classList.remove('busy', 'arm');
+      A.toast(x('rmFail') + ((e && e.message) ? ' · ' + e.message : ''));
+    });
+  }
   function openDrawer(ref) {
     var r = (S.data.rows || []).filter(function (v) { return v.ref === ref; })[0];
     if (!r) return;
@@ -974,7 +1004,7 @@
         var c = cols[k], v = r[k], val;
         if (c[2] === 'f') {
           var fl = files(v);
-          val = fl.length ? fl.map(function (u, i) { return '<a class="file-btn" href="' + esc(u) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2.5h8l4 4V21H6zM14 2.5V7h4"/></svg>' + esc(fl.length > 1 ? x('file', { n: i + 1 }) : x('openFile')) + '</a>'; }).join('')
+          val = fl.length ? fl.map(function (u, i) { return fileRmWrap('<a class="file-btn" href="' + esc(u) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2.5h8l4 4V21H6zM14 2.5V7h4"/></svg>' + esc(fl.length > 1 ? x('file', { n: i + 1 }) : x('openFile')) + '</a>', u); }).join('')
             : '<span class="muted">' + esc(v || x('noFile')) + '</span>';
         } else if (EXPIRY.indexOf(k) > -1) val = expChip(v);
         else if (k === 'salary') val = '<b class="money" dir="ltr">' + esc(v) + (r.currency ? ' ' + esc(r.currency) : '') + '</b>';
@@ -1269,6 +1299,7 @@
         else if (a === 'clear') { S.f = { q: '', country: '', nat: '', entity: '', status: '', emp: '', gender: '', doc: '' }; redrawPanel(); }
         else if (a === 'close') { if (S.edit && edCollect().n) { A.toast(x('edDirty')); return; } closeDrawer(); }
         else if (a === 'print') window.print();
+        else if (a === 'fileRm') fileRm(act);
         else if (a === 'edit') { S.edit = S.open; ED.files = {}; openDrawer(S.open); var db = $('#admDrawer .dr-body'); if (db) db.scrollTop = 0; }
         else if (a === 'edCancel') { S.edit = null; ED.files = {}; openDrawer(S.open); }
         else if (a === 'edSave') edSave(act);
