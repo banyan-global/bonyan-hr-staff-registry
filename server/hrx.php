@@ -320,10 +320,10 @@ function att_month_rows(string $ym, ?string $only = null): array {
         foreach ($days as $d) {
             /* يُبرَّر التأخير إن كان الحضور قبل نهاية الاستئذان (مع السماحية)، والخروج المبكر إن كان الخروج بعد بدايته */
             $mn = fn($t) => $t ? ((int)substr($t, 0, 2)) * 60 + (int)substr($t, 3, 2) : null; $g = (int)$W['grace'];
-            $in = $mn(substr((string)$d['in_time'], 0, 5)); $out = $mn(substr((string)$d['out_time'], 0, 5)); $exL = false; $exE = false;
+            $in = $mn(substr((string)$d['in_time'], 0, 5)); $outT = $mn(substr((string)$d['out_time'], 0, 5)); $exL = false; $exE = false;
             foreach ($pm[$d['day']] ?? [] as $p) {
                 if ($p['k'] === 'تأخر صباحي' && $in !== null && $in <= $mn($p['to']) + $g) $exL = true;
-                if ($p['k'] === 'خروج مبكر' && $out !== null && $out >= $mn($p['from']) - $g) $exE = true;
+                if ($p['k'] === 'خروج مبكر' && $outT !== null && $outT >= $mn($p['from']) - $g) $exE = true;
             }
             if ($d['late_min'] > 0) { if ($exL) $excused++; else { $late++; $lateMin += (int)$d['late_min']; } }
             if ($d['early_min'] > 0) { if ($exE) $excused++; else $early++; }

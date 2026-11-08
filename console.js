@@ -3471,7 +3471,7 @@ function pushOn(btn) {
     .catch(function (e) { if (btn) btn.disabled = false; toast(e && e.message ? e.message : errText(e)); });
 }
 function geoNote(title, body, actions) {
-  try { if (Notification.permission === 'granted' && navigator.serviceWorker) navigator.serviceWorker.getRegistration().then(function (r) { if (r) r.showNotification(title, { body: body, icon: 'icon-192.png', dir: 'rtl', lang: 'ar', tag: 'att-exit', renotify: true, requireInteraction: true, data: { url: '#myatt' }, actions: actions || [] }); }); } catch (e) { }
+  try { if (Notification.permission === 'granted' && navigator.serviceWorker) navigator.serviceWorker.getRegistration().then(function (r) { if (r) r.showNotification(title, { body: body, icon: 'icon-192.png', dir: 'rtl', lang: 'ar', tag: 'att-exit', renotify: true, requireInteraction: true, data: { url: '#myatt' }, actions: actions || [] }).catch(function () { }); }).catch(function () { }); } catch (e) { }
 }
 /* مراقبة النطاق أثناء الدوام (تعمل والمنصة مفتوحة على الجوال) */
 function geoStart() {
@@ -3612,6 +3612,42 @@ bindHrx = function () {
   if (attT()) gateCheck();
   if (GEO.pend === 'chk' && view === 'myatt' && attT()) { GEO.pend = ''; geoCheckOnce(); }
 };
+
+/* ---------- الجوال: كل جدول يحمل عناوين أعمدته ليُعرض بطاقات ---------- */
+(function () {
+  var SKIP = '.mini, .rtab, .matrix, .sappr';
+  function label(t) {
+    if (t.matches(SKIP)) return;
+    var hs = [].map.call(t.querySelectorAll('thead th'), function (th) { return th.textContent.replace(/\s+/g, ' ').trim(); });
+    if (!hs.length) return;
+    t.classList.add('mc');
+    [].forEach.call(t.querySelectorAll('tbody tr, tfoot tr'), function (tr) {
+      var i = 0;
+      [].forEach.call(tr.children, function (td, k) {
+        if (!td.hasAttribute('data-l')) td.setAttribute('data-l', (td.colSpan || 1) > 1 ? '' : (hs[i] || ''));
+        if (k > 0 && !td.dataset.mv && td.firstChild && !(td.childNodes.length === 1 && td.firstElementChild && td.firstElementChild.classList.contains('mv'))) { var w = document.createElement('div'); w.className = 'mv'; while (td.firstChild) w.appendChild(td.firstChild); td.appendChild(w); td.dataset.mv = 1; }
+        if (k === 0 && (td.querySelector('.av, .pcell, .who, b') || /المنسوب|الموظف|المتقدم|الجهة|اليوم/.test(hs[0] || ''))) td.classList.add('rh');
+        i += td.colSpan || 1;
+      });
+      if (tr.children.length > 5 && !tr.querySelector('td[colspan]')) tr.classList.add('g2');
+    });
+  }
+  var pend = false;
+  function run() { pend = false; [].forEach.call(document.querySelectorAll('.tw > table'), label); fixTabs(); }
+  /* الشريحة المختارة تظهر كاملة دون أن تتحرك الصفحة */
+  function fixTabs() {
+    [].forEach.call(document.querySelectorAll('.vtabs'), function (v) {
+      if (v.scrollWidth <= v.clientWidth + 2 || v.dataset.sc === location.hash) return;
+      var s = v.querySelector('[aria-selected="true"]'); if (!s) return;
+      v.dataset.sc = location.hash;
+      var vr = v.getBoundingClientRect(), sr = s.getBoundingClientRect();
+      if (sr.left < vr.left || sr.right > vr.right) v.scrollLeft += (sr.left + sr.width / 2) - (vr.left + vr.width / 2);
+    });
+  }
+  try {
+    new MutationObserver(function () { if (!pend) { pend = true; requestAnimationFrame(run); } }).observe(document.documentElement, { childList: true, subtree: true });
+  } catch (e) { }
+})();
 
 window.addEventListener('hashchange', route);
 boot();
