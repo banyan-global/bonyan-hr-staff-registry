@@ -1790,3 +1790,46 @@ html[dir="ltr"] .side-card-box > .idcard-wrap {transform-origin: top left;}
 .grid.g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 @media (max-width: 900px) { .grid.g3 { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) { .culist li { grid-template-columns: 42px minmax(0, 1fr); } .culist li > :last-child { grid-column: 1 / -1; justify-self: start; } }
+.lb-carry { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--gold-ink); margin-top: 8px; } .lb-carry.warn { color: var(--bad); } .lb-carry .i { width: 14px; height: 14px; }
+.lb-q { display: grid; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.lb-q > div { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 12.5px; }
+.lb-q i { height: 6px; border-radius: 99px; background: var(--well); overflow: hidden; } .lb-q em { display: block; height: 100%; background: var(--j-emerald); border-radius: 99px; }
+.lb-q b { font-variant-numeric: tabular-nums; } .lb-q small { color: var(--faint); font-weight: 600; }
+.wside .lb-q > div { grid-template-columns: 90px minmax(0, 1fr) auto; color: #c3cfe2; } .wside .lb-q i { background: rgba(255,255,255,.12); }
+.qgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.qgrid label { display: grid; grid-template-columns: minmax(0, 1fr) 64px auto; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); font-size: 13px; font-weight: 700; }
+.qgrid input { height: 34px; padding: 0 6px; text-align: center; } .qgrid small { color: var(--faint); font-size: 11px; }
+.seg2 button small { display: block; font-size: 11px; font-weight: 600; color: var(--faint); margin-top: 2px; }
+.sites { display: grid; gap: 8px; margin-bottom: 8px; }
+.siter { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 80px 36px 36px; gap: 6px; align-items: center; }
+.siter input { height: 38px; font-size: 13px; }
+@media (max-width: 760px) { .siter { grid-template-columns: 1fr 1fr; } }
+.mobck { padding: 18px 20px; margin-bottom: 16px; background: linear-gradient(135deg, var(--panel), color-mix(in srgb, #15718a 7%, var(--panel))); }
+.mck { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.mck .tile { width: 52px; height: 52px; border-radius: 16px; } .mck h2 { margin: 0 0 4px; font-size: 18px; } .mck p { margin: 0; color: var(--mute); font-size: 13.5px; }
+.mtimes { display: flex; gap: 16px; margin-top: 8px; font-size: 13px; color: var(--mute); } .mtimes b { color: var(--ink); font-size: 15px; margin-inline-start: 4px; }
+.btn.big { height: 54px; padding: 0 22px; font-size: 16px; border-radius: 16px; }
+@media (max-width: 640px) { .mck { grid-template-columns: 44px minmax(0, 1fr); } .mck .btn.big { grid-column: 1 / -1; width: 100%; } }
+.fixbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0 4px; } .fixbar small { color: var(--faint); font-size: 12px; }
+.affix { border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: var(--soft); margin: 6px 0 10px; }
+.afacts { display: flex; gap: 8px; align-items: center; margin-top: 10px; } .afacts .sp { flex: 1; }
+.evb { display: inline-grid; justify-items: center; min-width: 64px; padding: 6px 10px; border-radius: 14px; color: #fff; line-height: 1.15; }
+.evb b { font-size: 18px; font-weight: 900; } .evb small { font-size: 10.5px; font-weight: 800; opacity: .92; }
+.evb.emerald { background: var(--j-emerald); } .evb.sapphire { background: var(--j-sapphire); } .evb.gold { background: var(--j-gold); color: #3a2a07; } .evb.amethyst { background: var(--j-amethyst); } .evb.garnet { background: var(--j-garnet); }
+.evr { display: grid; gap: 6px; justify-items: end; }
+.evbars { display: flex; gap: 3px; align-items: flex-end; height: 18px; margin-top: 6px; }
+.evbars i { width: 10px; height: 100%; background: var(--well); border-radius: 3px; display: flex; align-items: flex-end; overflow: hidden; } .evbars em { display: block; width: 100%; background: var(--j-gold); }
+.evcrit { display: grid; gap: 8px; }
+.evc { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); font-weight: 700; font-size: 13.5px; }
+.evs { display: flex; gap: 5px; } .evs button { width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; font-weight: 800; cursor: pointer; }
+.evs button[aria-checked="true"] { background: var(--j-gold); border-color: transparent; color: #2c1d05; box-shadow: 0 6px 14px -8px rgba(139, 100, 33, .9); }
+@media (max-width: 560px) { .evc { grid-template-columns: minmax(0, 1fr); } }
+.jbshare { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line-2); box-shadow: var(--sh); margin-bottom: 16px; }
+.jbshare b { display: block; } .jbshare span { font-size: 12.5px; color: var(--faint); word-break: break-all; }
+.jbcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.jbcard { background: var(--panel); border: 1px solid var(--line-2); border-radius: 22px; padding: 16px; box-shadow: var(--sh); display: grid; gap: 10px; }
+.jbcard.off { opacity: .7; } .jbcard header { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.jbcard h3 { margin: 0; font-size: 16px; } .jbcard header span { font-size: 12.5px; color: var(--faint); } .jbcard p { margin: 0; font-size: 13.5px; color: var(--mute); line-height: 1.8; }
+.jbst { display: flex; flex-wrap: wrap; gap: 6px; } .jbcard footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--line-2); padding-top: 10px; } .jbcard footer small { flex: 1; color: var(--faint); font-size: 12px; }
+.aptab td { vertical-align: top; }
+@media (max-width: 640px) { .jbshare { grid-template-columns: 44px minmax(0, 1fr); } .jbshare .btn { grid-column: span 1; } }

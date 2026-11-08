@@ -44,6 +44,7 @@ try {
         elseif ($a === 'backupDownload') backup_download();
         elseif ($a === 'exportXlsx') export_xlsx();
         elseif ($a === 'zip') staff_zip();
+        elseif ($a === 'cv') cv_serve();
         else out(['ok' => true, 'service' => 'Bonyan HR · Global Staff Registry', 'v' => BHR_VERSION]);
         exit;
     }
@@ -71,6 +72,9 @@ try {
         /* طلبات المنسوبين */
         'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqDelete' => fn() => req_delete($b), 'payMonth' => fn() => pay_month($b),
         'actList' => fn() => act_list($b), 'actSave' => fn() => act_save($b), 'actDecide' => fn() => act_decide($b), 'actAck' => fn() => act_ack($b), 'actVoid' => fn() => act_void($b),
+        'attToday' => fn() => att_today($b), 'attCheck' => fn() => att_check($b), 'attFix' => fn() => att_fix($b),
+        'evList' => fn() => ev_list($b), 'evSave' => fn() => ev_save($b), 'evAck' => fn() => ev_ack($b), 'evDelete' => fn() => ev_delete($b),
+        'jobList' => fn() => job_list($b), 'jobSave' => fn() => job_save($b), 'jobsPublic' => fn() => jobs_public($b), 'jobApply' => fn() => job_apply($b), 'appSet' => fn() => app_set($b),
         'cusList' => fn() => cus_list($b), 'cusSave' => fn() => cus_save($b), 'cusReturn' => fn() => cus_return($b), 'cusAck' => fn() => cus_ack($b), 'reqTrack' => fn() => req_track($b), 'reqForms' => fn() => req_forms(), 'reqSupsSave' => fn() => req_sups_save($b), 'reqAct' => fn() => req_act($b), 'reqActDo' => fn() => req_act_do($b),
         /* الوحدات المتكاملة */
         'siteGet' => fn() => site_get(), 'uiSave' => fn() => ui_save($b), 'siteSave' => fn() => site_save($b), 'myExtra' => fn() => my_extra(), 'leaveBalances' => fn() => leave_balances(),

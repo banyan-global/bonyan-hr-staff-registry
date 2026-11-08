@@ -10,8 +10,9 @@ const SITE_DEFAULTS = [
     'modules' => ['reqs' => true, 'forms' => true, 'payroll' => true, 'att' => true, 'news' => true, 'org' => true, 'reports' => true, 'acts' => true, 'custody' => true, 'evals' => true, 'jobs' => true],
     'home' => ['hero' => true, 'kpis' => true, 'todo' => true, 'qa' => true, 'events' => true, 'charts' => true, 'quality' => true, 'cal' => true, 'ents' => true, 'recent' => true, 'log' => true],
     'staff' => ['card' => true, 'docs' => true, 'pay' => true, 'reqs' => true, 'balance' => true, 'att' => true, 'news' => true, 'update' => true, 'myhr' => true],
-    'leave' => ['annual' => 30, 'prorate' => true, 'kinds' => ['اعتيادية (سنوية)']],
-    'work' => ['start' => '08:00', 'end' => '16:00', 'grace' => 15, 'weekend' => [5, 6]],
+    'leave' => ['annual' => 30, 'prorate' => true, 'kinds' => ['اعتيادية (سنوية)'], 'carry' => 0,
+        'quotas' => ['مرضية' => 30, 'طارئة (اضطرارية)' => 5, 'أمومة' => 70, 'حج' => 10, 'زواج' => 5, 'وفاة قريب' => 5, 'دراسة / تدريب' => 0, 'تعويضية' => 0]],
+    'work' => ['start' => '08:00', 'end' => '16:00', 'grace' => 15, 'weekend' => [5, 6], 'probation' => 90, 'mobile' => 'off', 'mobileRefs' => [], 'sites' => []],
 ];
 function site(): array {
     static $c = null; if ($c !== null) return $c;
@@ -47,6 +48,8 @@ function site_save(array $b): array {
         $o['leave']['prorate'] = !empty($L['prorate']);
         $kinds = array_values(array_intersect(LEAVE_KINDS, (array)($L['kinds'] ?? [])));
         $o['leave']['kinds'] = $kinds ?: ['اعتيادية (سنوية)'];
+        $o['leave']['carry'] = max(0, min(60, (int)($L['carry'] ?? 0)));
+        if (isset($L['quotas']) && is_array($L['quotas'])) { $qq = []; foreach ($L['quotas'] as $k => $v) if (in_array($k, LEAVE_KINDS, true) && !in_array($k, $o['leave']['kinds'], true)) $qq[$k] = max(0, min(180, (int)$v)); $o['leave']['quotas'] = $qq; }
     }
     if (isset($in['work'])) {
         $W = $in['work']; $t = fn($v, $d) => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string)$v) ? (string)$v : $d;
@@ -54,6 +57,17 @@ function site_save(array $b): array {
         if ($o['work']['end'] <= $o['work']['start']) throw new HttpError('وقت نهاية الدوام يجب أن يكون بعد بدايته');
         $o['work']['grace'] = max(0, min(120, (int)($W['grace'] ?? 15)));
         $o['work']['weekend'] = array_values(array_unique(array_filter(array_map('intval', (array)($W['weekend'] ?? [])), fn($d) => $d >= 0 && $d <= 6)));
+        $o['work']['probation'] = max(0, min(180, (int)($W['probation'] ?? 90)));
+        $o['work']['mobile'] = in_array($W['mobile'] ?? 'off', ['off', 'all', 'listed'], true) ? $W['mobile'] : 'off';
+        $o['work']['mobileRefs'] = array_values(array_filter(array_map('strval', (array)($W['mobileRefs'] ?? [])), fn($r) => (bool)preg_match('/^[A-Z0-9-]{4,40}$/', $r)));
+        $sites = [];
+        foreach (array_slice((array)($W['sites'] ?? []), 0, 30) as $x) {
+            $nm = mb_substr(safe_text($x['name'] ?? ''), 0, 80); $la = (float)($x['lat'] ?? 0); $lo = (float)($x['lng'] ?? 0); $rad = max(30, min(5000, (int)($x['radius'] ?? 150)));
+            if ($nm === '' || abs($la) > 90 || abs($lo) > 180 || ($la == 0 && $lo == 0)) throw new HttpError('أكمل اسم كل موقع وإحداثياته');
+            $sites[] = ['name' => $nm, 'lat' => round($la, 6), 'lng' => round($lo, 6), 'radius' => $rad];
+        }
+        $o['work']['sites'] = $sites;
+        if ($o['work']['mobile'] !== 'off' && !$sites) throw new HttpError('أضف موقع عمل واحدًا على الأقل قبل تفعيل الحضور من الجوال');
     }
     setting_set('site', json_encode($o, JSON_UNESCAPED_UNICODE));
     audit_log('', 'تعديل إعدادات المنصة', '', $me['_label']);
@@ -62,10 +76,39 @@ function site_save(array $b): array {
 
 /* ============================================================ أرصدة الإجازات */
 /* الاستحقاق السنوي (يُحتسب بالتناسب في سنة المباشرة إن فُعّل)، والمستهلك = الإجازات المعتمدة من الأنواع المخصومة في السنة الحالية */
+function leave_annual_left(string $ref, array $rec, int $y): float {
+    $L = site()['leave']; $start = (string)($rec['data']['startDate'] ?? ''); $ent = (float)$L['annual'];
+    if (preg_match('/^(\d{4})-(\d{2})-\d{2}$/', $start, $m)) { if ((int)$m[1] > $y) $ent = 0; elseif ((int)$m[1] === $y && $L['prorate']) $ent = round($L['annual'] * (13 - (int)$m[2]) / 12, 1); }
+    $used = 0;
+    foreach (q("SELECT data FROM requests WHERE ref=? AND type='leave' AND status='approved'", [$ref])->fetchAll() as $r) {
+        $d = json_decode($r['data'], true) ?: []; if (substr((string)($d['from'] ?? ''), 0, 4) !== (string)$y) continue;
+        if (in_array(leave_kind_norm((string)($d['kind'] ?? '')), $L['kinds'], true)) $used += (int)($d['days'] ?? 0);
+    }
+    return max(0, $ent - $used);
+}
+/* رصيد الأنواع المستقلة (مرضية، طارئة، أمومة، حج، زواج، وفاة) للسنة الحالية */
+function leave_quota_left(string $ref, string $kind, string $exceptNo = ''): ?array {
+    $q = (int)(site()['leave']['quotas'][$kind] ?? 0); if ($q <= 0) return null;
+    $y = (string)date('Y'); $used = 0; $pend = 0;
+    foreach (q("SELECT no, status, data FROM requests WHERE ref=? AND type='leave' AND status IN ('approved','pending') AND no<>?", [$ref, $exceptNo])->fetchAll() as $r) {
+        $d = json_decode($r['data'], true) ?: []; if (leave_kind_norm((string)($d['kind'] ?? '')) !== $kind || substr((string)($d['from'] ?? ''), 0, 4) !== $y) continue;
+        if ($r['status'] === 'approved') $used += (int)($d['days'] ?? 0); else $pend += (int)($d['days'] ?? 0);
+    }
+    return ['quota' => $q, 'used' => $used, 'pending' => $pend, 'left' => max(0, $q - $used - $pend)];
+}
+function leave_quota_check(string $ref, array $o): void {
+    $k = (string)$o['kind'];
+    if ($k === 'أمومة') { $s = staff_get($ref); if ($s && preg_match('/^(male|m|ذكر|laki-laki|pria)$/iu', trim((string)($s['data']['gender'] ?? '')))) throw new HttpError('إجازة الأمومة للمنسوبات فقط'); }
+    $x = leave_quota_left($ref, $k); if (!$x) return;
+    if ((int)$o['days'] > $x['left'] && in_array($k, LEAVE_STRICT, true))
+        throw new HttpError('رصيد إجازة «' . $k . '» لهذا العام ' . $x['quota'] . ' يومًا، والمتاح منه ' . $x['left'] . ' يومًا' . ($x['pending'] ? ' (منها ' . $x['pending'] . ' قيد الاعتماد)' : '') . '. قلّل المدة أو اختر نوعًا آخر.');
+}
 function leave_balance(string $ref, ?array $rec = null): array {
     $L = site()['leave']; $y = (int)date('Y');
     $rec = $rec ?? staff_get($ref); $start = (string)($rec['data']['startDate'] ?? '');
     $ent = (float)$L['annual'];
+    /* المرحَّل من العام السابق بحد أقصى تحدده الإعدادات */
+    $carry = (int)($L['carry'] ?? 0) > 0 && $rec && (!preg_match('/^(\d{4})/', $start, $sm) || (int)$sm[1] < $y) ? min((float)$L['carry'], leave_annual_left($ref, $rec, $y - 1)) : 0;
     if (preg_match('/^(\d{4})-(\d{2})-\d{2}$/', $start, $m)) {
         if ((int)$m[1] > $y) $ent = 0;
         elseif ((int)$m[1] === $y && $L['prorate']) $ent = round($L['annual'] * (13 - (int)$m[2]) / 12, 1);
@@ -84,7 +127,10 @@ function leave_balance(string $ref, ?array $rec = null): array {
         $d = json_decode($r['data'], true) ?: []; if (substr((string)($d['day'] ?? ''), 0, 4) === (string)$y) $late += (int)($d['lateDays'] ?? 0);
     }
     $used += $late;
-    return ['year' => $y, 'entitled' => $ent, 'used' => $used, 'pending' => $pend, 'left' => max(0, $ent - $used), 'byKind' => $byKind, 'kinds' => $L['kinds'], 'lateReturn' => $late];
+    $ent += $carry;
+    $female = (bool)preg_match('/^(female|f|أنثى|انثى|perempuan|wanita)$/iu', trim((string)($rec['data']['gender'] ?? '')));
+    $quotas = []; foreach ((array)($L['quotas'] ?? []) as $k => $q) if ((int)$q > 0 && ($k !== 'أمومة' || $female)) { $x = leave_quota_left($ref, (string)$k); if ($x) $quotas[] = ['kind' => (string)$k] + $x + ['strict' => in_array($k, LEAVE_STRICT, true)]; }
+    return ['year' => $y, 'entitled' => $ent, 'carried' => $carry, 'used' => $used, 'pending' => $pend, 'left' => max(0, $ent - $used), 'byKind' => $byKind, 'kinds' => $L['kinds'], 'lateReturn' => $late, 'quotas' => $quotas];
 }
 function leave_balances(): array {
     require_perm('staff.view');
@@ -279,7 +325,7 @@ function att_month_rows(string $ym, ?string $only = null): array {
         foreach ($workDays as $wd) if (!isset($days[$wd]) && !isset($lv[$wd])) $absent[] = $wd;
         $out[$ref] = ['present' => $pres, 'late' => $late, 'lateMin' => $lateMin, 'early' => $early, 'hours' => round($mins / 60, 1), 'absent' => count($absent), 'absentDays' => $absent, 'leaveDays' => count($lv),
             'excused' => $excused, 'perms' => array_sum(array_map('count', $pm)), 'otHours' => round(($ot[$ref] ?? 0) / 60, 1), 'permDays' => $only ? $pm : null,
-            'days' => $only ? array_values(array_map(fn($d) => ['day' => $d['day'], 'in' => substr((string)$d['in_time'], 0, 5), 'out' => substr((string)$d['out_time'], 0, 5), 'late' => (int)$d['late_min'], 'early' => (int)$d['early_min'], 'mins' => (int)$d['minutes']], $days)) : null,
+            'days' => $only ? array_values(array_map(fn($d) => ['day' => $d['day'], 'in' => substr((string)$d['in_time'], 0, 5), 'out' => substr((string)$d['out_time'], 0, 5), 'late' => (int)$d['late_min'], 'early' => (int)$d['early_min'], 'mins' => (int)$d['minutes'], 'src' => (string)$d['source']], $days)) : null,
             'leave' => $only ? $lv : null];
     }
     return ['month' => $ym, 'workDays' => count($workDays), 'rows' => $out, 'work' => $W];

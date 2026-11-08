@@ -32,6 +32,12 @@ if (date('w') === '0' || in_array('--digest', $argv, true)) {
             $days = (int)floor((strtotime($v) - strtotime(date('Y-m-d'))) / 86400);
             if ($days <= 60) $items[] = [$days, ($d['fullNameAr'] ?? '') ?: ($d['fullNameLatin'] ?? ''), $s['ref'], $lbl, $v];
         }
+        /* نهاية فترة التجربة خلال ٣٠ يومًا (من تاريخ المباشرة) */
+        $st = valid_date($d['startDate'] ?? ''); $prob = (int)(json_decode((string)(setting('site') ?: ''), true)['work']['probation'] ?? 90);
+        if ($st !== '' && $prob > 0 && empty($d['serviceStatus'])) {
+            $pe = date('Y-m-d', strtotime($st . ' +' . $prob . ' days')); $days = (int)floor((strtotime($pe) - strtotime(date('Y-m-d'))) / 86400);
+            if ($days >= 0 && $days <= 30) $items[] = [$days, ($d['fullNameAr'] ?? '') ?: ($d['fullNameLatin'] ?? ''), $s['ref'], 'نهاية فترة التجربة', $pe];
+        }
     }
     usort($items, fn($a, $b) => $a[0] <=> $b[0]);
     if ($list && $items) {

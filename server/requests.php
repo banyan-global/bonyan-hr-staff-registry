@@ -56,7 +56,9 @@ const REQ_CHAINS = [
 ];
 const REQ_ST = ['pending' => 'قيد الإجراء', 'approved' => 'معتمد', 'rejected' => 'مرفوض', 'cancelled' => 'ملغى'];
 /* أنواع الإجازة الستة في النظام السابق، و«بدون راتب» التي كانت في المنصة */
-const LEAVE_KINDS = ['اعتيادية (سنوية)', 'تعويضية', 'مرضية', 'دراسة / تدريب', 'طارئة (اضطرارية)', 'بدون راتب', 'أخرى'];
+const LEAVE_KINDS = ['اعتيادية (سنوية)', 'تعويضية', 'مرضية', 'دراسة / تدريب', 'طارئة (اضطرارية)', 'أمومة', 'حج', 'زواج', 'وفاة قريب', 'بدون راتب', 'أخرى'];
+/* الأنواع التي لها رصيد مستقل لا يُتجاوز (المرضية تُتجاوز بأجر مخفّض فتُنبّه ولا تُمنع) */
+const LEAVE_STRICT = ['طارئة (اضطرارية)', 'أمومة', 'حج', 'زواج', 'وفاة قريب'];
 const LEAVE_KIND_OLD = ['اعتيادية' => 'اعتيادية (سنوية)', 'اضطرارية' => 'طارئة (اضطرارية)'];
 const CERT_KINDS = ['تعريف بالراتب', 'شهادة خبرة', 'تعريف بدون راتب'];
 const REQ_LINK_DAYS = 30; /* صلاحية روابط القرار في البريد */
@@ -610,7 +612,7 @@ function req_create(array $b): array {
             if (in_array($sup['email'], array_map('strtolower', array_filter([req_staff_email(staff_get($ref))])), true)) throw new HttpError('لا يمكن أن تكون المسؤول المباشر في طلبك أنت. اختر مسؤولك المباشر.');
             $data['supName'] = $sup['name'];
         } else { $data['supervisor'] = ''; $data['supName'] = ''; }
-        if ($type === 'leave') req_leave_overlap($ref, $data);
+        if ($type === 'leave') { req_leave_overlap($ref, $data); if (function_exists('leave_quota_check')) leave_quota_check($ref, $data); }
     }
     $chain = req_new_chain($type, $sup);
     named_lock('req_no');

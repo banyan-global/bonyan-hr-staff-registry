@@ -60,10 +60,11 @@ function hrp_label(array $u): string { return (string)($u['_label'] ?? ($u['name
 function hrp_is_top(array $u): bool { return in_array($u['role'], ['admin', 'ceo'], true) && has_perm($u, 'requests.approve'); }
 function hrp_mail(string $to, string $title, string $line, array $rows, string $hash, string $btn): void {
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return;
+    $url = (string)cfg('site_url') . (strpos($hash, '.html') !== false ? $hash : '#' . $hash);
     $t = ''; foreach ($rows as $r) if ((string)$r[1] !== '') $t .= '<tr><td style="padding:6px 0;color:#6B778A;width:130px;vertical-align:top;">' . esc_html($r[0]) . '</td><td style="padding:6px 0;font-weight:700;color:#1D2A3B;">' . nl2br(esc_html((string)$r[1])) . '</td></tr>';
     $inner = '<p style="margin:0 0 10px;font-size:14px;line-height:1.9;color:#1D2A3B;">' . esc_html($line) . '</p>' . ($t ? '<table style="border-collapse:collapse;width:100%;font-size:13.5px;">' . $t . '</table>' : '')
-        . '<div style="margin:16px 0 6px;"><a href="' . esc_html((string)cfg('site_url') . '#' . $hash) . '" style="display:inline-block;padding:10px 20px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;">' . esc_html($btn) . '</a></div>';
-    try { send_mail($to, $title, mail_frame('الموارد البشرية · مجموعة بنيان العالمية', $title, $inner), $line . "\n" . (string)cfg('site_url') . '#' . $hash, 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline()); }
+        . ($hash !== '' ? '<div style="margin:16px 0 6px;"><a href="' . esc_html($url) . '" style="display:inline-block;padding:10px 20px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;">' . esc_html($btn) . '</a></div>' : '');
+    try { send_mail($to, $title, mail_frame('الموارد البشرية · مجموعة بنيان العالمية', $title, $inner), $line . ($hash !== '' ? "\n" . $url : ''), 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline()); }
     catch (Throwable $e) { audit_log('', 'تعذّر إرسال بريد', $title . ' · ' . mask_email($to)); }
 }
 function hrp_staff_mail(string $ref): string { $s = staff_get($ref); return $s ? req_staff_email($s) : ''; }
@@ -269,4 +270,227 @@ function req_on_approved(array $r, string $actor): void {
         $s['updated_at'] = now(); staff_put($s);
         audit_log($r['ref'], 'انتهاء خدمة المنسوب', 'إخلاء الطرف ' . $r['no'] . ' · آخر يوم عمل ' . ($d['lastDay'] ?? '') . ' · ' . ($d['why'] ?? '') . ' · يبقى الملف في السجل للرجوع إليه', $actor);
     }
+}
+
+/* ============================================================ الحضور من الجوال وتصحيح الحضور */
+function geo_m(float $a1, float $o1, float $a2, float $o2): float {
+    $R = 6371000; $p1 = deg2rad($a1); $p2 = deg2rad($a2); $dp = deg2rad($a2 - $a1); $dl = deg2rad($o2 - $o1);
+    $h = sin($dp / 2) ** 2 + cos($p1) * cos($p2) * sin($dl / 2) ** 2; return 2 * $R * asin(min(1, sqrt($h)));
+}
+function att_mobile_ok(string $ref): bool { $W = site()['work']; return $W['mobile'] === 'all' || ($W['mobile'] === 'listed' && in_array($ref, (array)$W['mobileRefs'], true)); }
+/* سجل اليوم للمنسوب (للزر في صفحته) */
+function att_today(array $b): array {
+    $u = hrp_me(); $ref = my_staff_ref($u); if (!$ref || !staff_can_see('att')) return ['ok' => true, 'on' => false];
+    $r = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, date('Y-m-d')]);
+    $W = site()['work'];
+    return ['ok' => true, 'on' => att_mobile_ok($ref), 'in' => $r ? substr((string)$r['in_time'], 0, 5) : '', 'out' => $r && $r['out_time'] ? substr((string)$r['out_time'], 0, 5) : '', 'source' => $r['source'] ?? '',
+        'sites' => array_map(fn($x) => ['name' => $x['name'], 'radius' => $x['radius'], 'lat' => $x['lat'], 'lng' => $x['lng']], $W['sites']), 'weekend' => in_array((int)date('w'), $W['weekend'], true), 'now' => date('H:i')];
+}
+function att_check(array $b): array {
+    $u = hrp_me(); $ref = my_staff_ref($u); if (!$ref) throw new HttpError('لا يوجد سجل منسوب لهذا الحساب');
+    if (!staff_can_see('att') || !att_mobile_ok($ref)) throw new HttpError('تسجيل الحضور من الجوال غير مفعّل لك. تواصل مع الموارد البشرية.');
+    if (rate_hit('attck:' . $u['id'], 12, 3600)) throw new HttpError('محاولات كثيرة، حاول بعد قليل', 429);
+    $la = (float)($b['lat'] ?? 0); $lo = (float)($b['lng'] ?? 0); $acc = max(0, (float)($b['acc'] ?? 9999));
+    if (($la == 0 && $lo == 0) || abs($la) > 90 || abs($lo) > 180) throw new HttpError('تعذّر قراءة موقعك. فعّل خدمة الموقع في الجوال وحاول مرة أخرى.');
+    if ($acc > 300) throw new HttpError('دقة الموقع ضعيفة (' . round($acc) . ' م). اخرج إلى مكان مفتوح أو فعّل «الموقع الدقيق» وحاول مرة أخرى.');
+    $best = null;
+    foreach (site()['work']['sites'] as $x) { $d = geo_m($la, $lo, (float)$x['lat'], (float)$x['lng']); if (!$best || $d < $best[1]) $best = [$x, $d]; }
+    if (!$best) throw new HttpError('لم تُضَف مواقع العمل بعد');
+    if ($best[1] > $best[0]['radius'] + min($acc, 100)) throw new HttpError('أنت على بُعد ' . round($best[1]) . ' م من «' . $best[0]['name'] . '». يُسجَّل الحضور داخل نطاق ' . $best[0]['radius'] . ' م من موقع العمل.');
+    $day = date('Y-m-d'); $t = date('H:i:s'); $W = site()['work'];
+    named_lock('att:' . $ref);
+    try {
+        $r = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, $day]);
+        $src = 'الجوال · ' . $best[0]['name'] . ' · ' . round($best[1]) . ' م';
+        if (!$r) {
+            [$m, $late, $early] = att_calc(substr($t, 0, 5), '', $W);
+            q('INSERT INTO attendance (ref, day, in_time, out_time, minutes, late_min, early_min, source, batch, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)', [$ref, $day, $t, null, 0, $late, 0, $src, 'mobile', now()]);
+            $kind = 'in';
+        } else {
+            if ($r['out_time'] && substr((string)$r['out_time'], 0, 5) === date('H:i')) throw new HttpError('سُجّل انصرافك للتو');
+            [$m, $late, $early] = att_calc(substr((string)$r['in_time'], 0, 5), substr($t, 0, 5), $W);
+            q('UPDATE attendance SET out_time=?, minutes=?, late_min=?, early_min=?, source=? WHERE id=?', [$t, $m, $late, $early, mb_substr($r['source'] . ' | انصراف: ' . $best[0]['name'], 0, 120), $r['id']]);
+            $kind = 'out';
+        }
+    } finally { named_unlock('att:' . $ref); }
+    audit_log($ref, $kind === 'in' ? 'تسجيل حضور من الجوال' : 'تسجيل انصراف من الجوال', $best[0]['name'] . ' · ' . round($best[1]) . ' م · دقة ' . round($acc) . ' م', hrp_label($u));
+    return ['ok' => true, 'kind' => $kind, 'site' => $best[0]['name'], 'dist' => round($best[1])] + att_today([]);
+}
+/* تصحيح يوم حضور بسبب مكتوب (يُحفظ في سجل العمليات بالقيم السابقة والجديدة) */
+function att_fix(array $b): array {
+    $u = require_perm('attendance.manage');
+    $ref = (string)($b['ref'] ?? ''); if (!staff_get($ref)) throw new HttpError('not_found', 404);
+    $day = hrp_date($b['day'] ?? ''); if (!$day || $day > date('Y-m-d')) throw new HttpError('اختر يومًا صحيحًا (اليوم أو قبله)');
+    $tm = fn($v) => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', trim((string)$v)) ? trim((string)$v) : '';
+    $in = $tm($b['in'] ?? ''); $out = $tm($b['out'] ?? ''); $why = hrp_str($b['reason'] ?? '', 300); $del = !empty($b['remove']);
+    if (mb_strlen(trim($why)) < 3) throw new HttpError('اكتب سبب التصحيح (3 أحرف على الأقل)');
+    if (!$del && !$in) throw new HttpError('اكتب وقت الحضور');
+    if ($in && $out && $out <= $in) throw new HttpError('وقت الانصراف يجب أن يكون بعد الحضور');
+    $old = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, $day]);
+    $was = $old ? substr((string)$old['in_time'], 0, 5) . '–' . substr((string)$old['out_time'], 0, 5) : 'لا سجل';
+    if ($del) { if ($old) q('DELETE FROM attendance WHERE id=?', [$old['id']]); }
+    else {
+        [$m, $late, $early] = att_calc($in, $out, site()['work']); $src = mb_substr('تصحيح: ' . $why, 0, 120);
+        if ($old) q('UPDATE attendance SET in_time=?, out_time=?, minutes=?, late_min=?, early_min=?, source=?, batch=? WHERE id=?', [$in . ':00', $out ? $out . ':00' : null, $m, $late, $early, $src, 'fix', $old['id']]);
+        else q('INSERT INTO attendance (ref, day, in_time, out_time, minutes, late_min, early_min, source, batch, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)', [$ref, $day, $in . ':00', $out ? $out . ':00' : null, $m, $late, $early, $src, 'fix', now()]);
+    }
+    audit_log($ref, 'تصحيح سجل الحضور', $day . ' · ' . $was . ' ← ' . ($del ? 'حُذف السجل' : $in . '–' . $out) . ' · السبب: ' . $why, hrp_label($u));
+    return ['ok' => true];
+}
+
+/* ============================================================ تقييم الأداء */
+const EV_CRIT = [['q', 'جودة العمل وإتقانه'], ['t', 'الالتزام بالمواعيد والدوام'], ['c', 'التعاون والعمل الجماعي'], ['i', 'المبادرة والإبداع'], ['s', 'المهارات الفنية'], ['b', 'خدمة المستفيدين والتواصل']];
+const EV_REC = ['تجديد العقد', 'ترشيح لترقية', 'خطة تطوير', 'متابعة الأداء', 'لا توصية'];
+function ev_label(float $t): string { return $t >= 4.5 ? 'ممتاز' : ($t >= 3.5 ? 'جيد جدًا' : ($t >= 2.5 ? 'جيد' : ($t >= 1.5 ? 'مقبول' : 'يحتاج تحسينًا'))); }
+function ev_row(array $e): array {
+    $s = staff_get($e['ref']); $d = json_decode($e['data'], true) ?: [];
+    return ['id' => (int)$e['id'], 'ref' => $e['ref'], 'name' => $s ? staff_name($s) : $e['ref'], 'entity' => (string)($s['data']['entity'] ?? ''), 'jobTitle' => (string)($s['data']['jobTitle'] ?? ''), 'period' => $e['period'],
+        'scores' => json_decode($e['scores'], true) ?: [], 'total' => (float)$e['total'], 'label' => ev_label((float)$e['total']), 'data' => $d, 'status' => $e['status'],
+        'by' => $e['created_by'], 'createdAt' => substr($e['created_at'], 0, 16), 'sentAt' => $e['sent_at'] ? substr($e['sent_at'], 0, 16) : '', 'ackAt' => $e['ack_at'] ? substr($e['ack_at'], 0, 16) : '', 'ackNote' => $e['ack_note']];
+}
+function ev_list(array $b): array {
+    $u = hrp_me();
+    if (has_perm($u, 'staff.view')) return ['ok' => true, 'rows' => array_map('ev_row', q('SELECT * FROM evals ORDER BY id DESC LIMIT 800')->fetchAll()), 'crit' => EV_CRIT, 'recs' => EV_REC, 'canEdit' => has_perm($u, 'staff.edit')];
+    $ref = my_staff_ref($u); if (!$ref || !site_on('staff', 'myhr')) return ['ok' => true, 'rows' => [], 'crit' => EV_CRIT];
+    return ['ok' => true, 'rows' => array_map('ev_row', q("SELECT * FROM evals WHERE ref=? AND status IN ('sent','ack') ORDER BY id DESC", [$ref])->fetchAll()), 'crit' => EV_CRIT];
+}
+function ev_save(array $b): array {
+    $u = require_perm('staff.edit'); if (!site_on('modules', 'evals')) throw new HttpError('قسم تقييم الأداء موقوف من الإعدادات');
+    $ref = (string)($b['ref'] ?? ''); if (!staff_get($ref)) throw new HttpError('اختر المنسوب');
+    $period = hrp_str($b['period'] ?? '', 60); if (mb_strlen($period) < 3) throw new HttpError('اكتب فترة التقييم (مثال: الربع الرابع 2026)');
+    $sc = []; foreach (EV_CRIT as $c) { $v = (int)($b['scores'][$c[0]] ?? 0); if ($v < 1 || $v > 5) throw new HttpError('قيّم «' . $c[1] . '» من 1 إلى 5'); $sc[$c[0]] = $v; }
+    $total = round(array_sum($sc) / count($sc), 2);
+    $d = ['strengths' => hrp_str($b['strengths'] ?? '', 1500), 'improve' => hrp_str($b['improve'] ?? '', 1500), 'goals' => hrp_str($b['goals'] ?? '', 1500), 'evaluator' => hrp_str($b['evaluator'] ?? '', 120),
+        'rec' => in_array($b['rec'] ?? '', EV_REC, true) ? $b['rec'] : 'لا توصية'];
+    $send = !empty($b['send']);
+    if (!empty($b['id'])) {
+        $e = q1('SELECT * FROM evals WHERE id=?', [(int)$b['id']]); if (!$e) throw new HttpError('not_found', 404);
+        if ($e['status'] !== 'draft') throw new HttpError('لا يُعدَّل التقييم بعد إرساله للمنسوب');
+        q('UPDATE evals SET ref=?, period=?, scores=?, total=?, data=?, status=?, sent_at=?, updated_at=? WHERE id=?', [$ref, $period, json_encode($sc), $total, json_encode($d, JSON_UNESCAPED_UNICODE), $send ? 'sent' : 'draft', $send ? now() : null, now(), $e['id']]);
+        $id = (int)$e['id'];
+    } else {
+        $dup = q1("SELECT id FROM evals WHERE ref=? AND period=? AND status<>'void'", [$ref, $period]); if ($dup) throw new HttpError('سبق تقييم هذا المنسوب للفترة نفسها');
+        q('INSERT INTO evals (ref, period, scores, total, data, status, created_by, created_at, sent_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)', [$ref, $period, json_encode($sc), $total, json_encode($d, JSON_UNESCAPED_UNICODE), $send ? 'sent' : 'draft', hrp_label($u), now(), $send ? now() : null, now()]);
+        $id = (int)db()->lastInsertId();
+    }
+    audit_log($ref, $send ? 'إرسال تقييم أداء للمنسوب' : 'حفظ مسودة تقييم أداء', $period . ' · ' . $total . ' من 5 (' . ev_label($total) . ')', hrp_label($u));
+    if ($send) { $to = hrp_staff_mail($ref); if ($to) hrp_mail($to, 'تقييم أدائك: ' . $period, 'أعدّت الموارد البشرية تقييم أدائك. اطّلع عليه في صفحتك وأكّد اطلاعك، ويمكنك إضافة ملاحظتك.', [['الفترة', $period], ['التقدير العام', $total . ' من 5 · ' . ev_label($total)]], 'myhr', 'الاطلاع على التقييم'); }
+    return ['ok' => true, 'row' => ev_row(q1('SELECT * FROM evals WHERE id=?', [$id]))];
+}
+function ev_ack(array $b): array {
+    $u = hrp_me(); $ref = my_staff_ref($u);
+    $e = q1("SELECT * FROM evals WHERE id=? AND status='sent'", [(int)($b['id'] ?? 0)]); if (!$e || $e['ref'] !== $ref) throw new HttpError('not_found', 404);
+    q("UPDATE evals SET status='ack', ack_at=?, ack_note=?, updated_at=? WHERE id=?", [now(), hrp_str($b['note'] ?? '', 600), now(), $e['id']]);
+    audit_log($ref, 'اطّلاع المنسوب على تقييم أدائه', $e['period'] . (trim((string)($b['note'] ?? '')) !== '' ? ' · ملاحظته: ' . hrp_str($b['note'], 600) : ''), hrp_label($u));
+    return ['ok' => true, 'row' => ev_row(q1('SELECT * FROM evals WHERE id=?', [$e['id']]))];
+}
+function ev_delete(array $b): array {
+    $u = require_perm('staff.edit');
+    $e = q1('SELECT * FROM evals WHERE id=?', [(int)($b['id'] ?? 0)]); if (!$e) throw new HttpError('not_found', 404);
+    if ($e['status'] !== 'draft') throw new HttpError('تُحذف المسودات فقط');
+    q('DELETE FROM evals WHERE id=?', [$e['id']]); audit_log($e['ref'], 'حذف مسودة تقييم أداء', $e['period'], hrp_label($u));
+    return ['ok' => true];
+}
+
+/* ============================================================ التوظيف: الوظائف والمتقدمون والمقابلات */
+const JOB_KINDS = ['دوام كامل', 'دوام جزئي', 'مؤقت', 'تعاقد', 'تدريب تعاوني', 'عن بعد'];
+const APP_ST = ['new' => 'جديد', 'review' => 'قيد الدراسة', 'interview' => 'مقابلة', 'accepted' => 'مقبول', 'rejected' => 'غير مقبول'];
+const INT_CRIT = [['p', 'التواصل والحضور'], ['k', 'المعرفة الفنية'], ['e', 'الخبرة'], ['f', 'الملاءمة للفريق'], ['m', 'الدافعية']];
+function job_row(array $j, bool $pub = false): array {
+    $d = json_decode($j['data'], true) ?: [];
+    $o = ['slug' => $j['slug'], 'title' => $j['title'], 'entity' => (string)($d['entity'] ?? ''), 'location' => (string)($d['location'] ?? ''), 'kind' => (string)($d['kind'] ?? ''), 'count' => (int)($d['count'] ?? 1),
+        'desc' => (string)($d['desc'] ?? ''), 'quals' => (string)($d['quals'] ?? ''), 'closesOn' => (string)($j['closes_on'] ?? '')];
+    if ($pub) return $o;
+    return $o + ['id' => (int)$j['id'], 'department' => (string)($d['department'] ?? ''), 'status' => $j['status'], 'needNo' => $j['need_no'], 'by' => $j['created_by'], 'createdAt' => substr($j['created_at'], 0, 16),
+        'apps' => (int)(q1('SELECT COUNT(*) n FROM applicants WHERE job_id=?', [$j['id']])['n'] ?? 0)];
+}
+function app_row(array $a): array {
+    $d = json_decode($a['data'], true) ?: []; $r = json_decode((string)$a['review'], true) ?: [];
+    return ['id' => (int)$a['id'], 'jobId' => (int)$a['job_id'], 'name' => $a['name'], 'email' => $a['email'], 'phone' => $a['phone'], 'data' => $d, 'status' => $a['status'], 'statusName' => APP_ST[$a['status']] ?? $a['status'],
+        'cv' => $a['cv_file'] !== '', 'review' => $r, 'createdAt' => substr($a['created_at'], 0, 16), 'updatedAt' => substr($a['updated_at'], 0, 16)];
+}
+function job_list(array $b): array {
+    $u = require_perm('staff.view');
+    $jobs = q('SELECT * FROM jobs ORDER BY (status=\'open\') DESC, id DESC')->fetchAll();
+    $needs = array_map(fn($r) => ['no' => $r['no'], 'sum' => req_summary($r), 'data' => json_decode($r['data'], true) ?: []], q("SELECT * FROM requests WHERE type='hire' AND status='approved' ORDER BY id DESC LIMIT 50")->fetchAll());
+    return ['ok' => true, 'jobs' => array_map('job_row', $jobs), 'apps' => array_map('app_row', q('SELECT * FROM applicants ORDER BY id DESC LIMIT 2000')->fetchAll()), 'needs' => $needs,
+        'kinds' => JOB_KINDS, 'st' => APP_ST, 'crit' => INT_CRIT, 'canEdit' => has_perm($u, 'staff.edit'), 'url' => (string)cfg('site_url') . 'jobs.html'];
+}
+function job_save(array $b): array {
+    $u = require_perm('staff.edit'); if (!site_on('modules', 'jobs')) throw new HttpError('قسم التوظيف موقوف من الإعدادات');
+    $title = hrp_str($b['title'] ?? '', 120); if (mb_strlen($title) < 2) throw new HttpError('اكتب المسمى الوظيفي');
+    $d = ['entity' => hrp_str($b['entity'] ?? '', 120), 'department' => hrp_str($b['department'] ?? '', 120), 'location' => hrp_str($b['location'] ?? '', 120), 'kind' => in_array($b['kind'] ?? '', JOB_KINDS, true) ? $b['kind'] : 'دوام كامل',
+        'count' => max(1, min(50, (int)($b['count'] ?? 1))), 'desc' => hrp_str($b['desc'] ?? '', 4000), 'quals' => hrp_str($b['quals'] ?? '', 3000)];
+    if (mb_strlen($d['desc']) < 10) throw new HttpError('اكتب وصف الوظيفة ومهامها');
+    $closes = hrp_date($b['closesOn'] ?? '') ?: null; $need = preg_match('/^HN-\d{4}-\d{4}$/', (string)($b['needNo'] ?? '')) ? (string)$b['needNo'] : '';
+    $st = in_array($b['status'] ?? 'open', ['open', 'closed', 'filled'], true) ? (string)($b['status'] ?? 'open') : 'open';
+    if (!empty($b['id'])) {
+        $j = q1('SELECT * FROM jobs WHERE id=?', [(int)$b['id']]); if (!$j) throw new HttpError('not_found', 404);
+        q('UPDATE jobs SET title=?, data=?, status=?, need_no=?, closes_on=?, updated_at=? WHERE id=?', [$title, json_encode($d, JSON_UNESCAPED_UNICODE), $st, $need, $closes, now(), $j['id']]); $id = (int)$j['id'];
+        audit_log('', 'تعديل إعلان وظيفة', $title . ' · ' . $st, hrp_label($u));
+    } else {
+        q('INSERT INTO jobs (slug, title, data, status, need_no, closes_on, created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)', [bin2hex(random_bytes(6)), $title, json_encode($d, JSON_UNESCAPED_UNICODE), 'open', $need, $closes, hrp_label($u), now(), now()]);
+        $id = (int)db()->lastInsertId(); audit_log('', 'إعلان وظيفة', $title . ($need ? ' · من الاحتياج ' . $need : ''), hrp_label($u));
+    }
+    return job_list([]) + ['saved' => $id];
+}
+/* صفحة الوظائف العامة (بلا دخول) */
+function jobs_public(array $b): array {
+    if (!site_on('modules', 'jobs')) return ['ok' => true, 'jobs' => []];
+    $rows = q("SELECT * FROM jobs WHERE status='open' AND (closes_on IS NULL OR closes_on >= ?) ORDER BY id DESC", [date('Y-m-d')])->fetchAll();
+    return ['ok' => true, 'jobs' => array_map(fn($j) => job_row($j, true), $rows)];
+}
+function job_apply(array $b): array {
+    if (rate_hit('apply:' . client_ip(), 8, 3600)) throw new HttpError('locked', 429);
+    if (trim((string)($b['website'] ?? '')) !== '') throw new HttpError('bad_request'); /* حقل مخفي لصدّ البرامج الآلية */
+    $j = q1("SELECT * FROM jobs WHERE slug=? AND status='open' AND (closes_on IS NULL OR closes_on >= ?)", [(string)($b['slug'] ?? ''), date('Y-m-d')]);
+    if (!$j || !site_on('modules', 'jobs')) throw new HttpError('هذه الوظيفة لم تعد متاحة للتقديم');
+    $name = hrp_str($b['name'] ?? '', 120); $mail = strtolower(trim((string)($b['email'] ?? ''))); $phone = hrp_str($b['phone'] ?? '', 30);
+    if (mb_strlen($name) < 5) throw new HttpError('اكتب اسمك الكامل');
+    if (!filter_var($mail, FILTER_VALIDATE_EMAIL)) throw new HttpError('اكتب بريدًا إلكترونيًا صحيحًا');
+    if (strlen(preg_replace('/\D/', '', to_ascii_digits($phone))) < 8) throw new HttpError('اكتب رقم جوال صحيحًا مع رمز الدولة');
+    if (q1('SELECT id FROM applicants WHERE job_id=? AND email=?', [$j['id'], $mail])) throw new HttpError('سبق تقديمك على هذه الوظيفة بهذا البريد، وسنتواصل معك');
+    $d = ['city' => hrp_str($b['city'] ?? '', 80), 'nationality' => hrp_str($b['nationality'] ?? '', 60), 'edu' => hrp_str($b['edu'] ?? '', 160), 'years' => max(0, min(50, (int)($b['years'] ?? 0))), 'note' => hrp_str($b['note'] ?? '', 1500)];
+    if (empty($b['consent'])) throw new HttpError('وافق على استخدام بياناتك لأغراض التوظيف');
+    $cv = '';
+    if (!empty($b['cv'])) {
+        $bytes = base64_decode(preg_replace('/^data:[^,]*,/', '', (string)$b['cv']), true);
+        if ($bytes === false || strlen($bytes) > 5 * 1024 * 1024) throw new HttpError('السيرة الذاتية أكبر من 5 ميجابايت');
+        if (sniff_mime($bytes) !== 'application/pdf') throw new HttpError('أرفق السيرة الذاتية بصيغة PDF');
+        storage_dir('jobs'); $cv = 'jobs/' . bin2hex(random_bytes(16)) . '.pdf';
+        if (file_put_contents(storage_dir() . '/' . $cv, $bytes, LOCK_EX) === false) throw new HttpError('storage_write_failed', 500); @chmod(storage_dir() . '/' . $cv, 0640);
+    }
+    q('INSERT INTO applicants (job_id, name, email, phone, data, status, cv_file, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)', [$j['id'], $name, $mail, $phone, json_encode($d, JSON_UNESCAPED_UNICODE), 'new', $cv, now(), now()]);
+    audit_log('', 'تقديم على وظيفة', $j['title'] . ' · ' . $name, 'صفحة الوظائف');
+    hrp_mail($mail, 'استلمنا طلبك: ' . $j['title'], 'شكرًا لتقديمك على وظيفة «' . $j['title'] . '» في مجموعة بنيان العالمية. استلمنا طلبك، وسنتواصل معك إن ناسب ملفك الاحتياج.', [['الوظيفة', $j['title']], ['الاسم', $name]], '', 'زيارة الموقع');
+    foreach (hr_recipients() as $to) hrp_mail($to, 'متقدم جديد: ' . $j['title'], 'تقدّم ' . $name . ' على وظيفة «' . $j['title'] . '».', [['البريد', $mail], ['الجوال', $phone], ['المؤهل', $d['edu']], ['الخبرة', $d['years'] . ' سنة']], 'jobs', 'فتح التوظيف');
+    return ['ok' => true];
+}
+function app_set(array $b): array {
+    $u = require_perm('staff.edit');
+    $a = q1('SELECT * FROM applicants WHERE id=?', [(int)($b['id'] ?? 0)]); if (!$a) throw new HttpError('not_found', 404);
+    $st = (string)($b['status'] ?? $a['status']); if (!isset(APP_ST[$st])) throw new HttpError('حالة غير معروفة');
+    $r = json_decode((string)$a['review'], true) ?: [];
+    if (isset($b['review']) && is_array($b['review'])) {
+        $in = $b['review']; $sc = [];
+        foreach (INT_CRIT as $c) { $v = (int)($in['scores'][$c[0]] ?? 0); if ($v >= 1 && $v <= 5) $sc[$c[0]] = $v; }
+        $r = ['date' => hrp_date($in['date'] ?? ''), 'time' => preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string)($in['time'] ?? '')) ? (string)$in['time'] : '', 'mode' => in_array($in['mode'] ?? '', ['حضورية', 'عن بعد', 'هاتفية'], true) ? $in['mode'] : '',
+            'panel' => hrp_str($in['panel'] ?? '', 200), 'scores' => $sc, 'total' => $sc ? round(array_sum($sc) / count($sc), 2) : 0, 'rec' => in_array($in['rec'] ?? '', ['توظيف', 'احتياط', 'عدم توظيف'], true) ? $in['rec'] : '', 'notes' => hrp_str($in['notes'] ?? '', 2000)];
+    }
+    q('UPDATE applicants SET status=?, review=?, updated_at=? WHERE id=?', [$st, json_encode($r, JSON_UNESCAPED_UNICODE), now(), $a['id']]);
+    $j = q1('SELECT * FROM jobs WHERE id=?', [$a['job_id']]);
+    audit_log('', 'متقدم: ' . (APP_ST[$st] ?? $st), $a['name'] . ' · ' . ($j['title'] ?? ''), hrp_label($u));
+    if ($st !== $a['status'] && !empty($b['notify'])) {
+        if ($st === 'interview' && ($r['date'] ?? '')) hrp_mail($a['email'], 'موعد مقابلة: ' . ($j['title'] ?? ''), 'يسعدنا دعوتك لمقابلة شخصية على وظيفة «' . ($j['title'] ?? '') . '».', [['التاريخ', $r['date']], ['الوقت', $r['time'] ?? ''], ['الطريقة', $r['mode'] ?? '']], '', 'مجموعة بنيان العالمية');
+        if ($st === 'accepted') hrp_mail($a['email'], 'قبولك في وظيفة ' . ($j['title'] ?? ''), 'يسرّنا إبلاغك بقبولك في وظيفة «' . ($j['title'] ?? '') . '». الخطوة التالية: سجّل بياناتك ووثائقك في سجل المنسوبين من الرابط التالي، وستتواصل معك الموارد البشرية.', [], 'register.html', 'تسجيل بياناتي');
+        if ($st === 'rejected') hrp_mail($a['email'], 'بشأن طلبك على وظيفة ' . ($j['title'] ?? ''), 'نشكر اهتمامك بالعمل في مجموعة بنيان العالمية. بعد دراسة الطلبات لم يقع الاختيار على طلبك لهذه الوظيفة، ونتمنى لك التوفيق، وسنحتفظ ببياناتك لفرص قادمة.', [], '', 'مجموعة بنيان العالمية');
+    }
+    return ['ok' => true, 'row' => app_row(q1('SELECT * FROM applicants WHERE id=?', [$a['id']]))];
+}
+function cv_serve(): void {
+    $u = current_user(); if (!$u || !has_perm($u, 'staff.view')) throw new HttpError('forbidden', 403);
+    $a = q1('SELECT * FROM applicants WHERE id=?', [(int)($_GET['id'] ?? 0)]); if (!$a || $a['cv_file'] === '') throw new HttpError('not_found', 404);
+    $p = storage_dir() . '/' . $a['cv_file']; if (!is_file($p)) throw new HttpError('file_missing', 404);
+    header('Content-Type: application/pdf'); header('Content-Disposition: inline; filename="cv-' . (int)$a['id'] . '.pdf"'); header('X-Content-Type-Options: nosniff'); header('Cache-Control: private, no-store');
+    readfile($p); exit;
 }
