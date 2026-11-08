@@ -7,9 +7,9 @@ declare(strict_types=1);
 
 /* ============================================================ إعدادات المنصة */
 const SITE_DEFAULTS = [
-    'modules' => ['reqs' => true, 'forms' => true, 'payroll' => true, 'att' => true, 'news' => true, 'org' => true, 'reports' => true],
+    'modules' => ['reqs' => true, 'forms' => true, 'payroll' => true, 'att' => true, 'news' => true, 'org' => true, 'reports' => true, 'acts' => true, 'custody' => true, 'evals' => true, 'jobs' => true],
     'home' => ['hero' => true, 'kpis' => true, 'todo' => true, 'qa' => true, 'events' => true, 'charts' => true, 'quality' => true, 'cal' => true, 'ents' => true, 'recent' => true, 'log' => true],
-    'staff' => ['card' => true, 'docs' => true, 'pay' => true, 'reqs' => true, 'balance' => true, 'att' => true, 'news' => true, 'update' => true],
+    'staff' => ['card' => true, 'docs' => true, 'pay' => true, 'reqs' => true, 'balance' => true, 'att' => true, 'news' => true, 'update' => true, 'myhr' => true],
     'leave' => ['annual' => 30, 'prorate' => true, 'kinds' => ['اعتيادية (سنوية)']],
     'work' => ['start' => '08:00', 'end' => '16:00', 'grace' => 15, 'weekend' => [5, 6]],
 ];
@@ -78,7 +78,13 @@ function leave_balance(string $ref, ?array $rec = null): array {
         if (!in_array($k, $L['kinds'], true)) continue;
         if ($r['status'] === 'approved') $used += $days; else $pend += $days;
     }
-    return ['year' => $y, 'entitled' => $ent, 'used' => $used, 'pending' => $pend, 'left' => max(0, $ent - $used), 'byKind' => $byKind, 'kinds' => $L['kinds']];
+    /* أيام التأخر عن العودة (من إشعار المباشرة المعتمد) تُخصم من الرصيد السنوي */
+    $late = 0;
+    foreach (q("SELECT data FROM requests WHERE ref=? AND type='resume' AND status='approved'", [$ref])->fetchAll() as $r) {
+        $d = json_decode($r['data'], true) ?: []; if (substr((string)($d['day'] ?? ''), 0, 4) === (string)$y) $late += (int)($d['lateDays'] ?? 0);
+    }
+    $used += $late;
+    return ['year' => $y, 'entitled' => $ent, 'used' => $used, 'pending' => $pend, 'left' => max(0, $ent - $used), 'byKind' => $byKind, 'kinds' => $L['kinds'], 'lateReturn' => $late];
 }
 function leave_balances(): array {
     require_perm('staff.view');
@@ -251,15 +257,28 @@ function att_month_rows(string $ym, ?string $only = null): array {
         $d = json_decode($r['data'], true) ?: []; $a = (string)($d['from'] ?? ''); $b = (string)($d['to'] ?? ''); if (!$a || !$b) continue;
         for ($t = strtotime(max($a, $from)); $t <= strtotime(min($b, $to)); $t += 86400) $leave[$r['ref']][date('Y-m-d', $t)] = $r['type'];
     }
+    /* الاستئذان المعتمد يبرّر التأخير أو الخروج المبكر في يومه، والعمل الإضافي المعتمد يُجمع بالساعات */
+    $perm = []; $ot = [];
+    foreach (q("SELECT ref, type, data FROM requests WHERE status='approved' AND type IN ('perm','ot')" . ($only ? ' AND ref=?' : ''), $only ? [$only] : [])->fetchAll() as $r) {
+        $d = json_decode($r['data'], true) ?: []; $day = (string)($d['day'] ?? ''); if ($day < $from || $day > $to) continue;
+        if ($r['type'] === 'perm') $perm[$r['ref']][$day][] = (string)($d['kind'] ?? '');
+        else $ot[$r['ref']] = ($ot[$r['ref']] ?? 0) + (int)($d['mins'] ?? 0);
+    }
     $workDays = []; for ($t = strtotime($from); $t <= strtotime($last); $t += 86400) if (!in_array((int)date('w', $t), $W['weekend'], true)) $workDays[] = date('Y-m-d', $t);
-    $refs = $only ? [$only] : array_keys($by);
+    $refs = $only ? [$only] : array_values(array_unique(array_merge(array_keys($by), array_keys($ot))));
     $out = [];
     foreach ($refs as $ref) {
-        $days = $by[$ref] ?? []; $lv = $leave[$ref] ?? [];
-        $pres = count($days); $late = 0; $lateMin = 0; $early = 0; $mins = 0; $absent = [];
-        foreach ($days as $d) { if ($d['late_min'] > 0) { $late++; $lateMin += (int)$d['late_min']; } if ($d['early_min'] > 0) $early++; $mins += (int)$d['minutes']; }
+        $days = $by[$ref] ?? []; $lv = $leave[$ref] ?? []; $pm = $perm[$ref] ?? [];
+        $pres = count($days); $late = 0; $lateMin = 0; $early = 0; $mins = 0; $absent = []; $excused = 0;
+        foreach ($days as $d) {
+            $k = $pm[$d['day']] ?? []; $exL = in_array('تأخر صباحي', $k, true) || in_array('خروج أثناء الدوام', $k, true); $exE = in_array('خروج مبكر', $k, true) || in_array('خروج أثناء الدوام', $k, true);
+            if ($d['late_min'] > 0) { if ($exL) $excused++; else { $late++; $lateMin += (int)$d['late_min']; } }
+            if ($d['early_min'] > 0) { if ($exE) $excused++; else $early++; }
+            $mins += (int)$d['minutes'];
+        }
         foreach ($workDays as $wd) if (!isset($days[$wd]) && !isset($lv[$wd])) $absent[] = $wd;
         $out[$ref] = ['present' => $pres, 'late' => $late, 'lateMin' => $lateMin, 'early' => $early, 'hours' => round($mins / 60, 1), 'absent' => count($absent), 'absentDays' => $absent, 'leaveDays' => count($lv),
+            'excused' => $excused, 'perms' => array_sum(array_map('count', $pm)), 'otHours' => round(($ot[$ref] ?? 0) / 60, 1), 'permDays' => $only ? $pm : null,
             'days' => $only ? array_values(array_map(fn($d) => ['day' => $d['day'], 'in' => substr((string)$d['in_time'], 0, 5), 'out' => substr((string)$d['out_time'], 0, 5), 'late' => (int)$d['late_min'], 'early' => (int)$d['early_min'], 'mins' => (int)$d['minutes']], $days)) : null,
             'leave' => $only ? $lv : null];
     }

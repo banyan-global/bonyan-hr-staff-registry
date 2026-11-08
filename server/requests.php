@@ -13,6 +13,31 @@ const REQ_TYPES = [
     'leave'  => ['LV', 'طلب إجازة', 'BNY-F-HR-05'],
     'travel' => ['TR', 'أمر إركاب / مهمة رسمية', 'BNY-F-HR-08'],
     'cert'   => ['CR', 'تعريف بالراتب أو شهادة خبرة', 'BNY-F-HR-16'],
+    'perm'   => ['PM', 'طلب استئذان', 'BNY-F-HR-06'],
+    'ot'     => ['OT', 'طلب عمل إضافي', 'BNY-F-HR-07'],
+    'loan'   => ['LN', 'طلب سلفة على الراتب', 'BNY-F-HR-09'],
+    'resume' => ['RS', 'إشعار مباشرة عمل', 'BNY-F-HR-10'],
+    'train'  => ['TN', 'طلب تدريب', 'BNY-F-HR-11'],
+    'resign' => ['RG', 'طلب استقالة', 'BNY-F-HR-12'],
+    'clear'  => ['CL', 'إخلاء طرف', 'BNY-F-HR-13'],
+    'hire'   => ['HN', 'طلب احتياج وظيفي', 'BNY-F-HR-14'],
+];
+/* الأنواع المبنية بمخطط حقول: [المفتاح، الاسم، النوع، إلزامي، خيارات أو حدود، تلميح]
+   الأنواع: text · area · date · time · month · int · money · seg · reqref (طلب إجازة/إركاب معتمد للمنسوب نفسه) */
+const REQ_SCHEMA = [
+    'perm' => [['kind', 'نوع الاستئذان', 'seg', 1, ['تأخر صباحي', 'خروج مبكر', 'خروج أثناء الدوام']], ['day', 'التاريخ', 'date', 1], ['fromT', 'من الساعة', 'time', 1], ['toT', 'إلى الساعة', 'time', 1],
+        ['reason', 'السبب', 'area', 1, [3, 800], 'مثال: مراجعة مستشفى']],
+    'ot' => [['day', 'التاريخ', 'date', 1], ['fromT', 'من الساعة', 'time', 1], ['toT', 'إلى الساعة', 'time', 1], ['tasks', 'المهام المنجزة أو المطلوبة', 'area', 1, [3, 1200], 'ما الذي أُنجز في هذا الوقت؟']],
+    'loan' => [['amount', 'مبلغ السلفة', 'money', 1, [100, 200000]], ['months', 'عدد الأقساط الشهرية', 'int', 1, [1, 24]], ['start', 'شهر بداية الخصم', 'month', 1], ['reason', 'سبب السلفة', 'area', 1, [3, 800]]],
+    'resume' => [['kind', 'نوع المباشرة', 'seg', 1, ['عودة من إجازة', 'عودة من مهمة رسمية', 'تعيين جديد']], ['link', 'الطلب المرتبط', 'reqref', 0, ['leave', 'travel']], ['day', 'تاريخ المباشرة الفعلي', 'date', 1], ['note', 'ملاحظات', 'area', 0, [0, 800]]],
+    'train' => [['program', 'اسم البرنامج التدريبي', 'text', 1, [3, 160]], ['provider', 'الجهة المنفذة', 'text', 1, [2, 160]], ['mode', 'طريقة التنفيذ', 'seg', 1, ['حضوري', 'عن بعد', 'مدمج']], ['from', 'تاريخ البداية', 'date', 1], ['to', 'تاريخ النهاية', 'date', 1],
+        ['cost', 'التكلفة التقديرية (ر.س)', 'money', 0, [0, 1000000]], ['benefit', 'العائد المتوقع على العمل', 'area', 1, [3, 1200]]],
+    'resign' => [['lastDay', 'آخر يوم عمل مقترح', 'date', 1], ['reason', 'أسباب الاستقالة', 'area', 1, [3, 1500]], ['note', 'ملاحظات للتسليم', 'area', 0, [0, 800], 'المهام التي ستسلّمها ولمن']],
+    'clear' => [['why', 'سبب إخلاء الطرف', 'seg', 1, ['استقالة', 'انتهاء العقد', 'إنهاء خدمة', 'نقل إلى جهة أخرى']], ['link', 'طلب الاستقالة المرتبط', 'reqref', 0, ['resign']], ['lastDay', 'آخر يوم عمل', 'date', 1],
+        ['dues', 'المستحقات والالتزامات', 'area', 0, [0, 1200], 'مثال: رصيد إجازات، سلفة متبقية، مكافأة نهاية الخدمة'], ['note', 'ملاحظات', 'area', 0, [0, 800]]],
+    'hire' => [['title', 'المسمى الوظيفي المطلوب', 'text', 1, [2, 120]], ['entity', 'الجهة', 'text', 1, [2, 120]], ['department', 'الإدارة أو القسم', 'text', 0, [0, 120]], ['count', 'العدد المطلوب', 'int', 1, [1, 50]],
+        ['contract', 'نوع العقد', 'seg', 1, ['دوام كامل', 'دوام جزئي', 'مؤقت', 'تعاقد']], ['needBy', 'تاريخ الاحتياج', 'date', 1], ['budget', 'الراتب أو الميزانية التقديرية', 'money', 0, [0, 10000000]],
+        ['quals', 'المؤهلات والخبرات المطلوبة', 'area', 1, [3, 1500]], ['reason', 'مبرر الاحتياج', 'area', 1, [3, 1500]]],
 ];
 /* مسار الاعتماد الافتراضي لكل نوع: [نوع الخطوة، القيمة، اسم الخطوة]
    manager = المسؤول المباشر الذي يختاره المنسوب من قائمة المسؤولين (كما في النظام السابق) */
@@ -20,6 +45,14 @@ const REQ_CHAINS = [
     'leave'  => [['manager', '', 'المسؤول المباشر'], ['role', 'admin', 'المدير العام']],
     'travel' => [['role', 'hr', 'الموارد البشرية'], ['role', 'ceo', 'الرئيس التنفيذي']],
     'cert'   => [['role', 'hr', 'الموارد البشرية']],
+    'perm'   => [['manager', '', 'المسؤول المباشر'], ['role', 'hr', 'الموارد البشرية']],
+    'ot'     => [['manager', '', 'المسؤول المباشر'], ['role', 'hr', 'الموارد البشرية']],
+    'loan'   => [['role', 'hr', 'الموارد البشرية'], ['role', 'admin', 'المدير العام']],
+    'resume' => [['manager', '', 'المسؤول المباشر'], ['role', 'hr', 'الموارد البشرية']],
+    'train'  => [['manager', '', 'المسؤول المباشر'], ['role', 'hr', 'الموارد البشرية']],
+    'resign' => [['manager', '', 'المسؤول المباشر'], ['role', 'admin', 'المدير العام']],
+    'clear'  => [['role', 'hr', 'الموارد البشرية'], ['role', 'admin', 'المدير العام']],
+    'hire'   => [['role', 'hr', 'الموارد البشرية'], ['role', 'admin', 'المدير العام']],
 ];
 const REQ_ST = ['pending' => 'قيد الإجراء', 'approved' => 'معتمد', 'rejected' => 'مرفوض', 'cancelled' => 'ملغى'];
 /* أنواع الإجازة الستة في النظام السابق، و«بدون راتب» التي كانت في المنصة */
@@ -53,9 +86,83 @@ function req_clean_leave(array $d, bool $strict = true): array {
     }
     return $o;
 }
+function req_mins(string $t): ?int { return preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $t, $m) ? (int)$m[1] * 60 + (int)$m[2] : null; }
+/* بيانات الأنواع المبنية بالمخطط: التحقق ثم الحقول المحسوبة */
+function req_clean_schema(string $type, array $d, string $ref = ''): array {
+    $o = [];
+    foreach (REQ_SCHEMA[$type] as $f) {
+        [$k, $lab, $kind, $req] = $f; $opt = $f[4] ?? null; $v = $d[$k] ?? '';
+        if ($kind === 'date') $v = req_date($v);
+        elseif ($kind === 'time') $v = req_mins(trim((string)$v)) === null ? '' : trim((string)$v);
+        elseif ($kind === 'month') $v = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', trim((string)$v)) ? trim((string)$v) : '';
+        elseif ($kind === 'int' || $kind === 'money') {
+            $raw = trim(to_ascii_digits((string)$v)); $v = $raw === '' ? '' : ($kind === 'int' ? (int)$raw : round((float)$raw, 2));
+            if ($v !== '' && is_array($opt) && ($v < $opt[0] || $v > $opt[1])) throw new HttpError($lab . ': القيمة بين ' . $opt[0] . ' و' . $opt[1]);
+        } elseif ($kind === 'seg') $v = in_array($v, (array)$opt, true) ? $v : '';
+        elseif ($kind === 'reqref') {
+            $v = strtoupper(trim((string)$v));
+            if ($v !== '') { $x = q1("SELECT * FROM requests WHERE no=? AND ref=? AND status='approved'", [$v, $ref]); if (!$x || !in_array($x['type'], (array)$opt, true)) throw new HttpError('الطلب المرتبط غير صحيح'); }
+        } else {
+            $max = is_array($opt) ? (int)$opt[1] : ($kind === 'area' ? 1200 : 160); $v = req_str($v, $max);
+            if ($v !== '' && is_array($opt) && mb_strlen(trim($v)) < (int)$opt[0]) throw new HttpError('اكتب ' . $lab . ' (' . $opt[0] . ' أحرف على الأقل)');
+        }
+        if ($req && ($v === '' || $v === null)) throw new HttpError(($kind === 'seg' || $kind === 'reqref' ? 'اختر ' : 'اكتب ') . $lab);
+        $o[$k] = $v;
+    }
+    $o['supervisor'] = req_str($d['supervisor'] ?? '', 40); $o['supName'] = '';
+    $today = date('Y-m-d');
+    if ($type === 'perm' || $type === 'ot') {
+        $a = req_mins($o['fromT']); $b = req_mins($o['toT']); $m = $b - $a;
+        if ($type === 'ot' && $m <= 0) $m += 1440; /* عمل إضافي يمتد بعد منتصف الليل */
+        if ($m <= 0) throw new HttpError('وقت النهاية يجب أن يكون بعد وقت البداية');
+        if ($type === 'perm' && $m > 300) throw new HttpError('الاستئذان خمس ساعات على الأكثر؛ للمدة الأطول قدّم طلب إجازة');
+        if ($type === 'ot' && $m > 720) throw new HttpError('العمل الإضافي 12 ساعة على الأكثر في اليوم');
+        $o['mins'] = $m;
+        if ($o['day'] < date('Y-m-d', strtotime('-45 days'))) throw new HttpError('التاريخ أقدم من 45 يومًا؛ تواصل مع الموارد البشرية');
+        $w = (int)date('w', strtotime($o['day']));
+        if ($type === 'perm' && in_array($w, site()['work']['weekend'], true)) throw new HttpError('هذا اليوم عطلة نهاية أسبوع؛ لا يلزم استئذان');
+        if ($type === 'ot') $o['weekend'] = in_array($w, site()['work']['weekend'], true);
+    }
+    if ($type === 'loan') {
+        if ($o['start'] < date('Y-m')) throw new HttpError('شهر بداية الخصم لا يكون في الماضي');
+        $o['inst'] = round($o['amount'] / max(1, $o['months']), 2);
+        $o['end'] = date('Y-m', strtotime($o['start'] . '-01 +' . ($o['months'] - 1) . ' month'));
+        foreach (q("SELECT no, data FROM requests WHERE ref=? AND type='loan' AND status IN ('pending','approved')", [$ref])->fetchAll() as $x) {
+            $xd = json_decode($x['data'], true) ?: []; if (($xd['end'] ?? '') >= date('Y-m')) throw new HttpError('لديك سلفة قائمة (' . $x['no'] . ') لم تُسدَّد بعد');
+        }
+    }
+    if ($type === 'resume') {
+        if ($o['day'] > $today) throw new HttpError('تاريخ المباشرة لا يكون في المستقبل؛ قدّم الإشعار يوم مباشرتك أو بعده');
+        $o['lateDays'] = 0; $o['linkTo'] = '';
+        if ($o['link'] !== '') {
+            $x = q1('SELECT * FROM requests WHERE no=?', [$o['link']]); $xd = json_decode($x['data'], true) ?: [];
+            $o['linkTo'] = (string)($xd['to'] ?? ''); $back = date('Y-m-d', strtotime($o['linkTo'] . ' +1 day'));
+            /* أيام التأخر عن العودة: أيام العمل بين اليوم التالي لنهاية الإجازة ويوم المباشرة */
+            for ($t = strtotime($back); $t < strtotime($o['day']); $t += 86400) if (!in_array((int)date('w', $t), site()['work']['weekend'], true)) $o['lateDays']++;
+            if ($o['day'] < $o['linkTo']) throw new HttpError('تاريخ المباشرة قبل نهاية ' . ($x['type'] === 'leave' ? 'الإجازة' : 'المهمة') . ' المرتبطة');
+            $dup = q1("SELECT no FROM requests WHERE ref=? AND type='resume' AND status IN ('pending','approved') AND data LIKE ?", [$ref, '%"link":"' . $o['link'] . '"%']);
+            if ($dup) throw new HttpError('سبق تقديم إشعار مباشرة لهذا الطلب: ' . $dup['no']);
+        } elseif ($o['kind'] !== 'تعيين جديد') throw new HttpError('اختر الإجازة أو المهمة التي عدت منها');
+    }
+    if ($type === 'train') {
+        if ($o['to'] < $o['from']) throw new HttpError('تاريخ النهاية يجب أن يكون في يوم البداية أو بعده');
+        $o['days'] = req_days($o['from'], $o['to']);
+    }
+    if ($type === 'resign') {
+        if ($o['lastDay'] < $today) throw new HttpError('آخر يوم عمل لا يكون في الماضي');
+        $o['notice'] = req_days($today, $o['lastDay']) - 1;
+        $dup = q1("SELECT no FROM requests WHERE ref=? AND type='resign' AND status IN ('pending','approved')", [$ref]); if ($dup) throw new HttpError('سبق تقديم طلب استقالة: ' . $dup['no']);
+    }
+    if ($type === 'clear') {
+        $dup = q1("SELECT no FROM requests WHERE ref=? AND type='clear' AND status IN ('pending','approved')", [$ref]); if ($dup) throw new HttpError('سبق فتح إخلاء طرف لهذا المنسوب: ' . $dup['no']);
+    }
+    if ($type === 'hire' && $o['needBy'] < $today) throw new HttpError('تاريخ الاحتياج لا يكون في الماضي');
+    return $o;
+}
 /* يتحقق من بيانات كل نوع ويعيدها نظيفة */
-function req_clean(string $type, array $d): array {
+function req_clean(string $type, array $d, string $ref = ''): array {
     if ($type === 'leave') return req_clean_leave($d, true);
+    if (isset(REQ_SCHEMA[$type])) return req_clean_schema($type, $d, $ref);
     if ($type === 'travel') {
         $o = ['dest' => req_str($d['dest'] ?? '', 160), 'purpose' => req_str($d['purpose'] ?? '', 1500), 'from' => req_date($d['from'] ?? ''), 'to' => req_date($d['to'] ?? ''),
             'transport' => in_array($d['transport'] ?? '', ['طيران', 'بري', 'لا يلزم'], true) ? $d['transport'] : 'طيران', 'hotel' => !empty($d['hotel']),
@@ -92,8 +199,9 @@ function req_row(array $r, bool $full = true): array {
     $o = ['no' => $r['no'], 'ref' => $r['ref'], 'type' => $r['type'], 'typeName' => REQ_TYPES[$r['type']][1], 'form' => REQ_TYPES[$r['type']][2],
         'status' => $r['status'], 'statusName' => REQ_ST[$r['status']] ?? $r['status'], 'stage' => (int)$r['stage'],
         'chain' => $chain, 'createdAt' => substr($r['created_at'], 0, 16), 'updatedAt' => substr($r['updated_at'], 0, 16),
-        'name' => $s ? staff_name($s) : $r['ref']];
+        'name' => $s ? staff_name($s) : $r['ref'], 'sum' => req_summary($r)];
     if ($full) {
+        $o['view'] = req_view_rows($r);
         $o['data'] = json_decode($r['data'], true) ?: [];
         if ($r['type'] === 'leave' && isset($o['data']['kind'])) $o['data']['kind'] = leave_kind_norm((string)$o['data']['kind']);
         $o['createdBy'] = $r['created_by'];
@@ -137,6 +245,14 @@ const REQ_FORM_INFO = [
     'leave'  => 'إجازة اعتيادية أو تعويضية أو مرضية أو دراسية أو طارئة، بتاريخ البداية والنهاية والسبب والموظف البديل. يعتمدها المسؤول المباشر ثم المدير العام.',
     'travel' => 'تكليف بمهمة رسمية: الوجهة والغرض والتواريخ ووسيلة السفر والسكن والسلفة.',
     'cert'   => 'خطاب تعريف بالراتب أو شهادة خبرة موجّه إلى جهة، بالعربية أو الإنجليزية.',
+    'perm'   => 'تأخر صباحي أو خروج مبكر أو خروج أثناء الدوام، بالتاريخ والساعات والسبب. الاستئذان المعتمد يبرّر التأخير في كشف الحضور الشهري.',
+    'ot'     => 'ساعات عمل خارج الدوام بالتاريخ والوقت والمهام. تظهر الساعات المعتمدة في الحضور وفي مستحقات الشهر بالرواتب.',
+    'loan'   => 'سلفة من الراتب بالمبلغ وعدد الأقساط وشهر البداية. تظهر أقساطها في استقطاعات كل شهر بالرواتب حتى السداد.',
+    'resume' => 'إشعار بالعودة إلى العمل بعد إجازة أو مهمة، أو المباشرة بعد التعيين. يحدد يوم العودة الفعلي، وأيام التأخر تُخصم من الرصيد السنوي.',
+    'train'  => 'ترشيح لبرنامج تدريبي: البرنامج والجهة والتواريخ والتكلفة والعائد المتوقع.',
+    'resign' => 'استقالة المنسوب بآخر يوم عمل مقترح وأسبابها. بعد اعتمادها يُفتح إخلاء الطرف.',
+    'clear'  => 'إخلاء طرف عند انتهاء الخدمة: لا يكتمل حتى تُسلَّم كل العهد المسجّلة على المنسوب، وبعد اعتماده يصبح ملفه «منتهية خدمته» ويبقى في السجل.',
+    'hire'   => 'احتياج إدارة إلى موظف: المسمى والعدد ونوع العقد والمؤهلات والمبرر. بعد اعتماده تُعلن الوظيفة من صفحة التوظيف.',
 ];
 const REQ_STEP_ROLES = ['hr', 'ceo', 'admin']; /* «اطلاع فقط» لا يملك صلاحية الاعتماد؛ لشخص بعينه اختر «حساب محدد» */
 function req_flow(): array {
@@ -205,6 +321,7 @@ function req_forms(): array {
             return ['kind' => $k, 'v' => $k === 'person' && !$isAdmin ? '' : $s['v'], 'label' => $s['label'], 'people' => $people];
         }, $flow[$t]['steps']);
         $forms[] = ['type' => $t, 'code' => $T[2], 'prefix' => $T[0], 'name' => $T[1], 'info' => REQ_FORM_INFO[$t] ?? '', 'on' => $flow[$t]['on'], 'steps' => $steps,
+            'fields' => REQ_SCHEMA[$t] ?? null, 'mgrOk' => $t === 'leave' || isset(REQ_SCHEMA[$t]),
             'total' => array_sum($cnt[$t] ?? []), 'pending' => $cnt[$t]['pending'] ?? 0];
     }
     /* المنسوب يرى أسماء المسؤولين فقط ليختار منها؛ البريد لمن يدير النماذج */
@@ -228,7 +345,7 @@ function req_forms_save(array $b): array {
         } elseif ($kind === 'person') {
             $v = strtolower(trim((string)($s['v'] ?? ''))); if (!filter_var($v, FILTER_VALIDATE_EMAIL)) throw new HttpError('اكتب بريدًا صحيحًا للخطوة ' . ($i + 1));
         } elseif ($kind === 'manager') {
-            if ($t !== 'leave') throw new HttpError('«المسؤول المباشر» متاح لنموذج الإجازة فقط');
+            if ($t !== 'leave' && !isset(REQ_SCHEMA[$t])) throw new HttpError('«المسؤول المباشر» غير متاح لهذا النموذج');
             if ($i !== 0) throw new HttpError('«المسؤول المباشر» يكون الخطوة الأولى في المسار');
             $v = ''; if ($label === '') $label = 'المسؤول المباشر';
         } else {
@@ -248,7 +365,38 @@ function req_summary(array $r): string {
     $d = json_decode($r['data'], true) ?: [];
     if ($r['type'] === 'leave') return 'إجازة ' . leave_kind_norm((string)($d['kind'] ?? '')) . ' · ' . ($d['days'] ?? 0) . ' يومًا · من ' . ($d['from'] ?? '') . ' إلى ' . ($d['to'] ?? '');
     if ($r['type'] === 'travel') return 'مهمة إلى ' . ($d['dest'] ?? '') . ' · ' . ($d['days'] ?? 0) . ' أيام · من ' . ($d['from'] ?? '');
+    if ($r['type'] === 'perm') return ($d['kind'] ?? 'استئذان') . ' · ' . ($d['day'] ?? '') . ' · ' . ($d['fromT'] ?? '') . '–' . ($d['toT'] ?? '');
+    if ($r['type'] === 'ot') return 'عمل إضافي ' . req_hours((int)($d['mins'] ?? 0)) . ' · ' . ($d['day'] ?? '');
+    if ($r['type'] === 'loan') return 'سلفة ' . number_format((float)($d['amount'] ?? 0)) . ' ر.س على ' . ($d['months'] ?? 0) . ' أقساط من ' . ($d['start'] ?? '');
+    if ($r['type'] === 'resume') return ($d['kind'] ?? 'مباشرة') . ' · ' . ($d['day'] ?? '') . (!empty($d['lateDays']) ? ' · تأخر ' . $d['lateDays'] . ' يوم عمل' : '');
+    if ($r['type'] === 'train') return 'تدريب: ' . ($d['program'] ?? '') . ' · ' . ($d['provider'] ?? '');
+    if ($r['type'] === 'resign') return 'استقالة · آخر يوم عمل ' . ($d['lastDay'] ?? '');
+    if ($r['type'] === 'clear') return 'إخلاء طرف · ' . ($d['why'] ?? '') . ' · آخر يوم ' . ($d['lastDay'] ?? '');
+    if ($r['type'] === 'hire') return 'احتياج: ' . ($d['title'] ?? '') . ' × ' . ($d['count'] ?? 1) . ' · ' . ($d['entity'] ?? '');
     return ($d['kind'] ?? '') . ' موجّه إلى ' . ($d['to'] ?? '');
+}
+function req_hours(int $m): string { $h = intdiv($m, 60); $mm = $m % 60; return ($h ? $h . ' س' : '') . ($h && $mm ? ' ' : '') . ($mm ? $mm . ' د' : ($h ? '' : '0 د')); }
+/* صفوف العرض الجاهزة (للورقة الرسمية وصفحة القرار والبريد) */
+function req_view_rows(array $r): array {
+    $d = json_decode($r['data'], true) ?: []; $t = $r['type']; $o = [];
+    if (isset(REQ_SCHEMA[$t])) {
+        foreach (REQ_SCHEMA[$t] as $f) {
+            $v = $d[$f[0]] ?? ''; if ($v === '' || $v === null) continue;
+            if ($f[2] === 'money') $v = number_format((float)$v, 2) . ' ر.س';
+            if ($f[2] === 'area') continue;
+            $o[] = [$f[1], (string)$v, in_array($f[2], ['date', 'time', 'month', 'reqref'], true) ? 1 : 0];
+        }
+        if ($t === 'perm' || $t === 'ot') $o[] = ['المدة', req_hours((int)($d['mins'] ?? 0))];
+        if ($t === 'ot' && !empty($d['weekend'])) $o[] = ['ملاحظة', 'في يوم عطلة نهاية الأسبوع'];
+        if ($t === 'loan') { $o[] = ['القسط الشهري', number_format((float)($d['inst'] ?? 0), 2) . ' ر.س']; $o[] = ['آخر قسط', (string)($d['end'] ?? ''), 1]; }
+        if ($t === 'resume' && ($d['link'] ?? '') !== '') { $o[] = ['نهاية الإجازة أو المهمة', (string)($d['linkTo'] ?? ''), 1]; $o[] = ['التأخر عن العودة', !empty($d['lateDays']) ? $d['lateDays'] . ' يوم عمل (يُخصم من الرصيد السنوي)' : 'لا يوجد']; }
+        if ($t === 'train') $o[] = ['المدة', ($d['days'] ?? 0) . ' يوم'];
+        if ($t === 'resign') $o[] = ['مهلة الإشعار', (int)($d['notice'] ?? 0) . ' يومًا من تاريخ التقديم'];
+        if ($t === 'clear' && function_exists('custody_open')) { $op = custody_open($r['ref']); $o[] = ['العهد غير المسلّمة', $op ? count($op) . ': ' . implode('، ', array_column($op, 'item')) : 'لا يوجد — سُلّمت كل العهد']; }
+        if (($d['supName'] ?? '') !== '') $o[] = ['المسؤول المباشر', (string)$d['supName']];
+        foreach (REQ_SCHEMA[$t] as $f) if ($f[2] === 'area' && ($d[$f[0]] ?? '') !== '') $o[] = [$f[1], (string)$d[$f[0]], 0, 1];
+    }
+    return $o;
 }
 
 /* ============ روابط القرار في البريد ============
@@ -424,10 +572,20 @@ function req_mail_approvers(array $r, array $step): void {
     /* مدير النظام تصله نسخة إن كانت تنبيهاته مفعّلة (يستطيع الاعتماد عند الطوارئ) */
     foreach (q("SELECT * FROM users WHERE active=1 AND role='admin'")->fetchAll() as $u) if (user_notify($u) && in_array('requests.approve', user_perms($u), true)) $list[strtolower($u['email'])] = 1;
     $s = staff_get($r['ref']); $name = $s ? staff_name($s) : $r['ref'];
-    $inner = '<p style="margin:0 0 10px;font-size:14px;color:#1D2A3B;">طلب جديد بانتظار قرارك من <b>' . esc_html($name) . '</b>.</p><p style="margin:0 0 10px;font-size:13.5px;color:#3D4A60;">' . esc_html(req_summary($r)) . '</p>'
-        . '<div style="margin:14px 0 6px;"><a href="' . esc_html(cfg('site_url')) . '#reqs" style="display:inline-block;padding:9px 18px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13px;text-decoration:none;">فتح الطلب</a></div>';
+    $staffMails = array_map('strtolower', array_filter([req_staff_email($s)]));
+    $rows = '';
+    foreach (req_view_rows($r) as $v) $rows .= '<tr><td style="padding:6px 0;color:#6B778A;width:130px;vertical-align:top;">' . esc_html($v[0]) . '</td><td style="padding:6px 0;font-weight:700;color:#1D2A3B;">' . nl2br(esc_html($v[1])) . '</td></tr>';
+    /* من يعتمد بالبريد (المسؤول المباشر أو شخص بلا حساب) يصله رابط قرار خاص به */
+    $tokFor = !empty($step['email']) ? strtolower((string)$step['email']) : '';
     foreach (array_keys($list) as $to) {
-        try { send_mail($to, 'بانتظار اعتمادك: ' . REQ_TYPES[$r['type']][1] . ' · ' . $r['no'], mail_frame('Bonyan HR · الطلبات', REQ_TYPES[$r['type']][1], $inner), req_summary($r), 'منصة بنيان للموارد البشرية', logo_inline()); }
+        if (in_array($to, $staffMails, true)) continue; /* لا يعتمد أحد طلبه هو */
+        $link = (string)cfg('site_url') . '#reqs'; $lab = 'فتح الطلب في المنصة';
+        if ($tokFor !== '' && $to === $tokFor) { $link = (string)cfg('site_url') . 'decide.html#t=' . req_tok_issue($r, (int)$r['stage'], $to, (string)($step['who'] ?? $step['label'])) . '&a=view'; $lab = 'عرض الطلب واتخاذ القرار'; }
+        $inner = '<p style="margin:0 0 10px;font-size:14px;color:#1D2A3B;">' . esc_html(REQ_TYPES[$r['type']][1]) . ' بانتظار قرارك' . (!empty($step['mgr']) ? ' بصفتك المسؤول المباشر' : '') . ' من <b>' . esc_html($name) . '</b>.</p>'
+            . '<table style="border-collapse:collapse;width:100%;font-size:13.5px;"><tr><td style="padding:6px 0;color:#6B778A;width:130px;">رقم الطلب</td><td style="padding:6px 0;font-weight:800;direction:ltr;text-align:right;">' . esc_html($r['no']) . '</td></tr>' . $rows . '</table>'
+            . '<div style="margin:14px 0 6px;"><a href="' . esc_html($link) . '" style="display:inline-block;padding:10px 20px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;">' . $lab . '</a></div>'
+            . ($tokFor !== '' && $to === $tokFor ? '<p style="font-size:12px;color:#8E97B4;margin:4px 0 0;">الرابط خاص بك وصالح ' . REQ_LINK_DAYS . ' يومًا، ويفتح صفحة الطلب لتأكيد قرارك.</p>' : '');
+        try { send_mail($to, 'بانتظار اعتمادك: ' . REQ_TYPES[$r['type']][1] . ' · ' . $r['no'], mail_frame('Bonyan HR · الطلبات', REQ_TYPES[$r['type']][1], $inner), req_summary($r) . "\n" . $link, 'منصة بنيان للموارد البشرية', logo_inline()); }
         catch (Throwable $e) { audit_log($r['ref'], 'تعذّر إرسال تنبيه الاعتماد', mask_email($to)); }
     }
 }
@@ -443,16 +601,16 @@ function req_create(array $b): array {
     if (rate_hit('req:' . $u['id'], 30, 86400)) throw new HttpError('too_many', 429);
     if ($u['role'] === 'staff' && !staff_can_see('reqs')) throw new HttpError('تقديم الطلبات من بوابة المنسوب موقوف حاليًا. تواصل مع الموارد البشرية.');
     if (!req_flow()[$type]['on']) throw new HttpError('هذا النموذج موقوف حاليًا. تواصل مع الموارد البشرية.');
-    $data = req_clean($type, is_array($b['data'] ?? null) ? $b['data'] : []);
+    $data = req_clean($type, is_array($b['data'] ?? null) ? $b['data'] : [], $ref);
     $sup = null;
-    if ($type === 'leave') {
-        $needSup = in_array('manager', array_column(req_flow()['leave']['steps'], 'kind'), true);
+    if ($type === 'leave' || isset(REQ_SCHEMA[$type])) {
+        $needSup = in_array('manager', array_column(req_flow()[$type]['steps'], 'kind'), true);
         if ($needSup) {
             $sup = req_sup($data['supervisor']); if (!$sup) throw new HttpError('اختر المسؤول المباشر من القائمة');
             if (in_array($sup['email'], array_map('strtolower', array_filter([req_staff_email(staff_get($ref))])), true)) throw new HttpError('لا يمكن أن تكون المسؤول المباشر في طلبك أنت. اختر مسؤولك المباشر.');
             $data['supName'] = $sup['name'];
         } else { $data['supervisor'] = ''; $data['supName'] = ''; }
-        req_leave_overlap($ref, $data);
+        if ($type === 'leave') req_leave_overlap($ref, $data);
     }
     $chain = req_new_chain($type, $sup);
     named_lock('req_no');
@@ -464,7 +622,11 @@ function req_create(array $b): array {
     $r = q1('SELECT * FROM requests WHERE no=?', [$no]);
     audit_log($ref, 'تقديم ' . REQ_TYPES[$type][1], $no . ' · ' . req_summary($r) . ($sup ? ' · المسؤول المباشر: ' . $sup['name'] : ''), $by);
     if ($type === 'leave') { lv_mail_staff($r, 'received', ['first' => $chain[0]['who'] ?? $chain[0]['label']]); lv_mail_approvers($r); }
-    else { req_mail_staff($r, 'استلمنا طلبك', 'استلمت الموارد البشرية طلبك، وسيصلك بريد عند كل خطوة في مساره.'); req_mail_approvers($r, $chain[0]); }
+    else {
+        if ($type === 'clear') req_mail_staff($r, 'فُتح إخلاء الطرف', 'فتحت الموارد البشرية إخلاء طرفك. سلّم ما لديك من عهد، وسيصلك بريد عند كل خطوة.');
+        elseif ($type !== 'hire') req_mail_staff($r, 'استلمنا طلبك', 'استلمت الموارد البشرية طلبك، وسيصلك بريد عند كل خطوة في مساره.');
+        req_mail_approvers($r, $chain[0]);
+    }
     return ['ok' => true, 'request' => req_out($u, $r)];
 }
 function req_out(array $u, array $r): array { $cd = req_can_decide($u, $r); return req_row($r) + ['canDecide' => $cd, 'canEdit' => $cd && req_step_can_edit($r)]; }
@@ -510,10 +672,13 @@ function req_apply(array $r, string $actor, string $decision, string $note, ?arr
         }
         $chain[$i] = array_merge($chain[$i], ['decision' => $decision, 'by' => $actor, 'at' => now_min(), 'note' => $note] + ($decision === 'edit' ? ['changes' => $changes] : []));
         $last = $i >= count($chain) - 1; $ok = $decision !== 'reject';
+        if ($ok && $last && $r['type'] === 'clear' && function_exists('custody_open') && ($op = custody_open($r['ref'])))
+            throw new HttpError('لا يكتمل إخلاء الطرف قبل تسليم كل العهد. غير المسلّم: ' . implode('، ', array_column($op, 'item')));
         $status = !$ok ? 'rejected' : ($last ? 'approved' : 'pending'); $stage = $ok && !$last ? $i + 1 : $i;
         q('UPDATE requests SET chain=?, data=?, status=?, stage=?, updated_at=? WHERE id=?', [json_encode($chain, JSON_UNESCAPED_UNICODE), json_encode($data, JSON_UNESCAPED_UNICODE), $status, $stage, now(), $r['id']]);
     } finally { named_unlock('req_dec'); }
     $r = q1('SELECT * FROM requests WHERE id=?', [$r['id']]);
+    if ($r['status'] === 'approved' && function_exists('req_on_approved')) req_on_approved($r, $actor);
     $lab = $chain[$i]['label'];
     audit_log($r['ref'], ['approve' => 'اعتماد ', 'reject' => 'رفض ', 'edit' => 'تعديل واعتماد '][$decision] . REQ_TYPES[$r['type']][1], $r['no'] . ' · ' . $lab . ($changes ? ' · عُدّل: ' . implode('، ', array_column($changes, 0)) : '') . ($note ? ' · ' . $note : ''), $actor);
     if ($r['type'] === 'leave') {

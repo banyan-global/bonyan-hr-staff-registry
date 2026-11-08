@@ -15,6 +15,7 @@ require __DIR__ . '/../server/export.php';
 require __DIR__ . '/../server/requests.php';
 require __DIR__ . '/../server/passkey.php';
 require __DIR__ . '/../server/hrx.php';
+require __DIR__ . '/../server/hrplus.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -68,7 +69,9 @@ try {
         'fileHistory' => fn() => file_history($b), 'fileRestore' => fn() => file_restore($b),
         'backups' => fn() => backups_list(), 'backupNow' => fn() => backup_now(), 'health' => fn() => health(),
         /* طلبات المنسوبين */
-        'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqDelete' => fn() => req_delete($b), 'reqTrack' => fn() => req_track($b), 'reqForms' => fn() => req_forms(), 'reqSupsSave' => fn() => req_sups_save($b), 'reqAct' => fn() => req_act($b), 'reqActDo' => fn() => req_act_do($b),
+        'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqDelete' => fn() => req_delete($b), 'payMonth' => fn() => pay_month($b),
+        'actList' => fn() => act_list($b), 'actSave' => fn() => act_save($b), 'actDecide' => fn() => act_decide($b), 'actAck' => fn() => act_ack($b), 'actVoid' => fn() => act_void($b),
+        'cusList' => fn() => cus_list($b), 'cusSave' => fn() => cus_save($b), 'cusReturn' => fn() => cus_return($b), 'cusAck' => fn() => cus_ack($b), 'reqTrack' => fn() => req_track($b), 'reqForms' => fn() => req_forms(), 'reqSupsSave' => fn() => req_sups_save($b), 'reqAct' => fn() => req_act($b), 'reqActDo' => fn() => req_act_do($b),
         /* الوحدات المتكاملة */
         'siteGet' => fn() => site_get(), 'uiSave' => fn() => ui_save($b), 'siteSave' => fn() => site_save($b), 'myExtra' => fn() => my_extra(), 'leaveBalances' => fn() => leave_balances(),
         'attUpload' => fn() => att_upload($b), 'attImport' => fn() => att_import($b), 'attMonth' => fn() => att_month($b), 'attMy' => fn() => att_my($b), 'attUndo' => fn() => att_batch_undo($b),

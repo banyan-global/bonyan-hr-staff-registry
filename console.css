@@ -1756,3 +1756,37 @@ html[dir="ltr"] .side-card-box > .idcard-wrap {transform-origin: top left;}
 .upd-cardbox .idcard-wrap {width: 100%; max-width: 380px;}
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes plateIn { from { opacity: 0; transform: scale(.7) rotate(-4deg); } }
+
+/* ===== وحدات الموارد البشرية المكمّلة ===== */
+.ccards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.fld input[type=time] { direction: ltr; text-align: right; }
+.tbad { color: var(--bad); } .tok { color: var(--ok); }
+.dn2 { display: block; font-size: 11.5px; color: var(--faint); font-weight: 600; margin-top: 2px; }
+.pmtab td { vertical-align: top; }
+.pmln { font-size: 13px; line-height: 1.7; white-space: nowrap; }
+.pmln .ltr { font-weight: 800; color: var(--ink); }
+.pmln small { color: var(--faint); }
+.cd.pm { box-shadow: inset 0 -3px 0 #15718a; }
+.acal-k .pm { box-shadow: inset 0 -3px 0 #15718a; }
+.fhint .i { width: 14px; height: 14px; vertical-align: -2px; }
+#actLayer, #anLayer, #cuLayer, #evLayer, #jbLayer, #apLayer { position: fixed; inset: 0; z-index: 92; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); }
+#actLayer .abody { padding: 0; } #actLayer .rqbody { max-height: none; }
+.mdl.anm { width: min(820px, 100%); }
+.mdl .mf .lerr { flex: 1; text-align: start; }
+.mdl.anm .abody { padding: 16px 22px 20px; gap: 12px; }
+.ccards.sm { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.ccards.sm .ccard { padding: 12px 8px; gap: 4px; position: relative; }
+.ccards.sm .ccard .tile { width: 40px; height: 40px; border-radius: 12px; }
+.ccards.sm .ccard b { font-size: 14.5px; } .ccards.sm .ccard small { font-size: 11.5px; line-height: 1.5; }
+.needap { font-style: normal; font-size: 10.5px; font-weight: 800; color: var(--gold-ink); background: var(--gold-wash); border-radius: 99px; padding: 1px 8px; }
+.ssign { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 6px 0 10px; }
+.ssign > div { border: 1px dashed #c9d2e2; border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
+.ssign span { font-size: 11.5px; color: #6b778a; font-weight: 700; } .ssign b { font-size: 13.5px; color: #142340; min-height: 1.4em; } .ssign small { font-size: 11px; color: #8a96ab; }
+.cutab td { vertical-align: top; } .acts2 { white-space: nowrap; text-align: end; } .acts2 .btn { margin-inline-end: 6px; }
+.culist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.culist li { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--line-2); border-radius: 16px; background: var(--panel); }
+.culist li.back { opacity: .72; } .culist li .tile { width: 42px; height: 42px; border-radius: 12px; }
+.culist b { display: block; font-size: 14.5px; } .culist small { color: var(--faint); font-size: 12.5px; }
+.grid.g3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+@media (max-width: 900px) { .grid.g3 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .culist li { grid-template-columns: 42px minmax(0, 1fr); } .culist li > :last-child { grid-column: 1 / -1; justify-self: start; } }

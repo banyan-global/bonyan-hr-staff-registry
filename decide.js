@@ -35,6 +35,13 @@
   function table(rows) { return '<table class="dt">' + rows.filter(function (r) { return r; }).map(function (r) { var v = r[1] === '' || r[1] == null ? '—' : esc(r[1]); return '<tr><td>' + esc(r[0]) + '</td><td>' + (r[2] && v !== '—' ? '<bdi dir="ltr">' + v + '</bdi>' : v) + '</td></tr>'; }).join('') + '</table>'; }
   function details(r) {
     var d = r.data || {}, s = r.staff || {}, mgr = '';
+    if (r.type !== 'leave' && r.view) {
+      var long = r.view.filter(function (x) { return x[3]; }), h0 = '<h2 class="sec">بيانات الطلب</h2>' + table([['اسم الموظف', r.name], ['المسمى الوظيفي', s.jobTitle], s.employeeNo ? ['الرقم الوظيفي', s.employeeNo] : null,
+        ['الجهة / القسم', (s.entity || '') + (s.department ? ' - ' + s.department : '')]].concat(r.view.filter(function (x) { return !x[3]; }).map(function (x) { return [x[0], /^\d{4}-\d{2}-\d{2}$/.test(x[1]) ? fd(x[1]) : x[1], x[2] && !/^\d{4}-\d{2}-\d{2}$/.test(x[1]) ? 1 : 0]; })));
+      long.forEach(function (x) { h0 += '<div class="box"><b>' + esc(x[0]) + '</b>' + esc(x[1]) + '</div>'; });
+      r.chain.forEach(function (c) { if (c.decision && c.note) h0 += '<div class="box' + (c.decision === 'reject' ? ' r' : '') + '"><b>' + (c.decision === 'reject' ? 'سبب الرفض من ' : 'ملاحظة ') + esc(c.label) + '</b>' + esc(c.note) + '</div>'; });
+      return h0;
+    }
     r.chain.forEach(function (c) { if (c.mgr) mgr = c.who || ''; });
     var h = '<h2 class="sec">بيانات الطلب</h2>' + table([['اسم الموظف', r.name], ['المسمى الوظيفي', s.jobTitle], s.employeeNo ? ['الرقم الوظيفي', s.employeeNo] : null,
       ['الجهة / القسم', (s.entity || '') + (s.department ? ' - ' + s.department : '')], ['نوع الإجازة', d.kind], ['فترة الإجازة', fd(d.from) + ' إلى ' + fd(d.to)], ['عدد الأيام', dn(d.days)],
@@ -50,7 +57,8 @@
   function head(r) {
     document.getElementById('ent').textContent = (r.staff && r.staff.entity) || 'مجموعة بنيان العالمية';
     var no = document.getElementById('no'); no.textContent = r.no; no.hidden = false;
-    document.title = 'طلب إجازة ' + r.no + ' · ' + r.name;
+    document.title = (r.typeName || 'طلب إجازة') + ' ' + r.no + ' · ' + r.name;
+    if (r.type !== 'leave') { document.getElementById('ttl').textContent = r.typeName || 'طلب'; var f2 = document.querySelector('.ft2'); if (f2) f2.textContent = 'مجموعة بنيان العالمية - منصة بنيان للموارد البشرية'; }
   }
   var STN = { approved: 'معتمد نهائيًا', rejected: 'مرفوض', cancelled: 'ملغى من صاحبه', pending: 'قيد الإجراء' };
 

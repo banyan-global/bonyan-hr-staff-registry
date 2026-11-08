@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 10;
+const BHR_SCHEMA_VERSION = 11;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -170,6 +170,26 @@ function migrate(PDO $pdo): void {
             $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('leave_sups', ?)")->execute([json_encode($list, JSON_UNESCAPED_UNICODE)]);
         }
     }
+    /* ١١) الوحدات المكمّلة: الإجراءات الإدارية على الملف · العهد · تقييم الأداء · الوظائف والمتقدمون */
+    $T11 = ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+    $pdo->exec("CREATE TABLE IF NOT EXISTS hr_actions (
+        id INT AUTO_INCREMENT PRIMARY KEY, no VARCHAR(24) NOT NULL UNIQUE, ref VARCHAR(40) NOT NULL, kind VARCHAR(16) NOT NULL, status VARCHAR(12) NOT NULL DEFAULT 'issued',
+        data TEXT NOT NULL, created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, decided_by VARCHAR(190) NOT NULL DEFAULT '', decided_at DATETIME NULL,
+        ack_at DATETIME NULL, ack_note VARCHAR(600) NOT NULL DEFAULT '', updated_at DATETIME NOT NULL, KEY k_ref (ref), KEY k_status (status))" . $T11);
+    $pdo->exec("CREATE TABLE IF NOT EXISTS custody (
+        id INT AUTO_INCREMENT PRIMARY KEY, ref VARCHAR(40) NOT NULL, item VARCHAR(160) NOT NULL, category VARCHAR(40) NOT NULL DEFAULT '', serial VARCHAR(80) NOT NULL DEFAULT '',
+        value DECIMAL(12,2) NULL, issued_on DATE NOT NULL, cond_out VARCHAR(40) NOT NULL DEFAULT '', returned_on DATE NULL, cond_in VARCHAR(40) NOT NULL DEFAULT '', note VARCHAR(600) NOT NULL DEFAULT '',
+        created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, returned_by VARCHAR(190) NOT NULL DEFAULT '', ack_at DATETIME NULL, KEY k_ref (ref))" . $T11);
+    $pdo->exec("CREATE TABLE IF NOT EXISTS evals (
+        id INT AUTO_INCREMENT PRIMARY KEY, ref VARCHAR(40) NOT NULL, period VARCHAR(60) NOT NULL, scores TEXT NOT NULL, total DECIMAL(4,2) NOT NULL DEFAULT 0, data TEXT NOT NULL,
+        status VARCHAR(12) NOT NULL DEFAULT 'draft', created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, sent_at DATETIME NULL, ack_at DATETIME NULL, ack_note VARCHAR(600) NOT NULL DEFAULT '',
+        updated_at DATETIME NOT NULL, KEY k_ref (ref))" . $T11);
+    $pdo->exec("CREATE TABLE IF NOT EXISTS jobs (
+        id INT AUTO_INCREMENT PRIMARY KEY, slug CHAR(12) NOT NULL UNIQUE, title VARCHAR(160) NOT NULL, data TEXT NOT NULL, status VARCHAR(12) NOT NULL DEFAULT 'open', need_no VARCHAR(24) NOT NULL DEFAULT '',
+        closes_on DATE NULL, created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL)" . $T11);
+    $pdo->exec("CREATE TABLE IF NOT EXISTS applicants (
+        id INT AUTO_INCREMENT PRIMARY KEY, job_id INT NOT NULL, name VARCHAR(160) NOT NULL, email VARCHAR(190) NOT NULL, phone VARCHAR(40) NOT NULL DEFAULT '', data TEXT NOT NULL,
+        status VARCHAR(12) NOT NULL DEFAULT 'new', cv_file VARCHAR(255) NOT NULL DEFAULT '', review TEXT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, KEY k_job (job_id), KEY k_mail (email))" . $T11);
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {
