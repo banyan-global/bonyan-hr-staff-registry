@@ -91,7 +91,7 @@ function device_login(): array {
     q('DELETE FROM devices WHERE id=?', [$c['d']['id']]);
     device_issue($u);
     open_session($u, 'سريع من جهاز محفوظ');
-    return ['ok' => true, 'user' => user_public($u)];
+    return ['ok' => true, 'user' => user_session($u)];
 }
 function device_forget(): array {
     $tok = (string)($_COOKIE[DEVICE_COOKIE] ?? '');
@@ -232,7 +232,7 @@ function pk_login_finish(array $b): array {
     q('UPDATE passkeys SET sign_count=?, last_used_at=? WHERE id=?', [$ad['count'], now(), $row['id']]);
     open_session($u, 'بالبصمة');
     if (!empty($b['remember'])) device_issue($u);
-    return ['ok' => true, 'user' => user_public($u)];
+    return ['ok' => true, 'user' => user_session($u)];
 }
 
 /* ---------- «الدخول والأمان»: بصمات الحساب وأجهزته ---------- */

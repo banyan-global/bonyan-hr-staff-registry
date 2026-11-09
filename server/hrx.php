@@ -420,9 +420,11 @@ function news_row(array $n, array $u, bool $admin): array {
     if ($admin) $o['reads'] = (int)q1('SELECT COUNT(*) n FROM news_reads WHERE news_id=?', [$n['id']])['n'];
     return $o;
 }
-function news_list(): array {
+function news_list(array $b = []): array {
     $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
-    $admin = has_perm($u, 'announce.manage');
+    /* asStaff: صاحب حساب النظام في «واجهة الموظف» يرى ما يراه المنسوب */
+    $asStaff = !empty($b['asStaff']) && $u['role'] !== 'staff';
+    $admin = !$asStaff && has_perm($u, 'announce.manage');
     if (!$admin && !site_on('modules', 'news')) return ['ok' => true, 'rows' => [], 'hidden' => true];
     if ($u['role'] === 'staff' && !staff_can_see('news')) return ['ok' => true, 'rows' => [], 'hidden' => true];
     $rec = ($r = my_staff_ref($u)) ? staff_get($r) : null;
@@ -430,7 +432,7 @@ function news_list(): array {
     $out = [];
     foreach ($rows as $n) {
         $live = $n['active'] && (!$n['expires_at'] || $n['expires_at'] >= date('Y-m-d'));
-        if (!$admin && (!$live || ($u['role'] === 'staff' && !news_audience_ok($n, $rec)))) continue;
+        if (!$admin && (!$live || (($u['role'] === 'staff' || $asStaff) && !news_audience_ok($n, $rec)))) continue;
         $out[] = news_row($n, $u, $admin);
     }
     return ['ok' => true, 'rows' => $out, 'canEdit' => $admin, 'staffTotal' => (int)q1("SELECT COUNT(*) n FROM users WHERE role='staff' AND active=1")['n']];

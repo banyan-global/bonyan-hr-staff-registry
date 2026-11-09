@@ -1971,3 +1971,15 @@ td > .mv { display: contents; }
 @media (max-width: 760px) { .sitelink .btn { flex: 1 1 auto; justify-content: center; } }
 .sitelink select { height: 36px; font-size: 12.5px; max-width: 210px; }
 @media (max-width: 760px) { .sitelink select { flex: 1 1 100%; max-width: none; } }
+/* اختيار الواجهة للحساب المزدوج */
+#modeLayer { position: fixed; inset: 0; z-index: 210; background: radial-gradient(120% 60% at 100% 0%, rgba(227,196,133,.16), transparent 60%), linear-gradient(185deg, #1b3463, #13264a 45%, #0a172e); overflow-y: auto; }
+.mpk h2 { margin-bottom: 6px; }
+.mpick { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.mpick button { display: grid; justify-items: center; gap: 8px; padding: 20px 14px 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); color: var(--ink); cursor: pointer; font: inherit; text-align: center; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.mpick button:hover, .mpick button:focus-visible { border-color: var(--gold, #D9B67F); box-shadow: 0 10px 26px rgba(22, 41, 74, .12); transform: translateY(-2px); outline: none; }
+.mpick b { font-size: 15.5px; }
+.mpick small { color: var(--mut); font-size: 12px; line-height: 1.7; }
+.modesw { white-space: nowrap; }
+@media (max-width: 760px) { .mpick { grid-template-columns: 1fr; } .mpick button { grid-template-columns: auto 1fr; justify-items: start; text-align: start; padding: 14px; } .mpick button small { grid-column: 2; } .mpick button .tile { grid-row: span 2; } .modesw span { display: none; } .modesw { padding: 0 9px; } }
+.mpick .tile { width: 48px; height: 48px; min-width: 48px; border-radius: 15px; display: grid; place-items: center; align-self: center; }
+.mpick .tile svg { width: 23px; height: 23px; }

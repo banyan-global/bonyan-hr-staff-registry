@@ -79,7 +79,7 @@ try {
         /* الوحدات المتكاملة */
         'siteGet' => fn() => site_get(), 'uiSave' => fn() => ui_save($b), 'siteSave' => fn() => site_save($b), 'geoResolve' => fn() => geo_resolve($b), 'myExtra' => fn() => my_extra(), 'leaveBalances' => fn() => leave_balances(),
         'attUpload' => fn() => att_upload($b), 'attImport' => fn() => att_import($b), 'attMonth' => fn() => att_month($b), 'attMy' => fn() => att_my($b), 'attUndo' => fn() => att_batch_undo($b),
-        'newsList' => fn() => news_list(), 'newsSave' => fn() => news_save($b), 'newsDelete' => fn() => news_delete($b), 'newsRead' => fn() => news_read($b), 'newsReaders' => fn() => news_readers($b), 'reqFormsSave' => fn() => req_forms_save($b),
+        'newsList' => fn() => news_list($b), 'newsSave' => fn() => news_save($b), 'newsDelete' => fn() => news_delete($b), 'newsRead' => fn() => news_read($b), 'newsReaders' => fn() => news_readers($b), 'reqFormsSave' => fn() => req_forms_save($b),
         /* تحديث المنسوب لبياناته */
         'selfStart' => fn() => self_start($b), 'selfUpdate' => fn() => self_update($b), 'selfUpload' => fn() => self_upload($b), 'selfFinish' => fn() => self_finish($b),
         /* الاستيراد من النظام القديم (بمفتاح مؤقت) */

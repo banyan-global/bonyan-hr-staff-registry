@@ -568,7 +568,7 @@ function loadAll() {
     api({ action: 'list' }),
     can('audit') ? api({ action: 'audit', limit: 400 }).catch(function () { return null; }) : null,
     can('users') ? api({ action: 'health' }).catch(function () { return null; }) : null,
-    api({ action: 'reqList' }).catch(function () { return null; }),
+    api({ action: 'reqList', asStaff: role === 'staff' ? 1 : 0 }).catch(function () { return null; }),
     api({ action: 'siteGet' }).catch(function () { return null; })
   ]).then(function (R) {
     if (R[3]) seed('reqs', R[3].rows);
@@ -582,8 +582,8 @@ function loadAll() {
 }
 function reloadList() { return api({ action: 'list' }).then(function (j) { MAILED = j.mailed || {}; STAFF = (j.rows || []).map(toStaff).sort(function (a, b) { return b.reg - a.reg; }); rebuildIndex(); }); }
 function loadMe() {
-  api({ action: 'reqList' }).then(function (j) { seed('reqs', j.rows); if (screen === 'app') softRender(); }).catch(function () { });
-  api({ action: 'newsList' }).then(function (j) { seed('news', j); if (screen === 'app') softRender(); }).catch(function () { });
+  api({ action: 'reqList', asStaff: role === 'staff' ? 1 : 0 }).then(function (j) { seed('reqs', j.rows); if (screen === 'app') softRender(); }).catch(function () { });
+  api({ action: 'newsList', asStaff: role === 'staff' ? 1 : 0 }).then(function (j) { seed('news', j); if (screen === 'app') softRender(); }).catch(function () { });
   return Promise.all([api({ action: 'me' }), api({ action: 'myExtra' }).catch(function () { return null; })]).then(function (R) {
     var j = R[0]; if (R[1]) { SITE = R[1].site; MY_BAL = R[1].balance || null; }
     ME_DATA = j;
@@ -1481,7 +1481,7 @@ var LKINDS = ['اعتيادية (سنوية)', 'تعويضية', 'مرضية', '
 function myRows() { return reqRows().filter(function (r) { return r.mine !== false && (role === 'staff' || (ME && r.ref === ME.ref)); }); }
 function apprRows() { return reqRows().filter(function (r) { return r.mine === false; }); }
 var RST = { pending: ['warn', 'قيد الإجراء'], approved: ['ok', 'معتمد'], rejected: ['bad', 'مرفوض'], cancelled: ['mute', 'ملغى'] };
-function reqRows() { var c = need('reqs', function () { return api({ action: 'reqList' }).then(function (j) { return j.rows; }); }, 60000); return c.data || []; }
+function reqRows() { var c = need('reqs', function () { return api({ action: 'reqList', asStaff: role === 'staff' ? 1 : 0 }).then(function (j) { return j.rows; }); }, 60000); return c.data || []; }
 function reqPendingForMe() { return reqRows().filter(function (r) { return r.canDecide; }); }
 function reqByNo(no) { return reqRows().filter(function (r) { return r.no === no; })[0]; }
 function reqSum(r) {
@@ -2376,7 +2376,7 @@ VIEWS.myatt = function () {
 
 /* ======================= التعاميم والإعلانات ======================= */
 var NK = { 'تعميم': ['sapphire', 'doc'], 'إعلان': ['gold', 'bell'], 'تهنئة': ['emerald', 'gift'], 'تنبيه': ['garnet', 'alert'] };
-function newsData() { return need('news', function () { return api({ action: 'newsList' }); }, 60000); }
+function newsData() { return need('news', function () { return api({ action: 'newsList', asStaff: role === 'staff' ? 1 : 0 }); }, 60000); }
 function audLabel(a) { return a.map(function (x) { var k = x.slice(0, 2), v = x.slice(2); if (k === 'c:') return (CT_MAP[v] || { n: v }).n; return entOf(v).n; }).join('، '); }
 function newsCard(n, admin, total) {
   var K = NK[n.kind] || NK['تعميم'], body = esc(n.body).replace(/\n/g, '<br>');
@@ -3728,6 +3728,51 @@ function tzGuess(la, lo) {
   if (la > 3.4 && la < 15 && lo > 33 && lo < 48) return 'Africa/Addis_Ababa';
   return '';
 }
+
+/* ======================================================================
+   حساب مزدوج: من له حساب نظام وسجل منسوب معًا يختار عند الدخول
+   «واجهة الموظف» أو «واجهة النظام»، ويبدّل بينهما من الشريط العلوي
+   ====================================================================== */
+var MODE = { real: '', dual: false };
+function modeKey() { return 'bhr:mode'; }
+function modeGet() { try { return sessionStorage.getItem(modeKey()) || ''; } catch (e) { return ''; } }
+function modeSet(m) { try { if (m) sessionStorage.setItem(modeKey(), m); else sessionStorage.removeItem(modeKey()); } catch (e) { } }
+var _enterApp0 = enterApp;
+enterApp = function (u) {
+  MODE.dual = !!(u && u.role !== 'staff' && u.hasRecord); MODE.real = u ? u.role : '';
+  if (!MODE.dual) return _enterApp0(u);
+  var m = modeGet();
+  if (m !== 'staff' && m !== 'sys') return modePick(u);
+  return _enterApp0(m === 'staff' ? Object.assign({}, u, { role: 'staff' }) : u);
+};
+function modePick(u) {
+  var L = document.getElementById('modeLayer'); if (!L) { L = document.createElement('div'); L.id = 'modeLayer'; L.setAttribute('role', 'dialog'); L.setAttribute('aria-modal', 'true'); L.setAttribute('aria-labelledby', 'mdT'); document.body.appendChild(L); }
+  var nm = firstOf(u.name || u.email);
+  L.innerHTML = '<div class="gate"><div class="gcard mpk"><span class="glogo"><img src="' + LOGO + '" alt=""></span><h2 id="mdT">أهلًا ' + esc(nm) + '، بأي واجهة تدخل؟</h2><p>لحسابك واجهتان، وتستطيع التبديل بينهما في أي وقت من الشريط العلوي.</p>' +
+    '<div class="mpick"><button type="button" data-mode="staff">' + tile('teal', 'user') + '<b>واجهة الموظف</b><small>صفحتي، وطلباتي، وحضوري، والتعاميم، وملفي</small></button>' +
+    '<button type="button" data-mode="sys">' + tile('sapphire', 'grid') + '<b>واجهة النظام</b><small>لوحة القيادة، والمنسوبون، والطلبات، والإعدادات</small></button></div></div></div>';
+  return new Promise(function (res) {
+    L.querySelectorAll('[data-mode]').forEach(function (b) { b.onclick = function () {
+      var m = b.dataset.mode; modeSet(m); L.remove();
+      try { history.replaceState(null, '', location.pathname + location.search + (m === 'staff' ? '#me' : '#home')); } catch (e) { }
+      res(_enterApp0(m === 'staff' ? Object.assign({}, u, { role: 'staff' }) : u));
+    }; });
+    var f = L.querySelector('[data-mode]'); if (f) f.focus();
+  });
+}
+var _topHTML0 = topHTML;
+topHTML = function () {
+  var h = _topHTML0(); if (!MODE.dual) return h;
+  var toStaff = role !== 'staff';
+  return h.replace('<button class="ib" id="theme"', '<button type="button" class="btn sm modesw" id="modeSw" title="' + (toStaff ? 'التبديل إلى واجهة الموظف' : 'التبديل إلى واجهة النظام') + '">' + ic(toStaff ? 'user' : 'grid') + '<span>' + (toStaff ? 'واجهة الموظف' : 'واجهة النظام') + '</span></button><button class="ib" id="theme"');
+};
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('#modeSw'); if (!b) return;
+  var m = role === 'staff' ? 'sys' : 'staff'; modeSet(m); b.disabled = true;
+  location.replace(location.pathname + location.search + (m === 'staff' ? '#me' : '#home')); setTimeout(function () { location.reload(); }, 50);
+}, true);
+var _logout0 = logout;
+logout = function () { modeSet(''); var L = document.getElementById('modeLayer'); if (L) L.remove(); return _logout0(); };
 
 window.addEventListener('hashchange', route);
 boot();

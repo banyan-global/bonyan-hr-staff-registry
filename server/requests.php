@@ -670,7 +670,7 @@ function req_create(array $b): array {
 function req_out(array $u, array $r): array { $cd = req_can_decide($u, $r); return req_row($r) + ['canDecide' => $cd, 'canEdit' => $cd && req_step_can_edit($r)]; }
 function req_list(array $b): array {
     $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
-    if (has_perm($u, 'staff.view')) {
+    if (has_perm($u, 'staff.view') && empty($b['asStaff'])) {
         $rows = q('SELECT * FROM requests ORDER BY id DESC LIMIT 500')->fetchAll();
         $appr = has_perm($u, 'requests.approve');
         return ['ok' => true, 'rows' => array_map(function ($r) use ($u, $appr) { $o = req_out($u, $r);

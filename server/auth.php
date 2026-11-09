@@ -173,7 +173,7 @@ function auth_verify(array $b): array {
     q('UPDATE login_codes SET used_at=? WHERE id=?', [now(), $row['id']]);
     open_session($u, '');
     if (!empty($b['remember'])) device_issue($u); /* «تذكّر هذا الجهاز»: دخول سريع لاحقًا دون رمز */
-    return ['ok' => true, 'user' => user_public($u)];
+    return ['ok' => true, 'user' => user_session($u)];
 }
 function set_session_cookie(string $value, int $expires): void {
     if (PHP_SAPI === 'cli') return;
@@ -208,7 +208,9 @@ function require_perm(string $perm): array {
 }
 function has_perm(array $u, string $perm): bool { return in_array($perm, $u['_perms'] ?? [], true); }
 
-function auth_me(): array { $u = current_user(); return ['ok' => true, 'user' => $u ? user_public($u) + ['hasRecord' => (bool)my_staff_ref($u)] : null, 'perms' => PERMS, 'roles' => ROLE_NAMES]; }
+/* بيانات الجلسة: ومن له حساب نظام وسجل منسوب معًا يختار واجهته (hasRecord) */
+function user_session(array $u): array { return user_public($u) + ['hasRecord' => (bool)my_staff_ref($u)]; }
+function auth_me(): array { $u = current_user(); return ['ok' => true, 'user' => $u ? user_session($u) : null, 'perms' => PERMS, 'roles' => ROLE_NAMES]; }
 function auth_logout(): array {
     $tok = (string)($_COOKIE[SESSION_COOKIE] ?? '');
     if ($tok !== '') { $u = current_user(); q('DELETE FROM sessions WHERE id=?', [hash('sha256', $tok)]); if ($u) audit_log('', 'خروج', $u['_label'], $u['_label']); }
