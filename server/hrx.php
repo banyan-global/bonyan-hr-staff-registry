@@ -77,14 +77,12 @@ function site_save(array $b): array {
 
 /* ============================================================ إحداثيات المقر من رابط خرائط جوجل */
 /* يقبل الرابط المختصر (maps.app.goo.gl) أو الكامل أو «خط العرض، خط الطول»، ويتتبع التحويلات داخل نطاقات جوجل فقط */
-function geo_parse(string $s): ?array {
+function geo_parse(string $s, bool $page = false): ?array {
     $s = rawurldecode(rawurldecode(html_entity_decode($s, ENT_QUOTES)));
-    $pats = ['/!3d(-?\d{1,2}\.\d{3,})!4d(-?\d{1,3}\.\d{3,})/', '/[?&](?:q|query|ll|sll|center|daddr|destination|markers)=(?:loc:)?[^0-9\-]{0,12}(-?\d{1,2}\.\d{3,})\s*[,+ ]\s*\+?(-?\d{1,3}\.\d{3,})/',
-        '/\/search\/(-?\d{1,2}\.\d{3,}),\+?(-?\d{1,3}\.\d{3,})/', '/@(-?\d{1,2}\.\d{3,}),(-?\d{1,3}\.\d{3,})/', '/^\s*(-?\d{1,2}\.\d{3,})\s*[,،\s]\s*(-?\d{1,3}\.\d{3,})\s*$/u',
-        '/center=(-?\d{1,2}\.\d{3,})(?:%2C|,)(-?\d{1,3}\.\d{3,})/', '/\[null,null,(-?\d{1,2}\.\d{4,}),(-?\d{1,3}\.\d{4,})\]/'];
+    /* داخل صفحة الخريطة نقبل دبوس المكان (!3d!4d) فقط؛ مركز العرض فيها قد يكون موقع الزائر لا المقر */
+    $pats = $page ? ['/!3d(-?\d{1,2}\.\d{3,})!4d(-?\d{1,3}\.\d{3,})/'] : ['/!3d(-?\d{1,2}\.\d{3,})!4d(-?\d{1,3}\.\d{3,})/', '/[?&](?:q|query|ll|sll|daddr|destination)=(?:loc:)?[^0-9\-]{0,12}(-?\d{1,2}\.\d{3,})\s*[,+ ]\s*\+?(-?\d{1,3}\.\d{3,})/',
+        '/\/search\/(-?\d{1,2}\.\d{3,}),\+?(-?\d{1,3}\.\d{3,})/', '/\/maps\/place\/[^\/]*\/@(-?\d{1,2}\.\d{3,}),(-?\d{1,3}\.\d{3,})/', '/^\s*(-?\d{1,2}\.\d{3,})\s*[,،\s]\s*(-?\d{1,3}\.\d{3,})\s*$/u'];
     foreach ($pats as $p) if (preg_match($p, $s, $m)) { $la = (float)$m[1]; $lo = (float)$m[2]; if (abs($la) <= 90 && abs($lo) <= 180 && ($la || $lo)) return [round($la, 6), round($lo, 6)]; }
-    /* صفحة الخريطة نفسها: مركز العرض [الارتفاع، الطول، العرض] */
-    if (preg_match('/APP_INITIALIZATION_STATE=\[\[\[[-\d.e+]+,(-?\d{1,3}\.\d{4,}),(-?\d{1,2}\.\d{4,})\]/', $s, $m)) { $lo = (float)$m[1]; $la = (float)$m[2]; if (abs($la) <= 90 && abs($lo) <= 180) return [round($la, 6), round($lo, 6)]; }
     return null;
 }
 function geo_place_name(string $u): string {
@@ -114,7 +112,7 @@ function geo_resolve(array $b): array {
             if (!$okHost($next)) break;
             $u = $next; continue;
         }
-        if ($c = geo_parse(substr($res, $hl, 1500000))) return ['ok' => true, 'lat' => $c[0], 'lng' => $c[1], 'name' => $name];
+        if ($c = geo_parse(substr($res, $hl, 1500000), true)) return ['ok' => true, 'lat' => $c[0], 'lng' => $c[1], 'name' => $name];
         break;
     }
     throw new HttpError('لم أستخرج الإحداثيات من هذا الرابط. افتحه في خرائط جوجل، واضغط مطوّلًا على المكان، وانسخ الرقمين الظاهرين والصقهما هنا');
