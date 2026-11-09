@@ -640,8 +640,9 @@ function req_create(array $b): array {
     if ($u['role'] === 'staff' && !staff_can_see('reqs')) throw new HttpError('تقديم الطلبات من بوابة المنسوب موقوف حاليًا. تواصل مع الموارد البشرية.');
     if (!req_flow()[$type]['on']) throw new HttpError('هذا النموذج موقوف حاليًا. تواصل مع الموارد البشرية.');
     $data = req_clean($type, is_array($b['data'] ?? null) ? $b['data'] : [], $ref);
-    $sup = null;
-    if ($type === 'leave' || isset(REQ_SCHEMA[$type])) {
+    $sup = null; $priv = staff_private($ref);
+    if ($priv) { $data['supervisor'] = ''; $data['supName'] = ''; if ($type === 'leave') { req_leave_overlap($ref, $data); if (function_exists('leave_quota_check')) leave_quota_check($ref, $data); } }
+    elseif ($type === 'leave' || isset(REQ_SCHEMA[$type])) {
         $needSup = in_array('manager', array_column(req_flow()[$type]['steps'], 'kind'), true);
         if ($needSup) {
             $sup = req_sup($data['supervisor']); if (!$sup) throw new HttpError('اختر المسؤول المباشر من القائمة');
@@ -650,7 +651,9 @@ function req_create(array $b): array {
         } else { $data['supervisor'] = ''; $data['supName'] = ''; }
         if ($type === 'leave') { req_leave_overlap($ref, $data); if (function_exists('leave_quota_check')) leave_quota_check($ref, $data); }
     }
-    $chain = req_new_chain($type, $sup);
+    /* السجل الخاص: خطوة واحدة عند مالك المنصة، لا تمر على الموارد البشرية ولا غيرها */
+    if (!$priv) $chain = req_new_chain($type, $sup);
+    else { $ow = owner_user(); if (!$ow) throw new HttpError('تعذّر تحديد مالك المنصة'); $chain = [['label' => (string)($ow['name'] ?: 'مالك المنصة'), 'kind' => 'user', 'user' => (int)$ow['id'], 'who' => (string)($ow['name'] ?: 'مالك المنصة'), 'decision' => '', 'by' => '', 'at' => '', 'note' => '', 'role' => '']]; }
     named_lock('req_no');
     try {
         $no = req_next_no($type);
@@ -672,6 +675,7 @@ function req_list(array $b): array {
     $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
     if (has_perm($u, 'staff.view') && empty($b['asStaff'])) {
         $rows = q('SELECT * FROM requests ORDER BY id DESC LIMIT 500')->fetchAll();
+        $hide = private_hidden_for($u); if ($hide) $rows = array_values(array_filter($rows, fn($r) => !in_array($r['ref'], $hide, true)));
         $appr = has_perm($u, 'requests.approve');
         return ['ok' => true, 'rows' => array_map(function ($r) use ($u, $appr) { $o = req_out($u, $r);
             /* سبب الإجازة والملاحظات (قد تكون صحية) لا يراها إلا من يعتمد */

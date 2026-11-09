@@ -179,9 +179,9 @@ function leave_balance(string $ref, ?array $rec = null): array {
     return ['year' => $y, 'entitled' => $ent, 'carried' => $carry, 'used' => $used, 'pending' => $pend, 'left' => max(0, $ent - $used), 'byKind' => $byKind, 'kinds' => $L['kinds'], 'lateReturn' => $late, 'quotas' => $quotas];
 }
 function leave_balances(): array {
-    require_perm('staff.view');
-    $out = [];
-    foreach (q('SELECT ref FROM staff ORDER BY id')->fetchAll() as $x) { $r = staff_get($x['ref']); if ($r) $out[$x['ref']] = leave_balance($x['ref'], $r); }
+    $u = require_perm('staff.view');
+    $out = []; $hide = private_hidden_for($u);
+    foreach (q('SELECT ref FROM staff ORDER BY id')->fetchAll() as $x) { if (in_array($x['ref'], $hide, true)) continue; $r = staff_get($x['ref']); if ($r) $out[$x['ref']] = leave_balance($x['ref'], $r); }
     return ['ok' => true, 'rows' => $out, 'policy' => site()['leave']];
 }
 
@@ -385,8 +385,10 @@ function att_month_rows(string $ym, ?string $only = null): array {
 }
 function att_month(array $b): array {
     $u = require_perm('attendance.view');
-    $ref = (string)($b['ref'] ?? '');
+    $ref = (string)($b['ref'] ?? ''); $hide = private_hidden_for($u);
+    if ($ref !== '' && in_array($ref, $hide, true)) throw new HttpError('not_found', 404);
     $res = att_month_rows((string)($b['month'] ?? ''), $ref !== '' ? $ref : null);
+    foreach ($hide as $h) unset($res['rows'][$h]);
     $months = q("SELECT DISTINCT DATE_FORMAT(day, '%Y-%m') m FROM attendance ORDER BY m DESC LIMIT 24")->fetchAll(PDO::FETCH_COLUMN);
     $batches = q('SELECT * FROM att_batches ORDER BY created_at DESC LIMIT 12')->fetchAll();
     return ['ok' => true] + $res + ['months' => $months, 'batches' => $batches, 'linked' => count(json_decode((string)(setting('att_map') ?: ''), true) ?: [])];

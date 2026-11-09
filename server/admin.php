@@ -10,6 +10,8 @@ function audit_list(array $b): array {
     $ref = (string)($b['ref'] ?? '');
     $rows = $ref !== '' ? q('SELECT id, at, ref, action, detail, actor, ip FROM audit WHERE ref=? ORDER BY id DESC LIMIT ' . $lim, [$ref])->fetchAll()
         : q('SELECT id, at, ref, action, detail, actor, ip FROM audit ORDER BY id DESC LIMIT ' . $lim)->fetchAll();
+    $hide = private_hidden_for(current_user());
+    if ($hide) $rows = array_values(array_filter($rows, fn($a) => !in_array((string)$a['ref'], $hide, true)));
     return ['ok' => true, 'rows' => $rows, 'integrity' => audit_verify()];
 }
 /* المرفقات المؤرشفة لمنسوب (الملفات المستبدلة) — يمكن استرجاعها */

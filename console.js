@@ -3542,7 +3542,7 @@ function geoCheckout(auto, btn) {
     .catch(function (e) { if (btn) btn.disabled = false; toast(errText(e)); });
 }
 function exitDlg(best) {
-  var sups = (formsData() || {}).sups || [], last = reqRows().filter(function (r) { return ME && r.ref === ME.ref && r.data && r.data.supervisor; })[0], sup = last ? last.data.supervisor : '';
+  var sups = ME_DATA && ME_DATA.private ? [] : (formsData() || {}).sups || [], last = reqRows().filter(function (r) { return ME && r.ref === ME.ref && r.data && r.data.supervisor; })[0], sup = last ? last.data.supervisor : '';
   var now = new Date(), hhmm = function (d) { return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }, back = new Date(now.getTime() + 3600000);
   var d = attT(), endM = String(d.end || '16:00'); if (hhmm(back) > endM) back = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +endM.slice(0, 2), +endM.slice(3, 5));
   var F = { sup: sup, to: hhmm(back), why: '' };
@@ -3788,6 +3788,10 @@ document.addEventListener('click', function (e) {
 }, true);
 var _logout0 = logout;
 logout = function () { modeSet(''); var L = document.getElementById('modeLayer'); if (L) L.remove(); return _logout0(); };
+
+/* السجل الخاص: طلباته تمر على مالك المنصة وحده، فلا يُطلب فيها مسؤول مباشر */
+var _rwNeedSup0 = rwNeedSup;
+rwNeedSup = function (t) { if (role === 'staff' && ME_DATA && ME_DATA.private) return false; return _rwNeedSup0(t); };
 
 window.addEventListener('hashchange', route);
 boot();

@@ -44,6 +44,39 @@ function staff_put(array $r): void {
     else
         q('INSERT INTO staff (status, passport_norm, created_at, updated_at, data, quals, exp, langs, ref) VALUES (?,?,?,?,?,?,?,?,?)', $args);
 }
+/* ============================================================ السجل الخاص
+   سجل منسوب لا يراه إلا مالك المنصة وصاحبه، وطلباته تمر على المالك وحده (لا على الموارد البشرية) */
+function private_refs(): array { $p = json_decode((string)(setting('private_refs') ?: ''), true); return is_array($p) ? array_values(array_filter($p, 'is_string')) : []; }
+function staff_private(string $ref): bool { return $ref !== '' && in_array($ref, private_refs(), true); }
+/* ما يُخفى عن هذا الحساب من السجلات الخاصة (المالك يرى الكل، وصاحب السجل يرى سجله) */
+function private_hidden_for(?array $u): array {
+    $p = private_refs(); if (!$p) return [];
+    if ($u && is_owner($u)) return [];
+    $mine = $u ? (string)my_staff_ref($u) : '';
+    return array_values(array_filter($p, fn($r) => $r !== $mine));
+}
+function owner_user(): ?array { foreach (q("SELECT * FROM users WHERE active=1 AND role='admin' ORDER BY id")->fetchAll() as $u) if (is_owner($u)) return $u; return null; }
+/* المالك يجهّز لحساب إداري سجل منسوب خاصًا ويربطه به (واجهتان: الموظف وواجهة الحساب) */
+function private_setup(array $b): array {
+    $me = current_user(); if (!$me || !is_owner($me)) throw new HttpError('لمالك المنصة فقط', 403);
+    $uid = (int)($b['userId'] ?? 0); $u = q1('SELECT * FROM users WHERE id=?', [$uid]);
+    if (!$u || $u['role'] === 'staff') throw new HttpError('not_found', 404);
+    $ref = (string)($u['staff_ref'] ?? '');
+    if ($ref === '' || !staff_get($ref)) {
+        $in = is_array($b['data'] ?? null) ? $b['data'] : [];
+        $d = []; foreach (staff_cols() as [$k]) $d[$k] = '';
+        foreach (['fullNameAr', 'jobTitle', 'entity', 'workCountry', 'workCountryCode', 'gender', 'nationality', 'nationalityCode', 'workOffice'] as $k) if (isset($in[$k])) $d[$k] = mb_substr(safe_text((string)$in[$k]), 0, 160);
+        if ($d['fullNameAr'] === '') $d['fullNameAr'] = (string)$u['name'];
+        $d['officialEmail'] = strtolower((string)$u['email']);
+        $ref = next_ref($d['workCountryCode'] ?: 'SA');
+        staff_put(['ref' => $ref, 'status' => ST_DONE, 'created_at' => now(), 'updated_at' => now(), 'data' => $d, 'quals' => [], 'exp' => [], 'langs' => []]);
+    }
+    q('UPDATE users SET staff_ref=? WHERE id=?', [$ref, $uid]);
+    $p = private_refs(); if (!in_array($ref, $p, true)) { $p[] = $ref; setting_set('private_refs', json_encode($p)); }
+    kv_del('countries');
+    audit_log($ref, 'سجل منسوب خاص', ($u['name'] ?: $u['email']) . ' · لا يراه إلا مالك المنصة، وطلباته تمر عليه وحده', $me['_label']);
+    return ['ok' => true, 'ref' => $ref];
+}
 function staff_name(array $r): string { return trim((string)($r['data']['fullNameAr'] ?? '')) ?: trim((string)($r['data']['fullNameLatin'] ?? '')); }
 
 function next_ref(string $cc): string {
@@ -75,8 +108,9 @@ function fmt_num($v): string { if ($v === '' || $v === null) return ''; $f = (fl
 function countries(): array {
     $hit = kv_get('countries'); if ($hit) return json_decode($hit, true);
     $out = []; $nats = []; $allNat = []; $regs = []; $total = 0;
-    foreach (q('SELECT status, data FROM staff') as $r) {
-        if (strpos($r['status'], 'بانتظار') === 0) continue;
+    $priv = private_refs();
+    foreach (q('SELECT ref, status, data FROM staff') as $r) {
+        if (strpos($r['status'], 'بانتظار') === 0 || in_array($r['ref'], $priv, true)) continue;
         $d = json_decode($r['data'], true) ?: [];
         $c = cc_($d['workCountryCode'] ?? ''); $n = cc_($d['nationalityCode'] ?? '');
         if ($c === '') continue;
@@ -229,7 +263,9 @@ function admin_list(): array {
     $u = require_perm('staff.view');
     $fin = has_perm($u, 'finance.view');
     $files = files_by_ref(); $rows = []; $kids = ['quals' => [KIDS['quals'][1]], 'exp' => [KIDS['exp'][1]], 'langs' => [KIDS['langs'][1]]];
+    $hide = private_hidden_for($u);
     foreach (q('SELECT ref FROM staff ORDER BY id')->fetchAll() as $x) {
+        if (in_array($x['ref'], $hide, true)) continue;
         $r = staff_get($x['ref']);
         $rows[] = display_row($r, $files[$r['ref']] ?? [], $fin);
         foreach (array_keys(KIDS) as $k) foreach (kid_rows($r, $k) as $kr) $kids[$k][] = $kr;
@@ -394,7 +430,7 @@ function me_get(): array {
     $kids = []; foreach (array_keys(KIDS) as $k) $kids[$k] = $r[$k] ?? [];
     $card = q1("SELECT id FROM files WHERE ref=? AND kind='_card_jpg' AND archived_at IS NULL ORDER BY created_at DESC LIMIT 1", [$ref]);
     audit_log($ref, 'فتح صفحتي', $u['name'] ?: $u['email'], $u['name'] ?: $u['email']);
-    return ['ok' => true, 'user' => user_public($u), 'record' => $row, 'kids' => $kids, 'card' => $card ? file_url($card['id']) : '',
+    return ['ok' => true, 'user' => user_public($u), 'record' => $row, 'private' => staff_private($ref), 'kids' => $kids, 'card' => $card ? file_url($card['id']) : '',
         'cols' => array_values(array_filter(staff_cols(), function ($c) { return $c[0] !== 'folderId' && $c[0] !== 'folder'; }))];
 }
 function self_start(array $b): array {

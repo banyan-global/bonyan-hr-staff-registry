@@ -25,7 +25,9 @@ if (date('w') === '0' || in_array('--digest', $argv, true)) {
     $list = hr_recipients();
     $docs = ['passportExpiry' => 'الجواز', 'permitExpiry' => 'الإقامة', 'nationalIdExpiry' => 'الهوية', 'workPermitExpiry' => 'تصريح العمل', 'contractEnd' => 'العقد'];
     $items = [];
+    $priv = private_refs();
     foreach (q('SELECT ref, data FROM staff ORDER BY id') as $s) {
+        if (in_array($s['ref'], $priv, true)) continue;
         $d = json_decode($s['data'], true) ?: [];
         foreach ($docs as $k => $lbl) {
             $v = valid_date($d[$k] ?? ''); if ($v === '') continue;

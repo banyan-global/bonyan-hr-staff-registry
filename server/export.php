@@ -79,7 +79,9 @@ function export_xlsx(): void {
     $files = files_by_ref();
     $head = array_map(function ($c) { return $c[1]; }, $cols);
     $main = [$head]; $kids = ['quals' => [KIDS['quals'][1]], 'exp' => [KIDS['exp'][1]], 'langs' => [KIDS['langs'][1]]];
+    $hide = private_hidden_for($u);
     foreach (q('SELECT ref FROM staff ORDER BY id')->fetchAll() as $x) {
+        if (in_array($x['ref'], $hide, true)) continue;
         $r = staff_get($x['ref']);
         $d = display_row($r, $files[$r['ref']] ?? [], $fin);
         $main[] = array_map(function ($c) use ($d) {
@@ -98,7 +100,7 @@ function export_xlsx(): void {
     ];
     if (has_perm($u, 'audit.view')) {
         $log = [['الوقت', 'الرقم المرجعي', 'العملية', 'التفاصيل', 'بواسطة']];
-        foreach (q('SELECT at, ref, action, detail, actor FROM audit ORDER BY id DESC LIMIT 5000') as $a) $log[] = [substr($a['at'], 0, 16), $a['ref'], $a['action'], $a['detail'], $a['actor']];
+        foreach (q('SELECT at, ref, action, detail, actor FROM audit ORDER BY id DESC LIMIT 5000') as $a) if (!in_array((string)$a['ref'], $hide, true)) $log[] = [substr($a['at'], 0, 16), $a['ref'], $a['action'], $a['detail'], $a['actor']];
         $sheets['سجل العمليات'] = [$log, [17, 22, 28, 60, 22]];
     }
     audit_log('', 'تنزيل ملف Excel كامل', count($main) - 1 . ' منسوبًا' . ($fin ? ' · مع الرواتب' : ' · بلا الرواتب'), $u['_label']);
