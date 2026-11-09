@@ -67,7 +67,7 @@ try {
         /* لوحة الموارد البشرية */
         'list' => fn() => admin_list(), 'photo' => fn() => photo($b), 'adminUpdate' => fn() => admin_update($b), 'adminUpload' => fn() => admin_upload($b),
         'adminMail' => fn() => admin_mail($b), 'message' => fn() => admin_message($b), 'messageWa' => fn() => message_wa($b), 'messages' => fn() => messages_list($b), 'audit' => fn() => audit_list($b),
-        'fileHistory' => fn() => file_history($b), 'fileRestore' => fn() => file_restore($b), 'fileRemove' => fn() => file_remove($b), 'privateSetup' => fn() => private_setup($b),
+        'fileHistory' => fn() => file_history($b), 'fileRestore' => fn() => file_restore($b), 'fileRemove' => fn() => file_remove($b), 'privateSetup' => fn() => private_setup($b), 'staffVerify' => fn() => staff_verify($b),
         'backups' => fn() => backups_list(), 'backupNow' => fn() => backup_now(), 'health' => fn() => health(),
         /* طلبات المنسوبين */
         'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqDelete' => fn() => req_delete($b), 'payMonth' => fn() => pay_month($b),
@@ -87,9 +87,11 @@ try {
     ];
     $a = (string)($b['action'] ?? '');
     if (!isset($map[$a])) throw new HttpError('unknown action');
+    private_guard($b, $a);
     out($map[$a]());
     /* تنبيهات الحضور بلا مهمة مجدولة: تُفحص بعد إرسال الرد، مرة كل ٤ دقائق على الأكثر */
     if (function_exists('litespeed_finish_request')) litespeed_finish_request(); elseif (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+    run_deferred();
     try { att_push_tick(); } catch (Throwable $e) { }
 } catch (HttpError $e) {
     out(['ok' => false, 'error' => $e->getMessage()], $e->status >= 500 ? $e->status : 200);

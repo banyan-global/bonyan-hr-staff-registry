@@ -102,7 +102,21 @@ function send_self_code(string $to, string $name, string $ref, string $code, str
 /* ============================================================ رسالة تأكيد التسجيل (منقولة من Code.gs بنفس التصميم واللغات) */
 function mail_tx(): array { static $t = null; return $t ??= json_decode((string)file_get_contents(__DIR__ . '/mail_tx.json'), true); }
 function mail_lang($v): string { $v = strtolower((string)$v); return isset(mail_tx()[$v]) ? $v : 'ar'; }
-function self_sig(string $ref): string { return substr(b64url(hash_hmac('sha256', strtoupper($ref), self_secret(), true)), 0, 22); }
+/* رابط «تحديث بياناتي»: موقّع بالرقم المرجعي وتاريخ انتهاء (٣٠ يومًا) ونسخة تُرفع عند تغيّر البيانات الحساسة فتُبطل الروابط السابقة */
+const SELF_LINK_DAYS = 30;
+function self_ver(string $ref): string { return (string)(kv_get('selfver_' . strtoupper($ref)) ?? '0'); }
+function self_ver_bump(string $ref): void { kv_put('selfver_' . strtoupper($ref), (string)(((int)self_ver($ref)) + 1)); }
+function self_sig(string $ref, ?int $exp = null): string {
+    $exp = $exp ?? (time() + SELF_LINK_DAYS * 86400);
+    return dechex($exp) . '.' . substr(b64url(hash_hmac('sha256', strtoupper($ref) . '|' . $exp . '|' . self_ver($ref), self_secret(), true)), 0, 27);
+}
+/* 'ok' صالح، 'expired' منتهٍ أو مُبطل، 'bad' غير مطابق */
+function self_sig_check(string $ref, string $k): string {
+    if (!preg_match('/^([0-9a-f]{7,10})\.([A-Za-z0-9_-]{27})$/', $k, $m)) return strlen($k) === 22 ? 'expired' : 'bad'; /* الروابط القديمة بلا تاريخ لم تعد تُقبل */
+    $exp = (int)hexdec($m[1]);
+    if (!hash_equals(self_sig($ref, $exp), $k)) return 'bad';
+    return $exp < time() ? 'expired' : 'ok';
+}
 function update_url(string $ref, string $L): string { return cfg('site_url') . 'update.html?k=' . self_sig($ref) . '&lang=' . $L; }
 
 function send_confirm(array $row, bool $updated, ?array $info = null): string {
@@ -201,6 +215,7 @@ function hr_recipients(): array {
 }
 function notify_hr(array $row): void {
     $list = hr_recipients(); if (!$list) return;
+    if (rate_hit('hralert', 15, 3600)) { audit_log($row['ref'], 'تسجيل جديد (لم يُرسل تنبيه: تجاوز الحد الساعي)', '', 'النظام'); return; }
     $d = $row['data']; $g = function ($k) use ($d) { return trim((string)($d[$k] ?? '')); };
     $name = $g('fullNameAr') ?: $g('fullNameLatin');
     $html = mx_page(['eyebrow' => 'سجل المنسوبين · تسجيل جديد', 'title' => 'تسجيل جديد في سجل المنسوبين', 'tone' => 'teal', 'icon' => '👤', 'badge' => 'بانتظار المراجعة',

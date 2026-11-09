@@ -64,9 +64,10 @@ function file_remove(array $b): array {
 /* نسخة احتياطية كاملة: قاعدة البيانات (JSON مضغوط) في مجلد التخزين الخاص؛ تُحفظ آخر ٣٠ نسخة */
 function make_backup(string $actor = 'النظام'): array {
     $dump = ['version' => BHR_VERSION, 'at' => now(), 'tables' => []];
-    foreach (['staff', 'files', 'users', 'audit', 'messages', 'settings', 'requests', 'attendance', 'att_batches', 'news', 'news_reads'] as $t) {
-        $rows = q('SELECT * FROM ' . $t)->fetchAll();
-        if ($t === 'settings') $rows = array_values(array_filter($rows, function ($r) { return !in_array($r['k'], ['app_secret'], true); }));
+    /* كل جداول البيانات (لا الجلسات ولا الرموز المؤقتة)، وبلا أي مفتاح سري: من يحصل على النسخة لا يستطيع توقيع روابط ولا إرسال تنبيهات */
+    foreach (['staff', 'files', 'users', 'audit', 'messages', 'settings', 'requests', 'attendance', 'att_batches', 'news', 'news_reads', 'hr_actions', 'custody', 'evals', 'jobs', 'applicants', 'passkeys'] as $t) {
+        try { $rows = q('SELECT * FROM ' . $t)->fetchAll(); } catch (Throwable $e) { continue; }
+        if ($t === 'settings') $rows = array_values(array_filter($rows, function ($r) { return !in_array($r['k'], ['app_secret', 'self_secret', 'vapid', 'audit_key'], true) && strncmp((string)$r['k'], 'fix:', 4) !== 0; }));
         $dump['tables'][$t] = $rows;
     }
     $dir = storage_dir('backups');

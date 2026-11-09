@@ -55,6 +55,40 @@ function private_hidden_for(?array $u): array {
     $mine = $u ? (string)my_staff_ref($u) : '';
     return array_values(array_filter($p, fn($r) => $r !== $mine));
 }
+/* حارس مركزي: أي عملية تمس رقمًا مرجعيًا خاصًا (مباشرة أو عبر رقم طلب/إجراء/عهدة/تقييم) تُرد كأنه غير موجود */
+function private_guard(array $b, string $a): void {
+    $hide = private_hidden_for(current_user()); if (!$hide) return;
+    $refs = [];
+    foreach (['ref', 'staffRef'] as $k) if (isset($b[$k]) && is_string($b[$k])) $refs[] = strtoupper(trim($b[$k]));
+    if (isset($b['refs']) && is_array($b['refs'])) foreach ($b['refs'] as $r) if (is_string($r)) $refs[] = strtoupper(trim($r));
+    foreach (['req' => 'requests', 'act' => 'hr_actions', 'cus' => 'custody', 'ev' => 'evals'] as $p => $t) {
+        if (strncmp($a, $p, strlen($p)) !== 0 || !ctype_upper(substr($a, strlen($p), 1))) continue;
+        $row = null;
+        if (isset($b['id']) && is_scalar($b['id'])) $row = q1("SELECT ref FROM $t WHERE id=?", [(int)$b['id']]);
+        elseif (isset($b['no']) && is_string($b['no'])) $row = q1("SELECT ref FROM $t WHERE no=?", [$b['no']]);
+        if ($row) $refs[] = (string)$row['ref'];
+    }
+    foreach ($refs as $r) if (in_array($r, $hide, true)) throw new HttpError('not_found', 404);
+}
+/* توثيق السجل: التسجيل العام لا يفتح حساب دخول للمنصة حتى توثّقه الموارد البشرية (السجلات السابقة موثّقة كلها) */
+function verified_refs(): array {
+    $v = json_decode((string)(setting('verified_refs') ?? ''), true);
+    if (!is_array($v)) { $v = array_column(q('SELECT ref FROM staff')->fetchAll(), 'ref'); setting_set('verified_refs', json_encode(array_values($v))); }
+    return $v;
+}
+function staff_verified(string $ref): bool { static $v = null; $v ??= array_flip(verified_refs()); return isset($v[$ref]); }
+function staff_verify(array $b): array {
+    $u = require_perm('staff.edit');
+    $ref = strtoupper((string)($b['ref'] ?? '')); $r = staff_get($ref); if (!$r) throw new HttpError('not_found', 404);
+    $on = !array_key_exists('on', $b) || !empty($b['on']);
+    $v = verified_refs(); $v = array_values(array_diff($v, [$ref])); if ($on) $v[] = $ref;
+    setting_set('verified_refs', json_encode($v));
+    if (!$on) q("DELETE s FROM sessions s JOIN users x ON x.id=s.user_id WHERE x.staff_ref=? AND x.role='staff'", [$ref]);
+    audit_log($ref, $on ? 'توثيق السجل وتفعيل دخول المنسوب' : 'إلغاء توثيق السجل وإيقاف دخول المنسوب', staff_name($r), $u['_label']);
+    return ['ok' => true, 'verified' => $on];
+}
+function assert_ref_visible(?array $u, string $ref): void { if (in_array(strtoupper($ref), private_hidden_for($u), true)) throw new HttpError('not_found', 404); }
+function private_filter(?array $u, array $rows, string $key = 'ref'): array { $h = private_hidden_for($u); return $h ? array_values(array_filter($rows, fn($r) => !in_array((string)($r[$key] ?? ''), $h, true))) : $rows; }
 function owner_user(): ?array { foreach (q("SELECT * FROM users WHERE active=1 AND role='admin' ORDER BY id")->fetchAll() as $u) if (is_owner($u)) return $u; return null; }
 /* المالك يجهّز لحساب إداري سجل منسوب خاصًا ويربطه به (واجهتان: الموظف وواجهة الحساب) */
 function private_setup(array $b): array {
@@ -195,8 +229,17 @@ function check_token($ref, $token): string {
     if (!$t || !hash_equals($t, (string)$token)) throw new HttpError('انتهت صلاحية جلسة الرفع، أعد الإرسال');
     return $ref;
 }
+/* حصة رفع للنماذج العامة وصفحة التحديث: تمنع ملء مساحة الخادم بالمرفقات */
+function upload_budget(string $ref, string $data): void {
+    $bytes = (int)(strlen($data) * 3 / 4);
+    if (rate_hit('upn:' . $ref, 30, 86400) || rate_hit('upip:' . client_ip(), 80, 86400)) throw new HttpError('تجاوزت الحد اليومي لرفع المرفقات. حاول غدًا أو تواصل مع الموارد البشرية.', 429);
+    $k = 'upb:' . $ref; $used = (int)(kv_get($k) ?? 0) + $bytes;
+    if ($used > 80 * 1024 * 1024) throw new HttpError('تجاوزت المساحة اليومية للمرفقات (٨٠ م.ب).', 429);
+    kv_put($k, (string)$used, 86400);
+}
 function upload(array $b): array {
     $ref = check_token($b['ref'] ?? '', $b['token'] ?? '');
+    upload_budget($ref, (string)($b['data'] ?? ''));
     $kind = (string)($b['kind'] ?? '');
     if (col_type($kind) !== 'f') throw new HttpError('نوع مرفق غير معروف');
     $r = staff_get($ref); if (!$r) throw new HttpError('الرقم المرجعي غير موجود', 404);
@@ -216,7 +259,9 @@ function finalize(array $b): array {
     kv_del('countries'); kv_del('tok_' . $ref); kv_put('done_' . $ref, (string)$b['token'], 3600);
     audit_log($ref, 'اكتمل الرفع', '', 'النموذج العام');
     if (!$updated) notify_hr($r);
-    try { send_confirm($r, $updated); } catch (Throwable $e) { audit_log($ref, 'تعذّر إرسال رسالة التأكيد', $e->getMessage()); }
+    /* سقف عام لرسائل التأكيد من النموذج العام: لا يُستغل لإرسال بريد باسم بنيان إلى عناوين عشوائية */
+    if (rate_hit('confirm_pub', 60, 3600)) audit_log($ref, 'لم تُرسل رسالة التأكيد (تجاوز الحد الساعي)', '', 'النظام');
+    else { try { send_confirm($r, $updated); } catch (Throwable $e) { audit_log($ref, 'تعذّر إرسال رسالة التأكيد', $e->getMessage()); } }
     return ['ok' => true];
 }
 /* بطاقة المنسوب المتحركة (يصنعها المتصفح) تُحفظ مع ملفاته وتُرفق برسالة التأكيد */
@@ -267,7 +312,7 @@ function admin_list(): array {
     foreach (q('SELECT ref FROM staff ORDER BY id')->fetchAll() as $x) {
         if (in_array($x['ref'], $hide, true)) continue;
         $r = staff_get($x['ref']);
-        $rows[] = display_row($r, $files[$r['ref']] ?? [], $fin);
+        $rows[] = display_row($r, $files[$r['ref']] ?? [], $fin) + ['_verified' => staff_verified($r['ref']) ? 1 : 0];
         foreach (array_keys(KIDS) as $k) foreach (kid_rows($r, $k) as $kr) $kids[$k][] = $kr;
     }
     audit_log('', 'عرض بيانات المنسوبين', $u['_label'], $u['_label']);
@@ -442,12 +487,13 @@ function me_get(): array {
         'cols' => array_values(array_filter(staff_cols(), function ($c) { return $c[0] !== 'folderId' && $c[0] !== 'folder'; }))];
 }
 function self_start(array $b): array {
+    $via = 'link';
     /* المنسوب الداخل بحسابه يفتح صفحة التحديث مباشرة دون رمز إضافي */
     if (!empty($b['me'])) {
         $u = current_user(); $mr = $u ? my_staff_ref($u) : null;
         if (!$mr) throw new HttpError('self_bad', 401);
         if ($u['role'] === 'staff' && !staff_can_see('update')) throw new HttpError('تحديث البيانات من بوابة المنسوب موقوف حاليًا. تواصل مع الموارد البشرية.');
-        $b = ['ref' => $mr, 'k' => self_sig($mr)];
+        $b = ['ref' => $mr, 'k' => self_sig($mr)]; $via = 'session';
     }
     $ref = strtoupper(preg_replace('/\s+/', '', (string)($b['ref'] ?? '')));
     $fk = 'selffail_' . $ref;
@@ -456,11 +502,15 @@ function self_start(array $b): array {
     $ok = false;
     if ($r) {
         $mails = array_values(array_filter(array_map(function ($k) use ($r) { return strtolower(trim((string)($r['data'][$k] ?? ''))); }, ['officialEmail', 'personalEmail'])));
-        if (!empty($b['k']) && hash_equals(self_sig($ref), (string)$b['k'])) $ok = true;
+        if (!empty($b['k'])) {
+            $sc = self_sig_check($ref, (string)$b['k']);
+            if ($sc === 'ok') $ok = true;
+            elseif ($sc === 'expired') { rate_hit($fk, 6, 900); throw new HttpError('self_link_expired', 401); }
+        }
         elseif (!empty($b['otp'])) {
             $st = json_decode((string)kv_get('selfotp_' . $ref), true);
             $code = to_ascii_digits(preg_replace('/\s+/', '', (string)$b['otp']));
-            if ($st && $st['n'] < 5 && hash_equals($st['h'], hash_hmac('sha256', $ref . ':' . $code, app_secret()))) { $ok = true; kv_del('selfotp_' . $ref); }
+            if ($st && $st['n'] < 5 && hash_equals($st['h'], hash_hmac('sha256', $ref . ':' . $code, app_secret()))) { $ok = true; $via = 'otp'; kv_del('selfotp_' . $ref); }
             elseif ($st) { $st['n']++; kv_put('selfotp_' . $ref, json_encode($st), 600); }
             if (!$ok) { rate_hit($fk, 6, 900); usleep(600000); throw new HttpError('otp_bad', 401); }
         } elseif (!empty($b['contact'])) {
@@ -478,9 +528,11 @@ function self_start(array $b): array {
             }
         }
     }
+    /* لا نكشف هل الرقم المرجعي والبريد/الجوال متطابقان: الرد نفسه في الحالتين */
+    if (!$ok && !empty($b['contact']) && empty($b['k']) && empty($b['otp'])) { rate_hit($fk, 6, 900); usleep(random_int(400000, 900000)); return ['ok' => true, 'otp' => true, 'to' => '']; }
     if (!$ok) { rate_hit($fk, 6, 900); usleep(600000); throw new HttpError('self_bad', 401); }
     rate_clear($fk);
-    $token = uuid(); kv_put('self_' . $ref, $token, 7200);
+    $token = uuid(); kv_put('self_' . $ref, $token, 7200); kv_put('selfvia_' . $ref, $via, 7200);
     audit_log($ref, 'فتح صفحة التحديث الذاتي', !empty($b['k']) ? 'عبر رابط الرسالة' : 'برمز التحقق على البريد', 'المنسوب نفسه');
     $out = row_obj($r); $ph = latest_photo($ref);
     return ['ok' => true, 'ref' => $ref, 'token' => $token, 'rec' => $out['rec'], 'kids' => $out['kids'],
@@ -492,13 +544,42 @@ function self_check(array $b): string {
     if (!$t || !hash_equals($t, (string)($b['token'] ?? ''))) throw new HttpError('self_expired', 401);
     return $ref;
 }
+/* الجلسة القوية: دخول بالحساب أو برمز تحقق على البريد. رابط البريد وحده لا يغيّر الحساب البنكي ولا البريد */
+function self_strong(string $ref): bool { return in_array((string)kv_get('selfvia_' . $ref), ['session', 'otp'], true); }
+const SELF_SENSITIVE = ['iban', 'accountNo', 'swift', 'accountHolder', 'bankBranch', 'payOther', 'personalEmail', 'officialEmail'];
 function self_update(array $b): array {
-    $b['ref'] = self_check($b);
-    $res = update_core($b, 'المنسوب نفسه', true, true);
+    $b['ref'] = self_check($b); $strong = self_strong($b['ref']);
+    if (!$strong) foreach (SELF_SENSITIVE as $k) if (array_key_exists($k, (array)($b['changes'] ?? []))) throw new HttpError('لتغيير الحساب البنكي أو البريد ادخل برمز التحقق الذي يصل بريدك المسجّل، لا برابط الرسالة.', 403);
+    $before = staff_get($b['ref']);
+    $res = update_core($b, 'المنسوب نفسه', true, $strong);
+    self_sensitive_alert($before, staff_get($b['ref']));
     $out = row_obj(staff_get($b['ref'])); $res['rec'] = $out['rec']; $res['kids'] = $out['kids'];
     return $res;
 }
-function self_upload(array $b): array { $b['ref'] = self_check($b); return upload_core($b, 'المنسوب نفسه', true); }
+function self_upload(array $b): array {
+    $b['ref'] = self_check($b);
+    if (in_array((string)($b['kind'] ?? ''), FINANCE_KEYS, true) && !self_strong($b['ref'])) throw new HttpError('لرفع إثبات الحساب البنكي ادخل برمز التحقق الذي يصل بريدك المسجّل.', 403);
+    upload_budget($b['ref'], (string)($b['data'] ?? ''));
+    return upload_core($b, 'المنسوب نفسه', true);
+}
+/* تنبيه عند تغيّر الحساب البنكي أو البريد: يصل البريد القديم والجديد والموارد البشرية، وتُبطَل روابط التحديث السابقة */
+function self_sensitive_alert(?array $before, ?array $after): void {
+    if (!$before || !$after) return;
+    $ch = [];
+    foreach (SELF_SENSITIVE as $k) if (trim((string)($before['data'][$k] ?? '')) !== trim((string)($after['data'][$k] ?? ''))) $ch[] = col_title($k);
+    if (!$ch) return;
+    $ref = $after['ref']; self_ver_bump($ref);
+    $to = [];
+    foreach (['officialEmail', 'personalEmail'] as $k) foreach ([$before, $after] as $x) { $e = strtolower(trim((string)($x['data'][$k] ?? ''))); if (filter_var($e, FILTER_VALIDATE_EMAIL)) $to[$e] = 1; }
+    $name = staff_name($after); $hr = (string)cfg('hr_notify');
+    $html = mx_page(['eyebrow' => 'الموارد البشرية · تنبيه أمني', 'title' => 'تغيّرت بيانات حساسة في ملفك', 'tone' => 'red', 'icon' => '🛡', 'badge' => 'تنبيه أمني',
+        'pre' => 'تغيّر: ' . implode('، ', $ch), 'lead' => 'عزيزنا <b>' . esc_html($name) . '</b>، غُيّرت البيانات التالية في ملفك الآن من صفحة «تحديث بياناتي». إن كنت أنت من غيّرها فلا يلزمك شيء.',
+        'body' => mx_rows([['ما تغيّر', implode('، ', $ch)], ['الرقم المرجعي', $ref, 1], ['الوقت', date('Y-m-d H:i'), 1]], 'تفاصيل التغيير') . mx_note('إن لم تكن أنت من غيّرها فتواصل فورًا مع الموارد البشرية لإيقاف أي تحويل للراتب. والقيم نفسها لا تُكتب في البريد حفاظًا عليها.', 'red', 'لم تغيّرها أنت؟'),
+        'buttons' => [filter_var($hr, FILTER_VALIDATE_EMAIL) ? ['mailto:' . $hr . '?subject=' . rawurlencode('لم أغيّر بياناتي · ' . $ref), 'لم أغيّرها — تواصل مع الموارد البشرية', 'danger'] : [mx_url(), 'الدخول إلى المنصة', 'primary']]]);
+    foreach (array_keys($to) as $e) { try { send_mail($e, 'تنبيه أمني: تغيّرت بيانات حساسة في ملفك · ' . $ref, $html, 'تغيّر في ملفك: ' . implode('، ', $ch) . '. إن لم تكن أنت فتواصل مع الموارد البشرية فورًا.', 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline()); } catch (Throwable $x) { } }
+    foreach (hr_recipients() as $e) { if (isset($to[$e])) continue; try { send_mail($e, 'تنبيه: منسوب غيّر بيانات حساسة · ' . $name . ' · ' . $ref, $html, $name . ' غيّر: ' . implode('، ', $ch), 'Bonyan HR', logo_inline()); } catch (Throwable $x) { } }
+    audit_log($ref, 'تغيّر بيانات حساسة', implode('، ', $ch) . ' · أُبلغ المنسوب والموارد البشرية وأُبطلت روابط التحديث السابقة', 'النظام');
+}
 function self_finish(array $b): array {
     $ref = self_check($b); $r = staff_get($ref);
     if (!empty($b['gif']) || !empty($b['jpg'])) save_card($ref, staff_name($r), (string)($b['gif'] ?? ''), (string)($b['jpg'] ?? ''), 'المنسوب نفسه');

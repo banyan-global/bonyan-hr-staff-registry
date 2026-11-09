@@ -54,6 +54,7 @@ function staff_ref_by_email(string $email): ?string {
 /* حساب المنسوب يُنشأ تلقائيًا أول مرة يطلب فيها رمز الدخول ببريده المسجّل */
 function ensure_staff_user(string $email): ?array {
     $ref = staff_ref_by_email($email); if (!$ref) return null;
+    if (!staff_verified($ref)) return null; /* التسجيل العام لا يفتح حسابًا حتى توثّقه الموارد البشرية */
     $r = staff_get($ref); $name = $r ? staff_name($r) : '';
     q('INSERT INTO users (email, name, title, role, staff_ref, created_at) VALUES (?,?,?,?,?,?)', [$email, $name, 'منسوب', 'staff', $ref, now()]);
     audit_log($ref, 'إنشاء حساب منسوب', mask_email($email), 'النظام');
@@ -136,16 +137,19 @@ function auth_start(array $b): array {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new HttpError('bad_email');
     if (rate_hit('ip_auth:' . client_ip(), 30, 3600)) throw new HttpError('locked', 429);
     $generic = ['ok' => true, 'sent' => true, 'to' => mask_email($email)];
+    /* زمن الرد ثابت تقريبًا في كل الحالات، والبريد يُرسل بعد الرد: لا يكشف التوقيت وجود الحساب */
+    $t0 = microtime(true); $even = function () use ($t0) { $d = 0.55 + random_int(0, 150) / 1000 - (microtime(true) - $t0); if ($d > 0) usleep((int)($d * 1e6)); };
     $u = q1('SELECT * FROM users WHERE email=?', [$email]);
     if (!$u) $u = ensure_staff_user($email);
-    if (!$u || !$u['active']) { usleep(400000); audit_log('', 'طلب رمز لبريد غير مسجّل', mask_email($email)); return $generic; }
-    if ($u['locked_until'] && $u['locked_until'] > now()) throw new HttpError('locked', 429);
-    if (rate_hit('mail_code:' . $u['id'], 5, 3600)) { usleep(400000); return $generic; } /* الرد نفسه دائمًا (لا يكشف وجود الحساب) */
+    if (!$u || !$u['active']) { audit_log('', 'طلب رمز لبريد غير مسجّل', mask_email($email)); $even(); return $generic; }
+    if ($u['locked_until'] && $u['locked_until'] > now()) { $even(); return $generic; }
+    if (rate_hit('mail_code:' . $u['id'], 5, 3600)) { $even(); return $generic; } /* الرد نفسه دائمًا (لا يكشف وجود الحساب) */
     $code = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     q('UPDATE login_codes SET used_at=? WHERE user_id=? AND used_at IS NULL', [now(), $u['id']]);
     q('INSERT INTO login_codes (user_id, code_hash, expires_at, ip, created_at) VALUES (?,?,?,?,?)', [$u['id'], code_hash($code, (int)$u['id']), date('Y-m-d H:i:s', time() + 600), client_ip(), now()]);
-    send_login_code($u, $code);
+    defer_after(function () use ($u, $code) { send_login_code($u, $code); });
     audit_log('', 'طلب رمز دخول', $u['name'] ?: $email, $u['name'] ?: $email);
+    $even();
     return $generic;
 }
 
@@ -160,9 +164,13 @@ function auth_verify(array $b): array {
     if ($u['locked_until'] && $u['locked_until'] > now()) throw new HttpError('locked', 429);
     if (rate_count('vfail:' . $u['id'] . ':' . client_ip()) >= 8) throw new HttpError('locked', 429);
     $row = q1('SELECT * FROM login_codes WHERE user_id=? AND used_at IS NULL AND expires_at > ? ORDER BY id DESC LIMIT 1', [$u['id'], now()]);
-    $ok = $row && $row['attempts'] < 5 && preg_match('/^\d{6}$/', $code) && hash_equals($row['code_hash'], code_hash($code, (int)$u['id']));
+    /* كل محاولة تُحجز ذريًا قبل المقارنة: لا تُتجاوز المحاولات الخمس بطلبات متوازية */
+    $claimed = $row && preg_match('/^\d{6}$/', $code) && q('UPDATE login_codes SET attempts=attempts+1 WHERE id=? AND attempts<5 AND used_at IS NULL', [$row['id']])->rowCount() === 1;
+    $ok = $claimed && hash_equals($row['code_hash'], code_hash($code, (int)$u['id']))
+        && q('UPDATE login_codes SET used_at=? WHERE id=? AND used_at IS NULL', [now(), $row['id']])->rowCount() === 1;
     if (!$ok) {
-        if ($row) q('UPDATE login_codes SET attempts=attempts+1 WHERE id=?', [$row['id']]);
+        /* سقف يومي للحساب: ٢٠ محاولة خاطئة من أي عنوان توقفه ٣٠ دقيقة */
+        if (rate_hit('acctfail:' . $u['id'], 20, 86400)) { q('UPDATE users SET locked_until=? WHERE id=?', [date('Y-m-d H:i:s', time() + 1800), $u['id']]); audit_log('', 'إيقاف مؤقت للحساب', ($u['name'] ?: $email) . ' · محاولات خاطئة كثيرة', 'النظام'); }
         /* الإيقاف المؤقت لهذا الحساب من هذا العنوان فقط، فلا يستطيع أحد إقفال حساب غيره عن بُعد */
         $many = rate_hit('vfail:' . $u['id'] . ':' . client_ip(), 8, 900);
         if ($row && $many) q('UPDATE login_codes SET used_at=? WHERE id=?', [now(), $row['id']]);
@@ -170,14 +178,14 @@ function auth_verify(array $b): array {
         usleep(700000);
         throw new HttpError($many ? 'locked' : 'bad_code', $many ? 429 : 401);
     }
-    q('UPDATE login_codes SET used_at=? WHERE id=?', [now(), $row['id']]);
+    rate_clear('acctfail:' . $u['id']);
     open_session($u, '');
     if (!empty($b['remember'])) device_issue($u); /* «تذكّر هذا الجهاز»: دخول سريع لاحقًا دون رمز */
     return ['ok' => true, 'user' => user_session($u)];
 }
 function set_session_cookie(string $value, int $expires): void {
     if (PHP_SAPI === 'cli') return;
-    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    $secure = !in_array(parse_url((string)cfg('site_url'), PHP_URL_HOST), ['localhost', '127.0.0.1'], true) || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'); /* دائمًا Secure على الموقع الحقيقي */
     setcookie(SESSION_COOKIE, $value, ['expires' => $expires, 'path' => '/', 'secure' => $secure, 'httponly' => true, 'samesite' => 'Strict']);
 }
 
@@ -194,6 +202,7 @@ function current_user(): ?array {
     if ($s['expires_at'] < now() || strtotime($s['last_seen_at']) < time() - $idle) { q('DELETE FROM sessions WHERE id=?', [$s['id']]); return null; }
     $u = q1('SELECT * FROM users WHERE id=? AND active=1', [$s['user_id']]);
     if (!$u) return null;
+    if ($u['role'] === 'staff' && !empty($u['staff_ref']) && function_exists('staff_verified') && !staff_verified((string)$u['staff_ref'])) return null;
     if (strtotime($s['last_seen_at']) < time() - 60) q('UPDATE sessions SET last_seen_at=? WHERE id=?', [now(), $s['id']]);
     $u['_perms'] = user_perms($u);
     $u['_label'] = $u['name'] ?: $u['email'];
@@ -240,15 +249,28 @@ function users_save(array $b): array {
     $permsJson = $perms === null ? null : json_encode($perms);
     $dup = q1('SELECT id FROM users WHERE email=? AND id<>?', [$email, $id]);
     if ($dup) throw new HttpError('email_exists');
+    $ownerMail = fn(string $e) => is_owner(['id' => 1, 'active' => 1, 'email' => $e]);
     if ($id) {
         $old = q1('SELECT * FROM users WHERE id=?', [$id]);
         if (!$old) throw new HttpError('not_found', 404);
+        /* حساب مالك المنصة لا يعدّله غيره، ولا يُنقل بريده إلى حساب آخر */
+        if (is_owner($old) && !is_owner($me)) throw new HttpError('حساب مالك المنصة لا يعدّله غيره', 403);
+        if (is_owner($old) && ($email !== strtolower((string)$old['email']) || !$active || $role !== 'admin')) throw new HttpError('لا يُغيَّر بريد مالك المنصة ولا دوره ولا يُوقف', 403);
+        if (!is_owner($old) && $ownerMail($email)) throw new HttpError('email_exists');
+        if ($email !== strtolower((string)$old['email'])) {
+            q('DELETE FROM sessions WHERE user_id=?', [$id]); q('DELETE FROM devices WHERE user_id=?', [$id]);
+            $prev = (string)$old['email'];
+            defer_after(function () use ($prev, $email, $me) { try { send_mail($prev, 'تنبيه أمني: تغيّر بريد حسابك في منصة الموارد البشرية', mx_page(['eyebrow' => 'منصة الموارد البشرية · تنبيه أمني', 'title' => 'تغيّر بريد حسابك', 'tone' => 'red', 'icon' => '🛡', 'badge' => 'تنبيه أمني',
+                'lead' => 'غيّر <b>' . esc_html($me['_label']) . '</b> بريد حسابك في المنصة إلى ' . esc_html(mask_email($email)) . '. إن لم يكن ذلك بعلمك فتواصل مع مدير النظام فورًا.', 'buttons' => [[mx_url(), 'فتح المنصة', 'primary']]]),
+                'تغيّر بريد حسابك إلى ' . mask_email($email), 'Bonyan HR', logo_inline()); } catch (Throwable $e) { } });
+        }
         q('UPDATE users SET email=?, name=?, title=?, role=?, perms=?, active=?, locked_until=IF(?=1, locked_until, NULL) WHERE id=?',
             [$email, safe_text($b['name'] ?? ''), safe_text($b['title'] ?? ''), $role, $permsJson, $active, $active, $id]);
         if (!$active) q('DELETE FROM sessions WHERE user_id=?', [$id]);
         if (array_key_exists('notify', $b)) q('UPDATE users SET notify=? WHERE id=?', [$b['notify'] === null ? null : (int)(bool)$b['notify'], $id]);
         audit_log('', 'تعديل حساب', $email . ' · ' . ROLE_NAMES[$role] . ($active ? '' : ' · موقوف') . ' · ' . ($perms === null ? 'صلاحيات الدور' : implode('، ', $perms)), $me['_label']);
     } else {
+        if ($ownerMail($email)) throw new HttpError('email_exists');
         q('INSERT INTO users (email, name, title, role, perms, active, created_at) VALUES (?,?,?,?,?,?,?)',
             [$email, safe_text($b['name'] ?? ''), safe_text($b['title'] ?? ''), $role, $permsJson, $active, now()]);
         if (array_key_exists('notify', $b) && $b['notify'] !== null) q('UPDATE users SET notify=? WHERE email=?', [(int)(bool)$b['notify'], $email]);

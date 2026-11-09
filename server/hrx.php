@@ -96,7 +96,7 @@ function geo_resolve(array $b): array {
     if ($u === '' || mb_strlen($u) > 2000) throw new HttpError('الصق رابط الموقع من خرائط جوجل');
     if ($c = geo_parse($u)) return ['ok' => true, 'lat' => $c[0], 'lng' => $c[1], 'name' => geo_place_name($u)];
     if (!preg_match('#^https?://#i', $u) && preg_match('#^(maps\.app\.goo\.gl|goo\.gl|(www\.|maps\.)?google\.[a-z.]+)/#i', $u)) $u = 'https://' . $u;
-    $okHost = fn($x) => (bool)preg_match('/(^|\.)(goo\.gl|google\.[a-z]{2,3}(\.[a-z]{2})?)$/i', (string)parse_url($x, PHP_URL_HOST));
+    $okHost = fn($x) => in_array(strtolower((string)parse_url($x, PHP_URL_HOST)), ['maps.app.goo.gl', 'goo.gl', 'maps.google.com', 'www.google.com', 'google.com', 'consent.google.com', 'www.google.com.sa', 'maps.google.com.sa'], true) && parse_url($x, PHP_URL_PORT) === null;
     if (!$okHost($u) || !preg_match('#^https?://#i', $u)) throw new HttpError('يُقبل رابط من خرائط جوجل فقط');
     if (!function_exists('curl_init')) throw new HttpError('تعذّر فتح الرابط على الخادم؛ أدخل الإحداثيات يدويًا');
     $name = '';

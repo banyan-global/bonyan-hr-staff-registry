@@ -10,11 +10,12 @@ declare(strict_types=1);
 function pay_rate_hour(array $sd): float { $base = (float)preg_replace('/[^\d.]/', '', (string)($sd['salary'] ?? '')); return $base > 0 ? $base / 30 / 8 : 0.0; }
 function pay_cur(array $sd): string { return preg_match('/[A-Z]{3}/', (string)($sd['currency'] ?? ''), $m) ? $m[0] : 'SAR'; }
 function pay_month(array $b): array {
-    require_perm('finance.view');
+    $pu = require_perm('finance.view'); $hide = private_hidden_for($pu);
     $ym = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string)($b['month'] ?? '')) ? (string)$b['month'] : date('Y-m');
     $from = $ym . '-01'; $to = date('Y-m-t', strtotime($from));
     $ot = []; $loans = [];
     foreach (q("SELECT * FROM requests WHERE status='approved' AND type IN ('ot','loan')")->fetchAll() as $r) {
+        if (in_array($r['ref'], $hide, true)) continue;
         $d = json_decode($r['data'], true) ?: [];
         if ($r['type'] === 'ot') {
             $day = (string)($d['day'] ?? ''); if ($day < $from || $day > $to) continue;
@@ -91,18 +92,21 @@ const ACT_KINDS = [
 const ACT_ST = ['pending' => 'بانتظار اعتماد الإدارة العليا', 'issued' => 'صادر', 'rejected' => 'لم يُعتمد', 'void' => 'ملغى'];
 function act_row(array $a, bool $full = true): array {
     $s = staff_get($a['ref']); $d = json_decode($a['data'], true) ?: [];
+    if (!act_fin_ok($a)) unset($d['newSalary'], $d['oldSalary'], $d['salary'], $d['amount']);
     return ['id' => (int)$a['id'], 'no' => $a['no'], 'ref' => $a['ref'], 'name' => $s ? staff_name($s) : $a['ref'], 'entity' => (string)($s['data']['entity'] ?? ''), 'jobTitle' => (string)($s['data']['jobTitle'] ?? ''),
         'kind' => $a['kind'], 'kindName' => ACT_KINDS[$a['kind']][0] ?? $a['kind'], 'status' => $a['status'], 'statusName' => ACT_ST[$a['status']] ?? $a['status'], 'data' => $d,
         'createdBy' => $a['created_by'], 'createdAt' => substr($a['created_at'], 0, 16), 'decidedBy' => $a['decided_by'], 'decidedAt' => $a['decided_at'] ? substr($a['decided_at'], 0, 16) : '',
-        'ackAt' => $a['ack_at'] ? substr($a['ack_at'], 0, 16) : '', 'ackNote' => $a['ack_note'], 'sum' => act_summary($a['kind'], $d)];
+        'ackAt' => $a['ack_at'] ? substr($a['ack_at'], 0, 16) : '', 'ackNote' => $a['ack_note'], 'sum' => act_summary($a['kind'], $d, act_fin_ok($a))];
 }
-function act_summary(string $k, array $d): string {
+/* قيم الراتب في العلاوة لا يراها إلا من يملك صلاحية المالية، أو صاحب الإجراء نفسه */
+function act_fin_ok(array $a): bool { $u = current_user(); return $u && (has_perm($u, 'finance.view') || my_staff_ref($u) === $a['ref']); }
+function act_summary(string $k, array $d, bool $fin = true): string {
     $n = ACT_KINDS[$k][0] ?? $k;
     if ($k === 'warning') return 'إنذار ' . ($d['degree'] ?? '');
     if ($k === 'violation') return 'مخالفة' . (!empty($d['deduct']) ? ' · حسم ' . $d['deduct'] . ' يوم' : '');
     if ($k === 'promotion') return 'ترقية إلى ' . ($d['newTitle'] ?? '');
     if ($k === 'transfer') return 'نقل إلى ' . trim(($d['newEntity'] ?? '') . ' ' . ($d['newDepartment'] ?? ''));
-    if ($k === 'raise') return 'علاوة · الراتب الجديد ' . number_format((float)($d['newSalary'] ?? 0)) . ' ' . ($d['cur'] ?? '');
+    if ($k === 'raise') return $fin ? 'علاوة · الراتب الجديد ' . number_format((float)($d['newSalary'] ?? 0)) . ' ' . ($d['cur'] ?? '') : 'علاوة';
     if ($k === 'termination') return 'إنهاء خدمة · آخر يوم ' . ($d['lastDay'] ?? '');
     return $n . (($d['title'] ?? '') !== '' && $d['title'] !== $n ? ' · ' . $d['title'] : '');
 }
@@ -111,7 +115,7 @@ function act_list(array $b): array {
     if (has_perm($u, 'staff.view')) {
         $ref = (string)($b['ref'] ?? '');
         $rows = $ref !== '' ? q('SELECT * FROM hr_actions WHERE ref=? ORDER BY id DESC', [$ref])->fetchAll() : q('SELECT * FROM hr_actions ORDER BY id DESC LIMIT 600')->fetchAll();
-        return ['ok' => true, 'rows' => array_map('act_row', $rows), 'kinds' => array_map(fn($k) => ['name' => $k[0], 'approve' => (bool)$k[1]], ACT_KINDS), 'canIssue' => has_perm($u, 'staff.edit'), 'canDecide' => hrp_is_top($u)];
+        return ['ok' => true, 'rows' => array_map('act_row', private_filter($u, $rows)), 'kinds' => array_map(fn($k) => ['name' => $k[0], 'approve' => (bool)$k[1]], ACT_KINDS), 'canIssue' => has_perm($u, 'staff.edit'), 'canDecide' => hrp_is_top($u)];
     }
     $ref = my_staff_ref($u); if (!$ref || !site_on('staff', 'myhr')) return ['ok' => true, 'rows' => []];
     return ['ok' => true, 'rows' => array_map('act_row', q("SELECT * FROM hr_actions WHERE ref=? AND status='issued' ORDER BY id DESC", [$ref])->fetchAll())];
@@ -133,7 +137,7 @@ function act_save(array $b): array {
         if ($d['newSalary'] <= 0) throw new HttpError('اكتب الراتب الجديد'); }
     if ($k === 'termination') { $d['lastDay'] = hrp_date($in['lastDay'] ?? ''); $d['reason'] = in_array($in['reason'] ?? '', ['انتهاء العقد', 'عدم اجتياز فترة التجربة', 'فصل لمخالفة جسيمة', 'إعادة هيكلة', 'أخرى'], true) ? $in['reason'] : '';
         if (!$d['lastDay'] || !$d['reason']) throw new HttpError('اكتب آخر يوم عمل واختر السبب'); }
-    if ($d['title'] === '') $d['title'] = in_array($k, ['notice', 'thanks'], true) ? ACT_KINDS[$k][0] : act_summary($k, $d);
+    if ($d['title'] === '') $d['title'] = in_array($k, ['notice', 'thanks'], true) ? ACT_KINDS[$k][0] : act_summary($k, $d, false);
     $d['byId'] = (int)$u['id'];
     $need = (bool)ACT_KINDS[$k][1]; $st = $need ? 'pending' : 'issued';
     named_lock('act_no');
@@ -141,7 +145,7 @@ function act_save(array $b): array {
         q('INSERT INTO hr_actions (no, ref, kind, status, data, created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)', [$no, $ref, $k, $st, json_encode($d, JSON_UNESCAPED_UNICODE), hrp_label($u), now(), now()]);
     } finally { named_unlock('act_no'); }
     $a = q1('SELECT * FROM hr_actions WHERE no=?', [$no]);
-    audit_log($ref, 'إصدار إجراء إداري: ' . ACT_KINDS[$k][0], $no . ' · ' . act_summary($k, $d) . ($need ? ' · بانتظار اعتماد الإدارة العليا' : ''), hrp_label($u));
+    audit_log($ref, 'إصدار إجراء إداري: ' . ACT_KINDS[$k][0], $no . ' · ' . act_summary($k, $d, false) . ($need ? ' · بانتظار اعتماد الإدارة العليا' : ''), hrp_label($u));
     if ($need) act_mail_top($a); else act_mail_staff($a);
     return ['ok' => true, 'row' => act_row($a)];
 }
@@ -182,7 +186,7 @@ function act_apply(array $a, string $actor): void {
     $set = function (string $k, $v) use (&$s, &$ch) { if ($v === '' || $v === null) return; $old = (string)($s['data'][$k] ?? ''); if ($old === (string)$v) return; $s['data'][$k] = $v; $ch[] = (['grade' => 'المرتبة', 'serviceStatus' => 'حالة الخدمة', 'serviceEnd' => 'آخر يوم عمل', 'endReason' => 'سبب انتهاء الخدمة'][$k] ?? col_title($k)) . ': ' . ($old ?: '—') . ' ← ' . $v; };
     if ($a['kind'] === 'promotion') { $set('jobTitle', $d['newTitle'] ?? ''); $set('grade', $d['newGrade'] ?? ''); }
     if ($a['kind'] === 'transfer') { $set('entity', $d['newEntity'] ?? ''); $set('department', $d['newDepartment'] ?? ''); $set('manager', $d['newManager'] ?? ''); }
-    if ($a['kind'] === 'raise') $set('salary', (string)($d['newSalary'] ?? ''));
+    if ($a['kind'] === 'raise' && (string)($d['newSalary'] ?? '') !== '' && (string)($s['data']['salary'] ?? '') !== (string)$d['newSalary']) { $s['data']['salary'] = (string)$d['newSalary']; $ch[] = 'الراتب: (تغيّر — القيمة لا تُكتب في السجل)'; }
     if ($a['kind'] === 'termination') { $set('serviceStatus', 'إنهاء خدمة قيد الإخلاء'); $set('serviceEnd', $d['lastDay'] ?? ''); $set('endReason', $d['reason'] ?? ''); }
     if (!$ch) return;
     $s['updated_at'] = now(); staff_put($s);
@@ -221,7 +225,7 @@ function cus_list(array $b): array {
     if (has_perm($u, 'staff.view')) {
         $ref = (string)($b['ref'] ?? '');
         $rows = $ref !== '' ? q('SELECT * FROM custody WHERE ref=? ORDER BY returned_on IS NULL DESC, id DESC', [$ref])->fetchAll() : q('SELECT * FROM custody ORDER BY returned_on IS NULL DESC, id DESC LIMIT 1000')->fetchAll();
-        return ['ok' => true, 'rows' => array_map('cus_row', $rows), 'cats' => CUS_CATS, 'canEdit' => has_perm($u, 'staff.edit')];
+        return ['ok' => true, 'rows' => array_map('cus_row', private_filter($u, $rows)), 'cats' => CUS_CATS, 'canEdit' => has_perm($u, 'staff.edit')];
     }
     $ref = my_staff_ref($u); if (!$ref || !site_on('staff', 'myhr')) return ['ok' => true, 'rows' => []];
     return ['ok' => true, 'rows' => array_map('cus_row', q('SELECT * FROM custody WHERE ref=? ORDER BY returned_on IS NULL DESC, id DESC', [$ref])->fetchAll())];
@@ -394,7 +398,7 @@ function ev_row(array $e): array {
 }
 function ev_list(array $b): array {
     $u = hrp_me();
-    if (has_perm($u, 'staff.view')) return ['ok' => true, 'rows' => array_map('ev_row', q('SELECT * FROM evals ORDER BY id DESC LIMIT 800')->fetchAll()), 'crit' => EV_CRIT, 'recs' => EV_REC, 'canEdit' => has_perm($u, 'staff.edit')];
+    if (has_perm($u, 'staff.view')) return ['ok' => true, 'rows' => array_map('ev_row', private_filter($u, q('SELECT * FROM evals ORDER BY id DESC LIMIT 800')->fetchAll())), 'crit' => EV_CRIT, 'recs' => EV_REC, 'canEdit' => has_perm($u, 'staff.edit')];
     $ref = my_staff_ref($u); if (!$ref || !site_on('staff', 'myhr')) return ['ok' => true, 'rows' => [], 'crit' => EV_CRIT];
     return ['ok' => true, 'rows' => array_map('ev_row', q("SELECT * FROM evals WHERE ref=? AND status IN ('sent','ack') ORDER BY id DESC", [$ref])->fetchAll()), 'crit' => EV_CRIT];
 }
@@ -572,11 +576,16 @@ function push_encrypt(string $payload, string $uaPub, string $auth): string {
     $ct = openssl_encrypt($payload . "\x02", 'aes-128-gcm', $cek, OPENSSL_RAW_DATA, $nonce, $tag);
     return $salt . pack('N', 4096) . chr(65) . $asPub . $ct . $tag;
 }
+/* خوادم التنبيهات المعروفة فقط (Google وMozilla وApple وMicrosoft): لا يُرسل الخادم طلبات إلى عناوين يحددها المستخدم */
+function push_host_ok(string $url): bool {
+    $h = strtolower((string)parse_url($url, PHP_URL_HOST)); if ($h === '' || (string)parse_url($url, PHP_URL_SCHEME) !== 'https' || parse_url($url, PHP_URL_PORT) !== null) return false;
+    return (bool)preg_match('/^(fcm\.googleapis\.com|android\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9-]+\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com|wns2-[a-z0-9-]+\.notify\.windows\.com)$/', $h);
+}
 function push_send_one(array $sub, array $msg): int {
-    $u = parse_url((string)$sub['endpoint']); if (($u['scheme'] ?? '') !== 'https' || empty($u['host'])) return 400;
+    $u = parse_url((string)$sub['endpoint']); if (($u['scheme'] ?? '') !== 'https' || empty($u['host']) || !push_host_ok((string)$sub['endpoint'])) return 400;
     $body = push_encrypt(json_encode($msg, JSON_UNESCAPED_UNICODE), b64u_dec((string)$sub['p256dh']), b64u_dec((string)$sub['auth']));
     $ch = curl_init((string)$sub['endpoint']);
-    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10,
+    curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_FOLLOWLOCATION => false, CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
         CURLOPT_HTTPHEADER => ['Content-Type: application/octet-stream', 'Content-Encoding: aes128gcm', 'TTL: 3600', 'Urgency: high', 'Authorization: vapid t=' . vapid_jwt($u['scheme'] . '://' . $u['host']) . ', k=' . vapid()['pub']]]);
     curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
     if ($code === 404 || $code === 410) q('DELETE FROM push_subs WHERE id=?', [$sub['id']]);
@@ -585,7 +594,7 @@ function push_send_one(array $sub, array $msg): int {
 function push_to_user(int $uid, array $msg): int { $n = 0; foreach (q('SELECT * FROM push_subs WHERE user_id=?', [$uid])->fetchAll() as $s) { try { if (push_send_one($s, $msg) < 300) $n++; } catch (Throwable $e) { } } return $n; }
 function push_sub(array $b): array {
     $u = hrp_me(); $e = (string)($b['endpoint'] ?? ''); $k = (string)($b['p256dh'] ?? ''); $a = (string)($b['auth'] ?? '');
-    if (!preg_match('~^https://[^\s]{10,500}$~', $e) || strlen(b64u_dec($k)) !== 65 || strlen(b64u_dec($a)) < 16) throw new HttpError('اشتراك تنبيهات غير صالح');
+    if (!preg_match('~^https://[^\s]{10,500}$~', $e) || !push_host_ok($e) || strlen(b64u_dec($k)) !== 65 || strlen(b64u_dec($a)) < 16) throw new HttpError('اشتراك تنبيهات غير صالح');
     q('DELETE FROM push_subs WHERE endpoint=?', [$e]);
     q('INSERT INTO push_subs (user_id, endpoint, p256dh, auth, ua, created_at) VALUES (?,?,?,?,?,?)', [(int)$u['id'], $e, $k, $a, mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200), now()]);
     $n = push_to_user((int)$u['id'], ['title' => 'فُعّلت تنبيهات الحضور', 'body' => 'سيصلك تنبيه عند بداية الدوام لتسجيل حضورك، وعند نهايته.', 'url' => '#myatt']);

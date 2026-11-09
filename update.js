@@ -18,7 +18,7 @@
       vT: 'تحديث بياناتك المسجّلة', vD: 'اكتب رقمك المرجعي الموجود في رسالة التأكيد أو على بطاقتك، ثم اختر القسم الذي تريد تعديله.',
       vDk: 'فتحت الصفحة من رابط رسالتك الخاص. اكتب رقمك المرجعي للمتابعة.',
       ref: 'الرقم المرجعي', refPh: 'BNY-HR-SA-2026-0001', contact: 'البريد الإلكتروني أو رقم الجوال المسجّل', contactH: 'للتحقق من هويتك: اكتب البريد أو الجوال الذي سجّلت به.',
-      go: 'متابعة', checking: 'جارٍ التحقق…', bad: 'البيانات غير متطابقة. تأكد من الرقم المرجعي والبريد أو الجوال المسجّل.', badK: 'الرقم المرجعي لا يطابق رابط رسالتك.',
+      linkExp: 'انتهت صلاحية رابط التحديث. أدخل رقمك المرجعي وبريدك أو جوالك المسجّل ليصلك رمز تحقق.', otpAny: 'المسجّل لدينا (إن كانت البيانات مطابقة)', go: 'متابعة', checking: 'جارٍ التحقق…', bad: 'البيانات غير متطابقة. تأكد من الرقم المرجعي والبريد أو الجوال المسجّل.', badK: 'الرقم المرجعي لا يطابق رابط رسالتك.',
       locked: 'توقفت المحاولات مؤقتًا لكثرة الأخطاء. حاول بعد ١٥ دقيقة.', net: 'تعذّر الاتصال بالخادم، حاول مرة أخرى.', expired: 'انتهت الجلسة، أدخل رقمك المرجعي من جديد.',
       hi: 'مرحبًا {n}', pick: 'اختر القسم الذي تريد تعديله، ثم اضغط «حفظ التعديلات».', edit: 'تعديل', close: 'إغلاق', empty: 'لا توجد بيانات',
       g: { id: 'البيانات الشخصية', docs: 'الوثائق الرسمية', contact: 'التواصل والعنوان', em: 'جهات الاتصال للطوارئ', job: 'الوظيفة والعقد', edu: 'المهارات والدورات', fin: 'الراتب والحساب البنكي', quals: 'المؤهلات العلمية', exp: 'الخبرات السابقة', langs: 'اللغات', files: 'المرفقات' },
@@ -33,7 +33,7 @@
       vT: 'Update your registered details', vD: 'Enter the reference number from your confirmation email or your card, then choose the section you want to change.',
       vDk: 'You opened this page from your personal email link. Enter your reference number to continue.',
       ref: 'Reference number', refPh: 'BNY-HR-SA-2026-0001', contact: 'Registered email or mobile number', contactH: 'To verify it is you: enter the email or mobile you registered with.',
-      go: 'Continue', checking: 'Checking…', bad: 'The details do not match. Check your reference number and registered email or mobile.', badK: 'This reference number does not match your email link.',
+      linkExp: 'This update link has expired. Enter your reference number and registered email or mobile to receive a verification code.', otpAny: 'on file (if the details match)', go: 'Continue', checking: 'Checking…', bad: 'The details do not match. Check your reference number and registered email or mobile.', badK: 'This reference number does not match your email link.',
       locked: 'Too many attempts. Please try again in 15 minutes.', net: 'Could not reach the server, please try again.', expired: 'Your session has expired. Please enter your reference number again.',
       hi: 'Welcome, {n}', pick: 'Choose the section you want to change, then tap “Save changes”.', edit: 'Edit', close: 'Close', empty: 'No data',
       g: { id: 'Personal details', docs: 'Official documents', contact: 'Contact & address', em: 'Emergency contacts', job: 'Job & contract', edu: 'Skills & courses', fin: 'Salary & bank account', quals: 'Qualifications', exp: 'Previous experience', langs: 'Languages', files: 'Documents' },
@@ -48,7 +48,7 @@
       vT: 'Perbarui data Anda yang terdaftar', vD: 'Masukkan nomor referensi dari email konfirmasi atau kartu Anda, lalu pilih bagian yang ingin diubah.',
       vDk: 'Anda membuka halaman ini dari tautan email pribadi Anda. Masukkan nomor referensi untuk melanjutkan.',
       ref: 'Nomor referensi', refPh: 'BNY-HR-SA-2026-0001', contact: 'Email atau nomor ponsel terdaftar', contactH: 'Untuk verifikasi: masukkan email atau ponsel yang Anda daftarkan.',
-      go: 'Lanjutkan', checking: 'Memeriksa…', bad: 'Data tidak cocok. Periksa nomor referensi serta email atau ponsel terdaftar.', badK: 'Nomor referensi tidak cocok dengan tautan email Anda.',
+      linkExp: 'Tautan pembaruan ini sudah kedaluwarsa. Masukkan nomor referensi dan email atau ponsel terdaftar untuk menerima kode verifikasi.', otpAny: 'yang terdaftar (jika data cocok)', go: 'Lanjutkan', checking: 'Memeriksa…', bad: 'Data tidak cocok. Periksa nomor referensi serta email atau ponsel terdaftar.', badK: 'Nomor referensi tidak cocok dengan tautan email Anda.',
       locked: 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.', net: 'Tidak dapat terhubung ke server, coba lagi.', expired: 'Sesi berakhir. Masukkan nomor referensi lagi.',
       hi: 'Selamat datang, {n}', pick: 'Pilih bagian yang ingin diubah, lalu ketuk “Simpan perubahan”.', edit: 'Ubah', close: 'Tutup', empty: 'Tidak ada data',
       g: { id: 'Data pribadi', docs: 'Dokumen resmi', contact: 'Kontak & alamat', em: 'Kontak darurat', job: 'Pekerjaan & kontrak', edu: 'Keterampilan & kursus', fin: 'Gaji & rekening bank', quals: 'Kualifikasi', exp: 'Pengalaman sebelumnya', langs: 'Bahasa', files: 'Dokumen' },
@@ -272,6 +272,7 @@
   function errMsg(e) {
     var m = (e && e.message) || '';
     if (/otp_bad/.test(m)) return x('otpBad');
+    if (/self_link_expired/.test(m)) { U.k = ''; return x('linkExp'); }
     if (/self_bad/.test(m)) { U.me = false; return U.k ? x('badK') : x('bad'); }
     if (/locked/.test(m)) return x('locked');
     if (/self_expired/.test(m)) return x('expired');
@@ -282,7 +283,7 @@
     U.busy = true; U.err = ''; draw();
     var p = A.DEMO ? demoStart(ref) : A.api({ action: 'selfStart', me: U.me ? 1 : undefined, ref: ref, k: U.k || undefined, contact: otp ? undefined : (contact || undefined), otp: otp || undefined, lang: A.state.lang });
     p.then(function (j) {
-      if (j.otp) { U.busy = false; U.otpTo = j.to || '…'; draw(); var c = $('#updCode'); if (c) c.focus(); return; }
+      if (j.otp) { U.busy = false; U.otpTo = j.to || x('otpAny'); draw(); var c = $('#updCode'); if (c) c.focus(); return; }
       U.otpTo = '';
       U.busy = false; U.ref = j.ref; U.token = j.token; U.rec = j.rec; U.kids = j.kids || {}; U.cols = j.cols || []; U.photo = j.photo || '';
       U.cols.forEach(function (c) { HEAD[c[0]] = c[1]; });

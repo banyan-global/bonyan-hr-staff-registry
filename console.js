@@ -3925,6 +3925,20 @@ rwNeedSup = function (t) { if (role === 'staff' && ME_DATA && ME_DATA.private) r
 var _pkOffer0 = pkOffer;
 pkOffer = function () { if (isPhone() || standalone()) { JUST_IN = false; return; } return _pkOffer0(); };
 
+/* توثيق سجل التسجيل العام: لا يدخل صاحبه المنصة حتى تفعّله الموارد البشرية */
+var _profHTML0 = profHTML;
+profHTML = function (s) {
+  var h = _profHTML0(s);
+  if (!s || !s.r || s.r._verified !== 0 || !can('edit')) return h;
+  return h.replace('<div class="ptabs"', '<div class="vbar">' + ic('shield') + '<span><b>سجل من التسجيل العام لم يُوثَّق بعد.</b> لن يستطيع صاحبه الدخول إلى المنصة حتى تتأكد من بياناته وتفعّل دخوله.</span><button type="button" class="btn sm goldb" data-sverify="' + esc(s.ref) + '">' + ic('check') + 'توثيق وتفعيل الدخول</button></div><div class="ptabs"');
+};
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-sverify]'); if (!b) return;
+  b.disabled = true;
+  api({ action: 'staffVerify', ref: b.getAttribute('data-sverify'), on: 1 }).then(function () { var x = byRef(b.getAttribute('data-sverify')); if (x && x.r) x.r._verified = 1; toast('وُثّق السجل، ويستطيع صاحبه الدخول الآن'); softRender(); })
+    .catch(function (er) { b.disabled = false; toast(errText(er)); });
+}, true);
+
 window.addEventListener('hashchange', route);
 boot();
 })();

@@ -31,13 +31,13 @@ return [
 
     'hr_notify' => 'digital@bonyanglobal.com',   // يصله تنبيه كل تسجيل جديد والتنبيه الأسبوعي للوثائق
     'mail_only_to' => '',                        // للتجربة فقط: بريد واحد تذهب إليه كل الرسائل. فارغ = تصل أصحابها
-    'dev_email' => 'osama.mo.bonyan@gmail.com',
+    'dev_email' => 'developer@example.com',
 
     /* الحسابات الأولى (تُنشأ مرة واحدة عند أول دخول، ثم تُدار من صفحة «النظام») — الدخول برمز يصل إلى هذا البريد */
     'accounts' => [
-        ['email' => 'osama.mo.bonyan@gmail.com', 'name' => 'م. أسامة جنيدي', 'title' => 'مدير النظام', 'role' => 'admin'],
-        ['email' => 'galghamdi0203@gmail.com', 'name' => 'أ. غيداء عبدالله', 'title' => 'مديرة الموارد البشرية', 'role' => 'hr'],
-        ['email' => 'abdullah.m.y.alghamdi@gmail.com', 'name' => 'د. عبدالله الغامدي', 'title' => 'الرئيس التنفيذي', 'role' => 'ceo'],
+        ['email' => 'admin@example.com', 'name' => 'الاسم', 'title' => 'مدير النظام', 'role' => 'admin'],
+        ['email' => 'hr@example.com', 'name' => 'الاسم', 'title' => 'مديرة الموارد البشرية', 'role' => 'hr'],
+        ['email' => 'ceo@example.com', 'name' => 'الاسم', 'title' => 'الرئيس التنفيذي', 'role' => 'ceo'],
     ],
 
     'session_hours' => 12,     // أقصى مدة للجلسة

@@ -389,6 +389,7 @@ function req_step_emails(array $step): array {
 /* هل يستطيع هذا الحساب اتخاذ القرار في الخطوة الحالية؟ مدير النظام يستطيع دائمًا (للطوارئ) */
 function req_can_decide(array $u, array $r): bool {
     if ($r['status'] !== 'pending') return false;
+    if (staff_private((string)$r['ref']) && !is_owner($u)) return false; /* السجل الخاص يعتمده المالك وحده */
     $chain = json_decode($r['chain'], true) ?: []; $step = $chain[(int)$r['stage']] ?? null;
     if (!$step) return false;
     /* لا يعتمد أحد طلبه هو، ولا حتى مدير النظام */

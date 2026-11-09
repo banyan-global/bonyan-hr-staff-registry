@@ -262,11 +262,16 @@ function kv_gc(): void { if (random_int(1, 50) === 1) q('DELETE FROM kv WHERE ex
 
 /* عدّاد محاولات بنافذة زمنية: يعيد true إن تجاوز الحد */
 function rate_hit(string $key, int $limit, int $window): bool {
+    /* ذرّي: الطلبات المتزامنة لا تتجاوز الحد (زيادة داخل قاعدة البيانات لا قراءة ثم كتابة) */
     $k = 'rl:' . $key;
-    $n = (int)(kv_get($k) ?? 0) + 1;
-    if ($n === 1) kv_put($k, '1', $window); else q('UPDATE kv SET v=? WHERE k=?', [(string)$n, $k]);
+    q('DELETE FROM kv WHERE k=? AND expires_at IS NOT NULL AND expires_at < ?', [$k, now()]);
+    q('INSERT INTO kv (k, v, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE v = CAST(v AS UNSIGNED) + 1', [$k, '1', date('Y-m-d H:i:s', time() + $window)]);
+    $n = (int)(q1('SELECT v FROM kv WHERE k=?', [$k])['v'] ?? 1);
     return $n > $limit;
 }
+/* أعمال تُنفَّذ بعد إرسال الرد (البريد مثلًا) حتى لا يكشف زمن الرد شيئًا */
+function defer_after(callable $f): void { $GLOBALS['BHR_DEFER'][] = $f; }
+function run_deferred(): void { foreach ((array)($GLOBALS['BHR_DEFER'] ?? []) as $f) { try { $f(); } catch (Throwable $e) { error_log('[bonyan-hr] deferred: ' . $e->getMessage()); } } $GLOBALS['BHR_DEFER'] = []; }
 function rate_count(string $key): int { return (int)(kv_get('rl:' . $key) ?? 0); }
 function rate_clear(string $key): void { kv_del('rl:' . $key); }
 

@@ -49,7 +49,7 @@ function ua_label(string $ua = ''): string {
 /* ---------- ١) حفظ الجهاز ---------- */
 function set_device_cookie(string $value, int $expires): void {
     if (PHP_SAPI === 'cli') return;
-    setcookie(DEVICE_COOKIE, $value, ['expires' => $expires, 'path' => '/', 'secure' => is_https(), 'httponly' => true, 'samesite' => 'Strict']);
+    setcookie(DEVICE_COOKIE, $value, ['expires' => $expires, 'path' => '/', 'secure' => is_https() || !in_array(parse_url((string)cfg('site_url'), PHP_URL_HOST), ['localhost', '127.0.0.1'], true), 'httponly' => true, 'samesite' => 'Strict']);
 }
 function device_issue(array $u): void {
     $old = (string)($_COOKIE[DEVICE_COOKIE] ?? ''); /* الجهاز نفسه لا يُحفظ مرتين */

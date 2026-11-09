@@ -10,9 +10,9 @@ window.APP_CONFIG = {
         وعلى الرابط القديم (GitHub Pages) يبقى مع Apps Script حتى يكتمل الانتقال. */
   GAS_URL: (/(^|\.)bonyanglobal\.com$/.test(location.hostname) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))
     ? location.origin + '/api/'
-    : 'https://script.google.com/macros/s/AKfycbwqtt2vgZQunssdK0YF56Htxm26WH412omMM2tjW23ag23Xuqph5z0pqa8ehPS_W4_6/exec',
+    : '', /* أُوقف الربط بخادم Apps Script القديم: خارج الدومين الرسمي يعمل الموقع معاينةً فقط */
   /* الدخول إلى لوحة الموارد البشرية: بالبريد + رمز (الخادم الجديد) أو بالرمز المشترك (Apps Script القديم) */
-  AUTH: (/(^|\.)bonyanglobal\.com$/.test(location.hostname) || /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) ? 'email' : 'code',
+  AUTH: 'email',
 
   /* ٢) اللغات المتاحة واللغة الافتراضية */
   LANGS: ['ar', 'en', 'id'],

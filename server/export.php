@@ -110,7 +110,7 @@ function export_xlsx(): void {
 /* ============================================================ تنزيل كل مرفقات منسوب في ملف مضغوط */
 function staff_zip(): void {
     $u = require_perm('staff.view');
-    $ref = strtoupper((string)($_GET['ref'] ?? ''));
+    $ref = strtoupper((string)($_GET['ref'] ?? '')); assert_ref_visible($u, $ref);
     $r = staff_get($ref); if (!$r) throw new HttpError('not_found', 404);
     if (!class_exists('ZipArchive')) throw new HttpError('zip_unavailable', 500);
     $tmp = tempnam(sys_get_temp_dir(), 'bhrz');
