@@ -12,7 +12,7 @@ const SITE_DEFAULTS = [
     'staff' => ['card' => true, 'docs' => true, 'pay' => true, 'reqs' => true, 'balance' => true, 'att' => true, 'news' => true, 'update' => true, 'myhr' => true],
     'leave' => ['annual' => 30, 'prorate' => true, 'kinds' => ['اعتيادية (سنوية)'], 'carry' => 0,
         'quotas' => ['مرضية' => 30, 'طارئة (اضطرارية)' => 5, 'أمومة' => 70, 'حج' => 10, 'زواج' => 5, 'وفاة قريب' => 5, 'دراسة / تدريب' => 0, 'تعويضية' => 0]],
-    'work' => ['start' => '08:00', 'end' => '16:00', 'grace' => 15, 'weekend' => [5, 6], 'probation' => 90, 'mobile' => 'off', 'mobileRefs' => [], 'sites' => [], 'checkEvery' => 60],
+    'work' => ['start' => '08:00', 'end' => '16:00', 'grace' => 15, 'weekend' => [5, 6], 'probation' => 90, 'mobile' => 'off', 'mobileRefs' => [], 'remoteRefs' => [], 'sites' => [], 'checkEvery' => 60],
 ];
 function site(): array {
     static $c = null; if ($c !== null) return $c;
@@ -61,11 +61,13 @@ function site_save(array $b): array {
         $o['work']['mobile'] = in_array($W['mobile'] ?? 'off', ['off', 'all', 'listed'], true) ? $W['mobile'] : 'off';
         $o['work']['checkEvery'] = in_array((int)($W['checkEvery'] ?? 60), [0, 30, 60, 90, 120], true) ? (int)($W['checkEvery'] ?? 60) : 60;
         $o['work']['mobileRefs'] = array_values(array_filter(array_map('strval', (array)($W['mobileRefs'] ?? [])), fn($r) => (bool)preg_match('/^[A-Z0-9-]{4,40}$/', $r)));
+        $o['work']['remoteRefs'] = array_values(array_unique(array_filter(array_map('strval', (array)($W['remoteRefs'] ?? [])), fn($r) => (bool)preg_match('/^[A-Z0-9-]{4,40}$/', $r))));
         $sites = [];
         foreach (array_slice((array)($W['sites'] ?? []), 0, 30) as $x) {
             $nm = mb_substr(safe_text($x['name'] ?? ''), 0, 80); $la = (float)($x['lat'] ?? 0); $lo = (float)($x['lng'] ?? 0); $rad = max(20, min(5000, (int)($x['radius'] ?? 50)));
             if ($nm === '' || abs($la) > 90 || abs($lo) > 180 || ($la == 0 && $lo == 0)) throw new HttpError('أكمل اسم كل مقر وإحداثياته');
-            $sites[] = ['name' => $nm, 'entity' => mb_substr(safe_text($x['entity'] ?? ''), 0, 120), 'lat' => round($la, 6), 'lng' => round($lo, 6), 'radius' => $rad];
+            $tz = (string)($x['tz'] ?? ''); if (!att_tz_ok($tz)) $tz = ATT_TZ_DEFAULT;
+            $sites[] = ['name' => $nm, 'entity' => mb_substr(safe_text($x['entity'] ?? ''), 0, 120), 'lat' => round($la, 6), 'lng' => round($lo, 6), 'radius' => $rad, 'tz' => $tz];
         }
         $o['work']['sites'] = $sites;
         if ($o['work']['mobile'] !== 'off' && !$sites) throw new HttpError('أضف موقع عمل واحدًا على الأقل قبل تفعيل الحضور من الجوال');
@@ -326,12 +328,13 @@ function att_import(array $b): array {
     audit_log('', 'استيراد الحضور', $F['name'] . ' · ' . $res['records'] . ' يوم عمل · ' . $res['from'] . ' إلى ' . $res['to'], $me['_label']);
     return $res + ['batch' => $batch];
 }
-function att_calc(string $in, string $out, array $W): array {
+function att_calc(string $in, string $out, array $W, bool $free = false): array {
     $mn = fn($t) => $t ? ((int)substr($t, 0, 2)) * 60 + (int)substr($t, 3, 2) : null;
     $i = $mn($in); $o = $mn($out); $s = $mn($W['start']); $e = $mn($W['end']);
     $mins = $i !== null && $o !== null && $o > $i ? $o - $i : 0;
     $late = $i !== null && $i > $s + (int)$W['grace'] ? $i - $s : 0;
     $early = $o !== null && $o < $e ? $e - $o : 0;
+    if ($free) return [$mins, 0, 0]; /* العمل عن بعد: لا تأخير ولا انصراف مبكر */
     return [$mins, $late, $early];
 }
 /* ملخص شهري: لكل منسوب أيام الحضور والتأخير والغياب (أيام العمل بلا بصمة ولا إجازة معتمدة) */

@@ -289,48 +289,74 @@ function att_sites_for(string $ref): array {
     return $mine ?: array_values(array_filter($all, fn($x) => trim((string)($x['entity'] ?? '')) === ''));
 }
 function att_mobile_ok(string $ref): bool { $W = site()['work']; return $W['mobile'] === 'all' || ($W['mobile'] === 'listed' && in_array($ref, (array)$W['mobileRefs'], true)); }
+/* التوقيت المحلي: لكل مقر توقيته، والعامل عن بعد بتوقيت جهازه */
+const ATT_TZ_DEFAULT = 'Asia/Riyadh';
+function att_tz_ok(string $tz): bool { return $tz !== '' && strlen($tz) <= 64 && in_array($tz, DateTimeZone::listIdentifiers(), true); }
+/* العمل عن بعد: جهة اسمها فيه «عن بعد»، أو منسوب مضاف في الإعدادات */
+function att_remote(string $ref): bool {
+    if (in_array($ref, (array)(site()['work']['remoteRefs'] ?? []), true)) return true;
+    $s = staff_get($ref); return mb_strpos((string)($s['data']['entity'] ?? ''), 'عن بعد') !== false;
+}
+function att_tz_for(string $ref, string $client = '', ?bool $remote = null): string {
+    if ($remote ?? att_remote($ref)) return att_tz_ok($client) ? $client : ATT_TZ_DEFAULT;
+    foreach (att_sites_for($ref) as $x) if (att_tz_ok((string)($x['tz'] ?? ''))) return (string)$x['tz'];
+    return ATT_TZ_DEFAULT;
+}
+function att_clock(string $tz): array {
+    $d = new DateTime('now', new DateTimeZone(att_tz_ok($tz) ? $tz : ATT_TZ_DEFAULT));
+    return ['day' => $d->format('Y-m-d'), 't' => $d->format('H:i:s'), 'hm' => $d->format('H:i'), 'w' => (int)$d->format('w'), 'min' => (int)$d->format('G') * 60 + (int)$d->format('i'), 'off' => intdiv($d->getOffset(), 60), 'tz' => $d->getTimezone()->getName()];
+}
 /* سجل اليوم للمنسوب (للزر في صفحته) */
 function att_today(array $b): array {
     $u = hrp_me(); $ref = my_staff_ref($u); if (!$ref || !staff_can_see('att')) return ['ok' => true, 'on' => false];
-    $r = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, date('Y-m-d')]);
+    $remote = att_remote($ref); $C = att_clock(att_tz_for($ref, (string)($b['tz'] ?? ''), $remote));
+    $r = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, $C['day']]);
     $W = site()['work'];
-    return ['ok' => true, 'on' => att_mobile_ok($ref), 'in' => $r ? substr((string)$r['in_time'], 0, 5) : '', 'out' => $r && $r['out_time'] ? substr((string)$r['out_time'], 0, 5) : '', 'source' => $r['source'] ?? '',
-        'sites' => array_map(fn($x) => ['name' => $x['name'], 'radius' => $x['radius'], 'lat' => $x['lat'], 'lng' => $x['lng']], att_sites_for($ref)), 'weekend' => in_array((int)date('w'), $W['weekend'], true), 'now' => date('H:i'),
-        'start' => $W['start'], 'end' => $W['end'], 'grace' => (int)$W['grace'], 'push' => (bool)q1('SELECT id FROM push_subs WHERE user_id=? LIMIT 1', [(int)$u['id']]), 'vapid' => vapid()['pub']];
+    return ['ok' => true, 'on' => att_mobile_ok($ref), 'remote' => $remote, 'in' => $r ? substr((string)$r['in_time'], 0, 5) : '', 'out' => $r && $r['out_time'] ? substr((string)$r['out_time'], 0, 5) : '', 'source' => $r['source'] ?? '',
+        'sites' => $remote ? [] : array_map(fn($x) => ['name' => $x['name'], 'radius' => $x['radius'], 'lat' => $x['lat'], 'lng' => $x['lng']], att_sites_for($ref)), 'weekend' => !$remote && in_array($C['w'], $W['weekend'], true), 'now' => $C['hm'],
+        'tz' => $C['tz'], 'tzOff' => $C['off'], 'start' => $W['start'], 'end' => $W['end'], 'grace' => (int)$W['grace'], 'push' => (bool)q1('SELECT id FROM push_subs WHERE user_id=? LIMIT 1', [(int)$u['id']]), 'vapid' => vapid()['pub']];
 }
 function att_check(array $b): array {
     $u = hrp_me(); $ref = my_staff_ref($u); if (!$ref) throw new HttpError('لا يوجد سجل منسوب لهذا الحساب');
     if (!staff_can_see('att') || !att_mobile_ok($ref)) throw new HttpError('تسجيل الحضور من الجوال غير مفعّل لك. تواصل مع الموارد البشرية.');
     if (rate_hit('attck:' . $u['id'], 12, 3600)) throw new HttpError('محاولات كثيرة، حاول بعد قليل', 429);
     $la = (float)($b['lat'] ?? 0); $lo = (float)($b['lng'] ?? 0); $acc = max(0, (float)($b['acc'] ?? 9999));
-    if (($la == 0 && $lo == 0) || abs($la) > 90 || abs($lo) > 180) throw new HttpError('تعذّر قراءة موقعك. فعّل خدمة الموقع في الجوال وحاول مرة أخرى.');
-    if ($acc > 300) throw new HttpError('دقة الموقع ضعيفة (' . round($acc) . ' م). اخرج إلى مكان مفتوح أو فعّل «الموقع الدقيق» وحاول مرة أخرى.');
-    $best = null;
-    foreach (att_sites_for($ref) as $x) { $d = geo_m($la, $lo, (float)$x['lat'], (float)$x['lng']); if (!$best || $d < $best[1]) $best = [$x, $d]; }
-    if (!$best) throw new HttpError('لم يُحدَّد مقر لجهتك بعد. تواصل مع الموارد البشرية.');
-    $exit = !empty($b['exit']);
-    /* هامش الدقة: نصف دقة القراءة بحد أقصى 25 م، حتى لا يُقبل من خارج النطاق بقراءة ضعيفة */
-    if (!$exit && $best[1] > $best[0]['radius'] + min($acc / 2, 25)) throw new HttpError('أنت على بُعد ' . round($best[1]) . ' م من «' . $best[0]['name'] . '». تُقبل البصمة داخل ' . $best[0]['radius'] . ' م من المقر فقط.');
-    $day = date('Y-m-d'); $t = date('H:i:s'); $W = site()['work'];
+    $hasLoc = !($la == 0 && $lo == 0) && abs($la) <= 90 && abs($lo) <= 180;
+    $remote = att_remote($ref); $exit = !$remote && !empty($b['exit']);
+    if ($remote) {
+        /* عن بعد: يبصم من أي مكان وفي أي وقت؛ الموقع يُحفظ إن أُرسل للتوثيق فقط */
+        $best = [['name' => 'عن بعد'], 0.0];
+        $where = $hasLoc ? sprintf('%.5f، %.5f', $la, $lo) : 'بلا موقع';
+    } else {
+        if (!$hasLoc) throw new HttpError('تعذّر قراءة موقعك. فعّل خدمة الموقع في الجوال وحاول مرة أخرى.');
+        if ($acc > 300) throw new HttpError('دقة الموقع ضعيفة (' . round($acc) . ' م). اخرج إلى مكان مفتوح أو فعّل «الموقع الدقيق» وحاول مرة أخرى.');
+        $best = null;
+        foreach (att_sites_for($ref) as $x) { $d = geo_m($la, $lo, (float)$x['lat'], (float)$x['lng']); if (!$best || $d < $best[1]) $best = [$x, $d]; }
+        if (!$best) throw new HttpError('لم يُحدَّد مقر لجهتك بعد. تواصل مع الموارد البشرية.');
+        /* هامش الدقة: نصف دقة القراءة بحد أقصى 25 م، حتى لا يُقبل من خارج النطاق بقراءة ضعيفة */
+        if (!$exit && $best[1] > $best[0]['radius'] + min($acc / 2, 25)) throw new HttpError('أنت على بُعد ' . round($best[1]) . ' م من «' . $best[0]['name'] . '». تُقبل البصمة داخل ' . $best[0]['radius'] . ' م من المقر فقط.');
+        $where = round($best[1]) . ' م';
+    }
+    $C = att_clock(att_tz_for($ref, (string)($b['tz'] ?? ''), $remote)); $day = $C['day']; $t = $C['t']; $W = site()['work'];
     named_lock('att:' . $ref);
     try {
         $r = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, $day]);
-        $src = 'الجوال · ' . $best[0]['name'] . ' · ' . round($best[1]) . ' م';
+        $src = 'الجوال · ' . $best[0]['name'] . ' · ' . $where;
         if ($exit && (!$r || $r['out_time'])) throw new HttpError('لا يوجد حضور مفتوح اليوم لتسجيل انصرافه');
-        if ($exit) $src = 'انصراف عند مغادرة النطاق' . (!empty($b['auto']) ? ' (تلقائي)' : '') . ' · ' . round($best[1]) . ' م من ' . $best[0]['name'];
+        if ($exit) $src = 'انصراف عند مغادرة النطاق' . (!empty($b['auto']) ? ' (تلقائي)' : '') . ' · ' . $where . ' من ' . $best[0]['name'];
         if (!$r) {
-            [$m, $late, $early] = att_calc(substr($t, 0, 5), '', $W);
-            q('INSERT INTO attendance (ref, day, in_time, out_time, minutes, late_min, early_min, source, batch, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)', [$ref, $day, $t, null, 0, $late, 0, $src, 'mobile', now()]);
+            [$m, $late, $early] = att_calc(substr($t, 0, 5), '', $W, $remote);
+            q('INSERT INTO attendance (ref, day, in_time, out_time, minutes, late_min, early_min, source, batch, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)', [$ref, $day, $t, null, 0, $late, 0, mb_substr($src, 0, 120), 'mobile', now()]);
             $kind = 'in';
         } else {
-            if ($r['out_time'] && substr((string)$r['out_time'], 0, 5) === date('H:i')) throw new HttpError('سُجّل انصرافك للتو');
-            [$m, $late, $early] = att_calc(substr((string)$r['in_time'], 0, 5), substr($t, 0, 5), $W);
+            if ($r['out_time'] && substr((string)$r['out_time'], 0, 5) === $C['hm']) throw new HttpError('سُجّل انصرافك للتو');
+            [$m, $late, $early] = att_calc(substr((string)$r['in_time'], 0, 5), substr($t, 0, 5), $W, $remote);
             q('UPDATE attendance SET out_time=?, minutes=?, late_min=?, early_min=?, source=? WHERE id=?', [$t, $m, $late, $early, mb_substr($r['source'] . ' | ' . ($exit ? $src : 'انصراف: ' . $best[0]['name']), 0, 120), $r['id']]);
             $kind = 'out';
         }
     } finally { named_unlock('att:' . $ref); }
-    audit_log($ref, $kind === 'in' ? 'تسجيل حضور من الجوال' : ($exit ? 'انصراف عند مغادرة نطاق المقر' . (!empty($b['auto']) ? ' (تلقائي)' : '') : 'تسجيل انصراف من الجوال'), $best[0]['name'] . ' · ' . round($best[1]) . ' م · دقة ' . round($acc) . ' م', hrp_label($u));
-    return ['ok' => true, 'kind' => $kind, 'site' => $best[0]['name'], 'dist' => round($best[1])] + att_today([]);
+    audit_log($ref, $kind === 'in' ? 'تسجيل حضور من الجوال' . ($remote ? ' (عن بعد)' : '') : ($exit ? 'انصراف عند مغادرة نطاق المقر' . (!empty($b['auto']) ? ' (تلقائي)' : '') : 'تسجيل انصراف من الجوال' . ($remote ? ' (عن بعد)' : '')), $best[0]['name'] . ' · ' . $where . ($hasLoc ? ' · دقة ' . round($acc) . ' م' : '') . ' · ' . $C['tz'], hrp_label($u));
+    return ['ok' => true, 'kind' => $kind, 'site' => $best[0]['name'], 'dist' => round($best[1])] + att_today(['tz' => (string)($b['tz'] ?? '')]);
 }
 /* تصحيح يوم حضور بسبب مكتوب (يُحفظ في سجل العمليات بالقيم السابقة والجديدة) */
 function att_fix(array $b): array {
@@ -346,7 +372,7 @@ function att_fix(array $b): array {
     $was = $old ? substr((string)$old['in_time'], 0, 5) . '–' . substr((string)$old['out_time'], 0, 5) : 'لا سجل';
     if ($del) { if ($old) q('DELETE FROM attendance WHERE id=?', [$old['id']]); }
     else {
-        [$m, $late, $early] = att_calc($in, $out, site()['work']); $src = mb_substr('تصحيح: ' . $why, 0, 120);
+        [$m, $late, $early] = att_calc($in, $out, site()['work'], att_remote($ref)); $src = mb_substr('تصحيح: ' . $why, 0, 120);
         if ($old) q('UPDATE attendance SET in_time=?, out_time=?, minutes=?, late_min=?, early_min=?, source=?, batch=? WHERE id=?', [$in . ':00', $out ? $out . ':00' : null, $m, $late, $early, $src, 'fix', $old['id']]);
         else q('INSERT INTO attendance (ref, day, in_time, out_time, minutes, late_min, early_min, source, batch, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)', [$ref, $day, $in . ':00', $out ? $out . ':00' : null, $m, $late, $early, $src, 'fix', now()]);
     }
@@ -567,15 +593,18 @@ function push_unsub(array $b): array { $u = hrp_me(); q('DELETE FROM push_subs W
 /* جولة التنبيهات: عند بداية الدوام لمن لم يسجّل حضوره، وعند نهايته لمن لم يسجّل انصرافه (مرة في اليوم لكل منهما) */
 function att_push_tick(bool $force = false): array {
     $W = site()['work']; $out = ['start' => 0, 'end' => 0];
-    if ($W['mobile'] === 'off' || in_array((int)date('w'), $W['weekend'], true)) return $out;
+    if ($W['mobile'] === 'off') return $out;
     if (!$force) { if (kv_get('attpush:last') !== null) return $out; kv_put('attpush:last', '1', 240); }
-    $now = (int)date('H') * 60 + (int)date('i'); $mn = fn($t) => (int)substr($t, 0, 2) * 60 + (int)substr($t, 3, 2);
-    $inStart = $now >= $mn($W['start']) - 10 && $now <= $mn($W['start']) + max(30, (int)$W['grace']); $inEnd = $now >= $mn($W['end']) && $now <= $mn($W['end']) + 45;
-    $every = (int)($W['checkEvery'] ?? 60); $inWork = $now > $mn($W['start']) + max(30, (int)$W['grace']) && $now < $mn($W['end']) - 15;
-    if (!$inStart && !$inEnd && !($every > 0 && $inWork)) return $out;
-    $day = date('Y-m-d');
+    $mn = fn($t) => (int)substr($t, 0, 2) * 60 + (int)substr($t, 3, 2); $every = (int)($W['checkEvery'] ?? 60); $clk = [];
     foreach (q("SELECT DISTINCT p.user_id, u.staff_ref FROM push_subs p JOIN users u ON u.id=p.user_id WHERE u.active=1 AND u.staff_ref IS NOT NULL")->fetchAll() as $x) {
-        $ref = (string)$x['staff_ref']; if (!att_mobile_ok($ref)) continue;
+        $ref = (string)$x['staff_ref']; if (!att_mobile_ok($ref) || att_remote($ref)) continue; /* العامل عن بعد بلا مواعيد ثابتة */
+        /* وقت المقر المحلي لكل منسوب */
+        $tz = att_tz_for($ref, '', false); $C = $clk[$tz] ??= att_clock($tz);
+        if (in_array($C['w'], $W['weekend'], true)) continue;
+        $now = $C['min']; $day = $C['day'];
+        $inStart = $now >= $mn($W['start']) - 10 && $now <= $mn($W['start']) + max(30, (int)$W['grace']); $inEnd = $now >= $mn($W['end']) && $now <= $mn($W['end']) + 45;
+        $inWork = $now > $mn($W['start']) + max(30, (int)$W['grace']) && $now < $mn($W['end']) - 15;
+        if (!$inStart && !$inEnd && !($every > 0 && $inWork)) continue;
         $lv = false; foreach (q("SELECT data FROM requests WHERE ref=? AND status='approved' AND type IN ('leave','travel')", [$ref])->fetchAll() as $r) { $d = json_decode($r['data'], true) ?: []; if (($d['from'] ?? '') <= $day && ($d['to'] ?? '') >= $day) { $lv = true; break; } }
         if ($lv) continue;
         $a = q1('SELECT * FROM attendance WHERE ref=? AND day=?', [$ref, $day]);

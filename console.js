@@ -3183,7 +3183,7 @@ balHTML = function (b, compact) {
 var _setHTML0 = setHTML;
 setHTML = function () {
   var h = _setHTML0(); if (!SD) return h;
-  var L = SD.leave, W = SD.work; L.quotas = L.quotas || {}; W.sites = W.sites || []; W.mobileRefs = W.mobileRefs || []; if (W.probation == null) W.probation = 90; if (!W.mobile) W.mobile = 'off';
+  var L = SD.leave, W = SD.work; L.quotas = L.quotas || {}; W.sites = W.sites || []; W.mobileRefs = W.mobileRefs || []; W.remoteRefs = W.remoteRefs || []; if (W.probation == null) W.probation = 90; if (!W.mobile) W.mobile = 'off';
   var qk = LKINDS.filter(function (k) { return L.kinds.indexOf(k) < 0 && k !== 'بدون راتب' && k !== 'أخرى'; });
   var qp = pn('emerald', 'umbrella', 'أرصدة الأنواع الأخرى والترحيل', 'لكل نوع رصيد سنوي مستقل لا يُخصم من السنوية؛ صفر يعني بلا حد', '', '<div class="pb"><div class="form">' +
     '<div class="fld"><label for="stCarry">أقصى ما يُرحَّل من السنوية للعام التالي (يوم)</label><input id="stCarry" type="number" min="0" max="60" value="' + esc(L.carry || 0) + '"><small class="fhint">صفر: لا ترحيل</small></div>' +
@@ -3193,8 +3193,10 @@ setHTML = function () {
     '<div class="fld wide"><label>من يسجّل من الجوال</label><div class="seg2">' + mm.map(function (x) { return '<button type="button" data-mob="' + x[0] + '" aria-pressed="' + (W.mobile === x[0]) + '">' + x[1] + '<small>' + x[2] + '</small></button>'; }).join('') + '</div></div>' +
     (W.mobile === 'listed' ? '<div class="fld wide"><label>المنسوبون المسموح لهم</label>' + ssel('stMobAdd', staffOpts().filter(function (o) { return W.mobileRefs.indexOf(o.v) < 0; }), '', 'أضف منسوبًا', function (v) { SD.work.mobileRefs.push(v); softRender(); }, 'إضافة منسوب') +
       '<div class="chipsel">' + W.mobileRefs.map(function (r) { var s = byRef(r); return '<button type="button" data-mobdel="' + esc(r) + '" aria-pressed="true">' + esc(s ? s.name : r) + ' ×</button>'; }).join('') + '</div></div>' : '') +
+    '<div class="fld wide"><label>يعملون عن بعد (بلا نطاق ولا مواعيد)</label>' + ssel('stRemAdd', staffOpts().filter(function (o) { return W.remoteRefs.indexOf(o.v) < 0; }), '', 'أضف منسوبًا', function (v) { SD.work.remoteRefs.push(v); softRender(); }, 'إضافة منسوب يعمل عن بعد') +
+      '<div class="chipsel">' + W.remoteRefs.map(function (r) { var s = byRef(r); return '<button type="button" data-remdel="' + esc(r) + '" aria-pressed="true">' + esc(s ? s.name : r) + ' ×</button>'; }).join('') + '</div><small class="fhint">منسوبو أي جهة في اسمها «عن بعد» يعملون عن بعد تلقائيًا: يبصمون من أي مكان وفي أي وقت، بلا تأخير ولا تنبيهات دوام. أضف هنا من يعمل عن بعد من الجهات الأخرى.</small></div>' +
     '<div class="fld wide"><label>تأكيد التواجد أثناء الدوام</label><div class="seg2">' + [[0, 'لا'], [30, 'كل نصف ساعة'], [60, 'كل ساعة'], [120, 'كل ساعتين']].map(function (x) { return '<button type="button" data-chk="' + x[0] + '" aria-pressed="' + ((W.checkEvery == null ? 60 : +W.checkEvery) === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div><small class="fhint">يصل المنسوب تنبيه، فإذا فتحه تحقق جواله من وجوده داخل نطاق المقر، وإن كان خارجه طُلب منه استئذان أو احتُسب انصرافه.</small></div>' +
-    '<div class="fld wide"><label>مقرات الجهات (نقطة مركزية لكل مقر)</label><div class="sites">' + W.sites.map(function (x, i) { return '<div class="siter"><input data-site="' + i + '.name" value="' + esc(x.name) + '" placeholder="اسم المقر"><select data-site="' + i + '.entity" aria-label="الجهة"><option value="">كل الجهات</option>' + ENT.map(function (e) { var v = e.full || e.n; return '<option value="' + esc(v) + '"' + (v === x.entity || e.n === x.entity ? ' selected' : '') + '>' + esc(e.n) + '</option>'; }).join('') + '</select><input data-site="' + i + '.lat" value="' + esc(x.lat) + '" dir="ltr" placeholder="خط العرض"><input data-site="' + i + '.lng" value="' + esc(x.lng) + '" dir="ltr" placeholder="خط الطول"><input data-site="' + i + '.radius" type="number" min="30" max="5000" value="' + esc(x.radius) + '" dir="ltr" title="النطاق بالمتر"><button type="button" class="ib" data-sitehere="' + i + '" title="موقعي الحالي" aria-label="استخدام موقعي الحالي">' + ic('pin') + '</button><button type="button" class="ib del" data-sitedel="' + i + '" aria-label="حذف الموقع">' + ic('x') + '</button><div class="sitelink"><input data-sitelink="' + i + '" dir="ltr" inputmode="url" placeholder="الصق رابط خرائط جوجل للمقر لتُملأ الإحداثيات تلقائيًا" aria-label="رابط خرائط جوجل"><button type="button" class="btn sm" data-sitego="' + i + '">' + ic('pin') + 'استخراج</button>' + (x.lat && x.lng ? '<a class="btn sm ghost" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(x.lat + ',' + x.lng) + '">' + ic('eye') + 'تحقق على الخريطة</a>' : '') + '</div></div>'; }).join('') +
+    '<div class="fld wide"><label>مقرات الجهات (نقطة مركزية لكل مقر)</label><div class="sites">' + W.sites.map(function (x, i) { return '<div class="siter"><input data-site="' + i + '.name" value="' + esc(x.name) + '" placeholder="اسم المقر"><select data-site="' + i + '.entity" aria-label="الجهة"><option value="">كل الجهات</option>' + ENT.map(function (e) { var v = e.full || e.n; return '<option value="' + esc(v) + '"' + (v === x.entity || e.n === x.entity ? ' selected' : '') + '>' + esc(e.n) + '</option>'; }).join('') + '</select><input data-site="' + i + '.lat" value="' + esc(x.lat) + '" dir="ltr" placeholder="خط العرض"><input data-site="' + i + '.lng" value="' + esc(x.lng) + '" dir="ltr" placeholder="خط الطول"><input data-site="' + i + '.radius" type="number" min="30" max="5000" value="' + esc(x.radius) + '" dir="ltr" title="النطاق بالمتر"><button type="button" class="ib" data-sitehere="' + i + '" title="موقعي الحالي" aria-label="استخدام موقعي الحالي">' + ic('pin') + '</button><button type="button" class="ib del" data-sitedel="' + i + '" aria-label="حذف الموقع">' + ic('x') + '</button><div class="sitelink"><input data-sitelink="' + i + '" dir="ltr" inputmode="url" placeholder="الصق رابط خرائط جوجل للمقر لتُملأ الإحداثيات تلقائيًا" aria-label="رابط خرائط جوجل"><button type="button" class="btn sm" data-sitego="' + i + '">' + ic('pin') + 'استخراج</button><select data-site="' + i + '.tz" aria-label="توقيت المقر" title="توقيت المقر">' + tzOpts(x.tz) + '</select>' + (x.lat && x.lng ? '<a class="btn sm ghost" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(x.lat + ',' + x.lng) + '">' + ic('eye') + 'تحقق على الخريطة</a>' : '') + '</div></div>'; }).join('') +
     '</div><button type="button" class="btn sm" id="siteAdd">' + ic('plus') + 'إضافة مقر</button><small class="fhint">لكل جهة مقرها: يُقبل حضور منسوبيها داخل النطاق حوله فقط (50 م افتراضيًا). المقر بلا جهة يصلح لمن لا مقر لجهته. الإحداثيات من خرائط جوجل (اضغط مطوّلًا على المكان)، أو اضغط «موقعي الحالي» وأنت في المقر.</small></div></div></div>');
   return h.replace('<div class="setbar', '<div class="grid g2">' + qp + mp + '</div><div class="setbar');
 };
@@ -3208,17 +3210,18 @@ bindSet = function () {
   document.querySelectorAll('[data-mob]').forEach(function (b) { b.onclick = function () { SD.work.mobile = b.dataset.mob; re(); }; });
   document.querySelectorAll('[data-chk]').forEach(function (b) { b.onclick = function () { SD.work.checkEvery = +b.dataset.chk; re(); }; });
   document.querySelectorAll('[data-mobdel]').forEach(function (b) { b.onclick = function () { SD.work.mobileRefs = SD.work.mobileRefs.filter(function (r) { return r !== b.dataset.mobdel; }); re(); }; });
-  document.querySelectorAll('[data-site]').forEach(function (x) { x.onchange = function () { var p = x.dataset.site.split('.'); SD.work.sites[+p[0]][p[1]] = p[1] === 'name' || p[1] === 'entity' ? x.value : +x.value; re(); }; });
+  document.querySelectorAll('[data-remdel]').forEach(function (b) { b.onclick = function () { SD.work.remoteRefs = SD.work.remoteRefs.filter(function (r) { return r !== b.dataset.remdel; }); re(); }; });
+  document.querySelectorAll('[data-site]').forEach(function (x) { x.onchange = function () { var p = x.dataset.site.split('.'); var st = SD.work.sites[+p[0]]; st[p[1]] = p[1] === 'name' || p[1] === 'entity' || p[1] === 'tz' ? x.value : +x.value; if ((p[1] === 'lat' || p[1] === 'lng') && st.lat && st.lng) { var gz = tzGuess(+st.lat, +st.lng); if (gz) st.tz = gz; } re(); }; });
   document.querySelectorAll('[data-sitedel]').forEach(function (b) { b.onclick = function () { SD.work.sites.splice(+b.dataset.sitedel, 1); re(); }; });
   document.querySelectorAll('[data-sitehere]').forEach(function (b) { b.onclick = function () { if (!navigator.geolocation) return toast('المتصفح لا يدعم تحديد الموقع'); b.disabled = true;
-    navigator.geolocation.getCurrentPosition(function (p) { var x = SD.work.sites[+b.dataset.sitehere]; x.lat = +p.coords.latitude.toFixed(6); x.lng = +p.coords.longitude.toFixed(6); re(); toast('أُخذ موقعك الحالي بدقة ' + Math.round(p.coords.accuracy) + ' م'); }, function () { b.disabled = false; toast('تعذّر تحديد موقعك؛ فعّل خدمة الموقع'); }, { enableHighAccuracy: true, timeout: 15000 }); }; });
-  if (g('siteAdd')) g('siteAdd').onclick = function () { SD.work.sites.push({ name: '', entity: '', lat: '', lng: '', radius: 50 }); re(); };
+    navigator.geolocation.getCurrentPosition(function (p) { var x = SD.work.sites[+b.dataset.sitehere]; x.lat = +p.coords.latitude.toFixed(6); x.lng = +p.coords.longitude.toFixed(6); x.tz = devTZ() || x.tz; re(); toast('أُخذ موقعك الحالي بدقة ' + Math.round(p.coords.accuracy) + ' م'); }, function () { b.disabled = false; toast('تعذّر تحديد موقعك؛ فعّل خدمة الموقع'); }, { enableHighAccuracy: true, timeout: 15000 }); }; });
+  if (g('siteAdd')) g('siteAdd').onclick = function () { SD.work.sites.push({ name: '', entity: '', lat: '', lng: '', radius: 50, tz: 'Asia/Riyadh' }); re(); };
   var siteGo = function (i) {
     var inp = document.querySelector('[data-sitelink="' + i + '"]'), btn = document.querySelector('[data-sitego="' + i + '"]'), u = inp ? inp.value.trim() : '';
     if (!u) { if (inp) inp.focus(); return toast('الصق رابط المقر من خرائط جوجل أولًا'); }
     if (btn) btn.disabled = true;
     api({ action: 'geoResolve', url: u }).then(function (r) {
-      var x = SD.work.sites[i]; if (!x) return; x.lat = r.lat; x.lng = r.lng; if (!x.name && r.name) x.name = r.name; re();
+      var x = SD.work.sites[i]; if (!x) return; x.lat = r.lat; x.lng = r.lng; if (!x.name && r.name) x.name = r.name; var gz = tzGuess(r.lat, r.lng); if (gz) x.tz = gz; re();
       toast('تم: ' + r.lat + '، ' + r.lng + ' — راجعها بزر «تحقق على الخريطة» ثم احفظ');
     }).catch(function (e) { if (btn) btn.disabled = false; toast(errText(e) || 'تعذّر استخراج الإحداثيات'); });
   };
@@ -3232,20 +3235,26 @@ bindSet = function () {
 /* ---------- صفحة «حضوري»: التسجيل من الجوال ---------- */
 var _myatt0 = VIEWS.myatt;
 VIEWS.myatt = function () {
-  var h = _myatt0(), c = need('attToday', function () { return api({ action: 'attToday' }); }, 30000), d = c.data;
+  var h = _myatt0(), c = need('attToday', function () { return api({ action: 'attToday', tz: devTZ() }); }, 30000), d = c.data;
   if (!d || !d.on) return h;
-  var done = d.in && d.out, card = '<section class="pn mobck"><div class="mck">' + tile('teal', 'pin') + '<div><h2>' + (done ? 'سجّلت حضورك وانصرافك اليوم' : d.in ? 'حاضر منذ ' + d.in : 'لم تسجّل حضورك اليوم') + '</h2><p>' + (d.weekend ? 'اليوم عطلة نهاية الأسبوع. ' : '') + 'تُقبل البصمة من جوالك داخل نطاق مقر جهتك، وإن غادرت النطاق أثناء الدوام يُطلب منك استئذان أو يُحتسب انصرافك.</p>' +
+  var done = d.in && d.out, card = '<section class="pn mobck"><div class="mck">' + tile('teal', 'pin') + '<div><h2>' + (done ? 'سجّلت حضورك وانصرافك اليوم' : d.in ? 'حاضر منذ ' + d.in : 'لم تسجّل حضورك اليوم') + '</h2><p>' + (d.weekend ? 'اليوم عطلة نهاية الأسبوع. ' : '') + (d.remote ? 'تعمل عن بعد: سجّل حضورك وانصرافك من أي مكان وفي أي وقت.' : 'تُقبل البصمة من جوالك داخل نطاق مقر جهتك، وإن غادرت النطاق أثناء الدوام يُطلب منك استئذان أو يُحتسب انصرافك.') + '</p>' +
     (d.in ? '<div class="mtimes"><span>الحضور <b class="ltr">' + d.in + '</b></span><span>الانصراف <b class="ltr">' + (d.out || '—') + '</b></span></div>' : '') + '<div class="lerr" id="mckErr" role="alert"></div></div>' +
     '<button class="btn ' + (d.in ? 'prim' : 'goldb') + ' big" id="mckBtn">' + ic('finger') + (d.in ? (d.out ? 'تحديث الانصراف' : 'تسجيل الانصراف') : 'تسجيل الحضور') + '</button></div></section>';
   return h.replace('<div class="grid g4">', card + '<div class="grid g4">');
 };
+function devTZ() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; } }
 function mobCheck(b) {
-  var err = document.getElementById('mckErr'); if (!navigator.geolocation) { err.textContent = 'المتصفح لا يدعم تحديد الموقع.'; return; }
-  b.disabled = true; var t0 = b.innerHTML; b.innerHTML = ic('pin') + 'جارٍ تحديد موقعك…'; err.textContent = '';
-  navigator.geolocation.getCurrentPosition(function (p) {
-    api({ action: 'attCheck', lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }).then(function (j) { seed('attToday', j); GEO.out = 0; GEO.permSent = false; Object.keys(CACHE).forEach(function (k) { if (k.indexOf('myatt:') === 0) delete CACHE[k]; }); softRender(); toast((j.kind === 'in' ? 'سُجّل حضورك' : 'سُجّل انصرافك') + ' في ' + j.site); })
+  var err = document.getElementById('mckErr'), d = attT() || {}, remote = !!d.remote;
+  if (!navigator.geolocation && !remote) { err.textContent = 'المتصفح لا يدعم تحديد الموقع.'; return; }
+  b.disabled = true; var t0 = b.innerHTML; b.innerHTML = ic(remote ? 'finger' : 'pin') + (remote ? 'جارٍ التسجيل…' : 'جارٍ تحديد موقعك…'); err.textContent = '';
+  var send = function (p) {
+    var q = { action: 'attCheck', tz: devTZ() }; if (p) { q.lat = p.coords.latitude; q.lng = p.coords.longitude; q.acc = p.coords.accuracy; }
+    api(q).then(function (j) { seed('attToday', j); GEO.out = 0; GEO.permSent = false; Object.keys(CACHE).forEach(function (k) { if (k.indexOf('myatt:') === 0) delete CACHE[k]; }); softRender(); toast((j.kind === 'in' ? 'سُجّل حضورك' : 'سُجّل انصرافك') + (j.site === 'عن بعد' ? ' (عن بعد)' : ' في ' + j.site)); })
       .catch(function (e) { b.disabled = false; b.innerHTML = t0; err.textContent = errText(e); });
-  }, function (e) { b.disabled = false; b.innerHTML = t0; err.textContent = e && e.code === 1 ? 'اسمح للمنصة بالوصول إلى موقعك من إعدادات المتصفح، ثم حاول مرة أخرى.' : 'تعذّر تحديد موقعك. فعّل خدمة الموقع وحاول مرة أخرى.'; }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  };
+  /* العامل عن بعد: يُرسل الموقع إن توفر سريعًا للتوثيق، وإلا يُسجَّل بدونه */
+  if (remote) { if (!navigator.geolocation) return send(null); return navigator.geolocation.getCurrentPosition(send, function () { send(null); }, { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }); }
+  navigator.geolocation.getCurrentPosition(send, function (e) { b.disabled = false; b.innerHTML = t0; err.textContent = e && e.code === 1 ? 'اسمح للمنصة بالوصول إلى موقعك من إعدادات المتصفح، ثم حاول مرة أخرى.' : 'تعذّر تحديد موقعك. فعّل خدمة الموقع وحاول مرة أخرى.'; }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
 }
 
 /* ---------- تصحيح الحضور من نافذة المنسوب في السجل الشهري ---------- */
@@ -3469,7 +3478,9 @@ var GEO = { watch: null, out: 0, timer: null, asked: false, pend: '', last: null
 (function () { var h = location.hash.slice(1); if (/^myatt-(ck|perm|out)$/.test(h)) GEO.pend = h.slice(6); window.addEventListener('hashchange', function () { var x = location.hash.slice(1); if (/^myatt-(ck|perm|out)$/.test(x)) GEO.pend = x.slice(6); }); })();
 function geoD(a1, o1, a2, o2) { var R = 6371000, r = Math.PI / 180, dp = (a2 - a1) * r, dl = (o2 - o1) * r, h = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(a1 * r) * Math.cos(a2 * r) * Math.sin(dl / 2) * Math.sin(dl / 2); return 2 * R * Math.asin(Math.min(1, Math.sqrt(h))); }
 function attT() { var c = CACHE.attToday; return c && c.data; }
-function inWork(d) { var n = new Date(), m = n.getHours() * 60 + n.getMinutes(), f = function (t) { var p = String(t || '').split(':'); return +p[0] * 60 + +p[1]; }; return !d.weekend && m >= f(d.start) && m < f(d.end); }
+/* الدقيقة الحالية بتوقيت المقر (لا بتوقيت الجهاز) */
+function siteMin(d) { var n = new Date(), off = d && d.tzOff != null ? +d.tzOff : -n.getTimezoneOffset(); return (((n.getUTCHours() * 60 + n.getUTCMinutes() + off) % 1440) + 1440) % 1440; }
+function inWork(d) { if (!d || d.remote) return false; var m = siteMin(d), f = function (t) { var p = String(t || '').split(':'); return +p[0] * 60 + +p[1]; }; return !d.weekend && m >= f(d.start) && m < f(d.end); }
 /* تفعيل التنبيهات: عامل الخدمة + اشتراك Web Push */
 function pushOn(btn) {
   var d = attT(); if (!('serviceWorker' in navigator) || !('PushManager' in window)) { toast(/iP(hone|ad)/.test(navigator.userAgent) ? 'على الآيفون: أضف المنصة إلى الشاشة الرئيسية من زر المشاركة، ثم افتحها منها وفعّل التنبيهات' : 'المتصفح لا يدعم التنبيهات؛ استخدم Chrome'); return; }
@@ -3516,7 +3527,7 @@ function geoExit(best) {
 function geoCheckout(auto, btn) {
   var g = GEO.last; if (!g) return;
   if (btn) btn.disabled = true;
-  api({ action: 'attCheck', lat: g.lat, lng: g.lng, acc: g.acc, exit: 1, auto: auto ? 1 : 0 }).then(function (j) { seed('attToday', j); geoStop(); if (GEO.timer) { clearTimeout(GEO.timer); GEO.timer = null; } var L = document.getElementById('exLayer'); if (L) L.close(); Object.keys(CACHE).forEach(function (k) { if (k.indexOf('myatt:') === 0) delete CACHE[k]; }); softRender(); toast(auto ? 'احتُسب انصرافك لمغادرتك نطاق المقر' : 'سُجّل انصرافك'); if (auto) geoNote('احتُسب انصرافك', 'غادرت نطاق المقر دون استئذان، فسُجّل انصرافك تلقائيًا.'); })
+  api({ action: 'attCheck', lat: g.lat, lng: g.lng, acc: g.acc, exit: 1, auto: auto ? 1 : 0, tz: devTZ() }).then(function (j) { seed('attToday', j); geoStop(); if (GEO.timer) { clearTimeout(GEO.timer); GEO.timer = null; } var L = document.getElementById('exLayer'); if (L) L.close(); Object.keys(CACHE).forEach(function (k) { if (k.indexOf('myatt:') === 0) delete CACHE[k]; }); softRender(); toast(auto ? 'احتُسب انصرافك لمغادرتك نطاق المقر' : 'سُجّل انصرافك'); if (auto) geoNote('احتُسب انصرافك', 'غادرت نطاق المقر دون استئذان، فسُجّل انصرافك تلقائيًا.'); })
     .catch(function (e) { if (btn) btn.disabled = false; toast(errText(e)); });
 }
 function exitDlg(best) {
@@ -3547,7 +3558,9 @@ var _myatt1 = VIEWS.myatt;
 VIEWS.myatt = function () {
   var h = _myatt1(), d = attT(); if (!d || !d.on) return h;
   var pushOk = d.push && typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  if (d.remote) return h.replace('<div class="lerr" id="mckErr"', '<div class="mlink"><span class="tok">' + ic('globe') + 'عمل عن بعد · بلا نطاق ولا مواعيد</span><span>' + ic('clock') + 'التوقيت: <b>' + esc(tzName(d.tz)) + '</b></span></div><div class="lerr" id="mckErr"');
   var extra = '<div class="mlink">' + (d.sites.length ? '<span>' + ic('pin') + 'مقرك: <b>' + esc(d.sites.map(function (x) { return x.name; }).join('، ')) + '</b> · النطاق ' + d.sites[0].radius + ' م</span>' : '<span class="tbad">' + ic('alert') + 'لم يُحدَّد مقر لجهتك بعد</span>') +
+    (d.tz && d.tz !== 'Asia/Riyadh' ? '<span>' + ic('clock') + 'بتوقيت <b>' + esc(tzName(d.tz)) + '</b></span>' : '') +
     (pushOk ? '<span class="tok">' + ic('bell') + 'التنبيهات مفعّلة</span>' : '<button class="btn sm goldb" id="pushOn">' + ic('bell') + 'فعّل تنبيه بداية الدوام</button>') +
     (GEO.watch !== null ? '<span class="tok">' + ic('eye') + 'متابعة النطاق تعمل</span>' : '') + '</div>';
   return h.replace('<div class="lerr" id="mckErr"', extra + '<div class="lerr" id="mckErr"');
@@ -3556,7 +3569,7 @@ var _bindHrx1 = bindHrx;
 bindHrx = function () {
   _bindHrx1();
   if (role !== 'staff') return;
-  var c = need('attToday', function () { return api({ action: 'attToday' }); }, 60000);
+  var c = need('attToday', function () { return api({ action: 'attToday', tz: devTZ() }); }, 60000);
   if (c.data && c.data.on && c.data.in && !c.data.out) formsData();
   var pb = document.getElementById('pushOn'); if (pb) pb.onclick = function () { pushOn(pb); };
   if (c.data) {
@@ -3580,7 +3593,7 @@ function isPhone() { return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.us
 function isIOS() { return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
 function standalone() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
 var GATE = { geo: null };
-function gateNeed() { var d = attT(); return role === 'staff' && d && d.on && isPhone(); }
+function gateNeed() { var d = attT(); return role === 'staff' && d && d.on && !d.remote && isPhone(); }
 function gateState() {
   var d = attT() || {};
   return { inst: standalone() || INST.done, push: !!(d.push && typeof Notification !== 'undefined' && Notification.permission === 'granted'), geo: GATE.geo === 'granted' };
@@ -3702,6 +3715,19 @@ document.addEventListener('click', function (e) {
   }).then(function () { softRender(); toast('أُزيل المرفق من الملف، وسُجّل في سجل العمليات'); })
     .catch(function (er) { b.disabled = false; b.classList.remove('busy', 'arm'); toast('تعذّرت الإزالة: ' + ((er && er.message) || '')); });
 }, true);
+
+/* ---------- توقيت المقرات ---------- */
+var TZS = [['Asia/Riyadh', 'السعودية (مكة المكرمة)'], ['Asia/Jakarta', 'إندونيسيا - غرب (جاكرتا)'], ['Asia/Makassar', 'إندونيسيا - وسط (مكاسر)'], ['Asia/Jayapura', 'إندونيسيا - شرق (جايابورا)'], ['Africa/Nairobi', 'كينيا (نيروبي)'], ['Africa/Addis_Ababa', 'إثيوبيا (أديس أبابا)'], ['Asia/Dubai', 'الإمارات (دبي)'], ['Africa/Cairo', 'مصر (القاهرة)'], ['Europe/Istanbul', 'تركيا (إسطنبول)'], ['Asia/Karachi', 'باكستان (كراتشي)'], ['Asia/Kuala_Lumpur', 'ماليزيا (كوالالمبور)']];
+function tzName(z) { for (var i = 0; i < TZS.length; i++) if (TZS[i][0] === z) return TZS[i][1]; return z || 'السعودية (مكة المكرمة)'; }
+function tzOpts(cur) { cur = cur || 'Asia/Riyadh'; var L = TZS.slice(); if (!L.some(function (x) { return x[0] === cur; })) L.push([cur, cur]); return L.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === cur ? ' selected' : '') + '>' + esc(x[1]) + '</option>'; }).join(''); }
+/* تخمين التوقيت من الإحداثيات للبلدان التي تعمل فيها المجموعة */
+function tzGuess(la, lo) {
+  if (la > -11.5 && la < 6.5 && lo > 94 && lo < 141.5) return lo < 114.6 ? 'Asia/Jakarta' : lo < 125.5 ? 'Asia/Makassar' : 'Asia/Jayapura';
+  if (la > 16 && la < 32.5 && lo > 34.4 && lo < 55.7) return 'Asia/Riyadh';
+  if (la > -4.8 && la < 5.1 && lo > 33.9 && lo < 41.95) return 'Africa/Nairobi';
+  if (la > 3.4 && la < 15 && lo > 33 && lo < 48) return 'Africa/Addis_Ababa';
+  return '';
+}
 
 window.addEventListener('hashchange', route);
 boot();

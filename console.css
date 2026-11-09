@@ -1969,3 +1969,5 @@ td > .mv { display: contents; }
 .sitelink .btn { height: 36px; white-space: nowrap; }
 .sites > .siter:last-child .sitelink { border-bottom: 0; padding-bottom: 0; }
 @media (max-width: 760px) { .sitelink .btn { flex: 1 1 auto; justify-content: center; } }
+.sitelink select { height: 36px; font-size: 12.5px; max-width: 210px; }
+@media (max-width: 760px) { .sitelink select { flex: 1 1 100%; max-width: none; } }
