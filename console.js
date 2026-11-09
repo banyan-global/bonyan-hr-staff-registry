@@ -3209,7 +3209,8 @@ setHTML = function () {
     '<div class="fld wide"><label>تأكيد التواجد أثناء الدوام</label><div class="seg2">' + [[0, 'لا'], [30, 'كل نصف ساعة'], [60, 'كل ساعة'], [120, 'كل ساعتين']].map(function (x) { return '<button type="button" data-chk="' + x[0] + '" aria-pressed="' + ((W.checkEvery == null ? 60 : +W.checkEvery) === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div><small class="fhint">يصل المنسوب تنبيه، فإذا فتحه تحقق جواله من وجوده داخل نطاق المقر، وإن كان خارجه طُلب منه استئذان أو احتُسب انصرافه.</small></div>' +
     '<div class="fld wide"><label>مقرات الجهات (نقطة مركزية لكل مقر)</label><div class="sites">' + W.sites.map(function (x, i) { return '<div class="siter"><input data-site="' + i + '.name" value="' + esc(x.name) + '" placeholder="اسم المقر"><select data-site="' + i + '.entity" aria-label="الجهة"><option value="">كل الجهات</option>' + ENT.map(function (e) { var v = e.full || e.n; return '<option value="' + esc(v) + '"' + (v === x.entity || e.n === x.entity ? ' selected' : '') + '>' + esc(e.n) + '</option>'; }).join('') + '</select><input data-site="' + i + '.lat" value="' + esc(x.lat) + '" dir="ltr" placeholder="خط العرض"><input data-site="' + i + '.lng" value="' + esc(x.lng) + '" dir="ltr" placeholder="خط الطول"><input data-site="' + i + '.radius" type="number" min="30" max="5000" value="' + esc(x.radius) + '" dir="ltr" title="النطاق بالمتر"><button type="button" class="ib" data-sitehere="' + i + '" title="موقعي الحالي" aria-label="استخدام موقعي الحالي">' + ic('pin') + '</button><button type="button" class="ib del" data-sitedel="' + i + '" aria-label="حذف الموقع">' + ic('x') + '</button><div class="sitelink"><input data-sitelink="' + i + '" dir="ltr" inputmode="url" placeholder="الصق رابط خرائط جوجل للمقر لتُملأ الإحداثيات تلقائيًا" aria-label="رابط خرائط جوجل"><button type="button" class="btn sm" data-sitego="' + i + '">' + ic('pin') + 'استخراج</button><select data-site="' + i + '.tz" aria-label="توقيت المقر" title="توقيت المقر">' + tzOpts(x.tz) + '</select>' + (x.lat && x.lng ? '<a class="btn sm ghost" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + encodeURIComponent(x.lat + ',' + x.lng) + '">' + ic('eye') + 'تحقق على الخريطة</a>' : '') + '</div></div>'; }).join('') +
     '</div><button type="button" class="btn sm" id="siteAdd">' + ic('plus') + 'إضافة مقر</button><small class="fhint">لكل جهة مقرها: يُقبل حضور منسوبيها داخل النطاق حوله فقط (50 م افتراضيًا). المقر بلا جهة يصلح لمن لا مقر لجهته. الإحداثيات من خرائط جوجل (اضغط مطوّلًا على المكان)، أو اضغط «موقعي الحالي» وأنت في المقر.</small></div></div></div>');
-  return h.replace('<div class="setbar', '<div class="grid g2">' + qp + mp + '</div><div class="setbar');
+  var attOff = SD.modules && SD.modules.att === false;
+  return h.replace('<div class="setbar', '<div class="grid g2">' + qp + (attOff ? '' : mp) + '</div><div class="setbar');
 };
 var _bindSet0 = bindSet;
 bindSet = function () {
@@ -3605,9 +3606,13 @@ function isIOS() { return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navi
 function standalone() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
 var GATE = { geo: null };
 function gateNeed() { var d = attT(); return role === 'staff' && d && d.on && !d.remote && isPhone(); }
+/* الآيفون: التنبيهات لا تعمل إلا في التطبيق المثبّت على iOS 16.4 فأحدث؛ إن لم يدعمها الجهاز لا نوقف المنسوب عندها */
+function pushUnsupported() { return standalone() && (!('PushManager' in window) || typeof Notification === 'undefined'); }
+function geoMemo(v) { try { if (v) localStorage.setItem('bhr:geo', v); return localStorage.getItem('bhr:geo') || ''; } catch (e) { return ''; } }
+function iosBrowser() { var u = navigator.userAgent; return /FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|TikTok|MicroMessenger/i.test(u) ? 'inapp' : /CriOS|FxiOS|EdgiOS|OPiOS/i.test(u) ? 'other' : 'safari'; }
 function gateState() {
   var d = attT() || {};
-  return { inst: standalone() || INST.done, push: !!(d.push && typeof Notification !== 'undefined' && Notification.permission === 'granted'), geo: GATE.geo === 'granted' };
+  return { inst: standalone() || INST.done, push: pushUnsupported() || !!(d.push && typeof Notification !== 'undefined' && Notification.permission === 'granted'), geo: GATE.geo === 'granted' || (GATE.geo !== 'denied' && geoMemo() === 'granted') };
 }
 function gateDraw() {
   var L = document.getElementById('gateLayer');
@@ -3615,7 +3620,10 @@ function gateDraw() {
   var st = gateState(); if (st.inst && st.push && st.geo) { if (L) { L.remove(); toast('اكتمل التفعيل. البصمة من الجوال جاهزة'); } return; }
   var ios = isIOS(), canPrompt = !!INST.evt;
   var step = function (ok, n, t, body, btn) { return '<li class="' + (ok ? 'ok' : '') + '"><i>' + (ok ? ic('check') : n) + '</i><div><b>' + t + '</b>' + (ok ? '<small>تم</small>' : body + (btn || '')) + '</div></li>'; };
-  var instBody = st.inst ? '' : ios ? '<small>اضغط زر المشاركة ' + '<span class="shr">⎙</span>' + ' أسفل سفاري، ثم «إضافة إلى الشاشة الرئيسية»، ثم افتح «بنيان HR» من الشاشة الرئيسية وأكمل منه.</small>'
+  var ib = ios ? iosBrowser() : '';
+  var instBody = st.inst ? '' : ib === 'inapp' ? '<small>أنت تفتح المنصة من داخل تطبيق آخر (واتساب أو غيره). اضغط ⋯ أو «فتح في المتصفح» لتفتحها في سفاري، ثم اضغط زر المشاركة <span class="shr">⎙</span> واختر «إضافة إلى الشاشة الرئيسية».</small>'
+    : ib === 'other' ? '<small>اضغط زر المشاركة <span class="shr">⎙</span> في شريط المتصفح، ثم «إضافة إلى الشاشة الرئيسية» (يتطلب iOS 16.4 فأحدث، وإلا فافتح الرابط في سفاري)، ثم افتح «بنيان HR» من الشاشة الرئيسية وسجّل دخولك فيه.</small>'
+    : ios ? '<small>اضغط زر المشاركة ' + '<span class="shr">⎙</span>' + ' في سفاري، ثم «إضافة إلى الشاشة الرئيسية»، ثم افتح «بنيان HR» من الشاشة الرئيسية وسجّل دخولك فيه مرة واحدة (الآيفون يفصل التطبيق عن سفاري).</small>'
     : canPrompt ? '<small>يُضاف إلى الشاشة الرئيسية كتطبيق، ويعمل منه الحضور والتنبيهات.</small>' : '<small>من قائمة المتصفح ⋮ اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»، ثم افتحه من الشاشة الرئيسية.</small>';
   var html = '<div class="gate"><div class="gcard"><span class="glogo"><img src="' + LOGO + '" alt=""></span><h2>فعّل البصمة من جوالك</h2><p>هذه الخطوات إلزامية لتسجيل حضورك وانصرافك من المقر، ولا تأخذ أكثر من دقيقة.</p><ol class="gsteps">' +
     step(st.inst, 1, 'ثبّت تطبيق «بنيان HR»', instBody, !st.inst && canPrompt ? '<button class="btn goldb" id="gInst">' + ic('dl') + 'تثبيت التطبيق</button>' : '') +
@@ -3627,11 +3635,11 @@ function gateDraw() {
   var g = function (id) { return L.querySelector('#' + id); };
   if (g('gInst')) g('gInst').onclick = function () { var e = INST.evt; if (!e) return; e.prompt(); e.userChoice.then(function (c) { if (c.outcome === 'accepted') INST.done = true; INST.evt = null; gateDraw(); }); };
   if (g('gPush')) g('gPush').onclick = function () { pushOn(this); var t = setInterval(function () { if (gateState().push) { clearInterval(t); gateDraw(); } }, 800); setTimeout(function () { clearInterval(t); gateDraw(); }, 20000); };
-  if (g('gGeo')) g('gGeo').onclick = function () { var b = this; b.disabled = true; navigator.geolocation.getCurrentPosition(function () { GATE.geo = 'granted'; gateDraw(); geoStart(); }, function (er) { GATE.geo = er && er.code === 1 ? 'denied' : null; b.disabled = false; gateDraw(); }, { enableHighAccuracy: true, timeout: 20000 }); };
+  if (g('gGeo')) g('gGeo').onclick = function () { var b = this; b.disabled = true; navigator.geolocation.getCurrentPosition(function () { GATE.geo = 'granted'; geoMemo('granted'); gateDraw(); geoStart(); }, function (er) { GATE.geo = er && er.code === 1 ? 'denied' : null; b.disabled = false; gateDraw(); }, { enableHighAccuracy: true, timeout: 20000 }); };
 }
 function gateCheck() {
   if (!gateNeed()) return gateDraw();
-  if (GATE.geo === null && navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name: 'geolocation' }).then(function (p) { GATE.geo = p.state === 'granted' ? 'granted' : p.state === 'denied' ? 'denied' : ''; gateDraw(); p.onchange = function () { GATE.geo = p.state; gateDraw(); }; }, function () { GATE.geo = ''; gateDraw(); });
+  if (GATE.geo === null && navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name: 'geolocation' }).then(function (p) { GATE.geo = p.state === 'granted' ? 'granted' : p.state === 'denied' ? 'denied' : ''; if (p.state === 'granted') geoMemo('granted'); gateDraw(); p.onchange = function () { GATE.geo = p.state; gateDraw(); }; }, function () { GATE.geo = ''; gateDraw(); });
   else gateDraw();
 }
 /* التحقق من التواجد عند فتح تنبيه «تأكيد التواجد» */
