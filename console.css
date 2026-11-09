@@ -1962,3 +1962,10 @@ td > .mv { display: contents; }
 .frm.arm { color: #fff; background: #c0392b; border-color: #c0392b; padding: 0 10px; } .frm.arm span { display: inline; }
 .frm.busy { opacity: .6; pointer-events: none; }
 .frm-h { display: flex; align-items: center; gap: 8px; margin: 18px 4px 8px; font-size: 14px; color: var(--ink-2, var(--ink)); } .frm-h .i { width: 17px; height: 17px; color: var(--gold-ink); }
+
+/* رابط خرائط جوجل لكل مقر */
+.sitelink { grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: -2px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+.sitelink input { flex: 1 1 220px; min-width: 0; height: 36px; font-size: 12.5px; }
+.sitelink .btn { height: 36px; white-space: nowrap; }
+.sites > .siter:last-child .sitelink { border-bottom: 0; padding-bottom: 0; }
+@media (max-width: 760px) { .sitelink .btn { flex: 1 1 auto; justify-content: center; } }

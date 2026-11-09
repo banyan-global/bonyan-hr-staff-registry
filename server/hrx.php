@@ -75,6 +75,51 @@ function site_save(array $b): array {
     return ['ok' => true, 'site' => $o, 'canEdit' => true];
 }
 
+/* ============================================================ إحداثيات المقر من رابط خرائط جوجل */
+/* يقبل الرابط المختصر (maps.app.goo.gl) أو الكامل أو «خط العرض، خط الطول»، ويتتبع التحويلات داخل نطاقات جوجل فقط */
+function geo_parse(string $s): ?array {
+    $s = rawurldecode(rawurldecode(html_entity_decode($s, ENT_QUOTES)));
+    $pats = ['/!3d(-?\d{1,2}\.\d{3,})!4d(-?\d{1,3}\.\d{3,})/', '/[?&](?:q|query|ll|sll|center|daddr|destination|markers)=(?:loc:)?[^0-9\-]{0,12}(-?\d{1,2}\.\d{3,})\s*[,+ ]\s*\+?(-?\d{1,3}\.\d{3,})/',
+        '/\/search\/(-?\d{1,2}\.\d{3,}),\+?(-?\d{1,3}\.\d{3,})/', '/@(-?\d{1,2}\.\d{3,}),(-?\d{1,3}\.\d{3,})/', '/^\s*(-?\d{1,2}\.\d{3,})\s*[,،\s]\s*(-?\d{1,3}\.\d{3,})\s*$/u',
+        '/center=(-?\d{1,2}\.\d{3,})(?:%2C|,)(-?\d{1,3}\.\d{3,})/', '/\[null,null,(-?\d{1,2}\.\d{4,}),(-?\d{1,3}\.\d{4,})\]/'];
+    foreach ($pats as $p) if (preg_match($p, $s, $m)) { $la = (float)$m[1]; $lo = (float)$m[2]; if (abs($la) <= 90 && abs($lo) <= 180 && ($la || $lo)) return [round($la, 6), round($lo, 6)]; }
+    /* صفحة الخريطة نفسها: مركز العرض [الارتفاع، الطول، العرض] */
+    if (preg_match('/APP_INITIALIZATION_STATE=\[\[\[[-\d.e+]+,(-?\d{1,3}\.\d{4,}),(-?\d{1,2}\.\d{4,})\]/', $s, $m)) { $lo = (float)$m[1]; $la = (float)$m[2]; if (abs($la) <= 90 && abs($lo) <= 180) return [round($la, 6), round($lo, 6)]; }
+    return null;
+}
+function geo_place_name(string $u): string {
+    return preg_match('#/maps/place/([^/@?]+)#', $u, $m) ? mb_substr(trim(str_replace('+', ' ', rawurldecode($m[1]))), 0, 80) : '';
+}
+function geo_resolve(array $b): array {
+    require_perm('settings.manage');
+    $u = trim((string)($b['url'] ?? ''));
+    if ($u === '' || mb_strlen($u) > 2000) throw new HttpError('الصق رابط الموقع من خرائط جوجل');
+    if ($c = geo_parse($u)) return ['ok' => true, 'lat' => $c[0], 'lng' => $c[1], 'name' => geo_place_name($u)];
+    if (!preg_match('#^https?://#i', $u) && preg_match('#^(maps\.app\.goo\.gl|goo\.gl|(www\.|maps\.)?google\.[a-z.]+)/#i', $u)) $u = 'https://' . $u;
+    $okHost = fn($x) => (bool)preg_match('/(^|\.)(goo\.gl|google\.[a-z]{2,3}(\.[a-z]{2})?)$/i', (string)parse_url($x, PHP_URL_HOST));
+    if (!$okHost($u) || !preg_match('#^https?://#i', $u)) throw new HttpError('يُقبل رابط من خرائط جوجل فقط');
+    if (!function_exists('curl_init')) throw new HttpError('تعذّر فتح الرابط على الخادم؛ أدخل الإحداثيات يدويًا');
+    $name = '';
+    for ($i = 0; $i < 7; $i++) {
+        $ch = curl_init($u);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HEADER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_TIMEOUT => 10, CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS | CURLPROTO_HTTP, CURLOPT_USERAGENT => 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36',
+            CURLOPT_HTTPHEADER => ['Accept-Language: ar,en;q=0.8'], CURLOPT_MAXFILESIZE => 3000000]);
+        $res = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE); $hl = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE); curl_close($ch);
+        if ($res === false) break;
+        $name = geo_place_name($u) ?: $name;
+        if ($code >= 300 && $code < 400 && preg_match('/^location:\s*(\S+)/im', substr($res, 0, $hl), $m)) {
+            $next = trim($m[1]); if ($next[0] === '/') $next = preg_replace('#^(https?://[^/]+).*#', '$1', $u) . $next;
+            if ($c = geo_parse($next)) return ['ok' => true, 'lat' => $c[0], 'lng' => $c[1], 'name' => geo_place_name($next) ?: $name];
+            if (!$okHost($next)) break;
+            $u = $next; continue;
+        }
+        if ($c = geo_parse(substr($res, $hl, 1500000))) return ['ok' => true, 'lat' => $c[0], 'lng' => $c[1], 'name' => $name];
+        break;
+    }
+    throw new HttpError('لم أستخرج الإحداثيات من هذا الرابط. افتحه في خرائط جوجل، واضغط مطوّلًا على المكان، وانسخ الرقمين الظاهرين والصقهما هنا');
+}
+
 /* ============================================================ أرصدة الإجازات */
 /* الاستحقاق السنوي (يُحتسب بالتناسب في سنة المباشرة إن فُعّل)، والمستهلك = الإجازات المعتمدة من الأنواع المخصومة في السنة الحالية */
 function leave_annual_left(string $ref, array $rec, int $y): float {
