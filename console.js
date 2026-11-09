@@ -2150,6 +2150,14 @@ function hrBadge(k) {
 
 /* ---------- الشريط الجانبي: الأقسام كلها حسب الصلاحية والإظهار ---------- */
 function newsUnread() { var d = CACHE.news && CACHE.news.data; return d && d.rows ? d.rows.filter(function (n) { return !n.read; }).length : 0; }
+var NAVX = { v: null, open: null };
+document.addEventListener('click', function (e) {
+  var a = e.target.closest && e.target.closest('a.gh[data-gv]'); if (!a) return;
+  e.preventDefault();
+  var g = a.closest('.grp'), v = a.getAttribute('data-gv'), willOpen = !g.classList.contains('open');
+  document.querySelectorAll('.side .grp.open').forEach(function (o) { if (o !== g) { o.classList.remove('open'); var h = o.querySelector('a.gh'); if (h) h.setAttribute('aria-expanded', 'false'); } });
+  g.classList.toggle('open', willOpen); a.setAttribute('aria-expanded', String(willOpen)); NAVX.open = willOpen ? v : null;
+}, true);
 function sideHTML() {
   var G;
   if (role === 'staff') {
@@ -2179,11 +2187,13 @@ function sideHTML() {
         allowed('reports') ? { v: 'reports', n: 'التقارير', d: 'تصفية وتصدير وطباعة', j: 'sapphire', i: 'chart' } : null,
         can('sys') ? { v: 'system', n: 'النظام', d: 'الحسابات والإعدادات والسجل', j: 'slate', i: 'shield', s: [can('users') ? ['accounts', 'الموظفون والصلاحيات', view === 'system' && TAB.system === 'acc'] : null, can('settings') ? ['settings', 'إعدادات المنصة', view === 'system' && TAB.system === 'set'] : null, can('audit') ? ['log', 'سجل العمليات', view === 'system' && TAB.system === 'log'] : null, can('drive') || can('users') ? ['data', 'البيانات والنسخ', view === 'system' && TAB.system === 'data'] : null].filter(Boolean) } : null].filter(Boolean)]];
   }
+  /* القائمة المتحركة: المجموعة النشطة مفتوحة، والضغط على عنوان مجموعة لها فروع يفتحها أو يغلقها */
+  if (NAVX.v !== view) { NAVX.v = view; NAVX.open = view; }
   var navH = G.filter(function (g) { return g[1].length; }).map(function (g) {
     return '<div class="nsec"><span class="nlab">' + g[0] + '</span>' + g[1].map(function (x) {
-      var on = view === x.v;
-      return '<div class="grp' + (on ? ' on' : '') + '"><a class="gh" href="#' + x.v + '"' + (on ? ' aria-current="page"' : '') + '>' + tile(x.j, x.i) + '<span class="gt"><b>' + x.n + '</b><small>' + x.d + '</small></span>' + (x.b ? '<span class="gc hot">' + x.b + '</span>' : '') + '</a>' +
-        (x.s && x.s.length ? '<div class="subs">' + x.s.map(function (s) { return '<a class="sb' + (s[2] ? ' on' : '') + '" href="' + (/\.html/.test(s[0]) ? s[0] : '#' + s[0]) + '"' + (s[2] ? ' aria-current="true"' : '') + '><i aria-hidden="true"></i><span>' + s[1] + '</span>' + (s[3] ? '<em' + (s[4] ? ' class="hot"' : '') + '>' + s[3] + '</em>' : '') + '</a>'; }).join('') + '</div>' : '') + '</div>';
+      var on = view === x.v, hs = !!(x.s && x.s.length), op = hs && NAVX.open === x.v;
+      return '<div class="grp' + (on ? ' on' : '') + (hs ? ' hs' : '') + (op ? ' open' : '') + '"><a class="gh" href="#' + x.v + '"' + (hs ? ' data-gv="' + x.v + '" aria-expanded="' + op + '"' : '') + (on ? ' aria-current="page"' : '') + '>' + tile(x.j, x.i) + '<span class="gt"><b>' + x.n + '</b><small>' + x.d + '</small></span>' + (x.b ? '<span class="gc hot">' + x.b + '</span>' : '') + (hs ? ic('chev', 'chev') : '') + '</a>' +
+        (hs ? '<div class="subs">' + x.s.map(function (s) { return '<a class="sb' + (s[2] ? ' on' : '') + '" href="' + (/\.html/.test(s[0]) ? s[0] : '#' + s[0]) + '"' + (s[2] ? ' aria-current="true"' : '') + '><i aria-hidden="true"></i><span>' + s[1] + '</span>' + (s[3] ? '<em' + (s[4] ? ' class="hot"' : '') + '>' + s[3] + '</em>' : '') + '</a>'; }).join('') + '</div>' : '') + '</div>';
     }).join('') + '</div>';
   }).join('');
   return '<div class="side-in"><div class="brand"><span class="lt"><img src="' + LOGO + '" alt="بنيان"></span><div><b>' + (role === 'staff' ? 'بوابة المنسوب' : 'بنيان للموارد البشرية') + '</b><small>مجموعة بنيان العالمية</small></div></div><nav class="nav" aria-label="الأقسام">' + navH + '</nav></div>';

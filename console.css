@@ -1983,3 +1983,13 @@ td > .mv { display: contents; }
 @media (max-width: 760px) { .mpick { grid-template-columns: 1fr; } .mpick button { grid-template-columns: auto 1fr; justify-items: start; text-align: start; padding: 14px; } .mpick button small { grid-column: 2; } .mpick button .tile { grid-row: span 2; } .modesw span { display: none; } .modesw { padding: 0 9px; } }
 .mpick .tile { width: 48px; height: 48px; min-width: 48px; border-radius: 15px; display: grid; place-items: center; align-self: center; }
 .mpick .tile svg { width: 23px; height: 23px; }
+
+/* القائمة الجانبية المتحركة */
+.grp.hs > .subs { display: grid !important; max-height: 0; opacity: 0; overflow: hidden; margin-bottom: 0; visibility: hidden; transition: max-height .3s ease, opacity .2s ease, margin .3s ease, visibility 0s .3s; }
+.grp.hs.open > .subs { max-height: 360px; opacity: 1; margin-bottom: 6px; visibility: visible; transition: max-height .32s ease, opacity .25s ease .05s, margin .3s ease; }
+.grp.hs > .gh .chev { margin-inline-start: 6px; flex: none; width: 15px; height: 15px; color: var(--on-navy-3); transform: rotate(0deg); transition: transform .25s ease; }
+.grp.hs > .gh .gc + .chev { margin-inline-start: 6px; }
+.grp.hs > .gh .gt + .chev { margin-inline-start: auto; }
+.grp.hs.open > .gh .chev { transform: rotate(180deg); color: #e3c485; }
+.grp.hs > .gh { cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .grp.hs > .subs, .grp.hs > .gh .chev { transition: none; } }
