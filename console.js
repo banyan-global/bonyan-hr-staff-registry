@@ -1470,11 +1470,13 @@ ALIAS['myreq-new'] = ['myreq', 'new']; ALIAS['myreq-list'] = ['myreq', 'list']; 
 
 var RT2 = { leave: ['emerald', 'umbrella', 'إجازة', 'LV'], travel: ['amethyst', 'plane', 'أمر إركاب', 'TR'], cert: ['gold', 'cert', 'تعريف بالراتب', 'CR'],
   perm: ['teal', 'clock', 'استئذان', 'PM'], ot: ['sapphire', 'timer', 'عمل إضافي', 'OT'], loan: ['garnet', 'coins', 'سلفة', 'LN'], resume: ['slate', 'door', 'مباشرة عمل', 'RS'], train: ['gold', 'book', 'تدريب', 'TN'],
-  resign: ['slate', 'out', 'استقالة', 'RG'], clear: ['teal', 'box', 'إخلاء طرف', 'CL'], hire: ['amethyst', 'userok', 'احتياج وظيفي', 'HN'] };
+  resign: ['slate', 'out', 'استقالة', 'RG'], clear: ['teal', 'box', 'إخلاء طرف', 'CL'], hire: ['amethyst', 'userok', 'احتياج وظيفي', 'HN'],
+  access: ['sapphire', 'key', 'صلاحية على نظام', 'AC'], safety: ['garnet', 'shield', 'بلاغ سلامة', 'SF'] };
 /* بطاقات «نوع الطلب» في النموذج: [النوع، الاسم، الوصف، اللون، الأيقونة] */
 var RW_TYPES = [['leave', 'إجازة', 'اعتيادية أو مرضية أو اضطرارية', '#1f8f6a', 'umbrella'], ['perm', 'استئذان', 'تأخر صباحي أو خروج مبكر أو أثناء الدوام', '#15718a', 'clock'], ['travel', 'أمر إركاب', 'مهمة رسمية داخلية أو خارجية', '#5b3fc4', 'plane'],
   ['resume', 'مباشرة عمل', 'العودة بعد إجازة أو مهمة', '#3b4b6a', 'door'], ['ot', 'عمل إضافي', 'ساعات خارج الدوام', '#1d3f86', 'timer'], ['loan', 'سلفة على الراتب', 'تُخصم أقساطًا شهرية', '#9a2a43', 'coins'],
-  ['cert', 'تعريف بالراتب', 'أو شهادة خبرة لجهة محددة', '#b98f25', 'cert'], ['train', 'طلب تدريب', 'ترشيح لبرنامج تدريبي', '#c08b3f', 'book'],
+  ['cert', 'خطاب تعريف', 'بالراتب أو بدونه، أو شهادة خبرة', '#b98f25', 'cert'], ['train', 'طلب تدريب', 'ترشيح لبرنامج تدريبي', '#c08b3f', 'book'],
+  ['access', 'صلاحية على نظام', 'دخول أو صلاحية على نظام من أنظمة المجموعة', '#1d5fa8', 'key'], ['safety', 'بلاغ سلامة', 'حادث أو إصابة أو خطر في مقر العمل', '#a8323e', 'shield'],
   ['resign', 'استقالة', 'بآخر يوم عمل وأسبابها', '#475569', 'out'], ['clear', 'إخلاء طرف', 'عند انتهاء الخدمة (للموارد البشرية)', '#15718a', 'box', 1], ['hire', 'احتياج وظيفي', 'طلب موظف لإدارة (للموارد البشرية)', '#5539c2', 'userok', 1]];
 function rwFields(t) { var f = formOf(t || RW.type); return f && f.fields ? f.fields : null; }
 /* أنواع الإجازة كما في نظام الإجازات السابق (و«بدون راتب» من المنصة) */
@@ -1484,6 +1486,9 @@ function apprRows() { return reqRows().filter(function (r) { return r.mine === f
 var RST = { pending: ['warn', 'قيد الإجراء'], approved: ['ok', 'معتمد'], rejected: ['bad', 'مرفوض'], cancelled: ['mute', 'ملغى'] };
 function reqRows() { var c = need('reqs', function () { return api({ action: 'reqList', asStaff: role === 'staff' ? 1 : 0 }).then(function (j) { return j.rows; }); }, 60000); return c.data || []; }
 function reqPendingForMe() { return reqRows().filter(function (r) { return r.canDecide; }); }
+/* لأصحاب الاعتماد النهائي المباشر: الطلبات قيد الإجراء التي ليست في خطوتهم، ويستطيعون اعتمادها نهائيًا */
+function reqFinalForMe() { return reqRows().filter(function (r) { return r.canFinal && !r.canDecide; }); }
+function finalSecHTML() { var f = reqFinalForMe(); return f.length ? '<h3 class="h3s" style="margin-top:18px">' + ic('stamp') + ' طلبات قيد الإجراء يمكنك اعتمادها نهائيًا (' + f.length + ')</h3><p class="fhint" style="margin:0 0 8px">افتح الطلب واختر «اعتماد نهائي مباشر» لتتخطى بقية الخطوات.</p>' + reqListHTML(f, false) : ''; }
 function reqByNo(no) { return reqRows().filter(function (r) { return r.no === no; })[0]; }
 function reqSum(r) {
   var d = r.data || {};
@@ -1498,13 +1503,15 @@ function reqSum(r) {
   if (r.type === 'resign') return 'استقالة، آخر يوم ' + fdx(pdate(d.lastDay), { day: 'numeric', month: 'short' });
   if (r.type === 'clear') return 'إخلاء طرف، ' + (d.why || '');
   if (r.type === 'hire') return 'احتياج: ' + (d.title || '') + ' × ' + (d.count || 1);
+  if (r.type === 'access') return 'صلاحية على ' + (d.system || '') + (d.dur ? '، ' + d.dur : '');
+  if (r.type === 'safety') return 'بلاغ ' + (d.kind || '') + (d.level ? '، ' + d.level : '');
   return r.sum || r.typeName || '';
 }
 function hm(m) { m = +m || 0; var h = Math.floor(m / 60), r = m % 60; return (h ? h + ' س' : '') + (h && r ? ' و' : '') + (r ? r + ' د' : (h ? '' : '0 د')); }
 function reqDates(r) { var d = r.data || {}; if (d.day) return fdx(pdate(d.day), { day: 'numeric', month: 'short', year: 'numeric' }); if (d.start && r.type === 'loan') return 'من ' + d.start; return d.from ? fdx(pdate(d.from), { day: 'numeric', month: 'short' }) + (d.to && d.to !== d.from ? ' – ' + fdx(pdate(d.to), { day: 'numeric', month: 'short', year: 'numeric' }) : '') : ''; }
 function reqPill(r) { var s = RST[r.status] || ['mute', r.statusName]; var at = r.status === 'pending' && r.chain[r.stage] ? 'عند ' + (r.chain[r.stage].who || r.chain[r.stage].label) : s[1]; return '<span class="pill ' + s[0] + '"><i></i>' + esc(at) + '</span>'; }
 function reqTrail(r) {
-  var steps = [{ l: 'تقديم الطلب', st: 'done' }].concat(r.chain.map(function (c, i) { return { l: c.label, st: c.decision === 'approve' || c.decision === 'edit' ? 'done' : c.decision === 'reject' ? 'x' : r.status === 'pending' && i === r.stage ? 'now' : '' }; }));
+  var steps = [{ l: 'تقديم الطلب', st: 'done' }].concat(r.chain.filter(function (c) { return c.decision !== 'skip'; }).map(function (c) { var i = r.chain.indexOf(c); return { l: c.label, st: c.decision === 'approve' || c.decision === 'edit' ? 'done' : c.decision === 'reject' ? 'x' : r.status === 'pending' && i === r.stage ? 'now' : '' }; }));
   steps.push({ l: r.status === 'approved' ? 'معتمد' : r.status === 'rejected' ? 'مرفوض' : r.status === 'cancelled' ? 'ملغى' : 'القرار', st: r.status === 'approved' ? 'done' : r.status === 'rejected' || r.status === 'cancelled' ? 'x' : '' });
   return '<ol class="stg">' + steps.map(function (s, i) { return '<li class="' + s.st + '"><i>' + (s.st === 'done' ? ic('check') : s.st === 'x' ? '×' : i + 1) + '</i><span>' + esc(s.l) + '</span></li>'; }).join('') + '</ol>';
 }
@@ -1547,10 +1554,11 @@ function rwIn(k, type, ph, extra) { return '<input id="rw_' + k + '" data-rw="' 
 function rwSeg(k, opts) { return '<div class="seg2" role="group">' + opts.map(function (o) { return '<button type="button" data-rwseg="' + k + '" data-v="' + esc(o) + '" aria-pressed="' + (RW.d[k] === o) + '">' + esc(o) + '</button>'; }).join('') + '</div>'; }
 function rwStaff() { return RW.ref ? byRef(RW.ref) : (role === 'staff' ? ME : null); }
 function rwNeedSup(t) { t = t || RW.type || 'leave'; var f = formOf(t); return f ? f.steps.some(function (x) { return x.kind === 'manager'; }) : t === 'leave'; }
-/* تعبئة مسبقة: رقم الجوال من الملف، والمسؤول المباشر من آخر طلب إجازة أو من «المدير المباشر» في الملف */
+/* تعبئة مسبقة: رقم الجوال من الملف، والمسؤول المباشر من آخر طلب أو من «المدير المباشر» في الملف، ومكان الانطلاق في الإركاب من دولة العمل ومدينة السكن */
 function rwPrefill() {
-  if (RW.type !== 'leave' && !rwNeedSup()) return;
   var s = rwStaff(), d = RW.d, sups = (formsData() || {}).sups || [];
+  if (RW.type === 'travel' && s) { if (!d.fromCountry && s.c && s.c.cc !== '—') d.fromCountry = s.c.n; if (!d.fromCity && s.r && s.r.addrCity) d.fromCity = String(s.r.addrCity); if (!d.transport) d.transport = 'طيران'; }
+  if (RW.type !== 'leave' && !rwNeedSup()) return;
   if (!d.contact && s && RW.type === 'leave') d.contact = s.phone || '';
   if (!d.supervisor && s) {
     var last = reqRows().filter(function (r) { return r.ref === s.ref && r.data && r.data.supervisor; })[0];
@@ -1558,54 +1566,94 @@ function rwPrefill() {
     else { var m = gn(String((s.r && s.r.manager) || '')); if (m) { var hit = sups.filter(function (x) { var n2 = gn(x.name).replace(/^(د|أ|ا|م)\.?\s*/, ''); return n2 && (m.indexOf(n2) > -1 || n2.indexOf(m) > -1); })[0]; if (hit) d.supervisor = hit.id; } }
   }
 }
+/* حقل «المسؤول المباشر» المشترك بين كل النماذج */
+function rwSupField(t) {
+  if (!rwNeedSup(t)) return '';
+  var sups = (formsData() || {}).sups || [], fl = formOf(t || RW.type), nx = fl && fl.steps[1] ? fl.steps[1].label : '';
+  return '<div class="fld wide"><label>المسؤول المباشر <i class="rq">*</i></label>' + (sups.length ? ssel('rwSup', sups.map(function (x) { return { v: x.id, n: x.name, d: x.title || '', ic: 'user' }; }), RW.d.supervisor || '', 'اختر مسؤولك المباشر', function (v) { rwSync(); RW.d.supervisor = v; RW.err = ''; render(); }, 'المسؤول المباشر')
+    : '<div class="note warn">' + ic('alert') + '<span>لم تُضَف قائمة المسؤولين المباشرين بعد. تواصل مع الموارد البشرية.</span></div>') + '<small class="fhint">يصله الطلب أولًا ليعتمده أو يرفضه' + (nx ? '، ثم ينتقل إلى ' + esc(nx) : '') + '.</small></div>';
+}
+/* أنواع الإجازة في قائمة منسدلة: لكل نوع أيقونته ورصيده المتاح، بدل أحد عشر زرًا تزحم شاشة الجوال */
+var LKIND_IC = { 'اعتيادية (سنوية)': 'umbrella', 'تعويضية': 'history', 'مرضية': 'shield', 'دراسة / تدريب': 'book', 'طارئة (اضطرارية)': 'alert', 'أمومة': 'user', 'حج': 'globe', 'زواج': 'gift', 'وفاة قريب': 'users', 'بدون راتب': 'wallet', 'أخرى': 'doc' };
+var LKIND_D = { 'تعويضية': 'عن أيام عمل في العطل', 'مرضية': 'بتقرير طبي', 'دراسة / تدريب': 'لاختبار أو برنامج', 'طارئة (اضطرارية)': 'لظرف عاجل', 'بدون راتب': 'لا تُخصم من الرصيد ولا يُصرف عنها راتب', 'أخرى': 'اذكر السبب' };
+function leaveKindOpts() {
+  var s = rwStaff(), b = s && (role !== 'staff' || staffOn('balance')) ? lbal(s.ref) : null;
+  return LKINDS.map(function (k) {
+    var d = LKIND_D[k] || '', q = b && (b.quotas || []).filter(function (x) { return x.kind === k; })[0];
+    if (b && b.kinds && b.kinds.indexOf(k) > -1) d = 'من الرصيد السنوي · متبقٍ ' + b.left + ' يوم';
+    else if (q) d = 'المتاح ' + q.left + ' من ' + q.quota + ' يومًا هذا العام';
+    return { v: k, n: k, d: d, ic: LKIND_IC[k] || 'umbrella' };
+  });
+}
+/* قائمة الدول بالعربية (الأكثر استخدامًا أولًا) واقتراح المدن من ملف المناطق بعد اختيار الدولة */
+function countryOpts() {
+  var all = window.COUNTRIES || [], pri = (CFG.PRIORITY_COUNTRIES || []), by = {}; all.forEach(function (c) { by[c[0]] = c; });
+  return pri.filter(function (cc) { return by[cc]; }).map(function (cc) { return { v: by[cc][1], n: by[cc][1], d: by[cc][2], g: 'الأكثر استخدامًا', ic: 'globe' }; })
+    .concat(all.filter(function (c) { return pri.indexOf(c[0]) < 0 && c[0] !== 'AQ'; }).map(function (c) { return { v: c[1], n: c[1], d: c[2], g: 'كل الدول', ic: 'globe' }; }));
+}
+var PLACES_REQ = false;
+function citiesOf(country) {
+  if (!window.PLACES) { if (!PLACES_REQ) { PLACES_REQ = true; var sc = document.createElement('script'); sc.src = 'places.js?v=' + (window.BHR_V || '1'); sc.onload = function () { if (RW.type === 'travel') softRender(); }; document.head.appendChild(sc); } return []; }
+  var c = (window.COUNTRIES || []).filter(function (x) { return x[1] === country; })[0], P2 = c && window.PLACES[c[0]]; if (!P2) return [];
+  var out = []; (P2.r || []).forEach(function (r) { (r[1] || []).forEach(function (x) { if (out.indexOf(x) < 0) out.push(x); }); }); return out.slice(0, 400);
+}
 function rwBody() {
   if (RW.i === 0) {
     var T = RW_TYPES.filter(function (t) { return (formsData() ? !!formOf(t[0]) : ['leave', 'travel', 'cert'].indexOf(t[0]) > -1) && !(t[5] && role === 'staff'); });
-    return (role !== 'staff' ? '<div class="fld wide"><label for="rwRefS">' + (RW.type === 'hire' ? 'صاحب الاحتياج (مدير الإدارة أو المسؤول عنها)' : 'المنسوب') + ' <i class="rq">*</i></label>' + ssel('rwRefS', STAFF.map(function (s) { return { v: s.ref, n: s.name, d: s.ref + ' · ' + s.ent.n, c: s.ent.c }; }), RW.ref, 'اختر المنسوب', function (v) { if (v !== RW.ref) RW.d = {}; RW.ref = v; RW.err = ''; render(); }, 'المنسوب') + (RW.type === 'hire' ? '<small class="fhint">يصله إشعار بكل خطوة في مسار الاحتياج.</small>' : '') + '</div>' : '') +
+    return (role !== 'staff' ? '<div class="fld wide"><label for="rwRefS">' + (RW.type === 'hire' ? 'صاحب الاحتياج (مدير الإدارة أو المسؤول عنها)' : 'المنسوب') + ' <i class="rq">*</i></label>' + ssel('rwRefS', STAFF.map(function (s) { return { v: s.ref, n: s.name, d: s.ref + ' · ' + s.ent.n, c: s.ent.c }; }), RW.ref, 'اختر المنسوب', function (v) { if (v !== RW.ref) RW.d = {}; RW.ref = v; RW.err = ''; if (RW.type) { RW.i = 1; rwPrefill(); } render(); if (RW.i) rwTop(); }, 'المنسوب') + '<small class="fhint">' + (RW.type === 'hire' ? 'يصله إشعار بكل خطوة في مسار الاحتياج.' : 'اختر المنسوب ثم نوع الطلب، وينتقل النموذج مباشرة إلى التفاصيل.') + '</small></div>' : '') +
       '<div class="ccards" role="radiogroup" aria-label="نوع الطلب">' + T.filter(function (t) { return formOn(t[0]); }).map(function (t) { return '<button type="button" class="ccard" role="radio" data-rwtype="' + t[0] + '" aria-checked="' + (RW.type === t[0]) + '"><span class="ti" style="background:' + t[3] + '">' + ic(t[4]) + '</span><b>' + t[1] + '</b><small>' + t[2] + '</small></button>'; }).join('') + '</div>';
   }
   if (RW.i === 1) {
-    if (rwFields()) return rwSchemaBody();
-    if (RW.type === 'leave') { var fl = formOf('leave'), sups = (formsData() || {}).sups || [], needSup = rwNeedSup(), nx = fl && fl.steps[1] ? fl.steps[1].label : '';
-      return '<div class="form">' + rwField('lk', 'نوع الإجازة', rwSeg('kind', LKINDS), true, true) +
+    if (RW.type !== 'leave') return rwFields() ? rwSchemaBody() : '<div class="empty">جارٍ تحميل النموذج…</div>';
+    var med = RW.d.kind === 'مرضية';
+    return '<div class="form"><div class="fld wide"><label>نوع الإجازة <i class="rq">*</i></label>' + ssel('rwKind', leaveKindOpts(), RW.d.kind || '', 'اختر نوع الإجازة', function (v) { rwSync(); RW.d.kind = v; RW.err = ''; render(); }, 'نوع الإجازة') + '</div>' +
       rwField('rw_from', 'تاريخ البداية', rwIn('from', 'date'), true) + rwField('rw_to', 'تاريخ النهاية', rwIn('to', 'date'), true) +
       '<div class="fld wide">' + (rwDays() ? '<div class="note">' + ic('calendar') + '<span>مدة الإجازة <b>' + dn(rwDays()) + '</b> أيامًا تقويمية شاملة يومي البداية والنهاية.</span></div>' + (typeof quotaNote === 'function' ? quotaNote(RW.d.kind, rwDays()) : '') : (RW.d.from && RW.d.to ? '<div class="note warn">' + ic('alert') + '<span>تاريخ النهاية يجب أن يكون في يوم البداية أو بعده.</span></div>' : '')) + '</div>' +
+      (med ? rwField('rw_medOrg', 'الجهة الطبية', rwIn('medOrg', 'text', 'المستشفى أو المركز الصحي'), true) + rwField('rw_medNo', 'رقم التقرير الطبي', rwIn('medNo', 'text', 'اختياري', ' dir="ltr"')) +
+        '<div class="fld wide"><small class="fhint">' + ic('info') + 'سلّم أصل التقرير الطبي للموارد البشرية عند عودتك.</small></div>' : '') +
       rwField('rw_reason', 'سبب الإجازة', '<textarea id="rw_reason" data-rw="reason" maxlength="1500" placeholder="اكتب السبب باختصار">' + esc(RW.d.reason || '') + '</textarea>', true, true) +
-      (needSup ? '<div class="fld wide"><label>المسؤول المباشر <i class="rq">*</i></label>' + (sups.length ? ssel('rwSup', sups.map(function (x) { return { v: x.id, n: x.name, d: x.title || '', ic: 'user' }; }), RW.d.supervisor || '', 'اختر مسؤولك المباشر', function (v) { rwSync(); RW.d.supervisor = v; RW.err = ''; render(); }, 'المسؤول المباشر')
-        : '<div class="note warn">' + ic('alert') + '<span>لم تُضَف قائمة المسؤولين المباشرين بعد. تواصل مع الموارد البشرية.</span></div>') + '<small class="fhint">يصله الطلب أولًا ليعتمده أو يعدّله أو يرفضه' + (nx ? '، ثم ينتقل إلى ' + esc(nx) : '') + '.</small></div>' : '') +
+      rwSupField('leave') +
       '<div class="fld wide"><div class="fsub">' + ic('users') + 'الموظف البديل أثناء الإجازة</div></div>' +
       rwField('rw_substitute', 'اسم الموظف البديل', rwIn('substitute', 'text', 'الاسم الكامل'), true) + rwField('rw_subTitle', 'المسمى الوظيفي للبديل', rwIn('subTitle', 'text', 'مثال: منسق برامج'), true) +
       rwField('rw_subNo', 'الرقم الوظيفي للبديل', rwIn('subNo', 'text', 'اختياري', ' dir="ltr"')) +
       '<div class="fld wide"><div class="fsub">' + ic('chat') + 'التواصل أثناء الإجازة</div></div>' +
-      rwField('rw_contact', 'رقم التواصل', rwIn('contact', 'tel', '+966512345678', ' dir="ltr"'), true) + rwField('rw_address', 'العنوان أثناء الإجازة', rwIn('address', 'text', 'اختياري')) + '</div>'; }
-    if (RW.type === 'travel') return '<div class="form">' + rwField('rw_dest', 'الوجهة', rwIn('dest', 'text', 'مثال: جاكرتا، إندونيسيا'), true) + rwField('tk', 'وسيلة السفر', rwSeg('transport', ['طيران', 'بري', 'لا يلزم']), true) +
-      rwField('rw_from', 'تاريخ السفر', rwIn('from', 'date'), true) + rwField('rw_to', 'تاريخ العودة', rwIn('to', 'date'), true) +
-      rwField('rw_purpose', 'الغرض من المهمة', '<textarea id="rw_purpose" data-rw="purpose" maxlength="1500" placeholder="مثال: زيارة إشرافية لمراكز التدريب">' + esc(RW.d.purpose || '') + '</textarea>', true, true) +
-      '<div class="fld"><label class="ck"><input type="checkbox" data-rwck="hotel"' + (RW.d.hotel ? ' checked' : '') + '> أحتاج سكنًا</label></div>' + rwField('rw_advance', 'سلفة مصاريف (ر.س)', rwIn('advance', 'text', '0', ' inputmode="decimal" dir="ltr" data-num="1"')) + '</div>';
-    return '<div class="form">' + rwField('ck', 'نوع الخطاب', rwSeg('kind', ['تعريف بالراتب', 'شهادة خبرة', 'تعريف بدون راتب']), true, true) +
-      rwField('rw_to', 'الجهة الموجّه إليها', rwIn('to', 'text', 'مثال: البنك الأهلي، سفارة إندونيسيا'), true) + rwField('cl', 'لغة الخطاب', rwSeg('lang', ['العربية', 'الإنجليزية']), true) +
-      rwField('rw_note', 'ملاحظات', '<textarea id="rw_note" data-rw="note" maxlength="800" placeholder="اختياري">' + esc(RW.d.note || '') + '</textarea>', false, true) + '</div>';
+      rwField('rw_contact', 'رقم التواصل', rwIn('contact', 'tel', '+966512345678', ' dir="ltr"'), true) + rwField('rw_address', 'العنوان أثناء الإجازة', rwIn('address', 'text', 'اختياري')) + '</div>';
   }
   var s = rwStaff(), d = RW.d, rows = [['المنسوب', s ? esc(s.name) + ' <span class="ref">' + esc(s.ref) + '</span>' : '—'], ['نوع الطلب', RT2[RW.type][2]]];
   if (RW.type === 'leave') { var sp = ((formsData() || {}).sups || []).filter(function (x) { return x.id === d.supervisor; })[0];
     rows.push(['الإجازة', esc(d.kind) + '، ' + dn(rwDays())], ['المدة', fdx(pdate(d.from)) + ' إلى ' + fdx(pdate(d.to))], ['السبب', esc(d.reason || '')]);
+    if (d.kind === 'مرضية' && d.medOrg) rows.push(['الجهة الطبية', esc(d.medOrg) + (d.medNo ? ' · تقرير <span class="ltr">' + esc(d.medNo) + '</span>' : '')]);
     if (sp) rows.push(['المسؤول المباشر', esc(sp.name)]);
     rows.push(['الموظف البديل', esc(d.substitute || '') + (d.subTitle ? ' · ' + esc(d.subTitle) : '') + (d.subNo ? ' · <span class="ltr">' + esc(d.subNo) + '</span>' : '')], ['رقم التواصل', '<span class="ltr">' + esc(d.contact || '') + '</span>']);
     if (d.address) rows.push(['العنوان أثناء الإجازة', esc(d.address)]); }
-  if (RW.type === 'travel') rows.push(['الوجهة', esc(d.dest)], ['المدة', fdx(pdate(d.from)) + ' إلى ' + fdx(pdate(d.to)) + '، ' + dn(rwDays())], ['السفر', esc(d.transport || 'طيران') + (d.hotel ? ' وسكن' : '') + (+d.advance ? '، سلفة ' + n(+d.advance) + ' ر.س' : '')]);
-  if (RW.type === 'cert') rows.push(['الخطاب', esc(d.kind) + ' بال' + esc(d.lang || 'العربية').replace('ال', '')], ['موجّه إلى', esc(d.to)]);
-  if (rwFields()) { rwFields().forEach(function (f) { var v = d[f[0]]; if (v === '' || v == null) return; rows.push([f[1], f[2] === 'date' ? fdx(pdate(v)) : f[2] === 'money' ? n(+v) + ' ر.س' : f[2] === 'month' ? fmonth(v) : f[2] === 'time' || f[2] === 'reqref' ? '<span class="ltr">' + esc(v) + '</span>' : esc(v)]); });
+  else if (rwFields()) {
+    if (RW.type === 'travel') { rows.push(['من', esc(d.fromCity || '') + '، ' + esc(d.fromCountry || '')], ['إلى', esc(d.toCity || '') + '، ' + esc(d.toCountry || '')], ['المدة', fdx(pdate(d.from)) + ' إلى ' + fdx(pdate(d.to)) + '، ' + dn(rwDays())]);
+      rwFields().forEach(function (f) { var v = d[f[0]]; if (['fromCountry', 'fromCity', 'toCountry', 'toCity', 'from', 'to'].indexOf(f[0]) > -1 || v === '' || v == null) return; rows.push([f[1], f[2] === 'money' ? n(+v) + ' ر.س' : esc(v)]); }); }
+    else rwFields().forEach(function (f) { var v = d[f[0]]; if (v === '' || v == null) return; rows.push([f[1], f[2] === 'date' ? fdx(pdate(v)) : f[2] === 'money' ? n(+v) + ' ر.س' : f[2] === 'month' ? fmonth(v) : f[2] === 'time' || f[2] === 'reqref' ? '<span class="ltr">' + esc(v) + '</span>' : esc(v)]); });
     var ex = rwExtra(); if (ex) rows.push(['', ex]);
     var sp2 = ((formsData() || {}).sups || []).filter(function (x) { return x.id === d.supervisor; })[0]; if (sp2) rows.push(['المسؤول المباشر', esc(sp2.name)]); }
-  return kvHTML(rows) + '<label class="consent"><input type="checkbox" id="rwAgree"' + (RW.d.agree ? ' checked' : '') + '><span>أقر بصحة البيانات' + (RW.type === 'leave' ? '، وأتعهد بالعودة إلى العمل في اليوم التالي لانتهاء الإجازة وإبلاغ مديري بأي طارئ' : '') + '.</span></label>';
+  return kvHTML(rows) + '<label class="consent"><input type="checkbox" id="rwAgree"' + (RW.d.agree ? ' checked' : '') + '><span>أقر بصحة البيانات' + (RW.type === 'leave' ? '، وأتعهد بالعودة إلى العمل في اليوم التالي لانتهاء الإجازة وإبلاغ مديري بأي طارئ' : RW.type === 'travel' ? '، وأتعهد بتقديم إشعار المباشرة عند عودتي من المهمة' : '') + '.</span></label>';
 }
 function rwHTML() {
-  var sum = !RW.type ? 'لم تختر نوع الطلب بعد' : RT2[RW.type][2] + (RW.type === 'leave' && RW.d.kind ? ' ' + RW.d.kind : '') + (RW.type !== 'perm' && RW.type !== 'ot' && rwDays() ? '، ' + dn(rwDays()) : '') + (rwFields() ? rwExtraTxt() : '') + (RW.type === 'cert' && RW.d.to ? ' إلى ' + RW.d.to : '') + (RW.type === 'travel' && RW.d.dest ? ' إلى ' + RW.d.dest : '');
-  var s = rwStaff();
-  return '<div class="wiz"><form class="wcard pn" id="rwForm" novalidate><span class="stepchip">الخطوة ' + (RW.i + 1) + ' من ' + RW_STEPS.length + '</span><h2 class="wt">' + RW_STEPS[RW.i][0] + '</h2>' + rwBody() +
-    '<div class="lerr" role="alert">' + esc(RW.err) + '</div><div class="wfoot"><button class="btn" type="button" id="rwBack"' + (RW.i ? '' : ' disabled') + '>' + ic('back') + 'السابق</button><span class="ctr">' + (RW.i + 1) + ' / ' + RW_STEPS.length + '</span><button class="btn ' + (RW.i === RW_STEPS.length - 1 ? 'goldb' : 'prim') + '" type="submit"' + (RW.busy ? ' disabled' : '') + '>' + (RW.i === RW_STEPS.length - 1 ? ic('send') + (RW.busy ? 'جارٍ الإرسال…' : 'إرسال الطلب') : 'التالي') + '</button></div></form>' +
+  var sum = !RW.type ? 'لم تختر نوع الطلب بعد' : RT2[RW.type][2] + (RW.type === 'leave' && RW.d.kind ? ' ' + RW.d.kind : '') + (RW.type !== 'perm' && RW.type !== 'ot' && rwDays() ? '، ' + dn(rwDays()) : '') + (rwFields() ? rwExtraTxt() : '') + (RW.type === 'cert' && RW.d.to ? ' إلى ' + RW.d.to : '') + (RW.type === 'travel' && RW.d.toCity ? ' إلى ' + RW.d.toCity : '');
+  var s = rwStaff(), first = RW.i === 0;
+  /* الخطوة الأولى بلا زر «التالي»: الضغط على نوع الطلب ينقل مباشرة إلى التفاصيل */
+  var foot = first ? '<div class="wfoot w0"><span class="ctr">' + ic('info') + (role !== 'staff' && !RW.ref ? 'اختر المنسوب، ثم اضغط نوع الطلب' : 'اضغط نوع الطلب للمتابعة') + '</span></div>'
+    : '<div class="wfoot"><button class="btn" type="button" id="rwBack">' + ic('back') + 'السابق</button><span class="ctr">' + (RW.i + 1) + ' / ' + RW_STEPS.length + '</span><button class="btn ' + (RW.i === RW_STEPS.length - 1 ? 'goldb' : 'prim') + '" type="submit"' + (RW.busy ? ' disabled' : '') + '>' + (RW.i === RW_STEPS.length - 1 ? ic('send') + (RW.busy ? 'جارٍ الإرسال…' : 'إرسال الطلب') : 'التالي') + '</button></div>';
+  return '<div class="wiz"><form class="wcard pn" id="rwForm" novalidate><span class="stepchip">الخطوة ' + (RW.i + 1) + ' من ' + RW_STEPS.length + '</span><h2 class="wt">' + (RW.i && RW.type ? RT2[RW.type][2] + ': ' + RW_STEPS[RW.i][0] : RW_STEPS[RW.i][0]) + '</h2>' + rwBody() +
+    '<div class="lerr" role="alert">' + esc(RW.err) + '</div>' + foot + '</form>' +
     '<aside class="wside" aria-label="تقدم الطلب"><div class="wsh">' + tile('gold', 'stamp') + '<div><b>طلب جديد</b><small>' + (s ? esc(s.name) : 'يصلك رقم الطلب فور الإرسال') + '</small></div></div><ol class="wsteps">' + RW_STEPS.map(function (x, k) { return '<li class="' + (k < RW.i ? 'done' : k === RW.i ? 'on' : '') + '"><span><b>' + x[0] + '</b><small>' + x[1] + '</small></span><i>' + (k < RW.i ? '✓' : k + 1) + '</i></li>'; }).join('') + '</ol>' +
-    '<div class="wsum"><small>اختيارك</small><b>' + esc(sum) + '</b></div><div class="whelp">' + ic('info') + '<span>' + flowText(RW.type) + '</span></div>' + (RW.type === 'leave' && s && (role !== 'staff' || staffOn('balance')) ? balHTML(lbal(s.ref), true) : '') + '</aside></div>';
+    '<div class="wsum"><small>اختيارك</small><b>' + esc(sum) + '</b></div><div class="whelp">' + ic('info') + '<span>' + flowText(RW.type) + '</span></div>' + (RW.type === 'travel' && RW.i ? travelPassHTML(s) : '') + (RW.type === 'leave' && s && (role !== 'staff' || staffOn('balance')) ? balHTML(lbal(s.ref), true) : '') + '</aside></div>';
+}
+/* بيانات الجواز من ملف المنسوب (لا تُطلب في نموذج الإركاب) */
+function travelPassHTML(s) {
+  if (!s) return ''; var r = s.r || {}, pe = String(r.passportExpiry || ''), d = RW.d, back = d.to || d.from || '', warn = '';
+  var abroad = d.toCountry && d.fromCountry && d.toCountry !== d.fromCountry;
+  if (abroad && !r.passportNo) warn = 'لا يوجد رقم جواز في ملفك؛ حدّث بياناتك قبل الحجز.';
+  else if (abroad && pe && back && pe < back) warn = 'جوازك ينتهي قبل تاريخ العودة؛ لن يُقبل الطلب قبل تجديده.';
+  else if (abroad && pe && back && pdate(pe) && pdate(back) && (pdate(pe) - pdate(back)) / DAY < 182) warn = 'يبقى في جوازك أقل من ستة أشهر بعد العودة، وتشترطها دول كثيرة.';
+  return '<div class="wpass"><small>' + ic('pass') + 'بيانات السفر من ملفك</small><dl><dt>الاسم كما في الجواز</dt><dd class="ltr">' + esc(r.fullNameLatin || '—') + '</dd><dt>رقم الجواز</dt><dd class="ltr">' + esc(r.passportNo || '—') + '</dd><dt>ينتهي في</dt><dd>' + (pe ? fdx(pdate(pe)) : '—') + '</dd></dl>' +
+    (warn ? '<div class="note warn">' + ic('alert') + '<span>' + warn + '</span></div>' : '') + '<a class="wpl" href="update.html?me=1">' + ic('edit') + 'تحديث بياناتي</a></div>';
 }
 function asciiD(v) { return String(v == null ? '' : v).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; }).replace(/٫/g, '.').replace(/٬/g, ''); }
 function rwSync() { document.querySelectorAll('[data-rw]').forEach(function (e) { RW.d[e.dataset.rw] = e.dataset.num || e.type === 'tel' ? asciiD(e.value).trim() : e.value; }); var a = document.getElementById('rwAgree'); if (a) RW.d.agree = a.checked; }
@@ -1613,33 +1661,37 @@ function rwValidate() {
   var d = RW.d;
   if (RW.i === 0) { if (role !== 'staff' && !RW.ref) return 'اختر المنسوب أولًا'; if (!RW.type) return 'اختر نوع الطلب'; }
   if (RW.i === 1) {
-    if (rwFields()) return rwSchemaCheck();
-    if (RW.type === 'leave') {
-      if (!d.kind) return 'اختر نوع الإجازة'; if (!rwDays()) return 'تاريخ النهاية يجب أن يكون في يوم البداية أو بعده';
-      if (String(d.reason || '').trim().length < 3) return 'اكتب سبب الإجازة (3 أحرف على الأقل)';
-      if (rwNeedSup() && !d.supervisor) return 'اختر المسؤول المباشر';
-      if (!String(d.substitute || '').trim() || !String(d.subTitle || '').trim()) return 'اكتب اسم الموظف البديل ومسماه الوظيفي';
-      if (asciiD(d.contact).replace(/\D/g, '').length < 6) return 'اكتب رقم تواصل صحيحًا مع رمز الدولة';
-    }
-    if (RW.type === 'travel') { if (!String(d.dest || '').trim() || !String(d.purpose || '').trim()) return 'اكتب الوجهة والغرض من المهمة'; if (!rwDays()) return 'تحقق من تاريخي السفر والعودة'; }
-    if (RW.type === 'cert') { if (!d.kind) return 'اختر نوع الخطاب'; if (!String(d.to || '').trim()) return 'اكتب الجهة الموجّه إليها الخطاب'; }
+    if (RW.type !== 'leave') return rwFields() ? rwSchemaCheck() : 'انتظر حتى يكتمل تحميل النموذج';
+    if (!d.kind) return 'اختر نوع الإجازة'; if (!rwDays()) return 'تاريخ النهاية يجب أن يكون في يوم البداية أو بعده';
+    if (d.kind === 'مرضية' && String(d.medOrg || '').trim().length < 2) return 'اكتب الجهة الطبية التي أصدرت التقرير';
+    if (String(d.reason || '').trim().length < 3) return 'اكتب سبب الإجازة (3 أحرف على الأقل)';
+    if (rwNeedSup() && !d.supervisor) return 'اختر المسؤول المباشر';
+    if (!String(d.substitute || '').trim() || !String(d.subTitle || '').trim()) return 'اكتب اسم الموظف البديل ومسماه الوظيفي';
+    if (asciiD(d.contact).replace(/\D/g, '').length < 6) return 'اكتب رقم تواصل صحيحًا مع رمز الدولة';
   }
   if (RW.i === 2 && !d.agree) return 'ضع علامة على الإقرار قبل الإرسال';
   return '';
 }
+/* بعد الانتقال بين الخطوات: على الجوال يظهر النموذج نفسه لا ملخص التقدم الذي فوقه */
+function rwTop() { var fm = document.getElementById('rwForm'); if (fm && window.innerWidth < 900) fm.scrollIntoView({ block: 'start' }); else window.scrollTo(0, 0); }
 function rwBind() {
   var f = document.getElementById('rwForm'); if (!f) return;
-  f.querySelectorAll('[data-rwtype]').forEach(function (b) { b.onclick = function () { rwSync(); if (RW.type !== b.dataset.rwtype) RW.d = {}; RW.type = b.dataset.rwtype; RW.err = ''; render(); }; });
+  /* اختيار نوع الطلب ينقل مباشرة إلى التفاصيل (للموارد البشرية: بعد اختيار المنسوب) */
+  f.querySelectorAll('[data-rwtype]').forEach(function (b) { b.onclick = function () {
+    rwSync(); if (RW.type !== b.dataset.rwtype) RW.d = {}; RW.type = b.dataset.rwtype; RW.err = '';
+    if (role !== 'staff' && !RW.ref) { RW.err = 'اختر المنسوب أولًا، وسينتقل النموذج إلى التفاصيل مباشرة'; render(); return; }
+    RW.i = 1; rwPrefill(); render(); rwTop();
+  }; });
   f.querySelectorAll('[data-rwseg]').forEach(function (b) { b.onclick = function () { rwSync(); RW.d[b.dataset.rwseg] = b.dataset.v; RW.err = ''; render(); }; });
   f.querySelectorAll('[data-rwck]').forEach(function (c) { c.onchange = function () { RW.d[c.dataset.rwck] = c.checked; }; });
   f.querySelectorAll('input[type=date][data-rw],input[type=month][data-rw]').forEach(function (c) { c.onchange = function () { rwSync(); softRender(); }; });
   /* الوقت والأرقام: تحديث الحساب فقط دون إعادة رسم الصفحة، حتى لا يضيع المؤشر أثناء الكتابة */
   f.querySelectorAll('input[type=time][data-rw],[data-rwlive]').forEach(function (c) { c.oninput = c.onchange = function () { rwSync(); var x = document.getElementById('rwExtra'); if (x && typeof rwExtra === 'function') x.innerHTML = rwExtra(); var sb = document.querySelector('.wsum b'); if (sb && rwFields()) sb.textContent = RT2[RW.type][2] + rwExtraTxt(); }; });
-  document.getElementById('rwBack').onclick = function () { rwSync(); if (RW.i) { RW.i--; RW.err = ''; render(); } };
+  var bk = document.getElementById('rwBack'); if (bk) bk.onclick = function () { rwSync(); if (RW.i) { RW.i--; RW.err = ''; render(); } };
   f.onsubmit = function (e) {
-    e.preventDefault(); rwSync(); var err = rwValidate(); if (err) { RW.err = err; render(); return; }
+    e.preventDefault(); if (RW.i === 0) return; rwSync(); var err = rwValidate(); if (err) { RW.err = err; render(); return; }
     RW.err = '';
-    if (RW.i < RW_STEPS.length - 1) { RW.i++; if (RW.i === 1) rwPrefill(); render(); window.scrollTo(0, 0); return; }
+    if (RW.i < RW_STEPS.length - 1) { RW.i++; if (RW.i === 1) rwPrefill(); render(); rwTop(); return; }
     var d = {}; Object.keys(RW.d).forEach(function (k) { if (k !== 'agree') d[k] = RW.d[k]; });
     RW.busy = true; render();
     api({ action: 'reqCreate', type: RW.type, ref: role === 'staff' ? '' : RW.ref, data: d }).then(function (j) {
@@ -1672,7 +1724,7 @@ VIEWS.reqs = function () {
       ssel('rft', [{ v: '', n: 'الكل', ic: 'doc' }].concat(Object.keys(RT2).map(function (k) { return { v: k, n: RT2[k][2], k: cnt('type', k), ic: RT2[k][1] }; })), RF.type, 'الكل', function (v) { RF.type = v; render(); }, 'نوع الطلب', 'نوع الطلب') +
       (t === 'all' ? ssel('rfs', [{ v: '', n: 'الكل', ic: 'stamp' }].concat(Object.keys(RST).map(function (k) { return { v: k, n: RST[k][1], k: cnt('status', k) }; })), RF.st, 'الكل', function (v) { RF.st = v; render(); }, 'حالة الطلب', 'الحالة') : '') + '</div>' +
       fchips([[RF.q.trim() ? 'بحث: ' + RF.q.trim() : '', function () { RF.q = ''; }], [RF.type && RT2[RF.type] ? 'النوع: ' + RT2[RF.type][2] : '', function () { RF.type = ''; }], [t === 'all' && RF.st && RST[RF.st] ? 'الحالة: ' + RST[RF.st][1] : '', function () { RF.st = ''; }]]) + '</div>' +
-      '<div class="pb">' + (t === 'pend' && !pend.length ? '<div class="note">' + ic('check') + '<span>لا شيء ينتظر قرارك الآن. يصلك بريد عند وصول طلب جديد إلى خطوتك.</span></div>' : reqListHTML(list, false)) + '</div></section>';
+      '<div class="pb">' + (t === 'pend' && !pend.length ? '<div class="note">' + ic('check') + '<span>لا شيء ينتظر قرارك الآن. يصلك بريد عند وصول طلب جديد إلى خطوتك.</span></div>' : reqListHTML(list, false)) + (t === 'pend' ? finalSecHTML() : '') + '</div></section>';
   }
   var k = { pending: all.filter(function (r) { return r.status === 'pending'; }).length, approved: all.filter(function (r) { return r.status === 'approved'; }).length, rejected: all.filter(function (r) { return r.status === 'rejected'; }).length };
   return ptitle('الطلبات', 'إجازات المنسوبين واستئذاناتهم ومباشراتهم وسلفهم وطلبات العمل الإضافي والتدريب والإركاب والتعريف. لكل طلب رقم ثابت ومسار اعتماد، وكل قرار يُسجَّل باسم صاحبه ويصل المنسوب ببريد.', can('edit') && t !== 'new' ? '<a class="btn goldb" href="#reqs-new">' + ic('plus') + 'طلب نيابة عن منسوب</a>' : '') +
@@ -1681,9 +1733,9 @@ VIEWS.reqs = function () {
 };
 VIEWS.myreq = function () {
   var rows = myRows(), t = TAB.myreq, open = rows.filter(function (r) { return r.status === 'pending'; }).length, pend = reqPendingForMe(), done = apprRows().filter(function (r) { return !r.canDecide; });
-  var isAppr = pend.length || done.length; if (t === 'pend' && !isAppr) t = TAB.myreq = 'list';
+  var isAppr = pend.length || done.length || reqFinalForMe().length; if (t === 'pend' && !isAppr) t = TAB.myreq = 'list';
   var body = t === 'new' ? rwHTML() : t === 'pend' ? pn('amethyst', 'stamp', 'بانتظار اعتمادي', pend.length ? pend.length + ' طلبًا ينتظر قرارك' : 'لا شيء ينتظرك الآن', '', '<div class="pb">' + (pend.length ? reqListHTML(pend, false) : '<div class="note">' + ic('check') + '<span>لا شيء ينتظر قرارك الآن. يصلك بريد عند وصول طلب جديد إليك.</span></div>') +
-      (done.length ? '<h3 class="h3s" style="margin-top:18px">طلبات سبق أن مرّت عليك</h3>' + reqListHTML(done.slice(0, 30), false) : '') + '</div>')
+      finalSecHTML() + (done.length ? '<h3 class="h3s" style="margin-top:18px">طلبات سبق أن مرّت عليك</h3>' + reqListHTML(done.filter(function (r) { return !r.canFinal; }).slice(0, 30), false) : '') + '</div>')
     : pn('sapphire', 'doc', 'طلباتي', rows.length ? rows.length + ' طلبًا، ' + open + ' قيد الإجراء' : '', '<a class="btn sm goldb" href="#myreq-new">' + ic('plus') + 'طلب جديد</a>', '<div class="pb">' + reqListHTML(rows, true) + '</div>');
   return ptitle('طلباتي', 'قدّم طلب إجازة أو استئذان أو مباشرة عمل أو سلفة أو غيرها، وتابع أين وصل. يصلك بريد عند كل خطوة.') +
     vtabs('myreq', [['list', 'طلباتي', open ? open + ' قيد الإجراء' : rows.length, 'doc', open], ['new', 'طلب جديد', null, 'plus']].concat(isAppr ? [['pend', 'بانتظار اعتمادي', pend.length, 'stamp', pend.length]] : [])) + body;
@@ -1692,18 +1744,18 @@ VIEWS.myreq = function () {
 /* ---------- the official request sheet (view · decide · print) ---------- */
 function reqSheetHTML(r) {
   var d = r.data || {}, st = r.staff || {}, kv = function (a) { return '<div class="srow">' + a.map(function (x) { return '<div class="sf"><span>' + x[0] + '</span><b>' + (x[1] === '' || x[1] == null ? '—' : esc(x[1])) + '</b></div>'; }).join('') + '</div>'; };
-  var det = r.type === 'leave' ? kv([['نوع الإجازة', d.kind], ['من', fdx(pdate(d.from))], ['إلى', fdx(pdate(d.to))], ['المدة', dn(d.days || 0)]]) + kv([['المسؤول المباشر', d.supName || ''], ['رقم التواصل', d.contact], ['العنوان أثناء الإجازة', d.address || '']]) +
+  var det = r.type === 'leave' ? kv([['نوع الإجازة', d.kind], ['من', fdx(pdate(d.from))], ['إلى', fdx(pdate(d.to))], ['المدة', dn(d.days || 0)]]) + (d.medOrg ? kv([['الجهة الطبية', d.medOrg], ['رقم التقرير الطبي', d.medNo || '']]) : '') + kv([['المسؤول المباشر', d.supName || ''], ['رقم التواصل', d.contact], ['العنوان أثناء الإجازة', d.address || '']]) +
       (d.substitute ? kv([['الموظف البديل', d.substitute], ['مسماه الوظيفي', d.subTitle || ''], ['رقمه الوظيفي', d.subNo || '']]) : '')
-    : r.type === 'travel' ? kv([['الوجهة', d.dest], ['من', fdx(pdate(d.from))], ['إلى', fdx(pdate(d.to))], ['المدة', dn(d.days || 0)], ['وسيلة السفر', (d.transport || '') + (d.hotel ? ' وسكن' : '')], ['السلفة', +d.advance ? n(+d.advance) + ' ' + (d.currency || 'SAR') : 'لا يوجد']])
-    : r.type === 'cert' ? kv([['نوع الخطاب', d.kind], ['موجّه إلى', d.to], ['لغة الخطاب', d.lang]])
     : (r.view || []).filter(function (x) { return !x[3]; }).reduce(function (a, x, i, A) { if (i % 3 === 0) a.push(A.slice(i, i + 3)); return a; }, []).map(function (g) { return kv(g.map(function (x) { return [x[0], /^\d{4}-\d{2}-\d{2}$/.test(x[1]) ? fdx(pdate(x[1])) : /^\d{4}-\d{2}$/.test(x[1]) ? fmonth(x[1]) : x[1]]; })); }).join('');
-  var note = r.view && ['leave', 'travel', 'cert'].indexOf(r.type) < 0 ? (r.view || []).filter(function (x) { return x[3]; }).map(function (x) { return x[0] + ': ' + x[1]; }).join('\n') : d.reason || d.note || d.purpose;
-  return '<div class="sheet" id="reqSheet"><div class="shead"><div class="sorg"><span class="seal"><img src="' + LOGO + '" alt=""></span><div><b>مجموعة بنيان العالمية</b><small>Bonyan International Group</small><em>إدارة الموارد البشرية</em></div></div><div class="smeta">رمز النموذج<b>' + esc(r.form) + '</b>الإصدار 1.0<span>رقم المعاملة</span><b>' + esc(r.no) + '</b></div></div>' +
+  /* أمر الإركاب: بيانات الجواز من ملف المنسوب للحجز */
+  if (r.type === 'travel' && (st.passportNo || st.nameLatin)) det += '<div class="ssub">بيانات السفر من ملف المنسوب</div>' + kv([['الاسم كما في الجواز', st.nameLatin || ''], ['رقم الجواز', st.passportNo || ''], ['انتهاء الجواز', st.passportExpiry ? fdx(pdate(st.passportExpiry)) : ''], ['تاريخ الميلاد', st.birthDate ? fdx(pdate(st.birthDate)) : '']]);
+  var note = r.type !== 'leave' ? (r.view || []).filter(function (x) { return x[3]; }).map(function (x) { return x[0] + ': ' + x[1]; }).join('\n') : d.reason || d.note;
+  return '<div class="sheet" id="reqSheet"><div class="shead"><div class="sorg"><img class="smark" src="' + (BA.ink || LOGO) + '" alt="بنيان"><div><b>مجموعة بنيان العالمية</b><small>Bonyan International Group</small><em>إدارة الموارد البشرية</em></div></div><div class="smeta">رمز النموذج<b>' + esc(r.form) + '</b>الإصدار 1.0<span>رقم المعاملة</span><b>' + esc(r.no) + '</b></div></div>' +
     '<div class="stitle"><h3>' + esc(r.typeName) + '</h3><p>قُدّم ' + fdx(pdt(r.createdAt)) + ' بواسطة ' + esc(r.createdBy || r.name) + '</p></div>' +
     '<div class="sbar">بيانات المنسوب</div>' + kv([['الاسم', r.name], ['الرقم المرجعي', r.ref], ['الجهة', st.entity], ['المسمى', st.jobTitle], ['الإدارة', st.department], ['المدير المباشر', st.manager || d.supName || '']]) +
     '<div class="sbar">تفاصيل الطلب</div>' + det + (note ? '<div class="snote">' + esc(note) + '</div>' : '') +
     '<div class="sbar">الاعتماد والتوقيعات</div><div class="tw"><table class="sappr"><thead><tr><th>م</th><th>الجهة</th><th>الاسم</th><th>القرار</th><th>التاريخ</th></tr></thead><tbody>' +
-    r.chain.map(function (c, i) { var dec = c.decision === 'approve' ? '<span class="pill ok"><i></i>موافق</span>' : c.decision === 'edit' ? '<span class="pill ok"><i></i>عدّل ووافق</span>' : c.decision === 'reject' ? '<span class="pill bad"><i></i>غير موافق</span>' : r.status === 'pending' && i === r.stage ? '<span class="pill warn"><i></i>بانتظار القرار</span>' : r.status === 'cancelled' ? '<span class="pill mute"><i></i>ألغي الطلب</span>' : '<span class="pill mute"><i></i>—</span>';
+    r.chain.map(function (c, i) { var dec = c.decision === 'skip' ? '<span class="pill mute"><i></i>تُخطّيت</span>' : c.kind === 'final' ? '<span class="pill ok"><i></i>اعتماد نهائي</span>' : c.decision === 'approve' ? '<span class="pill ok"><i></i>موافق</span>' : c.decision === 'edit' ? '<span class="pill ok"><i></i>عدّل ووافق</span>' : c.decision === 'reject' ? '<span class="pill bad"><i></i>غير موافق</span>' : r.status === 'pending' && i === r.stage ? '<span class="pill warn"><i></i>بانتظار القرار</span>' : r.status === 'cancelled' ? '<span class="pill mute"><i></i>ألغي الطلب</span>' : '<span class="pill mute"><i></i>—</span>';
       return '<tr><td>' + (i + 1) + '</td><td class="r">' + esc(c.label) + '</td><td>' + esc(c.by || c.who || '') + (c.note ? '<small class="dn2">' + esc(c.note) + '</small>' : '') + (c.changes && c.changes.length ? '<small class="dn2 chg">' + c.changes.map(function (x) { return esc(x[0]) + ': <s>' + esc(x[1] || '—') + '</s> ← <b>' + esc(x[2] || '—') + '</b>'; }).join('<br>') + '</small>' : '') + '</td><td>' + dec + '</td><td>' + esc(c.at || '') + '</td></tr>'; }).join('') + '</tbody></table></div>' +
     '<div class="sfoot"><span>hr.bonyanglobal.com</span><span>' + esc(r.form) + ' · ' + esc(r.no) + '</span><span>الحالة: ' + esc(RST[r.status] ? RST[r.status][1] : r.statusName) + '</span></div></div>';
 }
@@ -1713,7 +1765,8 @@ function reqOpen(no, fresh) {
   var own = !!(ME && ME.ref === r.ref), el = document.createElement('div'); el.id = 'reqLayer';
   el.innerHTML = '<div class="mscrim" data-rqclose="1"></div><section class="mdl rqm2" role="dialog" aria-modal="true" aria-labelledby="rqT"><header class="mh">' + tile(RT2[r.type][0], RT2[r.type][1]) + '<div><h2 id="rqT">' + esc(r.typeName) + ' <span class="ltr ref">' + esc(r.no) + '</span></h2><p>' + (fresh ? 'أُرسل الطلب. احتفظ برقمه للمتابعة.' : esc(r.name)) + '</p></div>' + reqPill(r) + '<button class="ib mx" data-rqclose="1" aria-label="إغلاق">' + ic('plus') + '</button></header>' +
     '<div class="rqbody"><div class="rqtrack">' + reqTrail(r) + '</div>' + reqSheetHTML(r) + '</div>' +
-    '<footer class="mf">' + (r.canDecide ? '<div class="rqdec"><textarea id="rqNote" rows="2" maxlength="600" placeholder="ملاحظة للمنسوب (إلزامية عند الرفض)"></textarea><div class="lerr" id="rqErr" role="alert"></div></div><button class="btn" data-rqdec="reject">' + ic('alert') + 'رفض</button>' + (r.canEdit ? '<button class="btn" id="rqEdit">' + ic('edit') + 'تعديل ثم اعتماد</button>' : '') + '<button class="btn goldb" data-rqdec="approve">' + ic('check') + 'اعتماد</button>'
+    '<footer class="mf">' + (r.canDecide || r.canFinal ? '<div class="rqdec"><textarea id="rqNote" rows="2" maxlength="600" placeholder="ملاحظة للمنسوب (إلزامية عند الرفض)"></textarea><div class="lerr" id="rqErr" role="alert"></div></div>' + (r.canDecide ? '<button class="btn" data-rqdec="reject">' + ic('alert') + 'رفض</button>' : '') + (r.canEdit ? '<button class="btn" id="rqEdit">' + ic('edit') + 'تعديل ثم اعتماد</button>' : '') +
+      (r.canFinal && !(r.canDecide && r.stage >= r.chain.length - 1) ? '<button class="btn emb" data-rqdec="final" title="يعتمد الطلب نهائيًا ويتخطى بقية الخطوات">' + ic('stamp') + 'اعتماد نهائي مباشر</button>' : '') + (r.canDecide ? '<button class="btn goldb" data-rqdec="approve">' + ic('check') + (r.stage >= r.chain.length - 1 ? 'اعتماد نهائي' : 'اعتماد') + '</button>' : '')
       : (r.status === 'pending' && (own || can('edit')) ? '<button class="btn" id="rqCancel">إلغاء الطلب</button>' : '') + '<span class="sp"></span>') +
     (SESSION && SESSION.role === 'admin' ? '<button class="btn rqdel" id="rqDel" title="حذف الطلب من النظام نهائيًا (لمدير النظام)">' + ic('trash') + 'حذف الطلب</button>' : '') +
     '<button class="btn" id="rqPrint">' + ic('dl') + 'طباعة أو حفظ PDF</button></footer></section>';
@@ -1729,10 +1782,11 @@ function reqOpen(no, fresh) {
   };
   var c = document.getElementById('rqCancel'); if (c) c.onclick = function () { c.disabled = true; api({ action: 'reqCancel', no: r.no }).then(function () { r.status = 'cancelled'; r.statusName = 'ملغى'; seed('reqs', reqRows()); close(); softRender(); toast('أُلغي الطلب ' + r.no); }).catch(function (e) { c.disabled = false; toast(errText(e)); }); };
   el.querySelectorAll('[data-rqdec]').forEach(function (b) { b.onclick = function () {
-    var ok = b.dataset.rqdec === 'approve', note = document.getElementById('rqNote').value.trim(), err = document.getElementById('rqErr');
+    var dec = b.dataset.rqdec, ok = dec !== 'reject', note = document.getElementById('rqNote').value.trim(), err = document.getElementById('rqErr');
     if (!ok && !note) { err.textContent = 'اكتب سبب الرفض ليصل إلى المنسوب.'; document.getElementById('rqNote').focus(); return; }
+    if (dec === 'final' && b.dataset.sure !== '1') { b.dataset.sure = '1'; b.innerHTML = ic('stamp') + 'تأكيد: اعتماد نهائي وتخطي بقية الخطوات'; err.textContent = ''; return; }
     el.querySelectorAll('[data-rqdec]').forEach(function (x) { x.disabled = true; });
-    api({ action: 'reqDecide', no: r.no, decision: ok ? 'approve' : 'reject', note: note }).then(function (j) {
+    api({ action: 'reqDecide', no: r.no, decision: dec, note: note }).then(function (j) {
       seed('reqs', reqRows().map(function (x) { return x.no === r.no ? Object.assign(j.request, { mine: x.mine }) : x; })); delete CACHE.audit; delete CACHE['aud:' + r.ref];
       close(); softRender(); toast(ok ? (j.request.status === 'approved' ? 'اعتُمد الطلب نهائيًا وأُبلغ المنسوب' : 'وافقت، وانتقل الطلب إلى ' + (j.request.chain[j.request.stage].who || j.request.chain[j.request.stage].label)) : 'رُفض الطلب وأُبلغ المنسوب بالسبب');
     }).catch(function (e) { el.querySelectorAll('[data-rqdec]').forEach(function (x) { x.disabled = false; }); err.textContent = errText(e); });
@@ -1799,7 +1853,8 @@ function formOn(t) { var f = formOf(t); return !f || f.on; }
 function flowText(t) {
   var f = formOf(t); if (!t) return 'اختر نوع الطلب، وسيظهر هنا مسار اعتماده.';
   if (!f) return 'يمر الطلب بمسار اعتماد، ويصلك بريد عند كل خطوة.';
-  return 'يمر الطلب على: ' + f.steps.map(function (s) { return esc(s.label); }).join(' ثم ') + '، ويصلك بريد عند كل خطوة.';
+  var fn = ((formsData() || {}).finals || []).map(function (x) { return x.name; });
+  return 'يمر الطلب على: ' + f.steps.map(function (s) { return esc(s.label); }).join(' ثم ') + '، ويصلك بريد عند كل خطوة.' + (fn.length ? ' ويستطيع ' + esc(fn.join(' و')) + ' اعتماده نهائيًا في أي مرحلة.' : '');
 }
 function formsHTML() {
   var c = need('reqForms', function () { return api({ action: 'reqForms' }); }, 120000), d = c.data;
@@ -1810,19 +1865,23 @@ function formsHTML() {
       var who = s.people.length ? s.people.map(function (p) { return p.name; }).slice(0, 3).join('، ') + (s.people.length > 3 ? ' و' + (s.people.length - 3) + ' آخرون' : '') : '';
       var sm = s.kind === 'manager' ? (s.people.length ? 'يختاره المنسوب عند التقديم من ' + s.people.length + ' مسؤولين' : 'أضف المسؤولين المباشرين أولًا!') : s.kind === 'person' ? 'شخص بالبريد (يعتمد من رابط البريد): ' + esc(who) : who ? (s.kind === 'user' ? 'حساب محدد: ' : 'كل من بدور ' + esc(d.roles[s.v] || s.v) + ': ') + esc(who) : 'لا يوجد حساب نشط يعتمد هذه الخطوة!';
       return '<li class="' + (who ? '' : 'nobody') + '"><i>' + (i + 1) + '</i><span><b>' + esc(s.label) + '</b><small>' + sm + '</small></span></li>'; }).join('') +
-      '<li class="stz"><i>' + ic('check') + '</i><span><b>القرار النهائي</b><small>يصل المنسوب ببريد</small></span></li></ol>';
+      '<li class="stz"><i>' + ic('check') + '</i><span><b>القرار النهائي</b><small>يصل المنسوب ببريد' + ((d.finals || []).length ? '، ولـ' + esc(d.finals.map(function (x) { return x.name; }).join(' و')) + ' الاعتماد النهائي في أي مرحلة' : '') + '</small></span></li></ol>';
     return '<article class="fcard' + (f.on ? '' : ' off') + '"><header>' + tile(T[0], T[1]) + '<div><h3>' + esc(f.name) + '</h3><span class="fcode ltr">' + esc(f.code) + ' · ' + esc(f.prefix) + '-YYYY-NNNN</span></div>' +
       (f.on ? '<span class="pill ok"><i></i>مفعّل</span>' : '<span class="pill mute"><i></i>موقوف</span>') + '</header><p class="finfo">' + esc(f.info) + '</p>' +
       '<h4>مسار الاعتماد</h4>' + path +
       '<div class="fstats"><span><b>' + f.total + '</b> طلبًا</span><span><b>' + f.pending + '</b> قيد الإجراء</span></div>' +
-      '<footer>' + (d.canEdit ? '<button class="btn prim" data-flow="' + f.type + '">' + ic('users') + 'تحديد المسؤولين</button>' : '') + (d.canEdit && f.type === 'leave' ? '<button class="btn" data-sups="1">' + ic('user') + 'المسؤولون المباشرون (' + (d.sups || []).length + ')</button>' : '') +
+      '<footer>' + (d.canEdit ? '<button class="btn prim" data-flow="' + f.type + '">' + ic('users') + 'تحديد المسؤولين</button>' : '') +
       (can('edit') && f.on ? '<a class="btn" href="#reqs-new" data-ftype="' + f.type + '">' + ic('plus') + 'تقديم نيابة عن منسوب</a>' : '') + '</footer></article>';
   }).join('');
-  return '<div class="note fnote">' + ic('info') + '<span>هذه النماذج الإلكترونية المعتمدة في المنصة. يقدّمها المنسوب من «طلباتي»، أو الموارد البشرية نيابة عنه. ' + (d.canEdit ? 'بصفتك مدير النظام تحدد من يعتمد كل نموذج وترتيب الخطوات، أو توقف النموذج مؤقتًا.' : 'مدير النظام هو من يحدد مسؤولي الاعتماد.') + '</span></div><div class="fcards">' + cards + '</div>';
+  var fin = d.finals || [], top = '<div class="fsetup">' +
+    '<article class="fset">' + tile('emerald', 'users') + '<div><h3>المسؤولون المباشرون</h3><p>' + ((d.sups || []).length ? (d.sups || []).length + ' مسؤولًا يختار منهم المنسوب عند تقديم أي طلب، فيصله الطلب أولًا' : 'لم يُضف أحد بعد؛ أضفهم لتعمل خطوة «المسؤول المباشر»') + '</p></div>' + (d.canEdit ? '<button class="btn" data-sups="1">' + ic('user') + 'إدارة القائمة</button>' : '') + '</article>' +
+    '<article class="fset">' + tile('gold', 'stamp') + '<div><h3>الاعتماد النهائي المباشر</h3><p>' + (fin.length ? esc(fin.map(function (x) { return x.name; }).join('، ')) + ': يعتمدون أي طلب نهائيًا في أي مرحلة، فتُتخطّى بقية الخطوات وتُسجَّل كذلك' : 'لم يُحدَّد أحد') + '</p></div>' + (d.canEdit ? '<button class="btn" data-fins="1">' + ic('edit') + 'تحديد الأشخاص</button>' : '') + '</article></div>';
+  return top + '<div class="note fnote">' + ic('info') + '<span>هذه النماذج الإلكترونية المعتمدة في المنصة. يقدّمها المنسوب من «طلباتي»، أو الموارد البشرية نيابة عنه. ' + (d.canEdit ? 'بصفتك مدير النظام تحدد من يعتمد كل نموذج وترتيب الخطوات، أو توقف النموذج مؤقتًا.' : 'مدير النظام هو من يحدد مسؤولي الاعتماد.') + '</span></div><div class="fcards">' + cards + '</div>';
 }
 function bindForms() {
   document.querySelectorAll('[data-flow]').forEach(function (b) { b.onclick = function () { feOpen(b.dataset.flow); }; });
   document.querySelectorAll('[data-sups]').forEach(function (b) { b.onclick = supOpen; });
+  document.querySelectorAll('[data-fins]').forEach(function (b) { b.onclick = finOpen; });
   document.querySelectorAll('[data-ftype]').forEach(function (b) { b.addEventListener('click', function () { RW = { i: 0, type: b.dataset.ftype, ref: '', d: {}, busy: false, err: '' }; TAB.reqs = 'new'; }); });
 }
 var FE = null;
@@ -1889,6 +1948,33 @@ function drawFE() {
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && document.getElementById('feLayer') && !document.querySelector('.ss-pop')) { document.getElementById('feLayer').remove(); FE = null; } });
 
 /* ---------- المسؤولون المباشرون (يختار المنسوب منهم عند تقديم الطلبات) ---------- */
+/* أصحاب الاعتماد النهائي المباشر (يحددهم مدير النظام) */
+var FIN = null;
+function finOpen() { var d = formsData(); if (!d) return; FIN = { list: (d.finals || []).map(function (x) { return { name: x.name, email: x.email || '' }; }), err: '', busy: false }; drawFin(); }
+function finSync() { var el = document.getElementById('finLayer'); if (el && FIN) el.querySelectorAll('[data-fn]').forEach(function (x) { var p = x.dataset.fn.split(':'); FIN.list[+p[0]][p[1]] = x.value; }); }
+function drawFin() {
+  var old = document.getElementById('finLayer'); if (old) old.remove();
+  var el = document.createElement('div'), have = {}; el.id = 'finLayer'; FIN.list.forEach(function (x) { have[String(x.email).toLowerCase()] = 1; });
+  var opts = STAFF.filter(function (s) { return s.mail && !have[s.mail.toLowerCase()]; }).map(function (s) { return { v: s.ref, n: s.name, d: s.job + ' · ' + s.ent.n, c: s.ent.c }; })
+    .concat(((formsData() || {}).sups || []).filter(function (x) { return x.email && !have[x.email.toLowerCase()]; }).map(function (x) { return { v: 'sup:' + x.email, n: x.name, d: 'من قائمة المسؤولين المباشرين', ic: 'user' }; }));
+  var rows = FIN.list.length ? FIN.list.map(function (x, i) { return '<li class="suprow fin"><span class="fen">' + (i + 1) + '</span><input data-fn="' + i + ':name" value="' + esc(x.name) + '" placeholder="الاسم، مثل: د. فلان" aria-label="الاسم"><input data-fn="' + i + ':email" value="' + esc(x.email) + '" type="email" dir="ltr" placeholder="name@example.com" aria-label="البريد"><button type="button" class="ib del" data-fndel="' + i + '" aria-label="حذف">' + ic('x') + '</button></li>'; }).join('') : '<li class="empty">لا أحد. أضف من القائمة أو يدويًا.</li>';
+  el.innerHTML = '<div class="mscrim" data-fnclose="1"></div><section class="mdl fem supm" role="dialog" aria-modal="true" aria-labelledby="finT"><header class="mh">' + tile('gold', 'stamp') + '<div><h2 id="finT">الاعتماد النهائي المباشر</h2><p>من في هذه القائمة يعتمد أي طلب قيد الإجراء اعتمادًا نهائيًا في أي مرحلة، فتُتخطّى بقية الخطوات</p></div><button class="ib mx" data-fnclose="1" aria-label="إغلاق">' + ic('plus') + '</button></header>' +
+    '<div class="abody"><ol class="suplist">' + rows + '</ol><div class="supadd"><div class="fef"><label>إضافة من المنسوبين أو المسؤولين</label>' + ssel('finPick', opts, '', 'ابحث بالاسم', function (v) { finSync(); if (/^sup:/.test(v)) { var e = v.slice(4), x = ((formsData() || {}).sups || []).filter(function (y) { return y.email === e; })[0]; if (x) FIN.list.push({ name: x.name, email: x.email }); } else { var s2 = byRef(v); if (s2) FIN.list.push({ name: s2.name, email: s2.mail }); } drawFin(); }, 'إضافة') + '</div>' +
+    '<button type="button" class="btn" id="finNew">' + ic('plus') + 'إضافة يدويًا</button></div>' +
+    '<div class="note">' + ic('info') + '<span>يعتمد صاحب البريد من المنصة إن كان له حساب بالبريد نفسه، أو من زر «اعتماد نهائي مباشر» في رسائل الطلبات التي تصله. لا يعتمد أحد طلبه هو، ويُسجَّل الاعتماد باسمه ووقته.</span></div></div>' +
+    '<footer class="mf"><div class="lerr" role="alert">' + esc(FIN.err) + '</div><button class="btn" data-fnclose="1">إلغاء</button><button class="btn goldb" id="finSave"' + (FIN.busy ? ' disabled' : '') + '>' + ic('check') + (FIN.busy ? 'جارٍ الحفظ…' : 'حفظ') + '</button></footer></section>';
+  document.body.appendChild(el);
+  el.querySelectorAll('[data-fnclose]').forEach(function (b) { b.onclick = function () { el.remove(); FIN = null; }; });
+  el.querySelectorAll('[data-fndel]').forEach(function (b) { b.onclick = function () { finSync(); FIN.list.splice(+b.dataset.fndel, 1); drawFin(); }; });
+  document.getElementById('finNew').onclick = function () { finSync(); FIN.list.push({ name: '', email: '' }); drawFin(); };
+  document.getElementById('finSave').onclick = function () {
+    finSync(); var bad = FIN.list.filter(function (x) { return String(x.name).trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(x.email).trim()); })[0];
+    if (bad) { FIN.err = 'أكمل الاسم والبريد الصحيح لكل شخص.'; drawFin(); return; }
+    FIN.busy = true; drawFin();
+    api({ action: 'reqFinalsSave', list: FIN.list }).then(function (j) { seed('reqForms', j); var L = document.getElementById('finLayer'); if (L) L.remove(); FIN = null; delete CACHE.reqs; toast('حُفظ أصحاب الاعتماد النهائي المباشر'); render(); })
+      .catch(function (e) { FIN.busy = false; FIN.err = errText(e); drawFin(); });
+  };
+}
 var SUP = null;
 function supOpen() {
   var d = formsData(); if (!d) return;
@@ -2877,7 +2963,13 @@ function rwSchemaBody() {
   var F = rwFields(), d = RW.d, h = '<div class="form">';
   F.forEach(function (f) {
     var k = f[0], lab = f[1], kind = f[2], req = !!f[3], opt = f[4], ph = f[5] || '', id = 'rw_' + k;
-    if (kind === 'seg') h += rwField(id, lab, rwSeg(k, opt), req, true);
+    if (RW.type === 'access' && k === 'until' && d.dur !== 'مؤقتة') return;
+    /* أكثر من أربعة خيارات: قائمة منسدلة بدل الأزرار حتى لا تزدحم على الجوال */
+    if (kind === 'seg' && opt.length > 4) h += '<div class="fld wide"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, opt.map(function (o) { return { v: o, n: o, ic: RT2[RW.type] ? RT2[RW.type][1] : 'doc' }; }), d[k] || '', 'اختر ' + lab, function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab) + '</div>';
+    else if (kind === 'seg') h += rwField(id, lab, rwSeg(k, opt), req, true);
+    else if (kind === 'country') h += '<div class="fld"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, countryOpts(), d[k] || '', 'اختر الدولة', function (v) { rwSync(); if (RW.d[k] !== v) { RW.d[k] = v; F.forEach(function (g) { if (g[2] === 'city' && g[4] === k) RW.d[g[0]] = ''; }); } RW.err = ''; render(); }, lab) + '</div>';
+    else if (kind === 'city') { var cs = d[opt] ? citiesOf(d[opt]) : [];
+      h += rwField(id, lab, '<input id="' + id + '" data-rw="' + k + '" type="text" value="' + esc(d[k] || '') + '" list="' + id + '_l" autocomplete="off" placeholder="' + (d[opt] ? 'اكتب المدينة أو اخترها' : 'اختر الدولة أولًا') + '"' + (d[opt] ? '' : ' disabled') + ' maxlength="80"><datalist id="' + id + '_l">' + cs.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist>', req); }
     else if (kind === 'area') h += rwField(id, lab, '<textarea id="' + id + '" data-rw="' + k + '" maxlength="' + (opt ? opt[1] : 1200) + '" placeholder="' + esc(ph || (req ? '' : 'اختياري')) + '">' + esc(d[k] || '') + '</textarea>', req, true);
     else if (kind === 'date') h += rwField(id, lab, rwIn(k, 'date'), req, F.some(function (g) { return g[2] === 'time'; }));
     else if (kind === 'time') h += rwField(id, lab, rwIn(k, 'time', '', ' dir="ltr" step="300"'), req);
@@ -2889,9 +2981,7 @@ function rwSchemaBody() {
         : '<div class="note">' + ic('info') + '<span>' + ((opt || []).indexOf('resign') > -1 ? 'لا يوجد طلب استقالة معتمد لهذا المنسوب؛ يمكن المتابعة دون ربط.' : 'لا توجد إجازة أو مهمة معتمدة لربطها. إن كانت مباشرة بعد تعيين جديد فاختر «تعيين جديد».') + '</span></div>') + '</div>'; }
     else h += rwField(id, lab, rwIn(k, 'text', ph), req, opt && opt[1] > 120);
   });
-  if (rwNeedSup()) { var sups = (formsData() || {}).sups || [], fl = formOf(RW.type), nx = fl && fl.steps[1] ? fl.steps[1].label : '';
-    h += '<div class="fld wide"><label>المسؤول المباشر <i class="rq">*</i></label>' + (sups.length ? ssel('rwSup', sups.map(function (x) { return { v: x.id, n: x.name, d: x.title || '', ic: 'user' }; }), d.supervisor || '', 'اختر مسؤولك المباشر', function (v) { rwSync(); RW.d.supervisor = v; RW.err = ''; render(); }, 'المسؤول المباشر')
-      : '<div class="note warn">' + ic('alert') + '<span>لم تُضَف قائمة المسؤولين المباشرين بعد. تواصل مع الموارد البشرية.</span></div>') + '<small class="fhint">يصله الطلب أولًا ليعتمده أو يرفضه' + (nx ? '، ثم ينتقل إلى ' + esc(nx) : '') + '.</small></div>'; }
+  h += rwSupField();
   h += '<div class="fld wide" id="rwExtra">' + rwExtra() + '</div>';
   return h + '</div>';
 }
@@ -2902,7 +2992,8 @@ function rwCalc() {
   if (t === 'loan') { var am = +d.amount || 0, k = +d.months || 0; if (am > 0 && k > 0) { o.inst = Math.round(am / k * 100) / 100; if (d.start) o.end = ymAdd(d.start, k - 1); } }
   if (t === 'resume' && d.link && d.day) { var r = reqByNo(d.link), to = r && r.data ? pdate(r.data.to) : null, dy = pdate(d.day);
     if (to && dy) { var late = 0, x = new Date(to.getTime() + DAY), we = SITE && SITE.work && Array.isArray(SITE.work.weekend) ? SITE.work.weekend : [5, 6]; for (; x < dy; x = new Date(x.getTime() + DAY)) if (we.indexOf(x.getDay()) < 0) late++; o.late = late; o.before = dy < to; } }
-  if (t === 'train' && d.from && d.to) { var f1 = pdate(d.from), f2 = pdate(d.to); if (f1 && f2 && f2 >= f1) o.days = Math.round((f2 - f1) / DAY) + 1; }
+  if ((t === 'train' || t === 'travel') && d.from && d.to) { var f1 = pdate(d.from), f2 = pdate(d.to); if (f1 && f2 && f2 >= f1) o.days = Math.round((f2 - f1) / DAY) + 1; }
+  if (t === 'travel' && d.fromCountry && d.toCountry) o.scope = d.fromCountry === d.toCountry ? 'داخلية' : 'خارجية';
   return o;
 }
 function rwExtra() {
@@ -2911,6 +3002,9 @@ function rwExtra() {
   if (t === 'loan' && c.inst) return '<div class="note">' + ic('coins') + '<span>القسط الشهري <b>' + n(c.inst) + ' ر.س</b>' + (c.end ? ' من ' + fmonth(RW.d.start) + ' حتى ' + fmonth(c.end) : '') + '. تظهر الأقساط في استقطاعات الرواتب كل شهر.</span></div>';
   if (t === 'resume' && c.late != null) return c.before ? '<div class="note warn">' + ic('alert') + '<span>تاريخ المباشرة قبل نهاية الإجازة أو المهمة المرتبطة.</span></div>' : '<div class="note' + (c.late ? ' warn' : '') + '">' + ic(c.late ? 'alert' : 'check') + '<span>' + (c.late ? 'تأخرت عن العودة <b>' + dn(c.late) + '</b> عمل، تُخصم من رصيدك السنوي بعد الاعتماد.' : 'عدت في موعدك. شكرًا لك.') + '</span></div>';
   if (t === 'train' && c.days) return '<div class="note">' + ic('calendar') + '<span>مدة البرنامج <b>' + dn(c.days) + '</b></span></div>';
+  if (t === 'travel' && (c.days || c.scope)) return '<div class="note">' + ic('plane') + '<span>' + (c.scope ? 'مهمة <b>' + c.scope + '</b>' : '') + (c.scope && c.days ? '، ' : '') + (c.days ? 'مدتها <b>' + dn(c.days) + '</b> شاملة يومي الرحلة والعودة' : '') + '. تُحتسب أيامها حضورًا مبرّرًا بعد الاعتماد.</span></div>';
+  if (t === 'travel' && RW.d.from && RW.d.to && !c.days) return '<div class="note warn">' + ic('alert') + '<span>تاريخ العودة يجب أن يكون في يوم الرحلة أو بعده.</span></div>';
+  if (t === 'safety' && /حرجة|مرتفعة/.test(RW.d.level || '')) return '<div class="note warn">' + ic('alert') + '<span>إن كان الخطر قائمًا الآن فأبلغ مسؤولك هاتفيًا فورًا، ثم أكمل البلاغ هنا للتوثيق.</span></div>';
   return '';
 }
 function rwExtraTxt() { var c = rwCalc(), t = RW.type; return (t === 'perm' || t === 'ot') && c.mins > 0 ? '، ' + hm(c.mins) : t === 'loan' && c.inst ? '، قسط ' + n(c.inst) + ' ر.س' : t === 'resume' && c.late ? '، تأخر ' + dn(c.late) : ''; }
@@ -2934,6 +3028,11 @@ function rwSchemaCheck() {
   if (RW.type === 'hire' && d.needBy && d.needBy < today) return 'تاريخ الاحتياج لا يكون في الماضي';
   for (var j = 0; j < F.length; j++) { var g = F[j], gv = d[g[0]]; if ((g[2] === 'text') && g[3] && g[4] && String(gv || '').trim().length < g[4][0]) return 'اكتب ' + g[1] + ' (' + g[4][0] + ' أحرف على الأقل)'; }
   if (RW.type === 'train' && d.from && d.to && !c.days) return 'تاريخ النهاية يجب أن يكون في يوم البداية أو بعده';
+  if (RW.type === 'travel' && d.from && d.to && !c.days) return 'تاريخ العودة يجب أن يكون في يوم الرحلة أو بعده';
+  if (RW.type === 'travel' && d.from && d.from < ymd(new Date(Date.now() - 30 * DAY))) return 'تاريخ الرحلة أقدم من 30 يومًا؛ تواصل مع الموارد البشرية';
+  if (RW.type === 'access' && d.dur === 'مؤقتة' && !d.until) return 'حدد تاريخ انتهاء الصلاحية المؤقتة';
+  if (RW.type === 'access' && d.dur === 'مؤقتة' && d.until < today) return 'تاريخ انتهاء الصلاحية لا يكون في الماضي';
+  if (RW.type === 'safety' && d.day && d.day > today) return 'تاريخ الحدث لا يكون في المستقبل';
   if (rwNeedSup() && !d.supervisor) return 'اختر المسؤول المباشر';
   return '';
 }
@@ -2994,7 +3093,7 @@ function bindSeg(el, st, redraw) { el.querySelectorAll('[data-seg]').forEach(fun
 function sheetH(o) {
   var kv = function (a) { return '<div class="srow">' + a.map(function (x) { return '<div class="sf"><span>' + x[0] + '</span><b>' + (x[1] === '' || x[1] == null ? '—' : esc(x[1])) + '</b></div>'; }).join('') + '</div>'; };
   var groups = []; (o.rows || []).forEach(function (x, i) { if (i % 3 === 0) groups.push([]); groups[groups.length - 1].push(x); });
-  return '<div class="sheet" id="hrSheet"><div class="shead"><div class="sorg"><span class="seal"><img src="' + LOGO + '" alt=""></span><div><b>مجموعة بنيان العالمية</b><small>Bonyan International Group</small><em>إدارة الموارد البشرية</em></div></div><div class="smeta">' + esc(o.metaL || 'رقم القرار') + '<b>' + esc(o.no) + '</b><span>التاريخ</span><b>' + esc(o.date || '') + '</b></div></div>' +
+  return '<div class="sheet" id="hrSheet"><div class="shead"><div class="sorg"><img class="smark" src="' + (BA.ink || LOGO) + '" alt="بنيان"><div><b>مجموعة بنيان العالمية</b><small>Bonyan International Group</small><em>إدارة الموارد البشرية</em></div></div><div class="smeta">' + esc(o.metaL || 'رقم القرار') + '<b>' + esc(o.no) + '</b><span>التاريخ</span><b>' + esc(o.date || '') + '</b></div></div>' +
     '<div class="stitle"><h3>' + esc(o.title) + '</h3>' + (o.sub ? '<p>' + esc(o.sub) + '</p>' : '') + '</div>' +
     '<div class="sbar">بيانات المنسوب</div>' + kv(o.who) + (groups.length ? '<div class="sbar">' + esc(o.detT || 'التفاصيل') + '</div>' + groups.map(kv).join('') : '') + (o.text ? '<div class="snote">' + esc(o.text) + '</div>' : '') +
     (o.sign ? '<div class="sbar">الاعتماد</div><div class="ssign">' + o.sign.map(function (x) { return '<div><span>' + esc(x[0]) + '</span><b>' + esc(x[1] || '') + '</b><small>' + esc(x[2] || '') + '</small></div>'; }).join('') + '</div>' : '') +

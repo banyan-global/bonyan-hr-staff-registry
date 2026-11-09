@@ -26,7 +26,7 @@
   }
 
   function trail(r) {
-    var steps = [{ l: 'تقديم الطلب', st: 'ok', s: (r.createdAt || '').slice(0, 10) }].concat(r.chain.map(function (c, i) {
+    var steps = [{ l: 'تقديم الطلب', st: 'ok', s: (r.createdAt || '').slice(0, 10) }].concat(r.chain.filter(function (c) { return c.decision !== 'skip'; }).map(function (c) { var i = r.chain.indexOf(c);
       var st = c.decision === 'approve' || c.decision === 'edit' ? 'ok' : c.decision === 'reject' ? 'x' : r.status === 'pending' && i === r.stage ? 'now' : '';
       return { l: c.label, st: st, s: c.decision === 'edit' ? 'عدّل واعتمد' : c.who && !c.decision ? c.who : (c.at || '').slice(0, 10) };
     }));
@@ -64,19 +64,26 @@
 
   function viewHTML() {
     var r = S.request, h = '';
-    if (S.open) {
+    if (!S.open && S.canFinal) {
+      h += '<div class="hi"><span class="ico">' + ic('clock') + '</span><div><b>' + (S.who ? 'مرحبًا ' + esc(S.who) + '، ' : '') + 'الطلب الآن عند ' + esc((r.chain[r.stage] || {}).label || 'المرحلة التالية') + '</b><span>بصفتك من أصحاب الاعتماد النهائي المباشر تستطيع اعتماده نهائيًا الآن، فتُتخطّى بقية الخطوات.</span></div></div>';
+    } else if (S.open) {
       h += '<div class="hi"><span class="ico">' + ic('clock') + '</span><div><b>' + (S.who ? 'مرحبًا ' + esc(S.who) + '، ' : '') + 'هذا الطلب بانتظار قرارك</b><span>بصفتك: ' + esc(S.stageLabel) + (S.isLast ? ' (الاعتماد النهائي)' : '') + '. راجع البيانات ثم اختر القرار.</span></div></div>';
     } else {
       var st = r.status, cur = r.chain[r.stage] || {};
       h += '<div class="hi ' + (st === 'approved' ? 'done' : st === 'rejected' || st === 'cancelled' ? 'bad' : '') + '"><span class="ico">' + ic(st === 'approved' ? 'check' : st === 'pending' ? 'clock' : 'x') + '</span><div><b>تم اتخاذ القرار في خطوتك مسبقًا</b><span>حالة الطلب الآن: ' + esc(STN[st] || st) + (st === 'pending' && cur.label ? '، وهو عند ' + esc(cur.label) : '') + '. لا يلزمك أي إجراء.</span></div></div>';
     }
     h += trail(r) + details(r);
+    if (!S.open && S.canFinal) {
+      h += '<div class="dec" id="dec"><label for="note">ملاحظة تصل للموظف (اختيارية)</label><textarea id="note" maxlength="600"></textarea><div class="hint">يُسجَّل الاعتماد النهائي باسمك ووقته، وتُعلَّم الخطوات المتبقية بأنها تُخطّيت.</div><div class="err" id="err" role="alert"></div>' +
+        '<div class="acts two"><button class="btn b-ok' + (A === 'final' ? ' pick' : '') + '" data-do="final">' + ic('check') + 'اعتماد نهائي مباشر</button></div></div>';
+    }
     if (S.open) {
       h += '<div class="dec" id="dec"><label for="note">ملاحظة ' + (S.canEdit ? 'تصل للموظف' + (S.isLast ? '' : ' وللمرحلة التالية') : 'تصل للموظف') + '</label>' +
         '<textarea id="note" maxlength="600" placeholder="اختيارية عند الاعتماد، وإلزامية عند الرفض"' + (A === 'reject' ? ' class="need"' : '') + '></textarea>' +
         '<div class="hint">' + (A === 'reject' ? 'اكتب سبب الرفض ليصل إلى الموظف، ثم اضغط «رفض الطلب».' : 'القرار يُسجَّل باسمك ووقته، ويصل الموظف بريد بالنتيجة.') + '</div>' +
         '<div class="err" id="err" role="alert"></div>' +
         '<div class="acts' + (S.canEdit ? '' : ' two') + '"><button class="btn b-ok' + (A === 'approve' ? ' pick' : '') + '" data-do="approve">' + ic('check') + (S.isLast ? 'اعتماد نهائي' : 'اعتماد الطلب') + '</button>' +
+        (S.canFinal ? '<button class="btn b-ed' + (A === 'final' ? ' pick' : '') + '" data-do="final">' + ic('check') + 'اعتماد نهائي مباشر</button>' : '') +
         (S.canEdit ? '<button class="btn b-ed" data-do="edit">' + ic('edit') + 'تعديل قبل الاعتماد</button>' : '') +
         '<button class="btn b-no' + (A === 'reject' ? ' pick' : '') + '" data-do="reject">' + ic('x') + 'رفض الطلب</button></div></div>';
     }
@@ -101,7 +108,7 @@
   }
   function resultHTML(kind) {
     var r = S.request, ok = kind !== 'reject';
-    var t = kind === 'reject' ? 'رُفض الطلب' : kind === 'edit' ? 'حُفظت التعديلات واعتُمد الطلب' : r.status === 'approved' ? 'اعتُمد الطلب نهائيًا' : 'اعتُمد الطلب';
+    var t = kind === 'reject' ? 'رُفض الطلب' : kind === 'edit' ? 'حُفظت التعديلات واعتُمد الطلب' : kind === 'final' ? 'اعتُمد الطلب نهائيًا (اعتماد مباشر)' : r.status === 'approved' ? 'اعتُمد الطلب نهائيًا' : 'اعتُمد الطلب';
     var p = kind === 'reject' ? 'وصل الموظف بريد بالرفض وسببه.' : r.status === 'approved' ? 'وصل الموظف بريد بالاعتماد النهائي.' : 'انتقل الطلب إلى ' + esc((r.chain[r.stage] || {}).label || 'المرحلة التالية') + '، ووصل الموظف بريد بذلك' + (kind === 'edit' ? ' مع جدول التعديلات.' : '.');
     return '<div class="res"><div class="big' + (ok ? '' : ' r') + '">' + ic(ok ? 'check' : 'x') + '</div><h3>' + t + '</h3><p>' + p + '</p></div>' + trail(r) + details(r);
   }
@@ -139,7 +146,7 @@
   api({ action: 'reqAct', t: T }).then(function (j) {
     S = j; head(S.request);
     if (MODE === 'edit' && S.canEdit) act('edit'); else { MODE = 'view'; draw(viewHTML()); }
-    if (A === 'approve' && S.open) { var b = app.querySelector('[data-do="approve"]'); if (b) setTimeout(function () { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); b.focus({ preventScroll: true }); }, 250); }
+    if ((A === 'approve' && S.open) || (A === 'final' && S.canFinal)) { var b = app.querySelector('[data-do="' + (A === 'final' ? 'final' : 'approve') + '"]'); if (b) setTimeout(function () { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); b.focus({ preventScroll: true }); }, 250); }
   }).catch(function (e) {
     draw('<div class="hi bad"><span class="ico">' + ic('lock') + '</span><div><b>تعذّر فتح الطلب</b><span>' + esc(e.message) + '</span></div></div>');
   });
