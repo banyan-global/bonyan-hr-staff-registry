@@ -3801,6 +3801,31 @@ logout = function () { modeSet(''); var L = document.getElementById('modeLayer')
 var _rwNeedSup0 = rwNeedSup;
 rwNeedSup = function (t) { if (role === 'staff' && ME_DATA && ME_DATA.private) return false; return _rwNeedSup0(t); };
 
+/* ======================================================================
+   الآيفون كتطبيق: iOS قد يعيد تحميل التطبيق حين يخرج المستخدم إلى البريد
+   ليأخذ رمز الدخول، فيعود إلى خطوة البريد ويضيع الرمز. نحفظ خطوة «أدخل الرمز»
+   على الجهاز ١٠ دقائق، ونعيد التركيز على خانة الرمز عند العودة.
+   ولا نعرض على الجوال أي نافذة صلاحيات تلقائية بعد الدخول.
+   ====================================================================== */
+(function () {
+  var K = 'bhr:lg', TTL = 10 * 60 * 1000;
+  function lgSave() { try { if (!SESSION && LG && LG.step === 'code' && LG.mail) localStorage.setItem(K, JSON.stringify({ m: LG.mail, to: LG.to, r: LG.remember !== false, t: Date.now() })); else if (!LG || LG.step !== 'code') localStorage.removeItem(K); } catch (e) { } }
+  function lgLoad() { try { var x = JSON.parse(localStorage.getItem(K) || 'null'); if (x && x.m && Date.now() - x.t < TTL) return x; localStorage.removeItem(K); } catch (e) { } return null; }
+  var x = lgLoad();
+  if (x && LG && LG.step === 'email' && !LG.mail) { LG.step = 'code'; LG.mail = x.m; LG.to = x.to || x.m; LG.remember = x.r; }
+  var _render0 = render;
+  render = function () { var o = _render0.apply(this, arguments); lgSave(); return o; };
+  var _enterApp1 = enterApp;
+  enterApp = function (u) { try { localStorage.removeItem(K); } catch (e) { } return _enterApp1.apply(this, arguments); };
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible' || SESSION || !LG || LG.step !== 'code') return;
+    var f = document.querySelector('#otp input'); if (f && !f.value) setTimeout(function () { try { f.focus(); } catch (e) { } }, 250);
+  });
+})();
+/* لا نافذة تفعيل بصمة الدخول تلقائيًا على الجوال؛ تبقى متاحة من «الدخول والأمان» */
+var _pkOffer0 = pkOffer;
+pkOffer = function () { if (isPhone() || standalone()) { JUST_IN = false; return; } return _pkOffer0(); };
+
 window.addEventListener('hashchange', route);
 boot();
 })();
