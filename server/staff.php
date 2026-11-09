@@ -376,11 +376,19 @@ function admin_message(array $b): array {
     $subject = mb_substr(safe_text($b['subject'] ?? ''), 0, 200); $body = mb_substr(safe_text($b['body'] ?? ''), 0, 8000);
     if ($subject === '' || $body === '') throw new HttpError('اكتب العنوان والرسالة');
     /* {link} ← رابط «تحديث بياناتي» الخاص بالمنسوب (لا يُكشف في الواجهة) */
-    if (str_contains($body, '{link}')) $body = str_replace('{link}', update_url($r['ref'], mail_lang($b['lang'] ?? ($r['data']['lang'] ?? 'ar'))), $body);
+    $upd = update_url($r['ref'], mail_lang($b['lang'] ?? ($r['data']['lang'] ?? 'ar'))); $hasLink = str_contains($body, '{link}');
+    if ($hasLink) $body = str_replace('{link}', $upd, $body);
     if (rate_hit('msg:' . $u['id'], 200, 86400)) throw new HttpError('too_many', 429);
-    $inner = '<div style="font-size:14px;line-height:2;color:#1D2A3B;white-space:pre-wrap;">' . nl2br(esc_html($body)) . '</div>'
-        . '<p style="margin:16px 0 4px;font-size:13px;color:#6B778A;">' . esc_html($u['name'] . ($u['title'] ? ' · ' . $u['title'] : '')) . '</p>';
-    send_mail($to, $subject, mail_frame('الموارد البشرية · مجموعة بنيان العالمية', $subject, $inner), $body, 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline(), (string)cfg('hr_notify'));
+    $name = staff_name($r);
+    $inner = '<div style="height:16px;line-height:16px;font-size:0;">&nbsp;</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:#FFFFFF;border:1px solid ' . MX['line'] . ';border-radius:18px;"><tr><td style="padding:18px 20px;">'
+        . '<div style="font-size:14.5px;line-height:2.05;color:' . MX['ink'] . ';">' . nl2br(esc_html($body)) . '</div>'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;border-top:1px solid ' . MX['line'] . ';width:100%;"><tr><td style="padding-top:12px;">'
+        . '<div style="font-size:13.5px;font-weight:900;color:' . MX['navy'] . ';">' . esc_html($u['name'] ?: 'الموارد البشرية') . '</div>'
+        . '<div style="font-size:12px;color:' . MX['goldD'] . ';font-weight:700;">' . esc_html($u['title'] ?: 'إدارة الموارد البشرية') . '</div></td></tr></table></td></tr></table>';
+    $btns = $hasLink ? [[$upd, '✎ تحديث بياناتي', 'gold'], [mx_url(), 'الدخول إلى منصة الموارد البشرية', 'ghost']] : [[mx_url(), 'الدخول إلى منصة الموارد البشرية', 'primary']];
+    $html = mx_page(['eyebrow' => 'رسالة من الموارد البشرية', 'title' => $subject, 'tone' => 'navy', 'icon' => '✉', 'pre' => mb_substr($body, 0, 120),
+        'lead' => esc_html('إلى ' . $name . '،'), 'body' => $inner, 'buttons' => $btns]);
+    send_mail($to, $subject, $html, $body . "\n\n" . mx_url(), 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline(), (string)cfg('hr_notify'));
     q('INSERT INTO messages (ref, channel, to_addr, subject, body, sent_by, at) VALUES (?,?,?,?,?,?,?)', [$r['ref'], 'mail', $to, $subject, $body, $u['_label'], now()]);
     audit_log($r['ref'], 'رسالة من الموارد البشرية', $u['_label'] . ' · ' . $to . ' · ' . $subject, $u['_label']);
     return ['ok' => true, 'to' => $to];

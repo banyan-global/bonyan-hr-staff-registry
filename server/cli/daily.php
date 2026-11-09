@@ -23,7 +23,7 @@ q('DELETE FROM kv WHERE expires_at IS NOT NULL AND expires_at < ?', [now()]);
 
 if (date('w') === '0' || in_array('--digest', $argv, true)) {
     $list = hr_recipients();
-    $docs = ['passportExpiry' => 'الجواز', 'permitExpiry' => 'الإقامة', 'nationalIdExpiry' => 'الهوية', 'workPermitExpiry' => 'تصريح العمل', 'contractEnd' => 'العقد'];
+    $docs = ['passportExpiry' => 'الجواز', 'permitExpiry' => 'الإقامة', 'nationalIdExpiry' => 'الهوية', 'contractEnd' => 'العقد'];
     $items = [];
     $priv = private_refs();
     foreach (q('SELECT ref, data FROM staff ORDER BY id') as $s) {
@@ -37,10 +37,18 @@ if (date('w') === '0' || in_array('--digest', $argv, true)) {
     }
     usort($items, fn($a, $b) => $a[0] <=> $b[0]);
     if ($list && $items) {
-        $rows = implode('', array_map(fn($i) => '<tr><td style="padding:7px 6px;border-bottom:1px solid #EEF1F5;font-weight:700;">' . esc_html($i[1]) . '<div style="font-size:11px;color:#8A96AB;" dir="ltr">' . esc_html($i[2]) . '</div></td><td style="padding:7px 6px;border-bottom:1px solid #EEF1F5;">' . esc_html($i[3]) . '</td><td style="padding:7px 6px;border-bottom:1px solid #EEF1F5;" dir="ltr">' . esc_html($i[4]) . '</td><td style="padding:7px 6px;border-bottom:1px solid #EEF1F5;font-weight:800;color:' . ($i[0] < 0 ? '#B42318' : '#9A6700') . ';">' . ($i[0] < 0 ? 'منتهية' : 'بعد ' . $i[0] . ' يومًا') . '</td></tr>', $items));
-        $inner = '<p style="margin:0 0 10px;font-size:13.5px;color:#1D2A3B;">الوثائق المنتهية أو التي تنتهي خلال ٦٠ يومًا (' . count($items) . '):</p><table style="border-collapse:collapse;width:100%;font-size:13px;color:#1D2A3B;">' . $rows . '</table>'
-            . '<div style="margin:14px 0 6px;"><a href="' . esc_html(cfg('site_url')) . '" style="display:inline-block;padding:9px 18px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13px;text-decoration:none;">فتح منصة الموارد البشرية</a></div>';
-        foreach ($list as $to) send_mail($to, 'تنبيه أسبوعي: ' . count($items) . ' وثيقة تحتاج متابعة', mail_frame('Bonyan HR · تنبيه أسبوعي', 'وثائق تحتاج متابعة', $inner), 'وثائق تحتاج متابعة: ' . count($items), 'Bonyan HR', logo_inline());
+        $exp = count(array_filter($items, fn($i) => $i[0] < 0));
+        $rows = implode('', array_map(function ($i, $n) {
+            $late = $i[0] < 0; $chip = $late ? ['#FDEFED', '#B42318', '#F4C7C0', 'منتهية منذ ' . abs($i[0]) . ' يومًا'] : ['#FFF5E3', '#A35A00', '#F2D29A', $i[0] === 0 ? 'تنتهي اليوم' : 'تنتهي خلال ' . $i[0] . ' يومًا'];
+            return '<tr><td style="padding:12px 16px;' . ($n ? 'border-top:1px solid ' . MX['line'] . ';' : '') . 'vertical-align:top;"><div style="font-size:14px;font-weight:800;color:' . MX['ink'] . ';">' . esc_html($i[1]) . '</div>'
+                . '<div style="font-size:12px;color:' . MX['mut'] . ';margin-top:2px;">' . esc_html($i[3]) . ' · <span dir="ltr">' . esc_html($i[4]) . '</span> · <span dir="ltr">' . esc_html($i[2]) . '</span></div></td>'
+                . '<td align="left" style="padding:12px 16px;' . ($n ? 'border-top:1px solid ' . MX['line'] . ';' : '') . 'vertical-align:middle;white-space:nowrap;"><span style="display:inline-block;padding:4px 10px;border-radius:999px;background:' . $chip[0] . ';border:1px solid ' . $chip[2] . ';color:' . $chip[1] . ';font-size:11.5px;font-weight:800;">' . $chip[3] . '</span></td></tr>';
+        }, $items, array_keys($items)));
+        $html = mx_page(['eyebrow' => 'Bonyan HR · تنبيه أسبوعي', 'title' => count($items) . ' وثيقة تحتاج متابعة', 'tone' => $exp ? 'red' : 'amber', 'icon' => '📄', 'badge' => $exp ? $exp . ' منتهية' : 'خلال ٦٠ يومًا',
+            'pre' => 'وثائق منتهية أو تنتهي خلال ٦٠ يومًا: ' . count($items), 'lead' => 'هذه الوثائق انتهت صلاحيتها أو تنتهي خلال ٦٠ يومًا، مرتّبة من الأقرب.',
+            'body' => '<div style="height:16px;line-height:16px;font-size:0;">&nbsp;</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:' . MX['soft'] . ';border:1px solid ' . MX['line'] . ';border-radius:16px;">' . $rows . '</table>',
+            'buttons' => [[mx_url('documents'), 'مراجعة الوثائق في المنصة', 'primary']]]);
+        foreach ($list as $to) send_mail($to, 'تنبيه أسبوعي: ' . count($items) . ' وثيقة تحتاج متابعة', $html, 'وثائق تحتاج متابعة: ' . count($items), 'Bonyan HR', logo_inline());
         echo 'digest: ', count($items), "\n";
     }
 }

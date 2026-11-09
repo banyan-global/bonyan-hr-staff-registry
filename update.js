@@ -69,14 +69,14 @@
   /* الأقسام والحقول (نفس أعمدة الجدول) */
   var GROUPS = [
     ['id', ['firstNameAr', 'fatherNameAr', 'grandNameAr', 'lastNameAr', 'firstName', 'fatherName', 'grandName', 'lastName', 'gender', 'birthDate', 'birthCountry', 'birthCity', 'nationality', 'otherNationality', 'maritalStatus', 'dependents', 'bloodType']],
-    ['docs', ['passportNo', 'passportCountry', 'passportIssue', 'passportExpiry', 'nationalIdNo', 'nationalIdExpiry', 'permitNo', 'permitOccupation', 'permitIssue', 'permitExpiry', 'workPermitNo', 'workPermitExpiry', 'insuranceNo', 'npwp', 'bpjsTk', 'bpjsKes', 'kraPin', 'nssfNo', 'shaNo', 'tin']],
+    ['docs', ['passportNo', 'passportCountry', 'passportIssue', 'passportExpiry', 'nationalIdNo', 'nationalIdExpiry', 'permitNo', 'permitOccupation', 'permitIssue', 'permitExpiry', 'insuranceNo', 'npwp', 'bpjsTk', 'bpjsKes', 'kraPin', 'nssfNo', 'shaNo', 'tin']],
     ['contact', ['officialEmail', 'personalEmail', 'mobile', 'whatsapp', 'addrCountry', 'addrRegion', 'addrCity', 'homeCountry', 'homeCity']],
     ['em', ['em1Name', 'em1Relation', 'em1Phone', 'em2Name', 'em2Relation', 'em2Phone']],
     ['job', ['entity', 'workCountry', 'workRegion', 'workOffice', 'department', 'jobTitle', 'manager', 'employeeNo', 'startDate', 'employmentType', 'contractStatus', 'contractType', 'contractNo', 'contractStart', 'contractEnd']],
     ['edu', ['topDegree', 'techLevel', 'techSkills', 'hasCerts', 'certifications', 'quran']],
     ['fin', ['salary', 'currency', 'payMethod', 'bankCountry', 'bankName', 'accountHolder', 'iban', 'accountNo', 'swift', 'bankBranch', 'payOther']]
   ];
-  var FILES = ['photo', 'passportScan', 'nationalIdScan', 'permitScan', 'workPermitScan', 'contractFile', 'degreeFile', 'certFiles', 'bankProof'];
+  var FILES = ['photo', 'passportScan', 'nationalIdScan', 'permitScan', 'contractFile', 'degreeFile', 'certFiles', 'bankProof'];
   var CHILD = { quals: ['degree', 'major', 'institution', 'country', 'gradYear', 'grade'], exp: ['org', 'title', 'country', 'from', 'to'], langs: ['language', 'level'] };
   var COUNTRY = ['workCountry', 'nationality', 'otherNationality', 'birthCountry', 'passportCountry', 'addrCountry', 'homeCountry', 'bankCountry'];
   var OPT = { gender: 'gender', maritalStatus: 'maritalStatus', em1Relation: 'relation', em2Relation: 'relation', employmentType: 'employmentType', contractType: 'contractType', quran: 'quran', payMethod: 'payMethod', techLevel: 'techLevel', hasCerts: 'yesno', degree: 'degree', level: 'level' };

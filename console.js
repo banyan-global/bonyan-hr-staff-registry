@@ -500,7 +500,7 @@ function entOf(name) {
 }
 function ctryOf(cc, name) { var k = cc || '—'; return CT_MAP[k] || (CT_MAP[k] = { cc: k, n: CNAME[cc] || String(name || '').trim() || 'غير محددة' }); }
 var DOCS = [['جواز السفر', 'passportExpiry', 'passportNo', 'passportScan'], ['الهوية الوطنية', 'nationalIdExpiry', 'nationalIdNo', 'nationalIdScan'], ['الإقامة', 'permitExpiry', 'permitNo', 'permitScan'],
-  ['تصريح العمل', 'workPermitExpiry', 'workPermitNo', 'workPermitScan'], ['العقد', 'contractEnd', 'contractNo', 'contractFile']];
+  ['العقد', 'contractEnd', 'contractNo', 'contractFile']]; /* تصريح العمل والعقد وثيقة واحدة: يُكتفى بالعقد */
 function pdate(v) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
 function pdt(v) { var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(v || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : pdate(v); }
 function daysTo(d) { var t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((d - t) / DAY); }

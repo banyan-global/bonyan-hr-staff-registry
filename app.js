@@ -201,9 +201,7 @@
         { k: 'permitNo', type: 'text', req: 1, v: 'permit', dir: 'ltr', mono: 1, labelKey: function (d) { return 'f.permitNo.' + permitKind(d); } },
         { k: 'permitOccupation', type: 'text', show: C.abroadSA },
         { k: 'permitIssue', type: 'date', v: 'past' },
-        { k: 'permitExpiry', type: 'date', req: 1, after: 'permitIssue', meta: 'expiry' },
-        { k: 'workPermitNo', type: 'text', v: 'docNo', dir: 'ltr', mono: 1, show: C.abroadNotSA, labelKey: function (d) { return 'f.workPermitNo.' + permitKind(d); }, hint: 'h.workPermitNo' },
-        { k: 'workPermitExpiry', type: 'date', after: 'permitIssue', meta: 'expiry', show: C.abroadNotSA }
+        { k: 'permitExpiry', type: 'date', req: 1, after: 'permitIssue', meta: 'expiry' }
       ] },
       { t: 's.official', hint: 'h.official', show: C.wcAny(['EG', 'ID', 'KE', 'ET']), fields: [
         { k: 'insuranceNo', type: 'text', dir: 'ltr', mono: 1, show: C.wc('EG') },
@@ -334,7 +332,6 @@
         { k: 'passportScan', type: 'file', req: 1, max: 2 },
         { k: 'nationalIdScan', type: 'file', reqFn: function (d) { return !C.abroad(d) && !hasUp('permitScan'); }, max: 2, hint: 'h.nationalIdScan', labelKey: function (d) { return 'f.nationalIdScan.' + idKind(d); } },
         { k: 'permitScan', type: 'file', reqFn: function (d) { return C.needPermit(d) && !hasUp('nationalIdScan'); }, max: 2, hint: 'h.permitScan', show: C.needPermit, labelKey: function (d) { return 'f.permitScan.' + permitKind(d); } },
-        { k: 'workPermitScan', type: 'file', max: 2, show: C.abroadNotSA, labelKey: function (d) { return 'f.workPermitScan.' + permitKind(d); } },
         { k: 'contractFile', type: 'file', req: 1, max: 3, hint: 'h.contractFile', show: C.contract },
         { k: 'contractNone2', type: 'info', text: 'h.contractNone', show: C.noContract, label: 'f.contractFile' },
         { k: 'degreeFile', type: 'file', max: 2 },

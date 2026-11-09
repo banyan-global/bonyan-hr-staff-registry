@@ -60,11 +60,13 @@ function hrp_label(array $u): string { return (string)($u['_label'] ?? ($u['name
 function hrp_is_top(array $u): bool { return in_array($u['role'], ['admin', 'ceo'], true) && has_perm($u, 'requests.approve'); }
 function hrp_mail(string $to, string $title, string $line, array $rows, string $hash, string $btn): void {
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return;
-    $url = (string)cfg('site_url') . (strpos($hash, '.html') !== false ? $hash : '#' . $hash);
-    $t = ''; foreach ($rows as $r) if ((string)$r[1] !== '') $t .= '<tr><td style="padding:6px 0;color:#6B778A;width:130px;vertical-align:top;">' . esc_html($r[0]) . '</td><td style="padding:6px 0;font-weight:700;color:#1D2A3B;">' . nl2br(esc_html((string)$r[1])) . '</td></tr>';
-    $inner = '<p style="margin:0 0 10px;font-size:14px;line-height:1.9;color:#1D2A3B;">' . esc_html($line) . '</p>' . ($t ? '<table style="border-collapse:collapse;width:100%;font-size:13.5px;">' . $t . '</table>' : '')
-        . ($hash !== '' ? '<div style="margin:16px 0 6px;"><a href="' . esc_html($url) . '" style="display:inline-block;padding:10px 20px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;">' . esc_html($btn) . '</a></div>' : '');
-    try { send_mail($to, $title, mail_frame('الموارد البشرية · مجموعة بنيان العالمية', $title, $inner), $line . ($hash !== '' ? "\n" . $url : ''), 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline()); }
+    $url = mx_url($hash); $tone = mx_guess_tone($title . ' ' . $line);
+    $icon = preg_match('/عهدة|عهد/u', $title) ? '📦' : (preg_match('/تقييم/u', $title) ? '★' : (preg_match('/إجراء|قرار/u', $title) ? '📋' : null));
+    $o = ['eyebrow' => 'الموارد البشرية · مجموعة بنيان العالمية', 'title' => $title, 'tone' => $tone, 'pre' => $line, 'lead' => esc_html($line),
+        'badge' => ['amber' => 'بانتظار إجراء منك', 'green' => 'تم', 'red' => 'لم يُعتمد'][$tone] ?? '',
+        'body' => mx_rows(array_map(fn($r) => [$r[0], (string)$r[1]], $rows), 'التفاصيل'), 'buttons' => $hash !== '' ? [[$url, $btn !== '' ? $btn : 'فتح المنصة', 'primary']] : [[mx_url(), 'فتح منصة الموارد البشرية', 'primary']]];
+    if ($icon) $o['icon'] = $icon;
+    try { send_mail($to, $title, mx_page($o), $line . "\n" . $url, 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline()); }
     catch (Throwable $e) { audit_log('', 'تعذّر إرسال بريد', $title . ' · ' . mask_email($to)); }
 }
 function hrp_staff_mail(string $ref): string { $s = staff_get($ref); return $s ? req_staff_email($s) : ''; }

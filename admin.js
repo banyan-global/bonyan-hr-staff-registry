@@ -197,16 +197,16 @@
 ];
   var GROUPS = [
     ['id', ['fullNameAr', 'fullNameLatin', 'firstNameAr', 'fatherNameAr', 'grandNameAr', 'lastNameAr', 'firstName', 'fatherName', 'grandName', 'lastName', 'gender', 'birthDate', 'birthCountry', 'birthCity', 'nationality', 'otherNationality', 'maritalStatus', 'dependents', 'bloodType']],
-    ['docs', ['passportNo', 'passportCountry', 'passportIssue', 'passportExpiry', 'nationalIdNo', 'nationalIdExpiry', 'permitNo', 'permitOccupation', 'permitIssue', 'permitExpiry', 'workPermitNo', 'workPermitExpiry', 'insuranceNo', 'npwp', 'bpjsTk', 'bpjsKes', 'kraPin', 'nssfNo', 'shaNo', 'tin']],
+    ['docs', ['passportNo', 'passportCountry', 'passportIssue', 'passportExpiry', 'nationalIdNo', 'nationalIdExpiry', 'permitNo', 'permitOccupation', 'permitIssue', 'permitExpiry', 'insuranceNo', 'npwp', 'bpjsTk', 'bpjsKes', 'kraPin', 'nssfNo', 'shaNo', 'tin']],
     ['contact', ['officialEmail', 'personalEmail', 'mobile', 'whatsapp', 'addrCountry', 'addrRegion', 'addrCity', 'homeCountry', 'homeCity']],
     ['em', ['em1Name', 'em1Relation', 'em1Phone', 'em2Name', 'em2Relation', 'em2Phone']],
     ['job', ['entity', 'workCountry', 'workRegion', 'workOffice', 'department', 'jobTitle', 'manager', 'employeeNo', 'startDate', 'employmentType', 'contractStatus', 'contractType', 'contractNo', 'contractStart', 'contractEnd']],
     ['edu', ['topDegree', 'techLevel', 'techSkills', 'hasCerts', 'certifications', 'quran']],
     ['fin', ['salary', 'currency', 'payMethod', 'bankCountry', 'bankName', 'accountHolder', 'iban', 'accountNo', 'swift', 'bankBranch', 'payOther']],
-    ['files', ['photo', 'passportScan', 'nationalIdScan', 'permitScan', 'workPermitScan', 'contractFile', 'degreeFile', 'certFiles', 'bankProof']],
+    ['files', ['photo', 'passportScan', 'nationalIdScan', 'permitScan', 'contractFile', 'degreeFile', 'certFiles', 'bankProof']],
     ['sys', ['ref', 'status', 'createdAt', 'updatedAt', 'lang', 'tz']]
   ];
-  var EXPIRY = ['passportExpiry', 'nationalIdExpiry', 'permitExpiry', 'workPermitExpiry', 'contractEnd'];
+  var EXPIRY = ['passportExpiry', 'nationalIdExpiry', 'permitExpiry', 'contractEnd'];
 
   var S = { data: null, loading: false, err: '', f: { q: '', country: '', nat: '', entity: '', status: '', emp: '', gender: '', doc: '' }, shown: PAGE, open: null, globe: null, el: null,
     tab: 'overview', view: 'table', sort: { k: 'createdAt', dir: -1 }, opts: {}, cur: '', docKind: '', payEnt: '', paySort: { k: 'salary', dir: -1 } };
@@ -861,7 +861,7 @@
     var Y = S.sys; if (!Y.at && !Y.busy) sysLoad(true);
     var H = Y.health && !Y.health.err ? Y.health : null, st = H ? H.stats : null, B = Y.backups && !Y.backups.err ? Y.backups : null;
     var rows = S.data.rows || [];
-    var nFiles = st ? st.files : rows.reduce(function (n, r) { return n + ['photo', 'passportScan', 'nationalIdScan', 'permitScan', 'workPermitScan', 'contractFile', 'degreeFile', 'certFiles', 'bankProof'].reduce(function (m, k) { return m + (Array.isArray(r[k]) ? r[k].length : 0); }, 0); }, 0);
+    var nFiles = st ? st.files : rows.reduce(function (n, r) { return n + ['photo', 'passportScan', 'nationalIdScan', 'permitScan', 'contractFile', 'degreeFile', 'certFiles', 'bankProof'].reduce(function (m, k) { return m + (Array.isArray(r[k]) ? r[k].length : 0); }, 0); }, 0);
     var tile = function (n, l) { return '<li><b>' + (n == null ? '—' : A.num(n)) + '</b><span>' + esc(l) + '</span></li>'; };
     var where = card(sx('whereT'),
       '<p class="hint">' + esc(sx('whereD')) + '</p>' +

@@ -11,6 +11,8 @@ require_once __DIR__ . '/vendor/PHPMailer/SMTP.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 
+require_once __DIR__ . '/mailui.php';
+
 const NAVY = '#16294A';
 
 /* $inline: [cid => [bytes, mime, filename]] */
@@ -51,20 +53,10 @@ function send_mail(string $to, string $subject, string $html, string $text, stri
 }
 function logo_png(): string { static $b = null; return $b ??= base64_decode((string)file_get_contents(__DIR__ . '/logo.b64')); }
 
-/* إطار موحّد للرسائل القصيرة (رمز الدخول، التنبيهات، رسائل الموارد البشرية) */
-function mail_frame(string $eyebrow, string $title, string $inner, bool $rtl = true): string {
-    $dir = $rtl ? 'rtl' : 'ltr'; $al = $rtl ? 'right' : 'left';
-    $font = $rtl ? "'Tajawal','IBM Plex Sans Arabic',Tahoma,Arial,sans-serif" : "'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-    return '<!doctype html><html lang="' . ($rtl ? 'ar' : 'en') . '" dir="' . $dir . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head>'
-        . '<body style="margin:0;padding:0;background:#EDF0F5;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EDF0F5;"><tr><td align="center" style="padding:24px 10px;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="' . $dir . '" style="max-width:520px;background:#FFFFFF;border-radius:20px;overflow:hidden;font-family:' . $font . ';text-align:' . $al . ';box-shadow:0 12px 34px rgba(22,41,74,.13);">'
-        . '<tr><td style="background:' . NAVY . ';background-image:linear-gradient(135deg,#1C335A 0%,' . NAVY . ' 45%,#0E1C33 100%);padding:18px 22px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . '<td style="vertical-align:middle;"><div style="font-size:11.5px;color:#D2B074;font-weight:800;">' . esc_html($eyebrow) . '</div><div style="font-size:16px;font-weight:900;color:#FFFFFF;margin-top:2px;">' . esc_html($rtl ? 'مجموعة بنيان العالمية' : 'Bonyan International Group') . '</div></td>'
-        . '<td align="' . ($rtl ? 'left' : 'right') . '" style="vertical-align:middle;"><img src="cid:logo" width="56" alt="Bonyan" style="display:block;width:56px;height:auto;border:0;"></td></tr></table></td></tr>'
-        . '<tr><td style="height:3px;line-height:3px;font-size:0;background:#D2B074;">&nbsp;</td></tr>'
-        . '<tr><td style="padding:24px 24px 8px;"><h1 style="margin:0 0 10px;font-size:19px;color:' . NAVY . ';font-weight:900;">' . esc_html($title) . '</h1>' . $inner . '</td></tr>'
-        . '<tr><td style="background:#F6F7FA;border-top:1px solid #E8EBF1;padding:4px 18px 14px;">' . mail_signature($rtl) . '</td></tr>'
-        . '</table></td></tr></table></body></html>';
+/* إطار موحّد لكل الرسائل: يحوّل إلى نظام التصميم في mailui.php
+   $o اختياري: tone, icon, badge, lead, buttons, foot, pre */
+function mail_frame(string $eyebrow, string $title, string $inner, bool $rtl = true, array $o = []): string {
+    return mx_page($o + ['eyebrow' => $eyebrow, 'title' => $title, 'body' => $inner, 'rtl' => $rtl, 'tone' => mx_guess_tone($title)]);
 }
 /* توقيع المطوّر الموحد في رسائل الأنظمة (نفس توقيع أنظمة بنيان الأخرى) */
 function mail_signature(bool $rtl = true): string {
@@ -85,11 +77,11 @@ function mail_signature_text(): string { return "\n\n—\nرسالة آلية م
 function logo_inline(): array { return ['logo' => [logo_png(), 'image/png', 'bonyan.png']]; }
 
 function send_login_code(array $u, string $code): void {
-    $big = '<div dir="ltr" style="margin:14px 0;text-align:center;font-family:Consolas,\'SF Mono\',monospace;font-size:34px;font-weight:800;letter-spacing:10px;color:' . NAVY . ';background:#F4F6FA;border:1px solid #E3E8F0;border-radius:14px;padding:14px 0;">' . esc_html($code) . '</div>';
-    $inner = '<p style="margin:0;font-size:14px;line-height:1.9;color:#1D2A3B;">' . esc_html(($u['name'] ? $u['name'] . '، ' : '') . 'هذا رمز الدخول إلى منصة الموارد البشرية:') . '</p>' . $big
-        . '<p style="margin:0;font-size:12.5px;line-height:1.9;color:#6B778A;">صالح لمدة ١٠ دقائق ولمرة واحدة. لا تشاركه مع أحد — فريق الموارد البشرية لن يطلبه منك أبدًا. إن لم تطلب الدخول فتجاهل هذه الرسالة.</p>';
-    send_mail($u['email'], 'رمز الدخول: ' . $code . ' · بنيان للموارد البشرية', mail_frame('الموارد البشرية · دخول آمن', 'رمز الدخول إلى المنصة', $inner),
-        "رمز الدخول: $code\nصالح لمدة 10 دقائق ولمرة واحدة. لا تشاركه مع أحد.", 'Bonyan HR', logo_inline());
+    $html = mx_page(['eyebrow' => 'الموارد البشرية · دخول آمن', 'title' => 'رمز الدخول إلى المنصة', 'tone' => 'navy', 'icon' => '🔐', 'pre' => 'رمز الدخول: ' . $code . ' — صالح ١٠ دقائق',
+        'lead' => esc_html(($u['name'] ? $u['name'] . '، ' : '') . 'هذا رمز الدخول إلى منصة الموارد البشرية. اكتبه في صفحة الدخول:'),
+        'body' => mx_code($code) . mx_note('صالح لمدة ١٠ دقائق ولمرة واحدة. لا تشاركه مع أحد؛ فريق الموارد البشرية لن يطلبه منك أبدًا. وإن لم تطلب الدخول فتجاهل هذه الرسالة.', 'amber', 'للأمان'),
+        'buttons' => [[mx_url(), 'فتح منصة الموارد البشرية', 'primary']]]);
+    send_mail($u['email'], 'رمز الدخول: ' . $code . ' · بنيان للموارد البشرية', $html, "رمز الدخول: $code\nصالح لمدة 10 دقائق ولمرة واحدة. لا تشاركه مع أحد.", 'Bonyan HR', logo_inline());
 }
 /* رمز التحقق للمنسوب في صفحة «تحديث بياناتي» */
 function send_self_code(string $to, string $name, string $ref, string $code, string $L): void {
@@ -100,10 +92,11 @@ function send_self_code(string $to, string $name, string $ref, string $code, str
     ][$L] ?? null;
     $T = $T ?: ['t' => 'رمز التحقق لتحديث بياناتك', 'p' => 'رمز التحقق للرقم المرجعي', 'n' => 'صالح لمدة ١٠ دقائق.', 'e' => 'الموارد البشرية', 's' => 'رمز التحقق'];
     $rtl = $L === 'ar' || !in_array($L, ['en', 'id'], true);
-    $inner = '<p style="margin:0;font-size:14px;line-height:1.9;color:#1D2A3B;">' . esc_html($T['p']) . ' <b dir="ltr">' . esc_html($ref) . '</b></p>'
-        . '<div dir="ltr" style="margin:14px 0;text-align:center;font-family:Consolas,monospace;font-size:34px;font-weight:800;letter-spacing:10px;color:' . NAVY . ';background:#F4F6FA;border:1px solid #E3E8F0;border-radius:14px;padding:14px 0;">' . esc_html($code) . '</div>'
-        . '<p style="margin:0;font-size:12.5px;line-height:1.9;color:#6B778A;">' . esc_html($T['n']) . '</p>';
-    send_mail($to, $T['s'] . ': ' . $code . ' · ' . $ref, mail_frame($T['e'], $T['t'], $inner, $rtl), $T['s'] . ": $code", 'Bonyan HR', logo_inline());
+    $btn = ['ar' => 'فتح صفحة «تحديث بياناتي»', 'en' => 'Open “Update my details”', 'id' => 'Buka “Perbarui data saya”'][$L] ?? 'فتح صفحة «تحديث بياناتي»';
+    $html = mx_page(['eyebrow' => $T['e'], 'title' => $T['t'], 'tone' => 'navy', 'icon' => '🔐', 'rtl' => $rtl, 'pre' => $T['s'] . ': ' . $code,
+        'lead' => esc_html($T['p']) . ' <b dir="ltr">' . esc_html($ref) . '</b>', 'body' => mx_code($code) . mx_note($T['n'], 'amber', '', $rtl),
+        'buttons' => [[update_url($ref, $L), $btn, 'primary']]]);
+    send_mail($to, $T['s'] . ': ' . $code . ' · ' . $ref, $html, $T['s'] . ": $code", 'Bonyan HR', logo_inline());
 }
 
 /* ============================================================ رسالة تأكيد التسجيل (منقولة من Code.gs بنفس التصميم واللغات) */
@@ -126,7 +119,7 @@ function send_confirm(array $row, bool $updated, ?array $info = null): string {
     $pass = preg_replace('/\s+/', '', $get('passportNo'));
     $today = strtotime(date('Y-m-d') . ' 12:00:00');
     $alerts = [];
-    foreach (['passportExpiry', 'permitExpiry', 'nationalIdExpiry', 'workPermitExpiry'] as $k) {
+    foreach (['passportExpiry', 'permitExpiry', 'nationalIdExpiry'] as $k) {
         $v = $get($k); if (!preg_match('/^\d{4}-\d{2}-\d{2}/', $v)) continue;
         $days = (int)round((strtotime(substr($v, 0, 10) . ' 12:00:00') - $today) / 86400);
         if ($days < 0) $alerts[] = $fill($T['expired'], ['doc' => $T['docs'][$k], 'd' => substr($v, 0, 10)]);
@@ -156,14 +149,12 @@ function send_confirm(array $row, bool $updated, ?array $info = null): string {
 }
 
 function confirm_mail_html(array $m): string {
-    $T = $m['T']; $RTL = $m['L'] === 'ar'; $S = $RTL ? 'right' : 'left'; $E = $RTL ? 'left' : 'right'; $DIR = $RTL ? 'rtl' : 'ltr';
-    $e = 'esc_html';
-    $NAVY = '#16294A'; $NAVY2 = '#0E1C33'; $GOLD = '#D2B074'; $GOLD2 = '#9C7432'; $INK = '#1D2A3B'; $MUTED = '#6B778A'; $LINE = '#E8EBF1';
-    $FONT = $RTL ? "'Tajawal','IBM Plex Sans Arabic',Tahoma,Arial,sans-serif" : "'Segoe UI',Roboto,Helvetica,Arial,sans-serif"; $MONO = "Consolas,'SF Mono','Courier New',monospace";
-    $cell = function ($k, $v, $ltr = false, $span = false) use ($e, $LINE, $MUTED, $INK, $S) {
-        return '<td' . ($span ? ' colspan="2"' : '') . ' width="' . ($span ? '100%' : '50%') . '" style="padding:6px;vertical-align:top;"><div style="background:#F7F8FB;border:1px solid ' . $LINE . ';border-radius:12px;padding:10px 14px;">'
-            . '<div style="font-size:11.5px;color:' . $MUTED . ';font-weight:700;">' . $e($k) . '</div>'
-            . '<div' . ($ltr ? ' dir="ltr" style="text-align:' . $S . ';' : ' style="') . 'font-size:14px;color:' . $INK . ';font-weight:800;margin-top:3px;word-break:break-word;">' . ($v !== '' && $v !== null ? $e($v) : '—') . '</div></div></td>';
+    $T = $m['T']; $RTL = $m['L'] === 'ar'; $S = $RTL ? 'right' : 'left'; $E = $RTL ? 'left' : 'right';
+    $e = 'esc_html'; $MONO = "Consolas,'SF Mono','Courier New',monospace";
+    $cell = function ($k, $v, $ltr = false, $span = false) use ($e, $S) {
+        return '<td' . ($span ? ' colspan="2"' : '') . ' width="' . ($span ? '100%' : '50%') . '" style="padding:5px;vertical-align:top;"><div style="background:' . MX['soft'] . ';border:1px solid ' . MX['line'] . ';border-radius:14px;padding:11px 14px;">'
+            . '<div style="font-size:11.5px;color:' . MX['mut'] . ';font-weight:700;">' . $e($k) . '</div>'
+            . '<div' . ($ltr ? ' dir="ltr" style="text-align:' . $S . ';' : ' style="') . 'font-size:14px;color:' . MX['ink'] . ';font-weight:800;margin-top:3px;word-break:break-word;">' . ($v !== '' && $v !== null ? $e($v) : '—') . '</div></div></td>';
     };
     $pairs = $m['cardImg'] ? [[$T['nationality'], $m['nationality']], [$T['passport'], $m['passportMasked'], 1]]
         : [[$T['workCountry'], $m['workCountry']], [$T['nationality'], $m['nationality']], [$T['passport'], $m['passportMasked'], 1], [$T['passportExpiry'], $m['passportExpiry'], 1]];
@@ -172,47 +163,32 @@ function confirm_mail_html(array $m): string {
     $grid = '';
     for ($i = 0; $i < count($pairs); $i += 2) $grid .= '<tr>' . $cell($pairs[$i][0], $pairs[$i][1], !empty($pairs[$i][2])) . (isset($pairs[$i + 1]) ? $cell($pairs[$i + 1][0], $pairs[$i + 1][1], !empty($pairs[$i + 1][2])) : '<td></td>') . '</tr>';
     $grid .= '<tr>' . $cell($T['email'], $m['email'], true, true) . '</tr>';
-    $chips = implode('', array_map(function ($f) use ($e) { return '<span style="display:inline-block;margin:0 0 6px 6px;padding:6px 11px;border-radius:999px;background:#EEF7F1;border:1px solid #CFE7D8;color:#1E6B49;font-size:12.5px;font-weight:700;white-space:nowrap;">✓ ' . $e($f) . '</span>'; }, $m['files']));
-    $alerts = implode('', array_map(function ($a) use ($e, $S) { return '<div style="margin-top:12px;padding:10px 14px;border-radius:12px;background:#FFF6E5;border:1px solid #F1D49B;color:#7A5410;font-size:13px;line-height:1.8;text-align:' . $S . ';">⚠️ ' . $e($a) . '</div>'; }, $m['alerts']));
+    $chips = implode('', array_map(function ($f) use ($e) { return '<span style="display:inline-block;margin:0 0 6px 6px;padding:6px 12px;border-radius:999px;background:#EAF7F0;border:1px solid #BCE2CD;color:#147A4E;font-size:12.5px;font-weight:800;white-space:nowrap;">✓ ' . $e($f) . '</span>'; }, $m['files']));
+    $alerts = implode('', array_map(fn($a) => mx_note($a, 'amber', '', $RTL), $m['alerts']));
     $greet = str_replace('{name}', $e($m['name'] ?: ($m['nameAr'] ?: $m['nameLatin'])), $m['female'] ? $T['greetF'] : $T['greetM']);
     $nameBig = $RTL ? ($m['nameAr'] ?: $m['nameLatin']) : ($m['nameLatin'] ?: $m['nameAr']);
     $nameSmall = $RTL ? ($m['nameAr'] ? $m['nameLatin'] : '') : ($m['nameLatin'] ? $m['nameAr'] : '');
-    $h = '<!doctype html><html lang="' . $m['L'] . '" dir="' . $DIR . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>' . $e($m['subject']) . '</title>'
-        . '<style>details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-marker{display:none}details[open] .chev{transform:rotate(180deg)}</style></head>'
-        . '<body style="margin:0;padding:0;background:#EDF0F5;"><div style="display:none;max-height:0;overflow:hidden;">' . $e($m['preheader']) . '</div>'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EDF0F5;"><tr><td align="center" style="padding:24px 10px;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" dir="' . $DIR . '" style="max-width:560px;background:#FFFFFF;border-radius:22px;overflow:hidden;font-family:' . $FONT . ';text-align:' . $S . ';box-shadow:0 12px 34px rgba(22,41,74,.13);">'
-        . '<tr><td style="background:' . $NAVY . ';background-image:linear-gradient(135deg,#1C335A 0%,' . $NAVY . ' 45%,' . $NAVY2 . ' 100%);padding:20px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
-        . '<td style="vertical-align:middle;text-align:' . $S . ';"><div style="font-size:11.5px;color:' . $GOLD . ';font-weight:800;letter-spacing:.3px;">' . $e($T['hr']) . '</div><div style="font-size:17px;font-weight:900;color:#FFFFFF;margin-top:2px;">' . $e($T['org']) . '</div></td>'
-        . '<td align="' . $E . '" style="vertical-align:middle;"><img src="' . $e($m['logo']) . '" width="64" alt="' . $e($T['logoAlt']) . '" style="display:block;width:64px;height:auto;border:0;"></td></tr></table></td></tr>'
-        . '<tr><td style="height:3px;line-height:3px;font-size:0;background:' . $GOLD . ';background-image:linear-gradient(90deg,#B8924F,' . $GOLD . ',#F0D9A8,' . $GOLD . ',#B8924F);">&nbsp;</td></tr>'
-        . '<tr><td align="center" style="padding:26px 24px 4px;"><div style="width:54px;height:54px;line-height:54px;border-radius:50%;background:#EEF7F1;border:2px solid #BFE0CC;color:#1E7A52;font-size:26px;font-weight:900;text-align:center;margin:0 auto;">✓</div>'
-        . '<h1 style="margin:14px 0 4px;font-size:21px;line-height:1.5;color:' . $NAVY . ';font-weight:900;text-align:center;">' . $e($m['updated'] ? $T['titleUpd'] : $T['titleNew']) . '</h1>'
-        . '<p style="margin:0;font-size:14px;line-height:1.95;color:' . $INK . ';text-align:center;">' . $greet . '<br>' . $e($m['updated'] ? $T['bodyUpd'] : $T['bodyNew']) . '</p></td></tr>';
+    $body = '';
     if ($m['cardImg']) {
-        $h .= '<tr><td align="center" style="padding:14px 10px 0;"><img src="' . $e($m['cardImg']) . '" width="540" alt="' . $e($T['card']) . '" style="display:block;width:100%;max-width:540px;height:auto;border:0;margin:0 auto;"></td></tr>'
-            . '<tr><td align="center" style="padding:2px 24px 0;font-size:12.5px;color:' . $MUTED . ';">' . $e($T['ref']) . ' <b dir="ltr" style="font-family:' . $MONO . ';color:' . $NAVY . ';letter-spacing:.5px;">' . $e($m['ref']) . '</b> &nbsp;·&nbsp; ' . $e($T['date']) . ' <b dir="ltr" style="color:' . $INK . ';">' . $e($m['date']) . '</b>' . $alerts . '</td></tr>';
+        $body .= '<div style="height:16px;line-height:16px;font-size:0;">&nbsp;</div><img src="' . $e($m['cardImg']) . '" width="548" alt="' . $e($T['card']) . '" style="display:block;width:100%;max-width:548px;height:auto;border:0;margin:0 auto;border-radius:16px;">'
+            . '<p style="margin:8px 0 0;font-size:12.5px;color:' . MX['mut'] . ';text-align:center;">' . $e($T['ref']) . ' <b dir="ltr" style="font-family:' . $MONO . ';color:' . MX['navy'] . ';letter-spacing:.5px;">' . $e($m['ref']) . '</b> &nbsp;·&nbsp; ' . $e($T['date']) . ' <b dir="ltr" style="color:' . MX['navy'] . ';">' . $e($m['date']) . '</b></p>';
     } else {
-        $h .= '<tr><td style="padding:18px 24px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-radius:16px;background:' . $NAVY . ';background-image:linear-gradient(135deg,#21396A,' . $NAVY . ' 55%,' . $NAVY2 . ');"><tr>'
-            . '<td style="padding:18px 20px;vertical-align:top;text-align:' . $S . ';"><div style="font-size:17px;font-weight:900;color:#FFFFFF;line-height:1.5;">' . $e($nameBig) . '</div>'
-            . ($nameSmall ? '<div style="font-size:11px;letter-spacing:' . ($RTL ? '1px' : '0') . ';color:rgba(255,255,255,.7);font-weight:700;margin-top:1px;">' . $e($nameSmall) . '</div>' : '')
-            . '<div style="font-size:13.5px;color:' . $GOLD . ';font-weight:800;margin-top:8px;">' . $e($m['jobTitle']) . '</div><div style="font-size:12.5px;color:rgba(255,255,255,.78);margin-top:1px;">' . $e($m['entity']) . '</div></td></tr>'
-            . '<tr><td style="padding:0 20px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid rgba(210,176,116,.35);"><tr>'
-            . '<td style="padding-top:12px;text-align:' . $S . ';"><div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:700;">' . $e($T['ref']) . '</div><div dir="ltr" style="text-align:' . $S . ';font-family:' . $MONO . ';font-size:16px;font-weight:700;letter-spacing:1px;color:' . $GOLD . ';white-space:nowrap;">' . $e($m['ref']) . '</div></td>'
-            . '<td align="' . $E . '" style="padding-top:12px;"><div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:700;">' . $e($T['date']) . '</div><div dir="ltr" style="font-size:13px;font-weight:700;color:#FFFFFF;">' . $e($m['date']) . '</div></td>'
-            . '</tr></table></td></tr></table>' . $alerts . '</td></tr>';
+        $body .= '<div style="height:16px;line-height:16px;font-size:0;">&nbsp;</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' . MX['navy'] . '" style="border-collapse:separate;border-radius:18px;background-color:' . MX['navy'] . ';background-image:linear-gradient(135deg,#24406F,' . MX['navy'] . ' 55%,' . MX['navy2'] . ');"><tr>'
+            . '<td style="padding:18px 20px 6px;vertical-align:top;text-align:' . $S . ';"><div style="font-size:18px;font-weight:900;color:#FFFFFF;line-height:1.5;">' . $e($nameBig) . '</div>'
+            . ($nameSmall ? '<div style="font-size:11.5px;color:rgba(255,255,255,.72);font-weight:700;margin-top:1px;">' . $e($nameSmall) . '</div>' : '')
+            . '<div style="font-size:13.5px;color:' . MX['gold'] . ';font-weight:800;margin-top:8px;">' . $e($m['jobTitle']) . '</div><div style="font-size:12.5px;color:rgba(255,255,255,.8);margin-top:1px;">' . $e($m['entity']) . '</div></td></tr>'
+            . '<tr><td style="padding:0 20px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid rgba(212,177,118,.35);"><tr>'
+            . '<td style="padding-top:12px;text-align:' . $S . ';"><div style="font-size:11px;color:rgba(255,255,255,.62);font-weight:700;">' . $e($T['ref']) . '</div><div dir="ltr" style="text-align:' . $S . ';font-family:' . $MONO . ';font-size:14px;font-weight:700;letter-spacing:.3px;white-space:nowrap;color:' . MX['gold'] . ';">' . $e($m['ref']) . '</div></td>'
+            . '<td align="' . $E . '" style="padding-top:12px;"><div style="font-size:11px;color:rgba(255,255,255,.62);font-weight:700;">' . $e($T['date']) . '</div><div dir="ltr" style="font-size:13px;font-weight:700;color:#FFFFFF;">' . $e($m['date']) . '</div></td>'
+            . '</tr></table></td></tr></table>';
     }
-    $h .= '<tr><td style="padding:12px 18px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">' . $grid . '</table></td></tr>';
-    if ($chips) $h .= '<tr><td style="padding:8px 24px 0;"><details style="border:1px solid ' . $LINE . ';border-radius:14px;background:#FBFCFD;">'
-        . '<summary style="padding:12px 16px;font-size:14px;font-weight:800;color:' . $NAVY . ';text-align:' . $S . ';"><span style="display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:999px;background:#EEF7F1;color:#1E7A52;font-size:12px;margin-' . $E . ':8px;">' . count($m['files']) . '</span>' . $e($T['files']) . '<span class="chev" style="float:' . $E . ';color:' . $GOLD2 . ';font-size:12px;line-height:22px;display:inline-block;">▼</span></summary>'
-        . '<div style="padding:4px 16px 10px;text-align:' . $S . ';">' . $chips . '</div></details></td></tr>';
-    $h .= '<tr><td align="center" style="padding:20px 24px 4px;"><table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr><td style="border-radius:12px;background:' . $NAVY . ';background-image:linear-gradient(135deg,#21396A,' . $NAVY2 . ');"><a href="' . $e($m['formUrl']) . '" style="display:inline-block;padding:12px 28px;font-family:' . $FONT . ';font-size:14.5px;font-weight:800;color:#FFFFFF;text-decoration:none;">' . $e($T['btn']) . '</a></td></tr></table>'
-        . '<p style="margin:10px 0 0;font-size:12px;line-height:1.8;color:' . $MUTED . ';text-align:center;">' . $e($T['note']) . '</p></td></tr>'
-        . '<tr><td align="center" style="padding:18px 24px 22px;"><div style="font-size:13.5px;color:' . $INK . ';line-height:1.8;">' . $e($T['regards']) . '</div><div style="font-size:14.5px;font-weight:900;color:' . $NAVY . ';">' . $e($T['sign']) . '</div></td></tr>'
-        . '<tr><td align="center" style="background:#F6F7FA;border-top:1px solid ' . $LINE . ';padding:14px 24px 16px;"><p style="margin:0 0 8px;font-size:11.5px;line-height:1.8;color:' . $MUTED . ';">' . $e($T['auto']) . '</p>'
-        . '<a href="mailto:' . $e($m['devEmail']) . '" style="display:inline-block;padding:4px 11px;border-radius:999px;background:#FFF1E6;border:1px solid #F5C9A3;color:#B4570F;font-size:11.5px;font-weight:800;text-decoration:none;white-space:nowrap;">' . $e($T['dev']) . ' · <span dir="ltr">' . $e($m['devEmail']) . '</span></a>'
-        . '<div style="margin-top:8px;font-size:11px;color:#9AA5B6;">' . $e(str_replace('{y}', $m['year'], $T['copy'])) . '</div></td></tr></table></td></tr></table></body></html>';
-    return $h;
+    $body .= $alerts . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;">' . $grid . '</table>';
+    if ($chips) $body .= '<div style="margin:16px 2px 8px;font-size:12px;font-weight:800;color:' . MX['goldD'] . ';text-align:' . $S . ';">' . $e($T['files']) . ' (' . count($m['files']) . ')</div><div style="text-align:' . $S . ';">' . $chips . '</div>';
+    $body .= '<p style="margin:18px 0 0;font-size:13.5px;line-height:1.8;color:' . MX['ink'] . ';text-align:center;">' . $e($T['regards']) . '<br><b style="font-size:14.5px;color:' . MX['navy'] . ';">' . $e($T['sign']) . '</b></p>';
+    $portal = ['ar' => 'الدخول إلى منصة الموارد البشرية', 'en' => 'Open the HR portal', 'id' => 'Buka portal SDM'][$m['L']] ?? 'الدخول إلى منصة الموارد البشرية';
+    return mx_page(['eyebrow' => $T['hr'], 'title' => $m['updated'] ? $T['titleUpd'] : $T['titleNew'], 'tone' => 'green', 'rtl' => $RTL, 'pre' => $m['preheader'],
+        'lead' => $greet . '<br>' . $e($m['updated'] ? $T['bodyUpd'] : $T['bodyNew']), 'body' => $body,
+        'buttons' => [[$m['formUrl'], '✎ ' . $e($T['btn']), 'gold'], [mx_url(), $e($portal), 'ghost']], 'foot' => $T['note']]);
 }
 
 /* تنبيه مختصر للموارد البشرية عند كل تسجيل جديد */
@@ -227,12 +203,12 @@ function notify_hr(array $row): void {
     $list = hr_recipients(); if (!$list) return;
     $d = $row['data']; $g = function ($k) use ($d) { return trim((string)($d[$k] ?? '')); };
     $name = $g('fullNameAr') ?: $g('fullNameLatin');
-    $line = function ($k, $v) { return $v !== '' ? '<tr><td style="padding:5px 0;color:#6B778A;font-size:13px;width:110px;">' . esc_html($k) . '</td><td style="padding:5px 0;color:#1D2A3B;font-size:14px;font-weight:700;">' . esc_html($v) . '</td></tr>' : ''; };
-    $inner = '<table style="border-collapse:collapse;width:100%;">' . $line('الرقم المرجعي', $row['ref']) . $line('الجهة', $g('entity')) . $line('المسمى', $g('jobTitle'))
-        . $line('دولة العمل', $g('workCountry')) . $line('الجنسية', $g('nationality')) . $line('البريد', $g('officialEmail') ?: $g('personalEmail')) . '</table>'
-        . '<div style="margin:14px 0 6px;"><a href="' . esc_html(cfg('site_url')) . '" style="display:inline-block;padding:9px 18px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13px;text-decoration:none;">فتح منصة الموارد البشرية</a></div>';
+    $html = mx_page(['eyebrow' => 'سجل المنسوبين · تسجيل جديد', 'title' => 'تسجيل جديد في سجل المنسوبين', 'tone' => 'teal', 'icon' => '👤', 'badge' => 'بانتظار المراجعة',
+        'pre' => $name . ' · ' . $row['ref'], 'lead' => 'سجّل <b>' . esc_html($name) . '</b> بياناته ومرفقاته في سجل المنسوبين.',
+        'body' => mx_rows([['الرقم المرجعي', $row['ref'], 1], ['الجهة', $g('entity')], ['المسمى الوظيفي', $g('jobTitle')], ['دولة العمل', $g('workCountry')], ['الجنسية', $g('nationality')], ['البريد الإلكتروني', $g('officialEmail') ?: $g('personalEmail'), 1]], 'بيانات المسجّل'),
+        'buttons' => [[mx_url('people'), 'مراجعة الملف في المنصة', 'primary']]]);
     foreach ($list as $to) {
-        try { send_mail($to, 'تسجيل جديد: ' . $name . ' · ' . $row['ref'], mail_frame('Bonyan HR · تسجيل جديد', $name, $inner), 'تسجيل جديد: ' . $name . ' · ' . $row['ref'], 'Bonyan HR', logo_inline()); }
+        try { send_mail($to, 'تسجيل جديد: ' . $name . ' · ' . $row['ref'], $html, 'تسجيل جديد: ' . $name . ' · ' . $row['ref'] . "\n" . mx_url('people'), 'Bonyan HR', logo_inline()); }
         catch (Throwable $e) { audit_log($row['ref'], 'تعذّر إرسال التنبيه', mask_email($to) . ' · ' . $e->getMessage()); }
     }
     audit_log($row['ref'], 'تنبيه الموارد البشرية بتسجيل جديد', implode('، ', array_map('mask_email', $list)), 'النظام');

@@ -473,41 +473,26 @@ function req_act_do(array $b): array {
 /* ============ رسائل البريد (قالب نظام الإجازات السابق) ============ */
 const LV = ['navyDark' => '#161D35', 'navy' => '#1B2347', 'gold' => '#C9A84C', 'goldLight' => '#DDB95A', 'goldPale' => '#FBF5E6', 'bg' => '#EDEEF4', 'border' => '#DDE1EE', 'muted' => '#8E97B4', 'green' => '#1A6B3C', 'red' => '#C0392B'];
 function lv_frame(string $entity, string $title, string $content): string {
-    $C = LV;
-    return '<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head>'
-        . '<body style="margin:0;padding:0;background:' . $C['bg'] . ';font-family:Tahoma,Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#FFFFFF;">'
-        . '<div style="background:' . $C['navy'] . ';background-image:linear-gradient(135deg,' . $C['navyDark'] . ',' . $C['navy'] . ');padding:22px 24px 18px;text-align:center;">'
-        . '<img src="cid:logo" alt="بنيان" width="60" style="width:60px;height:auto;margin:0 auto 10px;display:block;border:0;">'
-        . '<div style="color:' . $C['gold'] . ';font-size:12px;font-weight:bold;letter-spacing:1px;margin-bottom:6px;">' . esc_html($entity) . '</div>'
-        . '<div style="color:#FFFFFF;font-size:19px;font-weight:bold;">' . $title . '</div></div>'
-        . '<div style="padding:24px;direction:rtl;text-align:right;color:' . $C['navy'] . ';font-size:14px;line-height:1.9;">' . $content . '</div>'
-        . '<div style="background:' . $C['navy'] . ';padding:16px;text-align:center;color:' . $C['goldLight'] . ';font-size:12px;">مجموعة بنيان العالمية - نظام إدارة طلبات الإجازات</div>'
-        . '<div style="background:#F6F7FA;padding:4px 18px 14px;">' . mail_signature(true) . '</div>'
-        . '</div></body></html>';
-}
-function lv_table(array $rows): string {
-    $C = LV; $h = '<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;">';
-    foreach (array_values($rows) as $i => $r) {
-        $v = ($r[1] === '' || $r[1] === null) ? '—' : (!empty($r[2]) ? '<span dir="ltr" style="unicode-bidi:embed;">' . esc_html($r[1]) . '</span>' : esc_html($r[1]));
-        $h .= '<tr style="background:' . ($i % 2 ? $C['bg'] : '#FFFFFF') . ';"><td style="padding:9px 12px;color:' . $C['muted'] . ';font-weight:bold;width:35%;border-bottom:1px solid ' . $C['border'] . ';">' . esc_html($r[0]) . '</td>'
-            . '<td style="padding:9px 12px;color:' . $C['navy'] . ';font-weight:bold;border-bottom:1px solid ' . $C['border'] . ';">' . $v . '</td></tr>';
+    /* العنوان يبدأ برمز (✅ ❌ ✏️ 📩 🔔) يحدد لون الحالة وأيقونتها */
+    $tone = 'navy'; $icon = '📨';
+    if (preg_match('/^&#(\d+);(?:&#65039;)?\s*/', $title, $m)) {
+        [$tone, $icon] = ['9989' => ['green', '✓'], '10060' => ['red', '✕'], '9999' => ['gold', '✎'], '128233' => ['blue', '📨'], '128276' => ['amber', '⏳']][$m[1]] ?? ['navy', '✉'];
+        $title = substr($title, strlen($m[0]));
     }
-    return $h . '</table>';
+    $plain = html_entity_decode(strip_tags($title), ENT_QUOTES, 'UTF-8');
+    $badge = ['green' => 'معتمد', 'red' => 'مرفوض', 'gold' => 'عُدّل قبل الاعتماد', 'blue' => 'قيد المراجعة', 'amber' => 'بانتظار اعتمادك'][$tone] ?? '';
+    return mx_page(['eyebrow' => $entity . ' · الإجازات', 'title' => $plain, 'tone' => $tone, 'icon' => $icon, 'badge' => $badge, 'pre' => $plain,
+        'body' => '<div style="font-size:14.5px;line-height:2;color:' . MX['ink'] . ';">' . $content . '</div>']);
 }
+function lv_table(array $rows): string { return mx_rows($rows, 'تفاصيل الطلب'); }
 function lv_changes(array $ch): string {
-    $C = LV;
-    if (!$ch) return '<p style="color:' . $C['muted'] . ';">لا توجد تغييرات في البيانات الأساسية للطلب.</p>';
-    $h = '<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;"><tr style="background:' . $C['navy'] . ';color:#FFFFFF;"><td style="padding:9px 12px;font-weight:bold;">الحقل</td><td style="padding:9px 12px;font-weight:bold;">القيمة السابقة</td><td style="padding:9px 12px;font-weight:bold;">القيمة الجديدة</td></tr>';
-    foreach (array_values($ch) as $i => $c) $h .= '<tr style="background:' . ($i % 2 ? $C['bg'] : '#FFFFFF') . ';"><td style="padding:9px 12px;font-weight:bold;color:' . $C['navy'] . ';border-bottom:1px solid ' . $C['border'] . ';">' . esc_html($c[0]) . '</td>'
-        . '<td style="padding:9px 12px;color:' . $C['red'] . ';text-decoration:line-through;border-bottom:1px solid ' . $C['border'] . ';">' . esc_html($c[1] !== '' ? $c[1] : '—') . '</td>'
-        . '<td style="padding:9px 12px;color:' . $C['green'] . ';font-weight:bold;border-bottom:1px solid ' . $C['border'] . ';">' . esc_html($c[2] !== '' ? $c[2] : '—') . '</td></tr>';
-    return $h . '</table>';
+    if (!$ch) return mx_note('لا توجد تغييرات في البيانات الأساسية للطلب.', 'navy');
+    $h = '';
+    foreach (array_values($ch) as $i => $c) $h .= '<tr><td style="padding:10px 14px;' . ($i ? 'border-top:1px solid ' . MX['line'] . ';' : '') . 'font-size:12.5px;font-weight:800;color:' . MX['mut'] . ';width:30%;vertical-align:top;">' . esc_html($c[0]) . '</td>'
+        . '<td style="padding:10px 14px;' . ($i ? 'border-top:1px solid ' . MX['line'] . ';' : '') . 'font-size:13.5px;vertical-align:top;"><div style="color:#B42318;text-decoration:line-through;">' . esc_html($c[1] !== '' ? $c[1] : '—') . '</div><div style="color:#147A4E;font-weight:800;">' . esc_html($c[2] !== '' ? $c[2] : '—') . '</div></td></tr>';
+    return '<div style="margin:18px 2px 8px;font-size:12px;font-weight:800;color:' . MX['goldD'] . ';">ما تغيّر في الطلب</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:#FFFFFF;border:1px solid #EAD39B;border-radius:16px;">' . $h . '</table>';
 }
-function lv_box(string $label, string $text, string $tone): string {
-    $C = LV; $bg = $tone === 'red' ? 'rgba(192,57,43,0.06)' : ($tone === 'gold' ? $C['goldPale'] : $C['bg']);
-    $bd = ['red' => $C['red'], 'gold' => $C['gold'], 'green' => $C['green']][$tone] ?? $C['navy']; $fg = $tone === 'gold' ? '#9C7E2E' : $bd;
-    return '<div style="background:' . $bg . ';border-right:4px solid ' . $bd . ';border-radius:8px;padding:12px 16px;margin:14px 0;"><div style="font-weight:bold;color:' . $fg . ';margin-bottom:6px;">' . esc_html($label) . '</div><div>' . nl2br(esc_html($text)) . '</div></div>';
-}
+function lv_box(string $label, string $text, string $tone): string { return mx_note($text, ['red' => 'red', 'gold' => 'gold', 'green' => 'green'][$tone] ?? 'blue', rtrim($label, ':')); }
 function lv_date(string $d): string { return $d ? date('Y/m/d', strtotime($d)) : ''; }
 function lv_rows(array $r): array {
     $d = json_decode($r['data'], true) ?: []; $s = staff_get($r['ref']); $sd = $s ? $s['data'] : [];
@@ -527,12 +512,26 @@ function lv_rows(array $r): array {
 }
 function lv_sub(array $r): string {
     $d = json_decode($r['data'], true) ?: []; if (empty($d['substitute'])) return '';
-    $C = LV; $rows = [['الاسم', (string)$d['substitute']], ['المسمى الوظيفي', (string)($d['subTitle'] ?? '')]];
+    $rows = [['الاسم', (string)$d['substitute']], ['المسمى الوظيفي', (string)($d['subTitle'] ?? '')]];
     if (!empty($d['subNo'])) $rows[] = ['الرقم الوظيفي', (string)$d['subNo']];
-    return '<div style="background:' . $C['goldPale'] . ';border:1px solid ' . $C['gold'] . ';border-radius:8px;padding:14px 16px;margin:14px 0;"><div style="color:#9C7E2E;font-weight:bold;font-size:13px;margin-bottom:8px;">&#128100; الموظف البديل أثناء الإجازة</div>' . lv_table($rows) . '</div>';
+    return mx_rows($rows, 'الموظف البديل أثناء الإجازة');
 }
 function lv_btn(string $url, string $text, string $bg, string $fg): string {
-    return '<a href="' . esc_html($url) . '" style="display:block;text-align:center;background:' . $bg . ';color:' . $fg . ';text-decoration:none;padding:13px;border-radius:8px;font-weight:bold;font-size:14px;margin-bottom:10px;">' . $text . '</a>';
+    $kind = [LV['green'] => 'success', LV['gold'] => 'gold', LV['red'] => 'danger'][$bg] ?? 'primary';
+    $text = preg_replace('/^&#\d+;(?:&#65039;)?\s*/', '', $text);
+    return '<div style="margin:0 0 10px;">' . mx_btn($url, $text, $kind) . '</div>';
+}
+/* مسار الاعتماد بحالته الحالية */
+function req_chain_html(array $r): string {
+    $chain = json_decode((string)$r['chain'], true) ?: []; $stage = (int)$r['stage']; $out = [];
+    foreach ($chain as $i => $c) {
+        $d = (string)($c['decision'] ?? ''); $who = trim((string)($c['who'] ?? '')); $at = substr((string)($c['at'] ?? ''), 0, 10);
+        if ($d === 'approve' || $d === 'edit') $out[] = [$c['label'], 'done', trim(($d === 'edit' ? 'عدّل واعتمد' : 'اعتمد') . ($at ? ' · ' . $at : ''))];
+        elseif ($d === 'reject') $out[] = [$c['label'], 'bad', 'رُفض' . ($at ? ' · ' . $at : '')];
+        elseif ($r['status'] === 'pending' && $i === $stage) $out[] = [$c['label'], 'now', 'بانتظار القرار' . ($who !== '' && $who !== $c['label'] ? ' · ' . $who : '')];
+        else $out[] = [$c['label'], 'next', $r['status'] === 'cancelled' ? 'أُلغي الطلب' : ''];
+    }
+    return mx_chain($out);
 }
 function lv_entity(array $r): string { $s = staff_get($r['ref']); $e = trim((string)($s['data']['entity'] ?? '')); return $e !== '' ? $e : 'مجموعة بنيان العالمية'; }
 function lv_send(string $to, string $subject, string $html, string $text, string $ref, bool $toStaff): void {
@@ -546,14 +545,14 @@ function lv_mail_staff(array $r, string $kind, array $x = []): void {
     $name = $s ? staff_name($s) : $r['ref']; $ent = lv_entity($r); $no = $r['no'];
     $hi = '<p>عزيزي/عزيزتي <strong>' . esc_html($name) . '</strong>،</p>';
     $track = '<div style="margin:16px 0 4px;">' . lv_btn((string)cfg('site_url') . '#myreq', 'متابعة طلبي في المنصة', LV['navy'], '#FFFFFF') . '</div>';
-    $table = lv_table(lv_rows($r)); $sub = lv_sub($r);
+    $table = lv_table(lv_rows($r)) . req_chain_html($r); $sub = lv_sub($r);
     if ($kind === 'received') {
         $first = (string)($x['first'] ?? 'المسؤول المباشر');
         lv_send($to, 'تأكيد استلام طلب الإجازة - ' . $no, lv_frame($ent, '&#128233; تأكيد استلام طلب الإجازة', $hi . '<p>نشكر لك تقديم طلب الإجازة. تم استلام طلبك بنجاح، وهو الآن قيد المراجعة من قِبل ' . esc_html($first) . '.</p>' . $table . $sub . '<p style="margin-top:14px;">سيتم إشعارك بالبريد الإلكتروني فور اتخاذ أي قرار بشأن طلبك.</p>' . $track), 'تم استلام طلب الإجازة ' . $no, $r['ref'], true);
     } elseif ($kind === 'stage') {
         lv_send($to, 'تم اعتماد طلب الإجازة - ' . $x['label'] . ' - ' . $no, lv_frame($ent, '&#9989; تم اعتماد طلبك (' . esc_html($x['label']) . ')', $hi . '<p>نود إعلامك بأن طلب الإجازة الخاص بك تم <strong>اعتماده من ' . esc_html($x['label']) . '</strong>، وهو الآن عند ' . esc_html($x['next']) . ' للاعتماد.</p>' . $table . ($x['note'] !== '' ? lv_box('ملاحظة ' . $x['label'] . ':', $x['note'], 'green') : '') . '<p style="margin-top:14px;">سيتم إشعارك بالنتيجة النهائية فور البت في الطلب.</p>' . $track), 'اعتُمد طلبك من ' . $x['label'] . ' ' . $no, $r['ref'], true);
     } elseif ($kind === 'edited') {
-        lv_send($to, 'تم تعديل طلب الإجازة - ' . $no, lv_frame($ent, '&#9999;&#65039; تعديل على طلب الإجازة', $hi . '<p>نود إعلامك بأن ' . esc_html($x['label']) . ' قام بإجراء بعض التعديلات على طلب إجازتك قبل اعتماده. وفيما يلي تفاصيل ما تغيّر:</p>' . lv_changes($x['changes']) . ($x['note'] !== '' ? lv_box('ملاحظة ' . $x['label'] . ':', $x['note'], 'gold') : '') . '<p style="font-weight:bold;margin:16px 0 6px;">بيانات الطلب بعد التعديل:</p>' . $table . $sub . '<p style="margin-top:14px;">' . ($x['next'] !== '' ? 'تم تحويل طلبك بعد التعديل إلى ' . esc_html($x['next']) . ' للاعتماد، وسيتم إشعارك بالنتيجة.' : 'واعتُمد طلبك بعد التعديل.') . '</p>' . $track), 'عُدّل طلب الإجازة ' . $no, $r['ref'], true);
+        lv_send($to, 'تم تعديل طلب الإجازة - ' . $no, lv_frame($ent, '&#9999;&#65039; تعديل على طلب الإجازة', $hi . '<p>نود إعلامك بأن ' . esc_html($x['label']) . ' قام بإجراء بعض التعديلات على طلب إجازتك قبل اعتماده. وفيما يلي تفاصيل ما تغيّر:</p>' . lv_changes($x['changes']) . ($x['note'] !== '' ? lv_box('ملاحظة ' . $x['label'] . ':', $x['note'], 'gold') : '') . $table . $sub . '<p style="margin-top:14px;">' . ($x['next'] !== '' ? 'تم تحويل طلبك بعد التعديل إلى ' . esc_html($x['next']) . ' للاعتماد، وسيتم إشعارك بالنتيجة.' : 'واعتُمد طلبك بعد التعديل.') . '</p>' . $track), 'عُدّل طلب الإجازة ' . $no, $r['ref'], true);
     } elseif ($kind === 'final') {
         lv_send($to, 'تم اعتماد طلب الإجازة نهائياً - ' . $no, lv_frame($ent, '&#9989; تم اعتماد طلب الإجازة نهائياً', $hi . '<p>يسرنا إعلامك بأن طلب الإجازة الخاص بك قد تم <strong>اعتماده بشكل نهائي</strong>. نتمنى لك إجازة سعيدة ومباركة.</p>' . $table . ($x['note'] !== '' ? lv_box('ملاحظة ' . $x['label'] . ':', $x['note'], 'green') : '') . $track), 'اعتُمد طلب الإجازة نهائيًا ' . $no, $r['ref'], true);
     } elseif ($kind === 'rejected') {
@@ -570,22 +569,21 @@ function lv_mail_approvers(array $r, array $x = []): void {
     foreach (req_step_emails($step) as $to => $who) {
         if (in_array($to, $staffMails, true)) continue; /* لا يعتمد أحد طلبه هو */
         $tk = req_tok_issue($r, $i, $to, $who); $base = (string)cfg('site_url') . 'decide.html#t=' . $tk;
-        $btn = '<div style="margin:18px 0;">' . lv_btn($base . '&a=approve', $last ? '&#9989; اعتماد نهائي' : '&#9989; اعتماد الطلب', LV['green'], '#FFFFFF')
-            . ($mgr ? lv_btn($base . '&a=edit', '&#9999;&#65039; تعديل الطلب قبل الاعتماد', LV['gold'], LV['navyDark']) : '')
-            . lv_btn($base . '&a=view', '&#128172; عرض التفاصيل والتعليق', LV['navy'], '#FFFFFF')
-            . lv_btn($base . '&a=reject', '&#10060; رفض الطلب', LV['red'], '#FFFFFF') . '</div>'
-            . '<p style="font-size:12px;color:' . LV['muted'] . ';margin:4px 0 0;">الرابط خاص بك ويفتح صفحة الطلب لتأكيد قرارك، وصالح ' . REQ_LINK_DAYS . ' يومًا. ويمكنك أيضًا اتخاذ القرار من المنصة بعد الدخول.</p>';
+        $btn = '<div style="height:20px;line-height:20px;font-size:0;">&nbsp;</div>' . mx_buttons([[$base . '&a=approve', $last ? '✓ اعتماد نهائي' : '✓ اعتماد الطلب', 'success'],
+                $mgr ? ['pair' => [[$base . '&a=edit', '✎ تعديل قبل الاعتماد', 'gold'], [$base . '&a=view', 'عرض التفاصيل', 'ghost']]] : [$base . '&a=view', 'عرض التفاصيل والتعليق', 'ghost'],
+                [$base . '&a=reject', '✕ رفض الطلب', 'danger']])
+            . '<p style="font-size:12px;line-height:1.9;color:' . MX['mut'] . ';margin:6px 0 0;text-align:center;">الرابط خاص بك ويفتح صفحة الطلب لتأكيد قرارك، وصالح ' . REQ_LINK_DAYS . ' يومًا. ويمكنك أيضًا اتخاذ القرار من المنصة.</p>';
         if ($edited && $prev) {
             $title = '&#128276; طلب اعتماد ' . ($last ? 'نهائي ' : '') . '(بعد التعديل)';
             $html = lv_frame($ent, $title, '<p>السلام عليكم،</p><p>قام ' . esc_html($prev['label']) . ' بإجراء بعض التعديلات على طلب الإجازة التالي ثم اعتمده، وهو الآن بانتظار ' . ($last ? 'الاعتماد النهائي من سعادتكم' : 'اعتمادكم') . '.</p>'
                 . lv_changes((array)($x['changes'] ?? ($prev['changes'] ?? []))) . (($prev['note'] ?? '') !== '' ? lv_box('ملاحظة ' . $prev['label'] . ':', (string)$prev['note'], 'navy') : '')
-                . '<p style="font-weight:bold;margin:16px 0 6px;">بيانات الطلب بعد التعديل:</p>' . lv_table(lv_rows($r)) . lv_sub($r) . $btn);
+                . lv_table(lv_rows($r)) . lv_sub($r) . req_chain_html($r) . $btn);
             lv_send($to, 'طلب اعتماد ' . ($last ? 'نهائي ' : '') . 'بعد التعديل - ' . $no, $html, 'طلب إجازة بانتظار اعتمادك بعد التعديل: ' . $no . "\n" . $base . '&a=view', $r['ref'], false);
         } else {
             $title = $i === 0 ? '&#128276; طلب اعتماد إجازة - ' . esc_html($step['label']) : ($last ? '&#128276; طلب الاعتماد النهائي لإجازة' : '&#128276; طلب اعتماد إجازة - ' . esc_html($step['label']));
             $intro = $i === 0 ? '<p>تم تقديم طلب إجازة جديد من الموظف <strong>' . esc_html($name) . '</strong>، وهو بانتظار اعتمادكم' . ($mgr ? ' كمسؤول مباشر' : '') . '.</p>'
                 : '<p>طلب الإجازة التالي تم اعتماده من ' . esc_html($prev['label']) . '، وهو الآن بانتظار ' . ($last ? 'الاعتماد النهائي من سعادتكم' : 'اعتمادكم') . '.</p>';
-            $html = lv_frame($ent, $title, '<p>السلام عليكم،</p>' . $intro . lv_table(lv_rows($r)) . lv_sub($r) . ($prev && ($prev['note'] ?? '') !== '' ? lv_box('ملاحظة ' . $prev['label'] . ':', (string)$prev['note'], 'navy') : '') . $btn);
+            $html = lv_frame($ent, $title, '<p>السلام عليكم،</p>' . $intro . lv_table(lv_rows($r)) . lv_sub($r) . req_chain_html($r) . ($prev && ($prev['note'] ?? '') !== '' ? lv_box('ملاحظة ' . $prev['label'] . ':', (string)$prev['note'], 'navy') : '') . $btn);
             lv_send($to, ($i === 0 ? 'طلب اعتماد إجازة - ' . $step['label'] : ($last ? 'طلب الاعتماد النهائي لإجازة' : 'طلب اعتماد إجازة - ' . $step['label'])) . ' - ' . $no, $html, 'طلب إجازة بانتظار اعتمادك: ' . $no . ' · ' . $name . "\n" . $base . '&a=view', $r['ref'], false);
         }
     }
@@ -595,11 +593,12 @@ function lv_mail_approvers(array $r, array $x = []): void {
 function req_mail_staff(array $r, string $title, string $line): void {
     $s = staff_get($r['ref']); if (!$s) return;
     $to = req_staff_email($s); if (!$to) return;
-    $inner = '<p style="margin:0 0 10px;font-size:14px;line-height:1.9;color:#1D2A3B;">' . esc_html($line) . '</p>'
-        . '<table style="border-collapse:collapse;width:100%;font-size:13.5px;"><tr><td style="padding:5px 0;color:#6B778A;width:110px;">رقم الطلب</td><td style="padding:5px 0;font-weight:800;direction:ltr;text-align:right;">' . esc_html($r['no']) . '</td></tr>'
-        . '<tr><td style="padding:5px 0;color:#6B778A;">التفاصيل</td><td style="padding:5px 0;">' . esc_html(req_summary($r)) . '</td></tr></table>'
-        . '<div style="margin:14px 0 6px;"><a href="' . esc_html(cfg('site_url')) . '#myreq" style="display:inline-block;padding:9px 18px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13px;text-decoration:none;">متابعة طلبي</a></div>';
-    try { send_mail($to, $title . ' · ' . $r['no'], mail_frame('الموارد البشرية · طلباتي', $title, $inner), $line . "\n" . $r['no'] . "\n" . req_summary($r), 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline(), (string)cfg('hr_notify')); }
+    $tone = mx_guess_tone($title . ' ' . $line);
+    $html = mx_page(['eyebrow' => 'الموارد البشرية · طلباتي', 'title' => $title, 'tone' => $tone, 'pre' => $line, 'lead' => esc_html($line),
+        'badge' => ['green' => 'معتمد', 'red' => 'مرفوض', 'amber' => 'قيد الإجراء', 'gold' => 'عُدّل'][$tone] ?? '',
+        'body' => mx_rows([['رقم الطلب', $r['no'], 1], ['نوع الطلب', REQ_TYPES[$r['type']][1] ?? ''], ['التفاصيل', req_summary($r)]], 'تفاصيل الطلب') . req_chain_html($r),
+        'buttons' => [[mx_url('myreq'), 'متابعة طلبي في المنصة', 'primary']]]);
+    try { send_mail($to, $title . ' · ' . $r['no'], $html, $line . "\n" . $r['no'] . "\n" . req_summary($r) . "\n" . mx_url('myreq'), 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline(), (string)cfg('hr_notify')); }
     catch (Throwable $e) { audit_log($r['ref'], 'تعذّر إرسال بريد الطلب', $r['no'] . ' · ' . $e->getMessage()); }
 }
 function req_mail_approvers(array $r, array $step): void {
@@ -610,19 +609,21 @@ function req_mail_approvers(array $r, array $step): void {
     foreach (q("SELECT * FROM users WHERE active=1 AND role='admin'")->fetchAll() as $u) if (user_notify($u) && in_array('requests.approve', user_perms($u), true)) $list[strtolower($u['email'])] = 1;
     $s = staff_get($r['ref']); $name = $s ? staff_name($s) : $r['ref'];
     $staffMails = req_staff_emails($r['ref']);
-    $rows = '';
-    foreach (req_view_rows($r) as $v) $rows .= '<tr><td style="padding:6px 0;color:#6B778A;width:130px;vertical-align:top;">' . esc_html($v[0]) . '</td><td style="padding:6px 0;font-weight:700;color:#1D2A3B;">' . nl2br(esc_html($v[1])) . '</td></tr>';
+    $info = mx_rows(array_merge([['رقم الطلب', $r['no'], 1], ['مقدّم الطلب', $name]], array_map(fn($v) => [$v[0], (string)$v[1]], req_view_rows($r))), 'تفاصيل الطلب') . req_chain_html($r);
     /* من يعتمد بالبريد (المسؤول المباشر أو شخص بلا حساب) يصله رابط قرار خاص به */
     $tokFor = !empty($step['email']) ? strtolower((string)$step['email']) : '';
+    $tname = REQ_TYPES[$r['type']][1];
     foreach (array_keys($list) as $to) {
         if (in_array($to, $staffMails, true)) continue; /* لا يعتمد أحد طلبه هو */
-        $link = (string)cfg('site_url') . '#reqs'; $lab = 'فتح الطلب في المنصة';
-        if ($tokFor !== '' && $to === $tokFor) { $link = (string)cfg('site_url') . 'decide.html#t=' . req_tok_issue($r, (int)$r['stage'], $to, (string)($step['who'] ?? $step['label'])) . '&a=view'; $lab = 'عرض الطلب واتخاذ القرار'; }
-        $inner = '<p style="margin:0 0 10px;font-size:14px;color:#1D2A3B;">' . esc_html(REQ_TYPES[$r['type']][1]) . ' بانتظار قرارك' . (!empty($step['mgr']) ? ' بصفتك المسؤول المباشر' : '') . ' من <b>' . esc_html($name) . '</b>.</p>'
-            . '<table style="border-collapse:collapse;width:100%;font-size:13.5px;"><tr><td style="padding:6px 0;color:#6B778A;width:130px;">رقم الطلب</td><td style="padding:6px 0;font-weight:800;direction:ltr;text-align:right;">' . esc_html($r['no']) . '</td></tr>' . $rows . '</table>'
-            . '<div style="margin:14px 0 6px;"><a href="' . esc_html($link) . '" style="display:inline-block;padding:10px 20px;border-radius:10px;background:#16294A;color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;">' . $lab . '</a></div>'
-            . ($tokFor !== '' && $to === $tokFor ? '<p style="font-size:12px;color:#8E97B4;margin:4px 0 0;">الرابط خاص بك وصالح ' . REQ_LINK_DAYS . ' يومًا، ويفتح صفحة الطلب لتأكيد قرارك.</p>' : '');
-        try { send_mail($to, 'بانتظار اعتمادك: ' . REQ_TYPES[$r['type']][1] . ' · ' . $r['no'], mail_frame('Bonyan HR · الطلبات', REQ_TYPES[$r['type']][1], $inner), req_summary($r) . "\n" . $link, 'منصة بنيان للموارد البشرية', logo_inline()); }
+        $btns = [[mx_url('reqs'), 'فتح الطلب في المنصة', 'primary']]; $foot = 'يمكنك اتخاذ القرار من صفحة «الطلبات» في المنصة.';
+        if ($tokFor !== '' && $to === $tokFor) {
+            $base = (string)cfg('site_url') . 'decide.html#t=' . req_tok_issue($r, (int)$r['stage'], $to, (string)($step['who'] ?? $step['label']));
+            $btns = [[$base . '&a=approve', '✓ اعتماد الطلب', 'success'], ['pair' => [[$base . '&a=view', 'عرض التفاصيل', 'ghost'], [$base . '&a=reject', '✕ رفض الطلب', 'danger']]]];
+            $foot = 'الرابط خاص بك وصالح ' . REQ_LINK_DAYS . ' يومًا، ويفتح صفحة الطلب لتأكيد قرارك.';
+        }
+        $html = mx_page(['eyebrow' => 'الموارد البشرية · الطلبات', 'title' => $tname . ' بانتظار اعتمادك', 'tone' => 'amber', 'badge' => 'بانتظار قرارك', 'pre' => $tname . ' من ' . $name . ' · ' . $r['no'],
+            'lead' => 'قدّم <b>' . esc_html($name) . '</b> ' . esc_html($tname) . '، وهو بانتظار قرارك' . (!empty($step['mgr']) ? ' بصفتك المسؤول المباشر' : '') . '.', 'body' => $info, 'buttons' => $btns, 'foot' => $foot]);
+        try { send_mail($to, 'بانتظار اعتمادك: ' . $tname . ' · ' . $r['no'], $html, req_summary($r) . "\n" . $btns[0][0], 'منصة بنيان للموارد البشرية', logo_inline()); }
         catch (Throwable $e) { audit_log($r['ref'], 'تعذّر إرسال تنبيه الاعتماد', mask_email($to)); }
     }
 }
