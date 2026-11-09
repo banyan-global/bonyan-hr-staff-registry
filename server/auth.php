@@ -224,7 +224,7 @@ function users_list(): array {
     $rows = q("SELECT * FROM users WHERE role <> 'staff' ORDER BY id")->fetchAll();
     $staffN = (int)q1("SELECT COUNT(*) n FROM users WHERE role = 'staff'")['n'];
     $roles = ROLE_NAMES; unset($roles['staff']); $def = ROLE_PERMS; unset($def['staff']);
-    return ['ok' => true, 'users' => array_map('user_public', $rows), 'staffAccounts' => $staffN, 'perms' => PERMS, 'roles' => $roles, 'rolePerms' => role_perms_map(), 'roleDefaults' => $def, 'roleCustom' => setting('role_perms', '') !== ''];
+    return ['ok' => true, 'users' => array_map(fn($r) => user_public($r) + ['staffRef' => (string)($r['staff_ref'] ?? '')], $rows), 'staffAccounts' => $staffN, 'perms' => PERMS, 'roles' => $roles, 'rolePerms' => role_perms_map(), 'roleDefaults' => $def, 'roleCustom' => setting('role_perms', '') !== ''];
 }
 function users_save(array $b): array {
     $me = require_perm('users.manage');
@@ -253,6 +253,18 @@ function users_save(array $b): array {
             [$email, safe_text($b['name'] ?? ''), safe_text($b['title'] ?? ''), $role, $permsJson, $active, now()]);
         if (array_key_exists('notify', $b) && $b['notify'] !== null) q('UPDATE users SET notify=? WHERE email=?', [(int)(bool)$b['notify'], $email]);
         audit_log('', 'إنشاء حساب', $email . ' · ' . ROLE_NAMES[$role] . ($perms === null ? '' : ' · ' . implode('، ', $perms)), $me['_label']);
+    }
+    /* ربط الحساب بسجل منسوب (لواجهة الموظف بجانب واجهة الحساب)؛ الفارغ = الربط التلقائي بالبريد */
+    if (array_key_exists('staffRef', $b)) {
+        $uid = $id ?: (int)q1('SELECT id FROM users WHERE email=?', [$email])['id'];
+        $sr = trim((string)$b['staffRef']);
+        if ($sr !== '') {
+            if (!preg_match('/^[A-Z0-9-]{4,40}$/', $sr) || !staff_get($sr)) throw new HttpError('سجل المنسوب غير موجود');
+            $tw = q1("SELECT name, email FROM users WHERE staff_ref=? AND id<>? AND role<>'staff'", [$sr, $uid]);
+            if ($tw) throw new HttpError('سجل المنسوب هذا مربوط بحساب آخر: ' . ($tw['name'] ?: $tw['email']));
+        }
+        $was = (string)(q1('SELECT staff_ref FROM users WHERE id=?', [$uid])['staff_ref'] ?? '');
+        if ($was !== $sr) { q('UPDATE users SET staff_ref=? WHERE id=?', [$sr !== '' ? $sr : null, $uid]); audit_log($sr, 'ربط حساب بسجل منسوب', $email . ' · ' . ($sr !== '' ? $sr : 'إلغاء الربط'), $me['_label']); }
     }
     return users_list();
 }

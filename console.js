@@ -1410,7 +1410,7 @@ function acctOpen(id) {
   var d = CACHE.users && CACHE.users.data; if (!d) { toast('جارٍ تحميل الحسابات، حاول بعد لحظة'); return; }
   var u = id ? d.users.filter(function (x) { return x.id === id; })[0] : null;
   var rp = d.rolePerms || {};
-  AC = { id: u ? u.id : 0, name: u ? u.name : '', email: u ? u.email : '', title: u ? u.title : '', role: u ? u.role : 'viewer', active: u ? u.active : true, notify: u ? !!u.notify : false, self: !!(u && SESSION && u.id === SESSION.id) };
+  AC = { id: u ? u.id : 0, name: u ? u.name : '', email: u ? u.email : '', title: u ? u.title : '', role: u ? u.role : 'viewer', active: u ? u.active : true, notify: u ? !!u.notify : false, staffRef: u ? u.staffRef || '' : '', self: !!(u && SESSION && u.id === SESSION.id) };
   AC.custom = u ? !samePerms(u.perms, rp[u.role] || []) : false; AC.perms = u ? u.perms.slice() : (rp.viewer || []).slice();
   drawAcct();
 }
@@ -1422,7 +1422,8 @@ function drawAcct() {
     '<div class="abody"><section class="ast"><h3><i>١</i>بيانات الموظف</h3><div class="form"><div class="fld"><label for="acName">الاسم</label><input id="acName" value="' + esc(AC.name) + '" placeholder="مثال: أ. سارة العتيبي" autocomplete="off"></div>' +
     '<div class="fld"><label for="acMail">البريد الإلكتروني</label><input id="acMail" class="ltr" style="text-align:left" type="email" value="' + esc(AC.email) + '" placeholder="name@bonyanglobal.com" autocomplete="off"></div>' +
     '<div class="fld wide"><label for="acTitle">المسمى</label>' + ssel('acTitleSel', [{ v: '', n: 'اكتب مسمى أو اختر من القائمة', ic: 'edit' }].concat(TITLE_SUGG.map(function (t) { return { v: t, n: t }; })), '', 'اختر مسمى شائعًا', function (v) { if (v) { document.getElementById('acTitle').value = v; } }, 'مسميات شائعة') +
-    '<input id="acTitle" value="' + esc(AC.title) + '" placeholder="أو اكتبه هنا"></div></div></section>' +
+    '<input id="acTitle" value="' + esc(AC.title) + '" placeholder="أو اكتبه هنا"></div>' +
+    '<div class="fld wide"><label>سجل الموظف المرتبط</label>' + ssel('acStaff', [{ v: '', n: 'بلا ربط يدوي (يُربط تلقائيًا إن تطابق البريد)', ic: 'link' }].concat(staffOpts()), AC.staffRef, 'اختر سجل الموظف', function (v) { sync(); AC.staffRef = v; }, 'سجل الموظف المرتبط') + '<small class="fhint">إن رُبط الحساب بسجل موظف صار لصاحبه واجهتان يختار بينهما عند الدخول: واجهة الموظف، وواجهة حسابه هذا.</small></div></div></section>' +
     '<section class="ast"><h3><i>٢</i>الدور</h3><div class="rcards" role="radiogroup" aria-label="الدور">' + Object.keys(roles).map(function (k) { var R = ROLE_INFO[k] || ['slate', 'user', ''];
       return '<button type="button" role="radio" class="rcard" data-acrole="' + k + '" aria-checked="' + (AC.role === k) + '"' + (AC.self ? ' disabled' : '') + '>' + tile(R[0], R[1]) + '<span><b>' + esc(roles[k]) + '</b><small>' + R[2] + '</small><em>' + (rp[k] || []).length + ' صلاحيات</em></span><i class="rc-ck">' + ic('check') + '</i></button>'; }).join('') + '</div>' + (AC.self ? '<p class="hint">لا يمكنك تغيير دور حسابك.</p>' : '') + '</section>' +
     '<section class="ast"><h3><i>٣</i>الصلاحيات</h3><label class="tgl"><button type="button" class="sw" role="switch" id="acCustom" aria-checked="' + AC.custom + '"' + (AC.self ? ' disabled' : '') + '></button><span><b>تخصيص صلاحيات هذا الحساب</b><small>' + (AC.custom ? 'الصلاحيات أدناه خاصة بهذا الموظف' : 'يأخذ صلاحيات دوره تلقائيًا، وتتحدث إن تغيّر الدور') + '</small></span></label>' +
@@ -1445,7 +1446,7 @@ function drawAcct() {
     if (!AC.name.trim()) { err.textContent = 'اكتب اسم الموظف.'; $('acName').focus(); return; }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ml)) { err.textContent = ERR.bad_email; $('acMail').focus(); return; }
     if (AC.custom && !AC.perms.length) { err.textContent = 'اختر صلاحية واحدة على الأقل.'; return; }
-    var b = { action: 'usersSave', name: AC.name.trim(), email: ml, title: AC.title.trim(), role: AC.role, active: AC.active, notify: AC.notify, perms: AC.custom ? AC.perms : null };
+    var b = { action: 'usersSave', name: AC.name.trim(), email: ml, title: AC.title.trim(), role: AC.role, active: AC.active, notify: AC.notify, perms: AC.custom ? AC.perms : null, staffRef: AC.staffRef || '' };
     if (AC.id) b.id = AC.id;
     this.disabled = true; err.textContent = '';
     var btn = this;
@@ -3734,6 +3735,10 @@ function tzGuess(la, lo) {
    «واجهة الموظف» أو «واجهة النظام»، ويبدّل بينهما من الشريط العلوي
    ====================================================================== */
 var MODE = { real: '', dual: false };
+/* اسم واجهة الحساب بحسب دوره */
+function sysLabel(r) { return { ceo: 'واجهة المدير العام', hr: 'واجهة الموارد البشرية', viewer: 'واجهة الاطلاع' }[r] || 'واجهة النظام'; }
+function sysIcon(r) { return { ceo: 'chart', hr: 'users' }[r] || 'grid'; }
+function sysHint(r) { return { ceo: 'لوحة القيادة، والاعتمادات، والتقارير، والمنسوبون', hr: 'المنسوبون، والطلبات، والحضور، والرواتب' }[r] || 'لوحة القيادة، والمنسوبون، والطلبات، والإعدادات'; }
 function modeKey() { return 'bhr:mode'; }
 function modeGet() { try { return sessionStorage.getItem(modeKey()) || ''; } catch (e) { return ''; } }
 function modeSet(m) { try { if (m) sessionStorage.setItem(modeKey(), m); else sessionStorage.removeItem(modeKey()); } catch (e) { } }
@@ -3750,7 +3755,7 @@ function modePick(u) {
   var nm = firstOf(u.name || u.email);
   L.innerHTML = '<div class="gate"><div class="gcard mpk"><span class="glogo"><img src="' + LOGO + '" alt=""></span><h2 id="mdT">أهلًا ' + esc(nm) + '، بأي واجهة تدخل؟</h2><p>لحسابك واجهتان، وتستطيع التبديل بينهما في أي وقت من الشريط العلوي.</p>' +
     '<div class="mpick"><button type="button" data-mode="staff">' + tile('teal', 'user') + '<b>واجهة الموظف</b><small>صفحتي، وطلباتي، وحضوري، والتعاميم، وملفي</small></button>' +
-    '<button type="button" data-mode="sys">' + tile('sapphire', 'grid') + '<b>واجهة النظام</b><small>لوحة القيادة، والمنسوبون، والطلبات، والإعدادات</small></button></div></div></div>';
+    '<button type="button" data-mode="sys">' + tile('sapphire', sysIcon(u.role)) + '<b>' + sysLabel(u.role) + '</b><small>' + sysHint(u.role) + '</small></button></div></div></div>';
   return new Promise(function (res) {
     L.querySelectorAll('[data-mode]').forEach(function (b) { b.onclick = function () {
       var m = b.dataset.mode; modeSet(m); L.remove();
@@ -3763,8 +3768,8 @@ function modePick(u) {
 var _topHTML0 = topHTML;
 topHTML = function () {
   var h = _topHTML0(); if (!MODE.dual) return h;
-  var toStaff = role !== 'staff';
-  return h.replace('<button class="ib" id="theme"', '<button type="button" class="btn sm modesw" id="modeSw" title="' + (toStaff ? 'التبديل إلى واجهة الموظف' : 'التبديل إلى واجهة النظام') + '">' + ic(toStaff ? 'user' : 'grid') + '<span>' + (toStaff ? 'واجهة الموظف' : 'واجهة النظام') + '</span></button><button class="ib" id="theme"');
+  var toStaff = role !== 'staff', sl = sysLabel(MODE.real);
+  return h.replace('<button class="ib" id="theme"', '<button type="button" class="btn sm modesw" id="modeSw" title="' + (toStaff ? 'التبديل إلى واجهة الموظف' : 'التبديل إلى ' + sl) + '">' + ic(toStaff ? 'user' : sysIcon(MODE.real)) + '<span>' + (toStaff ? 'واجهة الموظف' : sl) + '</span></button><button class="ib" id="theme"');
 };
 document.addEventListener('click', function (e) {
   var b = e.target.closest && e.target.closest('#modeSw'); if (!b) return;
