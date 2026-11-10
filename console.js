@@ -3939,6 +3939,104 @@ document.addEventListener('click', function (e) {
     .catch(function (er) { b.disabled = false; toast(errText(er)); });
 }, true);
 
+/* ======================================================================
+   منتقي الوقت: يستبدل منتقي المتصفح (أرقام هندية وقوائم متزاحمة) في كل
+   خانات الوقت بالمنصة. الخانة الأصلية تبقى مخفية وتحمل القيمة بصيغة 24 ساعة.
+   ====================================================================== */
+(function () {
+  var TP = { inp: null, h: 8, m: 0, pm: false, step: 5 };
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  function parse(v) { var m = /^(\d{1,2}):(\d{2})/.exec(v || ''); return m ? { h: +m[1], m: +m[2] } : null; }
+  function fmt(v) { var t = parse(v); if (!t) return ''; var h = t.h % 12 || 12; return h + ':' + p2(t.m) + ' ' + (t.h < 12 ? 'ص' : 'م'); }
+  function label(inp) { var b = inp._tpBtn; if (!b) return; var v = fmt(inp.value); b.querySelector('.tp-v').textContent = v || (inp.getAttribute('placeholder') || 'اختر الوقت'); b.classList.toggle('empty', !v); b.disabled = inp.disabled; }
+  function enhance(inp) {
+    if (inp._tpBtn || inp.closest('.tp-off')) return;
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'tp-btn';
+    b.setAttribute('aria-haspopup', 'dialog'); var lab = inp.id && document.querySelector('label[for="' + inp.id + '"]'); if (lab) b.setAttribute('aria-label', lab.textContent.trim());
+    b.innerHTML = '<span class="tp-v"></span>' + ic('clock');
+    inp.classList.add('tp-native'); inp.tabIndex = -1; inp.setAttribute('aria-hidden', 'true');
+    inp.parentNode.insertBefore(b, inp.nextSibling); inp._tpBtn = b; b._tpInp = inp;
+    b.addEventListener('click', function () { open(inp); });
+    inp.addEventListener('change', function () { label(inp); }); inp.addEventListener('input', function () { label(inp); });
+    label(inp);
+  }
+  function scan(root) { (root.querySelectorAll ? root : document).querySelectorAll('input[type="time"]').forEach(enhance); }
+  function live(i) { if (i && !document.documentElement.contains(i) && i.id) { var n = document.getElementById(i.id); if (n) { if (!n._tpBtn) enhance(n); return n; } } return i; }
+  function commit(close) {
+    var i = TP.inp = live(TP.inp); if (!i) return;
+    var h = TP.h % 12 + (TP.pm ? 12 : 0), v = p2(h) + ':' + p2(TP.m);
+    if (i.value !== v) { i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); }
+    label(i); if (close) shut(); else draw();
+  }
+  function draw() {
+    var L = document.getElementById('tpLayer'); if (!L) return;
+    var hs = '', ms = '';
+    for (var h = 1; h <= 12; h++) hs += '<button type="button" data-tph="' + h + '"' + ((TP.h % 12 || 12) === h ? ' class="on"' : '') + '>' + h + '</button>';
+    for (var m = 0; m < 60; m += TP.step) ms += '<button type="button" data-tpm="' + m + '"' + (TP.m === m ? ' class="on"' : '') + '>' + p2(m) + '</button>';
+    var hh = TP.h % 12 || 12;
+    L.querySelector('.tp-card').innerHTML =
+      '<div class="tp-head"><span class="tp-big" dir="ltr">' + hh + '<i>:</i>' + p2(TP.m) + '</span><div class="tp-ap" role="group" aria-label="صباحًا أو مساءً"><button type="button" data-tpap="0"' + (!TP.pm ? ' class="on"' : '') + '>صباحًا</button><button type="button" data-tpap="1"' + (TP.pm ? ' class="on"' : '') + '>مساءً</button></div></div>' +
+      '<div class="tp-lab">الساعة</div><div class="tp-grid tp-h">' + hs + '</div>' +
+      '<div class="tp-lab">الدقائق</div><div class="tp-grid tp-m">' + ms + '</div>' +
+      '<div class="tp-quick">' + [['08:00', '8:00 ص'], ['12:00', '12:00 م'], ['16:00', '4:00 م']].map(function (q) { return '<button type="button" data-tpq="' + q[0] + '">' + q[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="tp-foot"><button type="button" class="btn sm ghost" data-tpclr>مسح</button><button type="button" class="btn sm goldb" data-tpok>' + ic('check') + 'تم</button></div>';
+  }
+  function place() {
+    var L = document.getElementById('tpLayer'), c = L && L.querySelector('.tp-card'), b = TP.inp && TP.inp._tpBtn; if (!c || !b) return;
+    if (window.innerWidth <= 640) { L.classList.add('sheet'); c.style.top = c.style.left = ''; return; }
+    L.classList.remove('sheet');
+    var r = b.getBoundingClientRect(), w = c.offsetWidth, hgt = c.offsetHeight;
+    var top = r.bottom + 8; if (top + hgt > window.innerHeight - 10) top = Math.max(10, r.top - hgt - 8);
+    var left = Math.min(Math.max(10, r.right - w), window.innerWidth - w - 10);
+    c.style.top = top + 'px'; c.style.left = left + 'px';
+  }
+  function open(inp) {
+    if (inp.disabled) return;
+    TP.inp = inp; var st = +(inp.getAttribute('step') || 300); TP.step = st >= 60 ? Math.max(1, Math.min(30, Math.round(st / 60))) : 5;
+    if (60 % TP.step) TP.step = 5;
+    var t = parse(inp.value) || { h: 8, m: 0 }; TP.h = t.h; TP.m = t.m - t.m % TP.step; TP.pm = t.h >= 12; TP.dirty = false;
+    var L = document.getElementById('tpLayer');
+    if (!L) { L = document.createElement('div'); L.id = 'tpLayer'; L.innerHTML = '<div class="tp-back"></div><div class="tp-card" role="dialog" aria-modal="true" aria-label="اختيار الوقت"></div>'; document.body.appendChild(L); }
+    L.hidden = false; draw(); place(); inp._tpBtn.classList.add('open');
+    var f = L.querySelector('.tp-h .on') || L.querySelector('.tp-h button'); if (f) f.focus();
+  }
+  function shut() { var L = document.getElementById('tpLayer'); if (L) L.hidden = true; TP.dirty = false; var i = live(TP.inp); if (i && i._tpBtn) { i._tpBtn.classList.remove('open'); try { i._tpBtn.focus(); } catch (e) { } } TP.inp = null; }
+  document.addEventListener('click', function (e) {
+    var L = document.getElementById('tpLayer'); if (!L || L.hidden || !e.target.closest) return;
+    var t = e.target.closest('button');
+    if (e.target.classList && e.target.classList.contains('tp-back')) { if (TP.dirty) return commit(true); return shut(); }
+    if (!t || !L.contains(t)) return;
+    /* الاختيار يُعرض فورًا ولا يُحفظ في الخانة إلا عند «تم» أو الضغط خارج اللوحة */
+    if (t.hasAttribute('data-tph')) { var h = +t.getAttribute('data-tph') % 12; TP.h = h + (TP.pm ? 12 : 0); TP.dirty = true; draw(); }
+    else if (t.hasAttribute('data-tpm')) { TP.m = +t.getAttribute('data-tpm'); TP.dirty = true; draw(); }
+    else if (t.hasAttribute('data-tpap')) { TP.pm = t.getAttribute('data-tpap') === '1'; TP.dirty = true; draw(); }
+    else if (t.hasAttribute('data-tpq')) { var q = parse(t.getAttribute('data-tpq')); TP.h = q.h; TP.m = q.m; TP.pm = q.h >= 12; commit(true); }
+    else if (t.hasAttribute('data-tpclr')) { var i = TP.inp = live(TP.inp); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); label(i); shut(); }
+    else if (t.hasAttribute('data-tpok')) commit(true);
+  });
+  document.addEventListener('mousedown', function (e) { var L = document.getElementById('tpLayer'); if (L && !L.hidden && !L.querySelector('.tp-card').contains(e.target) && !(TP.inp && TP.inp._tpBtn && TP.inp._tpBtn.contains(e.target)) && !L.classList.contains('sheet')) { if (TP.dirty) commit(true); else shut(); } });
+  document.addEventListener('keydown', function (e) { var L = document.getElementById('tpLayer'); if (L && !L.hidden && e.key === 'Escape') { e.preventDefault(); shut(); } });
+  window.addEventListener('resize', place); window.addEventListener('scroll', function () { var L = document.getElementById('tpLayer'); if (L && !L.hidden && !L.classList.contains('sheet')) place(); }, true);
+  /* القيمة إن تغيّرت برمجيًا (إعادة رسم أو تعبئة) */
+  var _vd = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  if (_vd && _vd.set) Object.defineProperty(HTMLInputElement.prototype, 'value', { configurable: true, get: function () { return _vd.get.call(this); }, set: function (v) { _vd.set.call(this, v); if (this._tpBtn) label(this); } });
+  new MutationObserver(function (ms) { ms.forEach(function (m) { m.addedNodes.forEach(function (n) { if (n.nodeType === 1) { if (n.matches && n.matches('input[type="time"]')) enhance(n); else if (n.querySelector && n.querySelector('input[type="time"]')) scan(n); } }); }); }).observe(document.documentElement, { childList: true, subtree: true });
+  scan(document);
+})();
+
+/* الاستئذان: «خروج مبكر» يمتد افتراضيًا إلى نهاية الدوام، و«تأخر صباحي» يبدأ من بداية الدوام (تُعدَّل إن لزم) */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-rwseg="kind"]'); if (!b || !RW || RW.type !== 'perm') return;
+  var W = (SITE && SITE.work) || {}, end = /^\d{2}:\d{2}$/.test(W.end || '') ? W.end : '16:00', start = /^\d{2}:\d{2}$/.test(W.start || '') ? W.start : '08:00';
+  var v = b.getAttribute('data-v'), to = document.getElementById('rw_toT'), fr = document.getElementById('rw_fromT');
+  var auto = RW._autoT || {};
+  if (v === 'خروج مبكر' && to && (!to.value || to.value === auto.toT)) { to.value = end; auto.toT = end; }
+  if (v === 'تأخر صباحي' && fr && (!fr.value || fr.value === auto.fromT)) { fr.value = start; auto.fromT = start; }
+  if (v !== 'خروج مبكر' && to && auto.toT && to.value === auto.toT) { to.value = ''; auto.toT = ''; }
+  if (v !== 'تأخر صباحي' && fr && auto.fromT && fr.value === auto.fromT) { fr.value = ''; auto.fromT = ''; }
+  RW._autoT = auto;
+}, true);
+
 window.addEventListener('hashchange', route);
 boot();
 })();
