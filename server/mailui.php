@@ -84,10 +84,10 @@ function mx_chain(array $steps, bool $rtl = true): string {
     $S = $rtl ? 'right' : 'left'; $h = ''; $n = count($steps);
     foreach (array_values($steps) as $i => $s) {
         [$lab, $st] = [$s[0], $s[1]]; $sub = (string)($s[2] ?? '');
-        $c = ['done' => ['#147A4E', '#EAF7F0', '✓'], 'now' => ['#A35A00', '#FFF5E3', '●'], 'bad' => ['#B42318', '#FDEFED', '✕'], 'next' => ['#9AA5B8', '#F2F4F8', (string)($i + 1)]][$st] ?? ['#9AA5B8', '#F2F4F8', (string)($i + 1)];
+        $c = ['done' => ['#147A4E', '#EAF7F0', '✓'], 'now' => ['#A35A00', '#FFF5E3', '●'], 'bad' => ['#B42318', '#FDEFED', '✕'], 'next' => ['#9AA5B8', '#F2F4F8', (string)($i + 1)], 'skip' => ['#9AA5B8', '#F2F4F8', '–']][$st] ?? ['#9AA5B8', '#F2F4F8', (string)($i + 1)];
         $h .= '<tr><td width="34" style="vertical-align:top;padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:26px;height:26px;line-height:26px;border-radius:13px;background:' . $c[1] . ';border:1.5px solid ' . $c[0] . ';color:' . $c[0] . ';font-size:12px;font-weight:900;font-family:Arial,sans-serif;">' . $c[2] . '</td></tr>'
             . ($i < $n - 1 ? '<tr><td align="center" style="padding:0;"><div style="width:2px;height:18px;background:' . ($st === 'done' ? '#BCE2CD' : MX['line']) . ';margin:0 auto;"></div></td></tr>' : '') . '</table></td>'
-            . '<td style="vertical-align:top;padding:3px 10px 0;text-align:' . $S . ';"><div style="font-size:13.5px;font-weight:800;color:' . ($st === 'next' ? MX['mut'] : MX['ink']) . ';line-height:1.5;">' . esc_html($lab) . '</div>'
+            . '<td style="vertical-align:top;padding:3px 10px 0;text-align:' . $S . ';"><div style="font-size:13.5px;font-weight:800;color:' . ($st === 'next' || $st === 'skip' ? MX['mut'] : MX['ink']) . ';line-height:1.5;">' . esc_html($lab) . '</div>'
             . ($sub !== '' ? '<div style="font-size:11.5px;color:' . ($st === 'bad' ? '#B42318' : ($st === 'now' ? '#A35A00' : MX['mut'])) . ';line-height:1.6;">' . esc_html($sub) . '</div>' : '') . '</td></tr>';
     }
     return '<div style="margin:18px 2px 8px;font-size:12px;font-weight:800;color:' . MX['goldD'] . ';text-align:' . $S . ';">' . ($rtl ? 'مسار الطلب' : 'Request path') . '</div>'

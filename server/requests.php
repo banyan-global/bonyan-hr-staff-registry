@@ -617,8 +617,9 @@ function req_act_view(array $x, array $r): array {
     $open = $r['status'] === 'pending' && (int)$r['stage'] === (int)$x['stage'];
     if (in_array(strtolower((string)$x['email']), req_staff_emails($r['ref']), true)) $open = false;
     return ['ok' => true, 'request' => $o, 'open' => $open, 'stageLabel' => (string)($chain[(int)$x['stage']]['label'] ?? ''), 'who' => (string)$x['who'],
-        'canEdit' => $open && $r['type'] === 'leave' && !empty($chain[(int)$x['stage']]['mgr']), 'isLast' => (int)$x['stage'] >= count($chain) - 1, 'leaveKinds' => LEAVE_KINDS,
-        'canFinal' => req_can_final_mail((string)$x['email'], $r) && !($open && (int)$x['stage'] >= count($chain) - 1)];
+        /* اعتماد صاحب الاعتماد النهائي في خطوته نهائيٌّ تلقائيًا، فلا حاجة لزر «اعتماد نهائي مباشر» */
+        'canEdit' => $open && $r['type'] === 'leave' && !empty($chain[(int)$x['stage']]['mgr']), 'isLast' => ($last = (int)$x['stage'] >= count($chain) - 1 || ($open && req_is_final((string)$x['email']))), 'leaveKinds' => LEAVE_KINDS,
+        'canFinal' => req_can_final_mail((string)$x['email'], $r) && !($open && $last)];
 }
 function req_act(array $b): array { [$x, $r] = req_tok_load($b); return req_act_view($x, $r); }
 function req_act_do(array $b): array {
@@ -629,7 +630,7 @@ function req_act_do(array $b): array {
     if (!$fin && !$v['open']) throw new HttpError('تم اتخاذ القرار في هذه الخطوة مسبقًا، والطلب الآن: ' . (REQ_ST[$r['status']] ?? $r['status']));
     if ($fin) $x['who'] = req_final_name((string)$x['email']) ?: (string)$x['who'];
     $label = ($x['who'] ?: mask_email($x['email'])) . ' (من رابط البريد)';
-    $r = req_apply($r, $label, (string)($b['decision'] ?? ''), (string)($b['note'] ?? ''), is_array($b['edits'] ?? null) ? $b['edits'] : null, (string)$x['who']);
+    $r = req_apply($r, $label, (string)($b['decision'] ?? ''), (string)($b['note'] ?? ''), is_array($b['edits'] ?? null) ? $b['edits'] : null, (string)$x['who'], 0, (string)$x['email']);
     return req_act_view($x, $r);
 }
 
@@ -690,9 +691,9 @@ function req_chain_html(array $r): string {
     $chain = json_decode((string)$r['chain'], true) ?: []; $stage = (int)$r['stage']; $out = [];
     foreach ($chain as $i => $c) {
         $d = (string)($c['decision'] ?? ''); $who = trim((string)($c['who'] ?? '')); $at = substr((string)($c['at'] ?? ''), 0, 10);
-        if ($d === 'approve' || $d === 'edit') $out[] = [$c['label'], 'done', trim(($d === 'edit' ? 'عدّل واعتمد' : 'اعتمد') . ($at ? ' · ' . $at : ''))];
+        if ($d === 'approve' || $d === 'edit') $out[] = [$c['label'], 'done', trim(($d === 'edit' ? 'عدّل واعتمد' : (!empty($c['final']) || ($c['kind'] ?? '') === 'final' ? 'اعتمد نهائيًا' : 'اعتمد')) . ($who !== '' && $who !== $c['label'] ? ' · ' . $who : '') . ($at ? ' · ' . $at : ''))];
         elseif ($d === 'reject') $out[] = [$c['label'], 'bad', 'رُفض' . ($at ? ' · ' . $at : '')];
-        elseif ($d === 'skip') $out[] = [$c['label'], 'done', 'تُخطّيت بالاعتماد النهائي'];
+        elseif ($d === 'skip') $out[] = [$c['label'], 'skip', 'لم يلزم: اعتُمد الطلب نهائيًا'];
         elseif ($r['status'] === 'pending' && $i === $stage) $out[] = [$c['label'], 'now', 'بانتظار القرار' . ($who !== '' && $who !== $c['label'] ? ' · ' . $who : '')];
         else $out[] = [$c['label'], 'next', $r['status'] === 'cancelled' ? 'أُلغي الطلب' : ''];
     }
@@ -734,7 +735,7 @@ function lv_mail_approvers(array $r, array $x = []): void {
     foreach (req_step_emails($step) as $to => $who) {
         if (in_array($to, $staffMails, true)) continue; /* لا يعتمد أحد طلبه هو */
         $tk = req_tok_issue($r, $i, $to, $who); $base = (string)cfg('site_url') . 'decide.html#t=' . $tk;
-        $btn = '<div style="height:20px;line-height:20px;font-size:0;">&nbsp;</div>' . mx_buttons(array_merge([[$base . '&a=approve', $last ? '✓ اعتماد نهائي' : '✓ اعتماد الطلب', 'success']], !$last && req_is_final($to) ? [[$base . '&a=final', '✓✓ اعتماد نهائي مباشر (تخطّي بقية الخطوات)', 'gold']] : [], [
+        $btn = '<div style="height:20px;line-height:20px;font-size:0;">&nbsp;</div>' . mx_buttons(array_merge([[$base . '&a=approve', $last || req_is_final($to) ? '✓ اعتماد نهائي' : '✓ اعتماد الطلب', 'success']], [
                 $mgr ? ['pair' => [[$base . '&a=edit', '✎ تعديل قبل الاعتماد', 'gold'], [$base . '&a=view', 'عرض التفاصيل', 'ghost']]] : [$base . '&a=view', 'عرض التفاصيل والتعليق', 'ghost'],
                 [$base . '&a=reject', '✕ رفض الطلب', 'danger']]))
             . '<p style="font-size:12px;line-height:1.9;color:' . MX['mut'] . ';margin:6px 0 0;text-align:center;">الرابط خاص بك ويفتح صفحة الطلب لتأكيد قرارك، وصالح ' . REQ_LINK_DAYS . ' يومًا. ويمكنك أيضًا اتخاذ القرار من المنصة.</p>';
@@ -755,13 +756,13 @@ function lv_mail_approvers(array $r, array $x = []): void {
 }
 
 /* ============ رسائل الأنواع الأخرى (إركاب، تعريف) ============ */
-function req_mail_staff(array $r, string $title, string $line): void {
+function req_mail_staff(array $r, string $title, string $line, string $note = ''): void {
     $s = staff_get($r['ref']); if (!$s) return;
     $to = req_staff_email($s); if (!$to) return;
     $tone = mx_guess_tone($title . ' ' . $line);
     $html = mx_page(['eyebrow' => 'الموارد البشرية · طلباتي', 'title' => $title, 'tone' => $tone, 'pre' => $line, 'lead' => esc_html($line),
         'badge' => ['green' => 'معتمد', 'red' => 'مرفوض', 'amber' => 'قيد الإجراء', 'gold' => 'عُدّل'][$tone] ?? '',
-        'body' => mx_rows(array_merge([['رقم الطلب', $r['no'], 1], ['نوع الطلب', REQ_TYPES[$r['type']][1] ?? '']], array_map(fn($v) => [$v[0], (string)$v[1], $v[2] ?? 0], req_view_rows($r)) ?: [['التفاصيل', req_summary($r)]]), 'تفاصيل الطلب') . req_chain_html($r),
+        'body' => mx_rows(array_merge([['رقم الطلب', $r['no'], 1], ['نوع الطلب', REQ_TYPES[$r['type']][1] ?? '']], array_map(fn($v) => [$v[0], (string)$v[1], $v[2] ?? 0], req_view_rows($r)) ?: [['التفاصيل', req_summary($r)]]), 'تفاصيل الطلب') . ($note !== '' ? mx_note($note, $tone === 'red' ? 'red' : 'green', $tone === 'red' ? 'سبب عدم الاعتماد' : 'ملاحظة المعتمِد') : '') . req_chain_html($r),
         'buttons' => [[mx_url('myreq'), 'متابعة طلبي في المنصة', 'primary']]]);
     try { send_mail($to, $title . ' · ' . $r['no'], $html, $line . "\n" . $r['no'] . "\n" . req_summary($r) . "\n" . mx_url('myreq'), 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline(), (string)cfg('hr_notify')); }
     catch (Throwable $e) { audit_log($r['ref'], 'تعذّر إرسال بريد الطلب', $r['no'] . ' · ' . $e->getMessage()); }
@@ -783,7 +784,7 @@ function req_mail_approvers(array $r, array $step): void {
         $btns = [[mx_url('reqs'), 'فتح الطلب في المنصة', 'primary']]; $foot = 'يمكنك اتخاذ القرار من صفحة «الطلبات» في المنصة.';
         if (isset($tokFor[$to])) {
             $base = (string)cfg('site_url') . 'decide.html#t=' . req_tok_issue($r, (int)$r['stage'], $to, (string)($tokFor[$to] ?: ($step['who'] ?? $step['label'])));
-            $btns = array_merge([[$base . '&a=approve', '✓ اعتماد الطلب', 'success']], (int)$r['stage'] < count(json_decode($r['chain'], true) ?: []) - 1 && req_is_final($to) ? [[$base . '&a=final', '✓✓ اعتماد نهائي مباشر', 'gold']] : [], [['pair' => [[$base . '&a=view', 'عرض التفاصيل', 'ghost'], [$base . '&a=reject', '✕ رفض الطلب', 'danger']]]]);
+            $btns = array_merge([[$base . '&a=approve', req_is_final($to) || (int)$r['stage'] >= count(json_decode($r['chain'], true) ?: []) - 1 ? '✓ اعتماد نهائي' : '✓ اعتماد الطلب', 'success']], [['pair' => [[$base . '&a=view', 'عرض التفاصيل', 'ghost'], [$base . '&a=reject', '✕ رفض الطلب', 'danger']]]]);
             $foot = 'الرابط خاص بك وصالح ' . REQ_LINK_DAYS . ' يومًا، ويفتح صفحة الطلب لتأكيد قرارك.';
         }
         $html = mx_page(['eyebrow' => 'الموارد البشرية · الطلبات', 'title' => $tname . ' بانتظار اعتمادك', 'tone' => 'amber', 'badge' => 'بانتظار قرارك', 'pre' => $tname . ' من ' . $name . ' · ' . $r['no'],
@@ -854,7 +855,7 @@ function req_create(array $b): array {
     }
     return ['ok' => true, 'request' => req_out($u, $r)];
 }
-function req_out(array $u, array $r): array { $cd = req_can_decide($u, $r); return req_row($r) + ['canDecide' => $cd, 'canEdit' => $cd && req_step_can_edit($r), 'canFinal' => req_can_final($u, $r)]; }
+function req_out(array $u, array $r): array { $cd = req_can_decide($u, $r); $fe = req_is_final((string)$u['email']); return req_row($r) + ['canDecide' => $cd, 'canEdit' => $cd && req_step_can_edit($r), 'canFinal' => !($cd && $fe) && req_can_final($u, $r), 'approveFinal' => $cd && $fe]; }
 function req_list(array $b): array {
     $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
     if (has_perm($u, 'staff.view') && empty($b['asStaff'])) {
@@ -874,7 +875,7 @@ function req_list(array $b): array {
 }
 
 /* تنفيذ القرار (من المنصة أو من رابط البريد): approve · reject · edit (تعديل ثم اعتماد، للمسؤول المباشر) */
-function req_apply(array $r, string $actor, string $decision, string $note, ?array $edits, string $actorName = '', int $actorId = 0): array {
+function req_apply(array $r, string $actor, string $decision, string $note, ?array $edits, string $actorName = '', int $actorId = 0, string $actorEmail = ''): array {
     if (!in_array($decision, ['approve', 'reject', 'edit', 'final'], true)) throw new HttpError('قرار غير معروف');
     /* final: اعتماد نهائي مباشر من الإدارة العليا — تُتخطّى الخطوات المتبقية وتُضاف خطوة «الاعتماد النهائي» باسم صاحبه */
     $final = $decision === 'final';
@@ -905,7 +906,13 @@ function req_apply(array $r, string $actor, string $decision, string $note, ?arr
             $chain[] = ['label' => 'الاعتماد النهائي', 'kind' => 'final', 'who' => $actorName ?: $actor, 'decision' => 'approve', 'by' => $actor, 'at' => now_min(), 'note' => $note, 'role' => ''] + ($actorId ? ['uid' => $actorId] : []);
             $i = count($chain) - 1;
         } else $chain[$i] = array_merge($chain[$i], ['decision' => $decision, 'by' => $actor, 'at' => now_min(), 'note' => $note] + ($actorId ? ['uid' => $actorId] : []) + ($decision === 'edit' ? ['changes' => $changes] : []));
-        $last = $i >= count($chain) - 1; $ok = $decision !== 'reject';
+        /* اعتماد أحد أصحاب الاعتماد النهائي (الإدارة العليا) في أي خطوة = اعتماد نهائي: تُتخطّى بقية الخطوات ولا تُرسل لها رسائل */
+        $auto = !$final && in_array($decision, ['approve', 'edit'], true) && $actorEmail !== '' && req_is_final($actorEmail) && $i < count($chain) - 1;
+        if ($auto) {
+            $chain[$i]['final'] = 1; $chain[$i]['who'] = $actorName ?: (req_final_name($actorEmail) ?: ($chain[$i]['who'] ?? ''));
+            foreach ($chain as $k => $c) if ($k > $i && ($c['decision'] ?? '') === '') $chain[$k] = array_merge($c, ['decision' => 'skip', 'by' => '', 'at' => now_min(), 'note' => '']);
+        }
+        $last = $auto || $i >= count($chain) - 1; $ok = $decision !== 'reject';
         if ($ok && $last && $r['type'] === 'clear' && function_exists('custody_open') && ($op = custody_open($r['ref'])))
             throw new HttpError('لا يكتمل إخلاء الطرف قبل تسليم كل العهد. غير المسلّم: ' . implode('، ', array_column($op, 'item')));
         $status = !$ok ? 'rejected' : ($last ? 'approved' : 'pending'); $stage = $ok && !$last ? $i + 1 : $i;
@@ -920,12 +927,12 @@ function req_apply(array $r, string $actor, string $decision, string $note, ?arr
         if ($status === 'rejected') lv_mail_staff($r, 'rejected', ['label' => $lab, 'note' => $note]);
         else {
             if ($decision === 'edit') lv_mail_staff($r, 'edited', ['label' => $lab, 'note' => $note, 'changes' => $changes, 'next' => $nextLab]);
-            if ($status === 'approved') lv_mail_staff($r, 'final', ['label' => $final ? (string)($chain[$i]['who'] ?? $lab) : $lab, 'note' => $decision === 'edit' ? '' : $note]);
+            if ($status === 'approved') lv_mail_staff($r, 'final', ['label' => $final || $auto ? (string)($chain[$i]['who'] ?? $lab) : $lab, 'note' => $decision === 'edit' ? '' : $note]);
             elseif ($decision === 'approve') lv_mail_staff($r, 'stage', ['label' => $lab, 'note' => $note, 'next' => $nextLab]);
             if ($status === 'pending') lv_mail_approvers($r, $decision === 'edit' ? ['changes' => $changes] : []);
         }
     } else {
-        if ($status === 'approved') req_mail_staff($r, 'اعتُمد طلبك', 'اعتُمد طلبك نهائيًا' . ($final ? ' من ' . ($chain[$i]['who'] ?? '') : '') . '.' . ($note ? ' ملاحظة: ' . $note : ''));
+        if ($status === 'approved') req_mail_staff($r, 'اعتُمد طلبك نهائيًا', 'اعتُمد طلبك اعتمادًا نهائيًا' . (($final || $auto) && ($chain[$i]['who'] ?? '') !== '' ? ' من ' . $chain[$i]['who'] : '') . '، ولا يلزمه أي إجراء آخر.', $note);
         elseif ($status === 'rejected') req_mail_staff($r, 'لم يُعتمد طلبك', 'لم يُعتمد طلبك. السبب: ' . $note);
         else { req_mail_staff($r, 'تقدّم طلبك خطوة', 'وافقت ' . $lab . ' على طلبك، وهو الآن عند ' . $chain[$stage]['label'] . '.'); req_mail_approvers($r, $chain[$stage]); }
     }
@@ -936,7 +943,7 @@ function req_decide(array $b): array {
     $r = q1('SELECT * FROM requests WHERE no=?', [(string)($b['no'] ?? '')]); if (!$r) throw new HttpError('not_found', 404);
     if (($b['decision'] ?? '') === 'final') { if (!req_can_final($u, $r)) throw new HttpError('الاعتماد النهائي المباشر ليس من صلاحيتك، أو سبق حسم الطلب', 403); }
     elseif (!req_can_decide($u, $r)) throw new HttpError('هذه الخطوة ليست من صلاحيتك أو سبق اتخاذ القرار فيها', 403);
-    $r = req_apply($r, $u['_label'] ?? ($u['name'] ?: $u['email']), (string)($b['decision'] ?? ''), (string)($b['note'] ?? ''), is_array($b['edits'] ?? null) ? $b['edits'] : null, (string)($u['name'] ?: ''), (int)$u['id']);
+    $r = req_apply($r, $u['_label'] ?? ($u['name'] ?: $u['email']), (string)($b['decision'] ?? ''), (string)($b['note'] ?? ''), is_array($b['edits'] ?? null) ? $b['edits'] : null, (string)($u['name'] ?: ''), (int)$u['id'], (string)$u['email']);
     return ['ok' => true, 'request' => req_out($u, $r)];
 }
 function req_cancel(array $b): array {
