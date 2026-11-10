@@ -294,6 +294,16 @@ function req_sups_save(array $b): array {
         $out[] = $o;
     }
     setting_set('leave_sups', json_encode($out, JSON_UNESCAPED_UNICODE));
+    if (is_array($b['routes'] ?? null)) {
+        $fin = array_column(req_finals(), 'name', 'email'); $R = [];
+        foreach (array_slice($b['routes'], 0, 40, true) as $e => $r) {
+            $e = $e === '*' ? '*' : req_route_key(req_str($e, 120)); if ($e === '' || !is_array($r)) continue;
+            $top = array_values(array_unique(array_filter(array_map(fn($x) => strtolower(trim((string)$x)), (array)($r['top'] ?? [])), fn($x) => isset($fin[$x]))));
+            $R[$e] = ['mgr' => !empty($r['mgr']), 'hr' => !empty($r['hr']), 'top' => $top];
+        }
+        setting_set('ent_routes', json_encode($R, JSON_UNESCAPED_UNICODE));
+        audit_log('', 'تحديث مسارات الاعتماد حسب الجهة', count($R) . ' مسارًا', $me['_label']);
+    }
     $added = array_filter($out, fn($s) => !isset($old[$s['id']])); $gone = array_diff_key($old, array_column($out, null, 'id'));
     audit_log('', 'تحديث قائمة المسؤولين المباشرين', count($out) . ' مسؤولًا' . ($added ? ' · أُضيف: ' . implode('، ', array_column($added, 'name')) : '') . ($gone ? ' · حُذف: ' . implode('، ', array_column($gone, 'name')) : ''), $me['_label']);
     return req_forms();
@@ -371,26 +381,66 @@ function req_finals_save(array $b): array {
     audit_log('', 'تحديد أصحاب الاعتماد النهائي المباشر', $o ? implode('، ', array_column($o, 'name')) : 'لا أحد', $me['_label']);
     return req_forms();
 }
+/* ============ مسار الاعتماد حسب الجهة ============
+   لكل جهة: هل يمر الطلب بالمسؤول المباشر؟ ثم بالموارد البشرية؟ ثم بمن من الإدارة العليا (من أصحاب الاعتماد النهائي)؟
+   «*» = باقي الجهات. إن لم تُضبط المسارات يعمل مسار كل نموذج كما هو. والإدارة العليا تعتمد نهائيًا في أي مرحلة كالمعتاد. */
+function req_routes(): array {
+    $v = json_decode((string)(setting('ent_routes') ?: ''), true); if (!is_array($v)) return [];
+    $o = [];
+    foreach ($v as $e => $r) if (is_array($r)) $o[(string)$e] = ['mgr' => !empty($r['mgr']), 'hr' => !empty($r['hr']), 'top' => array_values(array_filter(array_map(fn($x) => strtolower(trim((string)$x)), (array)($r['top'] ?? []))))];
+    return $o;
+}
+function req_route_key(string $entity): string { return preg_replace('/\s+/u', ' ', trim($entity)); }
+function req_route_for(string $ref): ?array {
+    $R = req_routes(); if (!$R) return null;
+    $s = staff_get($ref); $e = req_route_key((string)($s['data']['entity'] ?? ''));
+    foreach ($R as $k => $r) if ($k !== '*' && req_route_key($k) === $e) return $r;
+    return $R['*'] ?? ['mgr' => true, 'hr' => true, 'top' => []];
+}
+/* خطوات الطلب الجديد لهذا المنسوب: مسار جهته إن ضُبطت المسارات، وإلا مسار النموذج */
+function req_steps_for(string $type, string $ref): array {
+    $rt = $ref !== '' ? req_route_for($ref) : null;
+    if (!$rt) return req_flow()[$type]['steps'];
+    $st = [];
+    if ($rt['mgr']) $st[] = ['kind' => 'manager', 'v' => '', 'label' => 'المسؤول المباشر'];
+    if ($rt['hr']) $st[] = ['kind' => 'role', 'v' => 'hr', 'label' => 'الموارد البشرية'];
+    if ($rt['top']) $st[] = ['kind' => 'top', 'v' => $rt['top'], 'label' => 'الإدارة العليا'];
+    return $st ?: [['kind' => 'role', 'v' => 'hr', 'label' => 'الموارد البشرية']];
+}
 /* سلسلة الطلب الجديد من الإعداد الحالي (المسؤول المباشر يُثبَّت فيها ببريده واسمه) */
-function req_new_chain(string $type, ?array $sup = null): array {
-    return array_map(function ($s) use ($sup) {
+function req_new_chain(string $type, ?array $sup = null, string $ref = ''): array {
+    $fin = []; foreach (req_finals() as $f) $fin[$f['email']] = (string)$f['name'];
+    $mine = $ref !== '' ? req_staff_emails($ref) : [];
+    $out = [];
+    foreach (req_steps_for($type, $ref) as $s) {
         $c = ['label' => (string)$s['label'], 'kind' => (string)($s['kind'] ?? 'role'), 'decision' => '', 'by' => '', 'at' => '', 'note' => '', 'role' => ''];
         if ($c['kind'] === 'user') $c['user'] = (int)$s['v'];
         elseif ($c['kind'] === 'person') { $c['email'] = strtolower((string)$s['v']); $c['who'] = (string)$s['label']; }
         elseif ($c['kind'] === 'manager') { if (!$sup) throw new HttpError('اختر المسؤول المباشر'); $c['email'] = $sup['email']; $c['who'] = $sup['name']; $c['mgr'] = 1; }
+        elseif ($c['kind'] === 'top') {
+            /* الإدارة العليا: لا يُكرَّر من اعتمد بصفته المسؤول المباشر، ولا يعتمد أحد طلبه */
+            $em = [];
+            foreach ((array)$s['v'] as $e) { $e = strtolower((string)$e); if (isset($fin[$e]) && !in_array($e, $mine, true) && !($sup && strtolower($sup['email']) === $e)) $em[$e] = $fin[$e]; }
+            if (!$em) continue;
+            if (count($em) === 1) { $c['email'] = array_key_first($em); $c['who'] = reset($em); }
+            else { $c['emails'] = $em; $c['who'] = implode(' أو ', array_values($em)); }
+        }
         else { $c['kind'] = 'role'; $c['role'] = (string)$s['v']; }
-        return $c;
-    }, req_flow()[$type]['steps']);
+        $out[] = $c;
+    }
+    return $out ?: [['label' => 'الموارد البشرية', 'kind' => 'role', 'role' => 'hr', 'decision' => '', 'by' => '', 'at' => '', 'note' => '']];
 }
 /* من يعتمد هذه الخطوة؟ (حسابات نشطة) */
 function req_step_people(array $step): array {
     if (!empty($step['email'])) return array_values(array_filter(q('SELECT * FROM users WHERE active=1 AND LOWER(email)=?', [strtolower((string)$step['email'])])->fetchAll()));
+    if (!empty($step['emails'])) { $em = array_keys((array)$step['emails']); return q('SELECT * FROM users WHERE active=1 AND LOWER(email) IN (' . implode(',', array_fill(0, count($em), '?')) . ')', $em)->fetchAll(); }
     if (!empty($step['user'])) { $u = q1('SELECT * FROM users WHERE id=? AND active=1', [(int)$step['user']]); return $u ? [$u] : []; }
     return array_values(array_filter(q('SELECT * FROM users WHERE active=1 AND role=?', [(string)($step['role'] ?? '')])->fetchAll(), fn($u) => in_array('requests.approve', user_perms($u), true)));
 }
 /* عناوين البريد التي تُرسل إليها روابط القرار لهذه الخطوة */
 function req_step_emails(array $step): array {
     if (!empty($step['email'])) return [strtolower((string)$step['email']) => (string)($step['who'] ?? $step['label'])];
+    if (!empty($step['emails'])) return array_change_key_case(array_map('strval', (array)$step['emails']));
     $o = []; foreach (req_step_people($step) as $u) $o[strtolower((string)$u['email'])] = (string)($u['name'] ?: $step['label']); return $o;
 }
 /* هل يستطيع هذا الحساب اتخاذ القرار في الخطوة الحالية؟ مدير النظام يستطيع دائمًا (للطوارئ) */
@@ -408,6 +458,7 @@ function req_can_decide(array $u, array $r): bool {
     /* من اعتمد خطوة سابقة لا يعتمد خطوة أخرى في الطلب نفسه (إلا مدير النظام عند الطوارئ) */
     foreach ($chain as $i => $c) if ($i < (int)$r['stage'] && (int)($c['uid'] ?? 0) === $uid) return false;
     if (!empty($step['email'])) return strtolower((string)$u['email']) === strtolower((string)$step['email']);
+    if (!empty($step['emails'])) return isset(array_change_key_case((array)$step['emails'])[strtolower((string)$u['email'])]);
     if (!empty($step['user'])) return (int)$step['user'] === (int)$u['id'];
     return has_perm($u, 'requests.approve') && $u['role'] === ($step['role'] ?? '');
 }
@@ -439,7 +490,9 @@ function req_forms(): array {
     /* المنسوب يرى أسماء المسؤولين فقط ليختار منها؛ البريد لمن يدير النماذج */
     $supsOut = array_map(fn($s) => $isAdmin ? $s : ['id' => $s['id'], 'name' => $s['name'], 'title' => $s['title'] ?? '', 'ents' => $s['ents'] ?? []], $sups);
     $finals = array_map(fn($f) => $isAdmin ? $f : ['email' => '', 'name' => $f['name']], req_finals());
-    return ['ok' => true, 'forms' => $forms, 'roles' => array_intersect_key(ROLE_NAMES, array_flip(REQ_STEP_ROLES)), 'canEdit' => $isAdmin, 'sups' => $supsOut, 'leaveKinds' => LEAVE_KINDS, 'finals' => $finals, 'iAmFinal' => req_is_final((string)$u['email'])];
+    return ['ok' => true, 'forms' => $forms, 'roles' => array_intersect_key(ROLE_NAMES, array_flip(REQ_STEP_ROLES)), 'canEdit' => $isAdmin, 'sups' => $supsOut, 'leaveKinds' => LEAVE_KINDS, 'finals' => $finals, 'iAmFinal' => req_is_final((string)$u['email']),
+        /* مسارات الجهات: كاملة لمن يدير النماذج، ولغيره هل يمر الطلب بالمسؤول المباشر فقط */
+        'routes' => $isAdmin ? (object)req_routes() : (object)array_map(fn($r) => ['mgr' => $r['mgr']], req_routes())];
 }
 function req_forms_save(array $b): array {
     $me = require_perm('requests.forms');
@@ -710,20 +763,20 @@ function req_mail_staff(array $r, string $title, string $line): void {
 function req_mail_approvers(array $r, array $step): void {
     $list = [];
     foreach (req_step_people($step) as $u) $list[strtolower($u['email'])] = 1;
-    if (!empty($step['email'])) $list[strtolower((string)$step['email'])] = 1;
+    foreach (array_keys(req_step_emails($step)) as $e) $list[$e] = 1;
     /* مدير النظام تصله نسخة إن كانت تنبيهاته مفعّلة (يستطيع الاعتماد عند الطوارئ) */
     foreach (q("SELECT * FROM users WHERE active=1 AND role='admin'")->fetchAll() as $u) if (user_notify($u) && in_array('requests.approve', user_perms($u), true)) $list[strtolower($u['email'])] = 1;
     $s = staff_get($r['ref']); $name = $s ? staff_name($s) : $r['ref'];
     $staffMails = req_staff_emails($r['ref']);
     $info = mx_rows(array_merge([['رقم الطلب', $r['no'], 1], ['مقدّم الطلب', $name]], array_map(fn($v) => [$v[0], (string)$v[1]], req_view_rows($r))), 'تفاصيل الطلب') . req_chain_html($r);
     /* من يعتمد بالبريد (المسؤول المباشر أو شخص بلا حساب) يصله رابط قرار خاص به */
-    $tokFor = !empty($step['email']) ? strtolower((string)$step['email']) : '';
+    $tokFor = !empty($step['email']) || !empty($step['emails']) ? req_step_emails($step) : [];
     $tname = REQ_TYPES[$r['type']][1];
     foreach (array_keys($list) as $to) {
         if (in_array($to, $staffMails, true)) continue; /* لا يعتمد أحد طلبه هو */
         $btns = [[mx_url('reqs'), 'فتح الطلب في المنصة', 'primary']]; $foot = 'يمكنك اتخاذ القرار من صفحة «الطلبات» في المنصة.';
-        if ($tokFor !== '' && $to === $tokFor) {
-            $base = (string)cfg('site_url') . 'decide.html#t=' . req_tok_issue($r, (int)$r['stage'], $to, (string)($step['who'] ?? $step['label']));
+        if (isset($tokFor[$to])) {
+            $base = (string)cfg('site_url') . 'decide.html#t=' . req_tok_issue($r, (int)$r['stage'], $to, (string)($tokFor[$to] ?: ($step['who'] ?? $step['label'])));
             $btns = array_merge([[$base . '&a=approve', '✓ اعتماد الطلب', 'success']], (int)$r['stage'] < count(json_decode($r['chain'], true) ?: []) - 1 && req_is_final($to) ? [[$base . '&a=final', '✓✓ اعتماد نهائي مباشر', 'gold']] : [], [['pair' => [[$base . '&a=view', 'عرض التفاصيل', 'ghost'], [$base . '&a=reject', '✕ رفض الطلب', 'danger']]]]);
             $foot = 'الرابط خاص بك وصالح ' . REQ_LINK_DAYS . ' يومًا، ويفتح صفحة الطلب لتأكيد قرارك.';
         }
@@ -750,7 +803,7 @@ function req_create(array $b): array {
     $sup = null; $priv = staff_private($ref);
     if ($priv) { $data['supervisor'] = ''; $data['supName'] = ''; if ($type === 'leave') { req_leave_overlap($ref, $data); if (function_exists('leave_quota_check')) leave_quota_check($ref, $data); } }
     else {
-        $needSup = in_array('manager', array_column(req_flow()[$type]['steps'], 'kind'), true);
+        $needSup = in_array('manager', array_column(req_steps_for($type, $ref), 'kind'), true);
         if ($needSup) {
             $sup = req_sup($data['supervisor']); if (!$sup) throw new HttpError('اختر المسؤول المباشر من القائمة');
             if (in_array(strtolower($sup['email']), req_staff_emails($ref), true)) throw new HttpError('لا يمكن أن يكون صاحب الطلب مسؤوله المباشر. اختر المسؤول المباشر الصحيح.');
@@ -759,7 +812,7 @@ function req_create(array $b): array {
         if ($type === 'leave') { req_leave_overlap($ref, $data); if (function_exists('leave_quota_check')) leave_quota_check($ref, $data); }
     }
     /* السجل الخاص: خطوة واحدة عند مالك المنصة، لا تمر على الموارد البشرية ولا غيرها */
-    if (!$priv) $chain = req_new_chain($type, $sup);
+    if (!$priv) $chain = req_new_chain($type, $sup, $ref);
     else { $ow = owner_user(); if (!$ow) throw new HttpError('تعذّر تحديد مالك المنصة'); $chain = [['label' => (string)($ow['name'] ?: 'مالك المنصة'), 'kind' => 'user', 'user' => (int)$ow['id'], 'who' => (string)($ow['name'] ?: 'مالك المنصة'), 'decision' => '', 'by' => '', 'at' => '', 'note' => '', 'role' => '']]; }
     named_lock('req_no');
     try {

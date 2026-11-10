@@ -1552,7 +1552,13 @@ function rwField(id, label, html, req, wide) { return '<div class="fld' + (wide 
 function rwIn(k, type, ph, extra) { return '<input id="rw_' + k + '" data-rw="' + k + '" type="' + (type || 'text') + '" value="' + esc(RW.d[k] == null ? '' : RW.d[k]) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + (extra || '') + '>'; }
 function rwSeg(k, opts) { return '<div class="seg2" role="group">' + opts.map(function (o) { return '<button type="button" data-rwseg="' + k + '" data-v="' + esc(o) + '" aria-pressed="' + (RW.d[k] === o) + '">' + esc(o) + '</button>'; }).join('') + '</div>'; }
 function rwStaff() { return RW.ref ? byRef(RW.ref) : (role === 'staff' ? ME : null); }
-function rwNeedSup(t) { t = t || RW.type || 'leave'; var f = formOf(t); return f ? f.steps.some(function (x) { return x.kind === 'manager'; }) : t === 'leave'; }
+function rwNeedSup(t) { t = t || RW.type || 'leave'; var rt = rtOf(rwStaff()); if (rt) return !!rt.mgr; var f = formOf(t); return f ? f.steps.some(function (x) { return x.kind === 'manager'; }) : t === 'leave'; }
+/* مسار جهة المنسوب إن ضُبطت مسارات الجهات */
+function rtOf(s) {
+  var R = (formsData() || {}).routes || {}, ks = Object.keys(R); if (!ks.length || !s || !s.ent) return null;
+  var k = ks.filter(function (x) { return x !== '*' && entOf(x).v === s.ent.v; })[0];
+  return k ? R[k] : R['*'] || { mgr: true };
+}
 /* تعبئة مسبقة: رقم الجوال من الملف، والمسؤول المباشر من آخر طلب أو من «المدير المباشر» في الملف، ومكان الانطلاق في الإركاب من دولة العمل ومدينة السكن */
 function rwPrefill() {
   var s = rwStaff(), d = RW.d, sups = (formsData() || {}).sups || [];
@@ -1574,7 +1580,7 @@ function supOfEnt(s, sups) {
 /* حقل «المسؤول المباشر» المشترك بين كل النماذج */
 function rwSupField(t) {
   if (!rwNeedSup(t)) return '';
-  var sups = (formsData() || {}).sups || [], fl = formOf(t || RW.type), nx = fl && fl.steps[1] ? fl.steps[1].label : '';
+  var sups = (formsData() || {}).sups || [], fl = formOf(t || RW.type), rt = rtOf(rwStaff()), nx = rt ? (rt.hr ? 'الموارد البشرية' : rt.top && rt.top.length ? 'الإدارة العليا' : '') : fl && fl.steps[1] ? fl.steps[1].label : '';
   return '<div class="fld wide"><label>المسؤول المباشر <i class="rq">*</i></label>' + (sups.length ? ssel('rwSup', sups.map(function (x) { return { v: x.id, n: x.name, d: x.title || '', ic: 'user' }; }), RW.d.supervisor || '', 'اختر مسؤولك المباشر', function (v) { rwSync(); RW.d.supervisor = v; RW.err = ''; render(); }, 'المسؤول المباشر')
     : '<div class="note warn">' + ic('alert') + '<span>لم تُضَف قائمة المسؤولين المباشرين بعد. تواصل مع الموارد البشرية.</span></div>') + '<small class="fhint">يصله الطلب أولًا ليعتمده أو يرفضه' + (nx ? '، ثم ينتقل إلى ' + esc(nx) : '') + '.</small></div>';
 }
@@ -1879,7 +1885,7 @@ function formsHTML() {
       (can('edit') && f.on ? '<a class="btn" href="#reqs-new" data-ftype="' + f.type + '">' + ic('plus') + 'تقديم نيابة عن منسوب</a>' : '') + '</footer></article>';
   }).join('');
   var fin = d.finals || [], top = '<div class="fsetup">' +
-    '<article class="fset">' + tile('emerald', 'users') + '<div><h3>المسؤولون المباشرون</h3><p>' + ((d.sups || []).length ? (d.sups || []).length + ' مسؤولًا يختار منهم المنسوب عند تقديم أي طلب، فيصله الطلب أولًا' : 'لم يُضف أحد بعد؛ أضفهم لتعمل خطوة «المسؤول المباشر»') + '</p></div>' + (d.canEdit ? '<button class="btn" data-sups="1">' + ic('user') + 'إدارة القائمة</button>' : '') + '</article>' +
+    '<article class="fset">' + tile('emerald', 'users') + '<div><h3>' + (Object.keys(d.routes || {}).length ? 'المسؤولون ومسار كل جهة' : 'المسؤولون المباشرون') + '</h3><p>' + (Object.keys(d.routes || {}).length ? 'مسار الطلبات يُحدَّد حسب جهة المنسوب (المسؤول المباشر، الموارد البشرية، الإدارة العليا)، ويحلّ محل مسار كل نموذج أدناه' : (d.sups || []).length ? (d.sups || []).length + ' مسؤولًا يختار منهم المنسوب عند تقديم أي طلب، فيصله الطلب أولًا' : 'لم يُضف أحد بعد؛ أضفهم لتعمل خطوة «المسؤول المباشر»') + '</p></div>' + (d.canEdit ? '<button class="btn" data-sups="1">' + ic('user') + 'إدارة القائمة</button>' : '') + '</article>' +
     '<article class="fset">' + tile('gold', 'stamp') + '<div><h3>الاعتماد النهائي المباشر</h3><p>' + (fin.length ? esc(fin.map(function (x) { return x.name; }).join('، ')) + ': يعتمدون أي طلب نهائيًا في أي مرحلة، فتُتخطّى بقية الخطوات وتُسجَّل كذلك' : 'لم يُحدَّد أحد') + '</p></div>' + (d.canEdit ? '<button class="btn" data-fins="1">' + ic('edit') + 'تحديد الأشخاص</button>' : '') + '</article></div>';
   return top + '<div class="note fnote">' + ic('info') + '<span>هذه النماذج الإلكترونية المعتمدة في المنصة. يقدّمها المنسوب من «طلباتي»، أو الموارد البشرية نيابة عنه. ' + (d.canEdit ? 'بصفتك مدير النظام تحدد من يعتمد كل نموذج وترتيب الخطوات، أو توقف النموذج مؤقتًا.' : 'مدير النظام هو من يحدد مسؤولي الاعتماد.') + '</span></div><div class="fcards">' + cards + '</div>';
 }
@@ -1983,27 +1989,38 @@ function drawFin() {
 var SUP = null;
 function supOpen() {
   var d = formsData(); if (!d) return;
-  SUP = { list: (d.sups || []).map(function (x, i) { return { id: x.id, name: x.name, email: x.email || '', title: x.title || '', k: 'k' + i }; }), err: '', busy: false, paste: '', map: {}, seq: 1000 };
+  SUP = { list: (d.sups || []).map(function (x, i) { return { id: x.id, name: x.name, email: x.email || '', title: x.title || '', k: 'k' + i }; }), err: '', busy: false, paste: '', map: {}, seq: 1000, rt: {} };
+  Object.keys(d.routes || {}).forEach(function (k) { var r = d.routes[k], cf = k === '*' ? null : supEnts().filter(function (c) { return entOf(c.ar).v === entOf(k).v; })[0]; SUP.rt[k === '*' ? '*' : cf ? cf.ar : k] = { mgr: !!r.mgr, hr: !!r.hr, top: (r.top || []).slice() }; });
   (d.sups || []).forEach(function (x, i) { (x.ents || []).forEach(function (e) { var cf = supEnts().filter(function (c) { return entOf(c.ar).v === entOf(e).v; })[0]; SUP.map[cf ? cf.ar : e] = 'k' + i; }); });
   drawSup();
 }
 function supEnts() { return (CFG.ENTITIES || []).filter(function (e) { return e.v !== 'other' && e.ar; }); }
 function supKey() { return 'k' + (SUP.seq++); }
 function supEntHTML() {
-  var opts = [{ v: '', n: 'بدون ربط', d: 'يختار المنسوب مسؤوله بنفسه', ic: 'x' }].concat(SUP.list.filter(function (x) { return String(x.name).trim(); }).map(function (x) { return { v: x.k, n: x.name, d: x.title || '', ic: 'user' }; }));
+  var opts = [{ v: '', n: 'يختاره المنسوب', d: 'بلا مسؤول افتراضي', ic: 'x' }].concat(SUP.list.filter(function (x) { return String(x.name).trim(); }).map(function (x) { return { v: x.k, n: x.name, d: x.title || '', ic: 'user' }; }));
+  var fins = ((formsData() || {}).finals || []).filter(function (f) { return f.email; });
+  var topOpts = [{ v: '', n: 'بلا إدارة عليا', ic: 'x' }].concat(fins.map(function (f) { return { v: f.email, n: f.name, d: 'الإدارة العليا', ic: 'medal' }; })).concat(fins.length > 1 ? [{ v: '*', n: 'الإدارة العليا (' + fins.length + ')', d: fins.map(function (f) { return f.name; }).join(' أو '), ic: 'users' }] : []);
   var cnt = {}; STAFF.forEach(function (s) { cnt[s.ent.v] = (cnt[s.ent.v] || 0) + 1; });
-  var ents = supEnts().map(function (e) { return { e: e, n: cnt[entOf(e.ar).v] || 0 }; }).sort(function (a, b) { return b.n - a.n; });
-  var done = ents.filter(function (x) { return SUP.map[x.e.ar]; }).length;
-  return '<details class="supents" open><summary>' + ic('link') + 'ربط الجهات بمسؤوليها <span class="sec">' + done + ' من ' + ents.length + '</span></summary>' +
-    '<p>يُختار مسؤول الجهة تلقائيًا لمنسوبيها عند تقديم أي طلب، ويبقى للمنسوب تغييره إن كان مسؤوله شخصًا آخر.</p><div class="supentl">' +
-    ents.map(function (x, i) {
-      return '<div class="supent' + (SUP.map[x.e.ar] ? ' on' : '') + '"><div class="en"><i style="background:' + esc((x.e.colors || ['#475569'])[0]) + '"></i><b>' + esc(x.e.ar) + '</b><small>' + (x.n ? nq(x.n, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') : 'لا منسوبين بعد') + '</small></div>' +
-        ssel('supEnt' + i, opts, SUP.map[x.e.ar] || '', 'بدون ربط', (function (ar) { return function (v) { supSync(); if (v) SUP.map[ar] = v; else delete SUP.map[ar]; drawSup(); }; })(x.e.ar), 'مسؤول ' + x.e.ar) + '</div>';
-    }).join('') + '</div></details>';
+  var ents = supEnts().map(function (e) { return { k: e.ar, e: e, n: cnt[entOf(e.ar).v] || 0 }; }).sort(function (a, b) { return b.n - a.n; });
+  ents.push({ k: '*', e: { ar: 'باقي الجهات', colors: ['#94a3b8'] }, n: -1 });
+  var row = function (x, i) {
+    var r = supRt(x.k), topV = r.top.length > 1 ? '*' : r.top[0] || '', sup = SUP.map[x.k] ? SUP.list.filter(function (y) { return y.k === SUP.map[x.k]; })[0] : null;
+    var path = [r.mgr ? (sup ? sup.name : 'المسؤول المباشر') : '', r.hr ? 'الموارد البشرية' : '', r.top.length ? fins.filter(function (f) { return r.top.indexOf(f.email) > -1; }).map(function (f) { return f.name; }).join(' أو ') : ''].filter(Boolean);
+    return '<div class="supent"><div class="en"><i style="background:' + esc((x.e.colors || ['#475569'])[0]) + '"></i><b>' + esc(x.e.ar) + '</b><small>' + (x.n < 0 ? 'كل جهة لم يُضبط مسارها' : x.n ? nq(x.n, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') : 'لا منسوبين بعد') + '</small></div>' +
+      '<div class="rtc"><div class="rtst"><button type="button" class="rtt' + (r.mgr ? ' on' : '') + '" data-rt="' + i + ':mgr">' + ic(r.mgr ? 'check' : 'plus') + 'المسؤول المباشر</button><button type="button" class="rtt' + (r.hr ? ' on' : '') + '" data-rt="' + i + ':hr">' + ic(r.hr ? 'check' : 'plus') + 'الموارد البشرية</button></div>' +
+      '<div class="rtsel">' + (r.mgr ? ssel('supEnt' + i, opts, SUP.map[x.k] || '', 'يختاره المنسوب', function (v) { supSync(); if (v) SUP.map[x.k] = v; else delete SUP.map[x.k]; drawSup(); }, 'المسؤول المباشر لـ' + x.e.ar) : '') +
+      ssel('supTop' + i, topOpts, topV, 'بلا إدارة عليا', function (v) { supSync(); supRt(x.k).top = v === '*' ? fins.map(function (f) { return f.email; }) : v ? [v] : []; drawSup(); }, 'الإدارة العليا لـ' + x.e.ar) + '</div>' +
+      '<div class="rtpath">' + (path.length ? path.map(function (p) { return '<span>' + esc(p) + '</span>'; }).join(ic('back')) : '<span class="bad">بلا خطوات: يذهب الطلب إلى الموارد البشرية</span>') + '</div></div></div>';
+  };
+  SUP._ents = ents;
+  return '<details class="supents" open><summary>' + ic('link') + 'مسار الاعتماد لكل جهة</summary>' +
+    '<p>اختر لكل جهة خطوات طلباتها بالترتيب: المسؤول المباشر (ومسؤولها الافتراضي، ويبقى للمنسوب تغييره)، ثم الموارد البشرية، ثم الإدارة العليا. ويبقى لأصحاب الاعتماد النهائي اعتماد أي طلب مباشرة في أي مرحلة. يسري على الطلبات الجديدة.</p><div class="supentl">' +
+    ents.map(row).join('') + '</div></details>';
 }
+function supRt(k) { if (!SUP.rt[k]) { var d = k !== '*' && SUP.rt['*']; SUP.rt[k] = d ? { mgr: d.mgr, hr: d.hr, top: d.top.slice() } : { mgr: true, hr: true, top: [] }; } return SUP.rt[k]; }
 function supSync() { var el = document.getElementById('supLayer'); if (!el || !SUP) return; el.querySelectorAll('[data-sp]').forEach(function (x) { var p = x.dataset.sp.split(':'); SUP.list[+p[0]][p[1]] = x.value; }); var t = document.getElementById('supPaste'); if (t) SUP.paste = t.value; }
 function drawSup() {
-  var old = document.getElementById('supLayer'); if (old) old.remove();
+  var old = document.getElementById('supLayer'), sy = old && old.querySelector('.abody') ? old.querySelector('.abody').scrollTop : 0; if (old) old.remove();
   var el = document.createElement('div'); el.id = 'supLayer';
   var have = {}; SUP.list.forEach(function (x) { have[String(x.email).toLowerCase()] = 1; });
   var opts = STAFF.filter(function (s) { return s.mail && !have[s.mail.toLowerCase()]; }).map(function (s) { return { v: s.ref, n: s.name, d: s.job + ' · ' + s.ent.n, c: s.ent.c }; });
@@ -2019,9 +2036,10 @@ function drawSup() {
     '<details class="suppaste"' + (SUP.paste ? ' open' : '') + '><summary>' + ic('doc') + 'لصق قائمة كاملة</summary><p>كل سطر: الاسم، ثم البريد (ويمكن إضافة الصفة بعدهما). مثال:<br><span class="ltr">د. فلان الفلاني, name@example.com</span></p><textarea id="supPaste" rows="5" dir="auto" placeholder="الاسم, البريد">' + esc(SUP.paste) + '</textarea><button type="button" class="btn" id="supParse">' + ic('plus') + 'إضافة الأسطر إلى القائمة</button></details>' +
     '<div class="note">' + ic('info') + '<span>البريد لا يظهر للمنسوبين؛ يرون الاسم والصفة فقط. ويصل المسؤول رابط خاص بكل طلب يعتمده أو يعدّله أو يرفضه منه، أو من المنصة إن كان له حساب.</span></div></div>' +
     '<footer class="mf"><div class="lerr" role="alert">' + esc(SUP.err) + '</div><button class="btn" data-spclose="1">إلغاء</button><button class="btn goldb" id="supSave"' + (SUP.busy ? ' disabled' : '') + '>' + ic('check') + (SUP.busy ? 'جارٍ الحفظ…' : 'حفظ القائمة') + '</button></footer></section>';
-  document.body.appendChild(el);
+  document.body.appendChild(el); if (sy) { var ab = el.querySelector('.abody'); if (ab) ab.scrollTop = sy; }
   el.querySelectorAll('[data-spclose]').forEach(function (b) { b.onclick = function () { el.remove(); SUP = null; }; });
   el.querySelectorAll('[data-spdel]').forEach(function (b) { b.onclick = function () { supSync(); var gk = SUP.list[+b.dataset.spdel].k; Object.keys(SUP.map).forEach(function (e) { if (SUP.map[e] === gk) delete SUP.map[e]; }); SUP.list.splice(+b.dataset.spdel, 1); drawSup(); }; });
+  el.querySelectorAll('[data-rt]').forEach(function (b) { b.onclick = function () { supSync(); var p = b.dataset.rt.split(':'), k = SUP._ents[+p[0]].k, r = supRt(k); r[p[1]] = !r[p[1]]; drawSup(); }; });
   document.getElementById('supNew').onclick = function () { supSync(); SUP.list.push({ id: '', name: '', title: '', email: '', k: supKey() }); drawSup(); var x = el.querySelectorAll('[data-sp$=":name"]'); var l = document.querySelector('#supLayer [data-sp="' + (SUP.list.length - 1) + ':name"]'); if (l) l.focus(); };
   document.getElementById('supParse').onclick = function () {
     supSync(); var n0 = SUP.list.length, dup = 0;
@@ -2038,7 +2056,7 @@ function drawSup() {
     var bad = SUP.list.filter(function (x) { return String(x.name).trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(x.email).trim()); })[0];
     if (bad) { SUP.err = 'أكمل الاسم والبريد الصحيح لكل مسؤول' + (bad.name ? ': ' + bad.name : '') + '.'; drawSup(); return; }
     SUP.busy = true; drawSup();
-    api({ action: 'reqSupsSave', sups: SUP.list.map(function (x) { return { id: x.id, name: x.name, email: x.email, title: x.title, ents: Object.keys(SUP.map).filter(function (e) { return SUP.map[e] === x.k; }) }; }) }).then(function (j) { seed('reqForms', j); var L = document.getElementById('supLayer'); if (L) L.remove(); SUP = null; toast('حُفظت قائمة المسؤولين المباشرين'); render(); })
+    api({ action: 'reqSupsSave', sups: SUP.list.map(function (x) { return { id: x.id, name: x.name, email: x.email, title: x.title, ents: Object.keys(SUP.map).filter(function (e) { return e !== '*' && SUP.map[e] === x.k && supRt(e).mgr; }) }; }), routes: (function () { var o = {}; SUP._ents.forEach(function (x) { o[x.k] = supRt(x.k); }); return o; })() }).then(function (j) { seed('reqForms', j); var L = document.getElementById('supLayer'); if (L) L.remove(); SUP = null; toast('حُفظت قائمة المسؤولين المباشرين'); render(); })
       .catch(function (e) { SUP.busy = false; SUP.err = errText(e); drawSup(); });
   };
 }
@@ -3964,7 +3982,7 @@ document.addEventListener('click', function (e) {
    خانات الوقت بالمنصة. الخانة الأصلية تبقى مخفية وتحمل القيمة بصيغة 24 ساعة.
    ====================================================================== */
 (function () {
-  var TP = { inp: null, h: 8, m: 0, pm: false, step: 5 };
+  var TP = { inp: null, h: 16, m: 0, pm: true, step: 5 };
   function p2(n) { return (n < 10 ? '0' : '') + n; }
   function parse(v) { var m = /^(\d{1,2}):(\d{2})/.exec(v || ''); return m ? { h: +m[1], m: +m[2] } : null; }
   function fmt(v) { var t = parse(v); if (!t) return ''; var h = t.h % 12 || 12; return h + ':' + p2(t.m) + ' ' + (t.h < 12 ? 'ص' : 'م'); }
@@ -4014,7 +4032,7 @@ document.addEventListener('click', function (e) {
     if (inp.disabled) return;
     TP.inp = inp; var st = +(inp.getAttribute('step') || 300); TP.step = st >= 60 ? Math.max(1, Math.min(30, Math.round(st / 60))) : 5;
     if (60 % TP.step) TP.step = 5;
-    var t = parse(inp.value) || { h: 8, m: 0 }; TP.h = t.h; TP.m = t.m - t.m % TP.step; TP.pm = t.h >= 12; TP.dirty = false;
+    var t = parse(inp.value) || { h: 16, m: 0 }; TP.h = t.h; TP.m = t.m - t.m % TP.step; TP.pm = t.h >= 12; TP.dirty = false;
     var L = document.getElementById('tpLayer');
     if (!L) { L = document.createElement('div'); L.id = 'tpLayer'; L.innerHTML = '<div class="tp-back"></div><div class="tp-card" role="dialog" aria-modal="true" aria-label="اختيار الوقت"></div>'; document.body.appendChild(L); }
     L.hidden = false; draw(); place(); inp._tpBtn.classList.add('open');

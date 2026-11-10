@@ -2070,3 +2070,15 @@ html[data-theme="dark"] .tp-grid button.on { background: var(--gold); color: #13
 .supent .en b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .supent .en small { color: var(--mute); font-size: 12px; }
 @media (max-width: 640px) { .supent { grid-template-columns: 1fr; } }
+.supent { grid-template-columns: minmax(0, .8fr) minmax(0, 1.6fr); align-items: start; padding: 12px; }
+.supent .en { padding-top: 6px; }
+.rtc { display: grid; gap: 8px; min-width: 0; }
+.rtst { display: flex; gap: 6px; flex-wrap: wrap; }
+.rtt { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 99px; border: 1.5px dashed var(--line); background: transparent; color: var(--mute); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; }
+.rtt .i { width: 14px; height: 14px; }
+.rtt.on { border-style: solid; border-color: color-mix(in srgb, var(--navy) 40%, transparent); background: color-mix(in srgb, var(--navy) 8%, var(--panel)); color: var(--ink); }
+.rtsel { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 6px; }
+.rtpath { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; color: var(--mute); }
+.rtpath span { background: color-mix(in srgb, var(--gold, #b8893b) 10%, var(--panel)); color: var(--ink); border-radius: 8px; padding: 3px 8px; font-weight: 700; }
+.rtpath span.bad { background: color-mix(in srgb, var(--c-bad, #c0392b) 10%, var(--panel)); }
+.rtpath .i { width: 12px; height: 12px; opacity: .55; }
