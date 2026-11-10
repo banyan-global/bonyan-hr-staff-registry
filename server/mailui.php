@@ -59,7 +59,7 @@ function mx_rows(array $rows, string $title = '', bool $rtl = true): string {
     foreach ($rows as $r) {
         $v = (string)($r[1] ?? ''); if ($v === '') continue;
         $val = !empty($r[2]) ? '<span dir="ltr" style="unicode-bidi:embed;">' . esc_html($v) . '</span>' : nl2br(esc_html($v));
-        $h .= '<tr><td style="padding:11px 16px;' . ($i++ ? 'border-top:1px solid ' . MX['line'] . ';' : '') . 'vertical-align:top;width:36%;font-size:12.5px;line-height:1.7;color:' . MX['mut'] . ';font-weight:700;text-align:' . $S . ';">' . esc_html((string)$r[0]) . '</td>'
+        $h .= '<tr><td style="padding:11px 16px;' . ($i++ ? 'border-top:1px solid ' . MX['line'] . ';' : '') . 'vertical-align:top;width:32%;font-size:12.5px;line-height:1.7;color:' . MX['mut'] . ';font-weight:700;text-align:' . $S . ';white-space:nowrap;">' . esc_html((string)$r[0]) . '</td>'
             . '<td style="padding:11px 16px;' . ($i > 1 ? 'border-top:1px solid ' . MX['line'] . ';' : '') . 'vertical-align:top;font-size:14px;line-height:1.75;color:' . MX['ink'] . ';font-weight:800;text-align:' . $S . ';word-break:break-word;">' . $val . '</td></tr>';
     }
     if ($h === '') return '';

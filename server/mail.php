@@ -67,10 +67,11 @@ function mail_signature(bool $rtl = true): string {
         : 'Automated message from <b style="color:#14213d">Bonyan HR Platform</b>. For any technical question, reach us at the email below.';
     return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="' . ($rtl ? 'rtl' : 'ltr') . '" style="border-collapse:collapse;">'
         . '<tr><td align="center" style="' . $F . 'padding:12px 12px 8px;font-size:12px;line-height:1.9;color:#7a8499">' . $line . '</td></tr>'
-        . '<tr><td align="center" style="padding:0 12px"><table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:#fff4ec;border:1px solid #fcd9bf;border-radius:14px">'
-        . '<tr><td align="center" style="' . $F . 'padding:6px 14px;font-size:12.5px;line-height:1.7;text-align:center"><span style="color:#f97415;font-size:8px;vertical-align:2px">&#9679;</span>&nbsp; '
-        . '<a href="' . $href . '" style="color:#ea580c;font-weight:bold;text-decoration:none;white-space:nowrap">' . ($rtl ? 'م. أسامة جنيدي' : 'Eng. Osama Junaydi') . '</a>'
-        . '<span style="color:#fcd9bf">&nbsp;&nbsp;|&nbsp;&nbsp;</span><a href="' . $href . '" dir="ltr" style="color:#7a8499;font-size:12px;text-decoration:none;white-space:nowrap">' . esc_html($mail) . '</a></td></tr></table></td></tr>'
+        /* بطاقة المطوّر: الاسم في سطر والبريد تحته، فلا ينكسر أيٌّ منهما على شاشة الجوال */
+        . '<tr><td align="center" style="padding:2px 12px 0"><table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:#fff4ec;border:1px solid #fcd9bf;border-radius:14px">'
+        . '<tr><td align="center" style="' . $F . 'padding:9px 22px 2px;font-size:13.5px;line-height:1.6;text-align:center;white-space:nowrap"><span style="color:#f97415;font-size:8px;vertical-align:2px">&#9679;</span>&nbsp; '
+        . '<a href="' . $href . '" style="color:#ea580c;font-weight:bold;text-decoration:none">' . ($rtl ? 'م. أسامة جنيدي' : 'Eng. Osama Junaydi') . '</a></td></tr>'
+        . '<tr><td align="center" dir="ltr" style="font-family:Arial,Helvetica,sans-serif;padding:0 22px 9px;font-size:12.5px;line-height:1.6;text-align:center;white-space:nowrap"><a href="' . $href . '" style="color:#7a8499;text-decoration:none;white-space:nowrap">' . esc_html($mail) . '</a></td></tr></table></td></tr>'
         . '<tr><td align="center" style="' . $F . 'padding:9px 12px 0;font-size:11px;color:#a3abba">&copy; ' . date('Y') . ' ' . ($rtl ? 'مجموعة بنيان العالمية' : 'Bonyan International Group') . '</td></tr></table>';
 }
 function mail_signature_text(): string { return "\n\n—\nرسالة آلية من منصة بنيان للموارد البشرية، ولأي استفسار تقني يسعدنا تواصلك عبر البريد أدناه.\nم. أسامة جنيدي | " . cfg('dev_email') . "\n© " . date('Y') . ' مجموعة بنيان العالمية'; }

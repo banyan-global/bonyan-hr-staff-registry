@@ -1578,6 +1578,21 @@ function supOfEnt(s, sups) {
   return (sups || []).filter(function (x) { return (x.ents || []).some(function (e) { return entOf(e).v === v; }); })[0] || null;
 }
 /* حقل «المسؤول المباشر» المشترك بين كل النماذج */
+/* الموظف البديل: قائمة بزملاء جهة المنسوب (الاسم والمسمى والرقم الوظيفي تُملأ معًا)، مع «شخص آخر» للكتابة يدويًا */
+function rwSubField() {
+  var c = need('colls:' + (RW.ref || 'me'), function () { return api({ action: 'reqColleagues', ref: RW.ref || '' }); }, 300000);
+  var L = (c.data && c.data.list) || [], other = RW.d.subRef === '__other' || (!RW.d.subRef && RW.d.substitute && !L.some(function (x) { return x.name === RW.d.substitute; }));
+  if (!L.length) return rwField('rw_substitute', 'اسم الموظف البديل', rwIn('substitute', 'text', c.loading ? 'جارٍ تحميل زملاء الجهة…' : 'الاسم الكامل'), true);
+  var cur = other ? '__other' : RW.d.subRef || (L.filter(function (x) { return x.name === RW.d.substitute; })[0] || {}).ref || '';
+  var opts = L.map(function (x) { return { v: x.ref, n: x.name, d: x.job || '', ic: 'user' }; }).concat([{ v: '__other', n: 'شخص آخر', d: 'من خارج القائمة: اكتب اسمه ومسماه', ic: 'plus' }]);
+  return '<div class="fld"><label>اسم الموظف البديل <i class="rq">*</i></label>' + ssel('rwSub', opts, cur, 'اختر زميلًا من ' + (c.data.entity || 'جهتك'), function (v) {
+    rwSync(); RW.err = '';
+    if (v === '__other') { RW.d.subRef = '__other'; RW.d.substitute = ''; RW.d.subTitle = ''; RW.d.subNo = ''; }
+    else { var x = L.filter(function (y) { return y.ref === v; })[0] || {}; RW.d.subRef = v; RW.d.substitute = x.name || ''; RW.d.subTitle = x.job || ''; RW.d.subNo = x.no || ''; }
+    render();
+  }, 'الموظف البديل') + (other ? '<input id="rw_substitute" data-rw="substitute" type="text" style="margin-top:8px" value="' + esc(RW.d.substitute || '') + '" placeholder="الاسم الكامل للبديل" maxlength="120">' : '') +
+    '<small class="fhint">' + L.length + ' من منسوبي ' + esc(c.data.entity || 'جهتك') + '، ويُملأ المسمى والرقم الوظيفي تلقائيًا.</small></div>';
+}
 function rwSupField(t) {
   if (!rwNeedSup(t)) return '';
   var sups = (formsData() || {}).sups || [], fl = formOf(t || RW.type), rt = rtOf(rwStaff()), nx = rt ? (rt.hr ? 'الموارد البشرية' : rt.top && rt.top.length ? 'الإدارة العليا' : '') : fl && fl.steps[1] ? fl.steps[1].label : '';
@@ -1625,7 +1640,7 @@ function rwBody() {
       rwField('rw_reason', 'سبب الإجازة', '<textarea id="rw_reason" data-rw="reason" maxlength="1500" placeholder="اكتب السبب باختصار">' + esc(RW.d.reason || '') + '</textarea>', true, true) +
       rwSupField('leave') +
       '<div class="fld wide"><div class="fsub">' + ic('users') + 'الموظف البديل أثناء الإجازة</div></div>' +
-      rwField('rw_substitute', 'اسم الموظف البديل', rwIn('substitute', 'text', 'الاسم الكامل'), true) + rwField('rw_subTitle', 'المسمى الوظيفي للبديل', rwIn('subTitle', 'text', 'مثال: منسق برامج'), true) +
+      rwSubField() + rwField('rw_subTitle', 'المسمى الوظيفي للبديل', rwIn('subTitle', 'text', 'مثال: منسق برامج'), true) +
       rwField('rw_subNo', 'الرقم الوظيفي للبديل', rwIn('subNo', 'text', 'اختياري', ' dir="ltr"')) +
       '<div class="fld wide"><div class="fsub">' + ic('chat') + 'التواصل أثناء الإجازة</div></div>' +
       rwField('rw_contact', 'رقم التواصل', rwIn('contact', 'tel', '+966512345678', ' dir="ltr"'), true) + rwField('rw_address', 'العنوان أثناء الإجازة', rwIn('address', 'text', 'اختياري')) + '</div>';

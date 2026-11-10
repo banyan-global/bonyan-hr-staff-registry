@@ -528,12 +528,17 @@ function req_forms_save(array $b): array {
     audit_log('', 'تحديد مسؤولي اعتماد ' . REQ_TYPES[$t][1], ($flow[$t]['on'] ? '' : 'النموذج موقوف · ') . implode(' ← ', array_column($steps, 'label')), $me['_label']);
     return req_forms();
 }
+/* الوقت بنظام ١٢ ساعة: 13:00 ← 1:00 م */
+function req_t12(string $v): string {
+    if (!preg_match('/^(\d{1,2}):(\d{2})/', $v, $m)) return $v;
+    $h = (int)$m[1]; return (($h % 12) ?: 12) . ':' . $m[2] . ' ' . ($h >= 12 ? 'م' : 'ص');
+}
 function req_summary(array $r): string {
     $d = json_decode($r['data'], true) ?: [];
     if ($r['type'] === 'leave') return 'إجازة ' . leave_kind_norm((string)($d['kind'] ?? '')) . ' · ' . ar_days((int)($d['days'] ?? 0)) . ' · من ' . ($d['from'] ?? '') . ' إلى ' . ($d['to'] ?? '');
     if ($r['type'] === 'travel') return 'مهمة إلى ' . ($d['dest'] ?? '') . ' · ' . ar_days((int)($d['days'] ?? 0)) . ' · من ' . ($d['from'] ?? '');
     if ($r['type'] === 'leave' && ($d['medOrg'] ?? '') !== '') return 'إجازة مرضية · ' . ($d['days'] ?? 0) . ' يومًا · من ' . ($d['from'] ?? '') . ' إلى ' . ($d['to'] ?? '') . ' · ' . $d['medOrg'];
-    if ($r['type'] === 'perm') return ($d['kind'] ?? 'استئذان') . ' · ' . ($d['day'] ?? '') . ' · ' . ($d['fromT'] ?? '') . '–' . ($d['toT'] ?? '');
+    if ($r['type'] === 'perm') return ($d['kind'] ?? 'استئذان') . ' · ' . ($d['day'] ?? '') . ' · من ' . req_t12((string)($d['fromT'] ?? '')) . ' إلى ' . req_t12((string)($d['toT'] ?? ''));
     if ($r['type'] === 'ot') return 'عمل إضافي ' . req_hours((int)($d['mins'] ?? 0)) . ' · ' . ($d['day'] ?? '');
     if ($r['type'] === 'loan') return 'سلفة ' . number_format((float)($d['amount'] ?? 0)) . ' ر.س على ' . ($d['months'] ?? 0) . ' أقساط من ' . ($d['start'] ?? '');
     if ($r['type'] === 'resume') return ($d['kind'] ?? 'مباشرة') . ' · ' . ($d['day'] ?? '') . (!empty($d['lateDays']) ? ' · تأخر ' . ar_days((int)$d['lateDays']) . ' عمل' : '');
@@ -574,7 +579,8 @@ function req_view_rows(array $r): array {
             $v = $d[$f[0]] ?? ''; if ($v === '' || $v === null) continue;
             if ($f[2] === 'money') $v = number_format((float)$v, 2) . ' ر.س';
             if ($f[2] === 'area') continue;
-            $o[] = [$f[1], (string)$v, in_array($f[2], ['date', 'time', 'month', 'reqref'], true) ? 1 : 0];
+            if ($f[2] === 'time') { $o[] = [$f[1], req_t12((string)$v)]; continue; }
+            $o[] = [$f[1], (string)$v, in_array($f[2], ['date', 'month', 'reqref'], true) ? 1 : 0];
         }
         if ($t === 'perm' || $t === 'ot') $o[] = ['المدة', req_hours((int)($d['mins'] ?? 0))];
         if ($t === 'ot' && !empty($d['weekend'])) $o[] = ['ملاحظة', 'في يوم عطلة نهاية الأسبوع'];
@@ -755,7 +761,7 @@ function req_mail_staff(array $r, string $title, string $line): void {
     $tone = mx_guess_tone($title . ' ' . $line);
     $html = mx_page(['eyebrow' => 'الموارد البشرية · طلباتي', 'title' => $title, 'tone' => $tone, 'pre' => $line, 'lead' => esc_html($line),
         'badge' => ['green' => 'معتمد', 'red' => 'مرفوض', 'amber' => 'قيد الإجراء', 'gold' => 'عُدّل'][$tone] ?? '',
-        'body' => mx_rows([['رقم الطلب', $r['no'], 1], ['نوع الطلب', REQ_TYPES[$r['type']][1] ?? ''], ['التفاصيل', req_summary($r)]], 'تفاصيل الطلب') . req_chain_html($r),
+        'body' => mx_rows(array_merge([['رقم الطلب', $r['no'], 1], ['نوع الطلب', REQ_TYPES[$r['type']][1] ?? '']], array_map(fn($v) => [$v[0], (string)$v[1], $v[2] ?? 0], req_view_rows($r)) ?: [['التفاصيل', req_summary($r)]]), 'تفاصيل الطلب') . req_chain_html($r),
         'buttons' => [[mx_url('myreq'), 'متابعة طلبي في المنصة', 'primary']]]);
     try { send_mail($to, $title . ' · ' . $r['no'], $html, $line . "\n" . $r['no'] . "\n" . req_summary($r) . "\n" . mx_url('myreq'), 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline(), (string)cfg('hr_notify')); }
     catch (Throwable $e) { audit_log($r['ref'], 'تعذّر إرسال بريد الطلب', $r['no'] . ' · ' . $e->getMessage()); }
@@ -785,6 +791,24 @@ function req_mail_approvers(array $r, array $step): void {
         try { send_mail($to, 'بانتظار اعتمادك: ' . $tname . ' · ' . $r['no'], $html, req_summary($r) . "\n" . $btns[0][0], 'منصة بنيان للموارد البشرية', logo_inline()); }
         catch (Throwable $e) { audit_log($r['ref'], 'تعذّر إرسال تنبيه الاعتماد', mask_email($to)); }
     }
+}
+
+/* زملاء الجهة (لاختيار الموظف البديل): الاسم والمسمى والرقم الوظيفي فقط، بلا السجلات الخاصة ولا مقدّم الطلب */
+function req_colleagues(array $b): array {
+    $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
+    $mine = (string)my_staff_ref($u); $ref = (string)($b['ref'] ?? '') ?: $mine;
+    if ($ref !== $mine && !has_perm($u, 'staff.edit')) throw new HttpError('forbidden', 403);
+    $s = $ref !== '' ? staff_get($ref) : null; if (!$s) return ['ok' => true, 'entity' => '', 'list' => []];
+    $ent = req_route_key((string)($s['data']['entity'] ?? '')); $priv = private_refs(); $out = [];
+    if ($ent !== '') foreach (q('SELECT ref, status, data FROM staff') as $r) {
+        if ($r['ref'] === $ref || in_array($r['ref'], $priv, true) || strpos((string)$r['status'], 'بانتظار') === 0) continue;
+        $d = json_decode($r['data'], true) ?: [];
+        if (req_route_key((string)($d['entity'] ?? '')) !== $ent) continue;
+        $n = trim((string)($d['fullNameAr'] ?? '')) ?: trim((string)($d['fullNameLatin'] ?? '')); if ($n === '') continue;
+        $out[] = ['ref' => $r['ref'], 'name' => $n, 'job' => trim((string)($d['jobTitle'] ?? '')), 'no' => trim((string)($d['employeeNo'] ?? ''))];
+    }
+    usort($out, fn($a, $c) => strcmp($a['name'], $c['name']));
+    return ['ok' => true, 'entity' => $ent, 'list' => $out];
 }
 
 /* تقديم طلب: المنسوب لنفسه، أو الموارد البشرية نيابة عن منسوب */
