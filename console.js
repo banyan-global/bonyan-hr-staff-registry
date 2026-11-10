@@ -484,7 +484,7 @@ function capsFrom(p) {
     attv: h('attendance.view'), attm: h('attendance.manage'), news: h('announce.manage'), reports: h('reports.view'), settings: h('settings.manage') };
 }
 function can(p) { return role !== 'staff' && !!CAP[p]; }
-function firstOf(name) { var w = String(name || '').trim().split(/\s+/); return /^(د|أ|م|ا|م\.|د\.|أ\.)\.?$/.test(w[0]) && w[1] ? w[0] + ' ' + w[1] : w[0] || ''; }
+function firstOf(name) { return callName(name); }
 
 /* ---------- mapping server rows to the console model ---------- */
 var ENT_KEY = { bonyan: 'bonyan', 'bonyan-university': 'uni', 'bonyan-humanitarian': 'hum', 'bonyan-waqf': 'waqf', afaq: 'afaq', 'bonyan-academy': 'acad', almaarif: 'maarif', 'kafaa-tech': 'kafaa', 'dar-altamkeen': 'tamkeen', 'tamkeen-education': 'tedu', 'bonyan-university-women': 'uniw', 'bonyan-remote': 'remote', 'bonyan-kenya': 'kenya', taqat: 'taqat' };
@@ -526,7 +526,7 @@ function toStaff(r) {
   if (!r.officialEmail && !r.personalEmail) miss.push('البريد الإلكتروني');
   if (!r.mobile && !r.whatsapp) miss.push('رقم الجوال');
   var cur = (/[A-Z]{3}/.exec(r.currency || '') || [])[0] || DEFCUR[cc] || 'SAR';
-  var s = { ref: r.ref, r: r, name: name, latin: String(r.fullNameLatin || ''), ini: name.charAt(0), job: String(r.jobTitle || '').trim() || '—', ent: entOf(r.entity), c: ctryOf(cc, r.workCountry),
+  var s = { ref: r.ref, r: r, name: name, latin: String(r.fullNameLatin || ''), ini: honSplit(name).rest.charAt(0), job: String(r.jobTitle || '').trim() || '—', ent: entOf(r.entity), c: ctryOf(cc, r.workCountry),
     reg: pdt(r.createdAt) || new Date(0), upd: pdt(r.updatedAt), hire: pdate(r.startDate), docs: docs, base: parseFloat(String(r.salary || '').replace(/[^\d.]/g, '')) || 0, allow: 0, cur: cur,
     miss: miss, mailed: !!MAILED[r.ref], self: false, phone: String(r.mobile || r.whatsapp || ''), wa: String(r.whatsapp || r.mobile || ''), mail: String(r.officialEmail || r.personalEmail || ''),
     female: female, iban: bank ? '•••• ' + bank.slice(-4) : '', nat: CNAME[String(r.nationality || '').toUpperCase()] || String(r.nationality || '').trim(), photo: urls(r.photo)[0] || '', lang: /^(ar|en|id)$/.test(r.lang || '') ? r.lang : '' };
@@ -604,7 +604,7 @@ function boot() {
 function enterApp(u) {
   SESSION = u; role = u.role === 'staff' ? 'staff' : u.role; CAP = capsFrom(u.perms || []);
   var nm = u.name || u.email;
-  USERS[role] = { name: nm, first: firstOf(nm), role: u.title || u.roleName || '', ini: nm.charAt(0), mail: u.email, j: ROLEJ[u.role] || 'slate' };
+  USERS[role] = { name: nm, first: firstOf(nm), role: u.title || u.roleName || '', ini: honSplit(nm).rest.charAt(0), mail: u.email, j: ROLEJ[u.role] || 'slate' };
   screen = 'loading'; render();
   return (role === 'staff' ? loadMe() : loadAll()).then(function () {
     if (role === 'staff' && !ME) { screen = 'noreg'; render(); return; }
@@ -976,8 +976,26 @@ function mountCards() {
   document.querySelectorAll('[data-card]').forEach(function (el) {
     var s = byRef(el.dataset.card) || (ME && ME.ref === el.dataset.card ? ME : null); if (!s) return;
     try { BonyanApp.card.render(el, cardRec(s), s.photo || null); } catch (e) { if (window.console) console.error(e); }
+    cardFit(el);
   });
 }
+/* البطاقة مصممة على عرض ٣٨٠ بكسل: تُرسم بمقاسها الأصلي ثم تُصغَّر كلها كوحدة واحدة لتناسب المكان،
+   فلا تتداخل نصوصها مهما ضاق العرض أو كبّر المستخدم خط الجهاز */
+var CARD_RO = window.ResizeObserver ? new ResizeObserver(function (es) { es.forEach(function (e) { var w = e.target.querySelector('.idcard-wrap[data-card]'); if (w) cardFit(w); }); }) : null;
+function cardFit(el) {
+  var box = el.parentNode; if (!box) return;
+  if (CARD_RO && !box._ro) { box._ro = 1; CARD_RO.observe(box); }
+  var w = box.clientWidth; if (!w) return;
+  el.style.width = '380px'; el.style.maxWidth = 'none'; el.style.zoom = Math.min(1.05, w / 380).toFixed(4);
+}
+/* اسم النداء: اللقب (د. / أ. / م. / الشيخ) مع الاسم الأول — «د مبارك محمد» ← «د. مبارك» */
+var HON_AR = { 'د': 'د.', 'د.': 'د.', 'د/': 'د.', 'دكتور': 'د.', 'الدكتور': 'د.', 'دكتورة': 'د.', 'الدكتورة': 'د.', 'أ': 'أ.', 'أ.': 'أ.', 'أ/': 'أ.', 'ا.': 'أ.', 'ا/': 'أ.', 'أستاذ': 'أ.', 'الأستاذ': 'أ.', 'أستاذة': 'أ.', 'الأستاذة': 'أ.', 'م': 'م.', 'م.': 'م.', 'م/': 'م.', 'مهندس': 'م.', 'المهندس': 'م.', 'الشيخ': 'الشيخ', 'شيخ': 'الشيخ', 'فضيلة': 'فضيلة' };
+function honSplit(full) {
+  var t = String(full || '').replace(/\s+/g, ' ').trim().replace(/^(د|أ|ا|م)([.\/])(?=\S)/, '$1$2 ').split(' '), tt = [];
+  while (t.length > 1 && HON_AR[t[0]] && tt.length < 2) tt.push(HON_AR[t.shift()]);
+  return { t: tt.join(' '), rest: t.join(' ') };
+}
+function callName(full) { var h = honSplit(full); return ((h.t ? h.t + ' ' : '') + (h.rest.split(' ')[0] || '')).trim(); }
 /* إن لم تُسجَّل أجزاء الاسم (سجلات قديمة) يُستعمل الاسم الكامل */
 function cardRec(s) { var r = {}; Object.keys(s.r).forEach(function (k) { r[k] = s.r[k]; }); if (!r.firstNameAr && !r.lastNameAr) r.firstNameAr = r.fullNameAr || ''; if (!r.firstName && !r.lastName) r.firstName = r.fullNameLatin || ''; return r; }
 function cardPng(s, btn) {
@@ -1161,7 +1179,7 @@ VIEWS.me = function () {
   var s = ME, h = new Date().getHours(), next = s.docs.filter(function (d) { return d.exp; }).sort(function (a, b) { return a.days - b.days; })[0];
   var sum = hijri(new Date()) + '. ' + (s.status === 'مكتمل' ? 'ملفك <b>مكتمل</b>' : 'ينقص ملفك <b>' + nq(s.miss.length, 'أمر واحد', 'أمران', 'أمور', 'أمرًا') + '</b>') + (next ? '، وأقرب وثيقة تنتهي هي <b>' + next.t + '</b> (' + dl(next.days) + ').' : '.');
   var U = S('staff', 'update');
-  var hero = '<section class="hero"><div class="hero-in me-hero"><div><span class="rl"><i></i>' + esc(s.job) + '، ' + esc(s.ent.n) + '</span><h1>' + (h < 12 ? 'صباح الخير' : 'مساء الخير') + ' يا ' + esc(s.name.split(' ')[0]) + '</h1><p class="sum">' + sum + '</p>' +
+  var hero = '<section class="hero"><div class="hero-in me-hero"><div><span class="rl"><i></i>' + esc(s.job) + '، ' + esc(s.ent.n) + '</span><h1>' + (h < 12 ? 'صباح الخير' : 'مساء الخير') + ' يا ' + esc(callName(s.name)) + '</h1><p class="sum">' + sum + '</p>' +
     '<div class="chips">' + (staffOn('myreq') ? '<a class="chip" href="#myreq-new"><i style="background:#5cdba0"></i>طلب جديد</a>' : '') + (U ? '<a class="chip" href="update.html?me=1"><i style="background:#e3c485"></i>تحديث بياناتي</a>' : '') + '<a class="chip" href="#myfile"><i style="background:#82c8f2"></i>ملفي وبطاقتي</a>' + (staffOn('myatt') ? '<a class="chip" href="#myatt"><i style="background:#7fd8e6"></i>حضوري</a>' : '') + (s.miss.length && U ? '<a class="chip" href="update.html?me=1"><i style="background:#ffc966"></i>أكمل النواقص</a>' : '') + '</div></div>' +
     (S('staff', 'card') ? '<div class="cardcol me-card">' + cardHTML(s) + '</div>' : '') + '</div></section>';
   var nd = CACHE.news && CACHE.news.data, unread = nd && nd.rows ? nd.rows.filter(function (n) { return !n.read; }) : [];
@@ -1198,7 +1216,7 @@ function fillT(txt, s, L, mode) {
   var when = !d || d.days > 9000 ? (L === 'ar' ? 'تحتاج مراجعة' : L === 'en' ? 'needs review' : 'perlu diperiksa') : L === 'ar' ? (d.days < 0 ? 'انتهت منذ ' + dn(-d.days) : 'تنتهي خلال ' + dn(d.days)) : L === 'en' ? (d.days < 0 ? 'expired ' + (-d.days) + ' days ago' : 'expires in ' + d.days + ' days') : (d.days < 0 ? 'telah habis ' + (-d.days) + ' hari lalu' : 'akan habis dalam ' + d.days + ' hari');
   var miss = s.miss.length ? s.miss.join('، ') : (L === 'ar' ? 'بعض البيانات' : L === 'en' ? 'some details' : 'beberapa data');
   var link = !(CMP && CMP.link) ? '' : mode === 'mail' ? '{link}' : mode === 'wa' ? siteURL() + 'update.html' : siteURL() + 'update.html?k=•••';
-  return txt.replace(/\{name\}/g, s.name.split(' ')[0]).replace(/\{ref\}/g, s.ref).replace(/\{doc\}/g, dnm).replace(/\{when\}/g, when).replace(/\{missing\}/g, miss).replace(/\{link\}/g, link).replace(/\n{3,}/g, '\n\n');
+  return txt.replace(/\{name\}/g, callName(s.name)).replace(/\{ref\}/g, s.ref).replace(/\{doc\}/g, dnm).replace(/\{when\}/g, when).replace(/\{missing\}/g, miss).replace(/\{link\}/g, link).replace(/\n{3,}/g, '\n\n');
 }
 function sendText(s, mode) { var L = CMP.L === 'auto' ? langOf(s) : CMP.L; return { subj: fillT(CMP.subj, s, L, mode), body: fillT(CMP.body, s, L, mode), L: L }; }
 function msgTpl(refs, tpl) { msgOpen(refs); if (CMP && tpl) { CMP.tpl = tpl; loadT(); drawMsg(); } }

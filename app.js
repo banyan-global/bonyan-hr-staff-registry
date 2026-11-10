@@ -1106,8 +1106,19 @@
   function pad(s, n) { s = s.slice(0, n); while (s.length < n) s += '<'; return s; }
   /* تُزال المسافات الزائدة في أول الاسم وآخره وبين أجزائه */
   function joinName(a) { return a.map(function (v) { return String(v || '').replace(/\s+/g, ' ').trim(); }).filter(Boolean).join(' '); }
-  function latinName(d) { return joinName([d.firstName, d.fatherName, d.grandName, d.lastName]).toUpperCase(); }
-  function arabicName(d) { return joinName([d.firstNameAr, d.fatherNameAr, d.grandNameAr, d.lastNameAr]); }
+  /* اللقب في أول الاسم يُوحَّد (د مبارك ← د. مبارك · D MUBARAK ← DR. MUBARAK) ولا يدخل سطري MRZ */
+  var HON_AR = { 'د': 'د.', 'د.': 'د.', 'د/': 'د.', 'دكتور': 'د.', 'الدكتور': 'د.', 'دكتورة': 'د.', 'الدكتورة': 'د.', 'أ': 'أ.', 'أ.': 'أ.', 'أ/': 'أ.', 'ا.': 'أ.', 'ا/': 'أ.', 'أستاذ': 'أ.', 'الأستاذ': 'أ.', 'أستاذة': 'أ.', 'الأستاذة': 'أ.', 'م': 'م.', 'م.': 'م.', 'م/': 'م.', 'مهندس': 'م.', 'المهندس': 'م.', 'الشيخ': 'الشيخ', 'شيخ': 'الشيخ', 'فضيلة': 'فضيلة' };
+  var HON_LA = { 'D': 'DR.', 'D.': 'DR.', 'DR': 'DR.', 'DR.': 'DR.', 'DOCTOR': 'DR.', 'PROF': 'PROF.', 'PROF.': 'PROF.', 'ENG': 'ENG.', 'ENG.': 'ENG.', 'SHEIKH': 'SHEIKH', 'SHAIKH': 'SHEIKH', 'SYEKH': 'SYEKH', 'SHEH': 'SYEKH', 'MR': '', 'MR.': '', 'MRS': '', 'MRS.': '', 'MS': '', 'MS.': '', 'USTADZ': 'USTADZ', 'UST.': 'UST.' };
+  function honSplit(full, map) {
+    var t = String(full || '').replace(/\s+/g, ' ').trim().replace(/^(د|أ|ا|م|D|Dr)([.\/])(?=\S)/i, '$1$2 ').split(' '), tt = [];
+    while (t.length > 1 && map[map === HON_LA ? t[0].toUpperCase() : t[0]] !== undefined && tt.length < 2) { var h = map[map === HON_LA ? t.shift().toUpperCase() : t.shift()]; if (h) tt.push(h); }
+    return { t: tt.join(' '), rest: t.join(' ') };
+  }
+  function withHon(full, map) { var h = honSplit(full, map); return (h.t ? h.t + ' ' : '') + h.rest; }
+  function noHon(v, map) { return honSplit(v, map).rest; }
+  function latinName(d) { return withHon(joinName([d.firstName, d.fatherName, d.grandName, d.lastName]).toUpperCase(), HON_LA); }
+  function arabicName(d) { return withHon(joinName([d.firstNameAr, d.fatherNameAr, d.grandNameAr, d.lastNameAr]), HON_AR); }
+  function mrzGiven(d) { return mrzClean(noHon(joinName([d.firstName, d.fatherName, d.grandName]), HON_LA)); }
   /* رقم الطوارئ كما يُعرض: من حقلي المقدمة والرقم، أو كما هو مخزّن في الجدول (لوحة الموارد البشرية) */
   function emPhone(d) { return d.em1Full || (d.em1Phone ? '+' + dialOf(d.em1PhoneDial) + ' ' + d.em1Phone : ''); }
   var EX_ICON = '<svg class="ex-ic" viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4.5" width="15" height="10" rx="2"/><path d="M6 17.5h8M10 7v4.5m0 0-2-2m2 2 2-2"/></svg>';
@@ -1123,7 +1134,7 @@
       entName: ent ? (ent.v === 'other' ? (d.entityOther || ent[L]) : ent[L]) : '',
       latin: latinName(d), nameAr: arabicName(d), st0: st0, svc: svcLen(st0), ref: ref,
       photo: (state.files.photo || [])[0],
-      l1: pad('P<' + mrzClean(d.nationality || '') + mrzClean(d.lastName || '') + '<<' + mrzClean([d.firstName, d.fatherName, d.grandName].filter(Boolean).join(' ')), 36),
+      l1: pad('P<' + mrzClean(d.nationality || '') + mrzClean(d.lastName || '') + '<<' + mrzGiven(d), 36),
       l2: pad(mrzClean(d.passportNo || '') + '<' + mrzClean(d.nationality || '') + yymmdd(d.birthDate) + (d.gender === 'female' ? 'F' : (d.gender === 'male' ? 'M' : '<')) + yymmdd(d.passportExpiry) + '<BONYANHR', 36),
       emerg: d.em1Name ? d.em1Name + (emPhone(d) ? ' · \u2066' + emPhone(d) + '\u2069' : '') : '—',
       blood: d.bloodType ? optLabel(FIELD.bloodType, d.bloodType) : '—'
@@ -1135,7 +1146,7 @@
     var ent = CFG.ENTITIES.filter(function (x) { return x.v === d.entity; })[0];
     var photo = (state.files.photo || [])[0];
     var ref = (state.result && state.result.ref) || ('BNY-HR-' + (d.workCountry || '••') + '-' + new Date().getFullYear() + '-••••');
-    var l1 = pad('P<' + mrzClean(d.nationality || '') + mrzClean(d.lastName || '') + '<<' + mrzClean([d.firstName, d.fatherName, d.grandName].filter(Boolean).join(' ')), 36);
+    var l1 = pad('P<' + mrzClean(d.nationality || '') + mrzClean(d.lastName || '') + '<<' + mrzGiven(d), 36);
     var l2 = pad(mrzClean(d.passportNo || '') + '<' + mrzClean(d.nationality || '') + yymmdd(d.birthDate) + (d.gender === 'female' ? 'F' : (d.gender === 'male' ? 'M' : '<')) + yymmdd(d.passportExpiry) + '<BONYANHR', 36);
     var em = d.em1Name ? d.em1Name + (emPhone(d) ? ' · \u2066' + emPhone(d) + '\u2069' : '') : '—';
     var mainLogo = logoImg(CFG.MAIN_LOGO, 'ic-logo-img', CFG.MAIN_LOGO.name[L], true);
@@ -1150,7 +1161,7 @@
       : '<span class="ic-logo">' + mainLogo + '</span><span class="ic-kind">' + esc(t('card.kind')) + '<b>STAFF · HR</b></span><span class="ic-holo" aria-hidden="true"></span>';
     var wmL = (window.BONYAN_LOGOS || {}).markWhite;
     var wm = (showEnt && el) ? '<span class="ic-wm ent" aria-hidden="true"><img src="' + el.src + '" alt=""></span>' : (wmL ? '<span class="ic-wm" aria-hidden="true"><img src="' + wmL.src + '" alt=""></span>' : '');
-    var fit = function (txt, n, big, small) { var l = (txt || '').length; return l > n ? ' style="font-size:' + Math.max(small, big * n / l).toFixed(3) + 'rem"' : ''; };
+    var fit = function (txt, n, big, small) { var l = (txt || '').length; return l > n ? ' style="font-size:calc(' + Math.max(small, big * n / l).toFixed(3) + ' * var(--cu, 1rem))"' : ''; };
     return '<div class="idcard' + (showEnt ? ' has-ent' : '') + '" style="--c1:' + th[0] + ';--c2:' + th[1] + ';--ca:' + th[2] + '" tabindex="0" role="button" aria-label="' + esc(t('card.flip')) + '"><div class="idcard-in">' +
       '<div class="face front"><div class="ic-guil" aria-hidden="true"></div>' +
         '<div class="ic-top">' + top + '</div>' +

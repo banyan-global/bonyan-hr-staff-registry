@@ -1663,7 +1663,7 @@ table.mini th.used { background: var(--gold-wash); }
 
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
-.idcard-wrap {--bg-0: #162942;
+.idcard-wrap {--cu: 16px; --bg-0: #162942;
   --bg-1: #0f1f38;
   --body-grad: radial-gradient(60% 50% at 80% 0%, rgba(227, 196, 133, .14), transparent 60%), radial-gradient(55% 45% at 10% 12%, rgba(95, 217, 230, .08), transparent 60%), radial-gradient(50% 50% at 50% 100%, rgba(169, 155, 255, .06), transparent 60%), linear-gradient(180deg, #16294a, #0f1f38);
   --pattern-op: .12;
@@ -1713,9 +1713,9 @@ table.mini th.used { background: var(--gold-wash); }
 .idcard .ic-top {position: relative; display: flex; align-items: center; gap: 10px;}
 .idcard .ic-logo {height: 30px; display: flex; align-items: center;}
 .idcard .ic-logo-img {height: 30px; width: auto; display: block;}
-.idcard .ic-logo-img.logo-fallback {font-family: var(--f-display); font-size: .7rem; font-weight: 600; color: #fff; height: auto; white-space: nowrap;}
-.idcard .ic-kind {font-family: var(--f-display); font-size: .64rem; line-height: 1.2; color: rgba(255, 255, 255, .82); display: grid; padding-inline-start: 10px; border-inline-start: 1px solid color-mix(in srgb, var(--ca) 50%, transparent);}
-.idcard .ic-kind b {font-family: var(--f-mono); font-weight: 500; letter-spacing: .14em; color: var(--ca); font-size: .56rem; direction: ltr; text-align: start;}
+.idcard .ic-logo-img.logo-fallback {font-family: var(--f-display); font-size: calc(.7 * var(--cu, 1rem)); font-weight: 600; color: #fff; height: auto; white-space: nowrap;}
+.idcard .ic-kind {font-family: var(--f-display); font-size: calc(.64 * var(--cu, 1rem)); line-height: 1.2; color: rgba(255, 255, 255, .82); display: grid; padding-inline-start: 10px; border-inline-start: 1px solid color-mix(in srgb, var(--ca) 50%, transparent);}
+.idcard .ic-kind b {font-family: var(--f-mono); font-weight: 500; letter-spacing: .14em; color: var(--ca); font-size: calc(.56 * var(--cu, 1rem)); direction: ltr; text-align: start;}
 .idcard .ic-holo {margin-inline-start: auto; width: 30px; height: 30px; border-radius: 8px; opacity: .95; background: conic-gradient(from 0deg, var(--ca), #F6EEDF, color-mix(in srgb, var(--ca) 70%, #000), #F3E6CC, var(--ca)); -webkit-mask: radial-gradient(circle, transparent 36%, #000 38%); mask: radial-gradient(circle, transparent 36%, #000 38%); animation: spin 9s linear infinite;}
 .idcard .ic-body {position: relative; display: flex; gap: 12px; align-items: center; min-height: 0;}
 .idcard .ic-photo {flex: none; width: 23%; aspect-ratio: 35 / 45; border-radius: 8px; overflow: hidden; background: rgba(255, 255, 255, .1); border: 2px solid var(--ca); display: grid; place-items: end center; color: rgba(255, 255, 255, .35);}
@@ -1724,9 +1724,9 @@ html[dir="rtl"] .idcard .ic-photo {order: 2;}
 .idcard .ic-photo svg {width: 86%;}
 .idcard .ic-info {flex: 1; min-width: 0; display: grid; gap: 1px;}
 .idcard .ic-info p {overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
-.idcard .ic-name-ar {font-family: var(--f-display); font-weight: 900; font-size: 1.12rem; line-height: 1.35; color: #fff; text-align: start; letter-spacing: 0;}
+.idcard .ic-name-ar {font-family: var(--f-display); font-weight: 900; font-size: calc(1.12 * var(--cu, 1rem)); line-height: 1.35; color: #fff; text-align: start; letter-spacing: 0;}
 .idcard .ic-name-ar.ic-latin {letter-spacing: .03em;}
-.idcard .ic-name-en {font-family: var(--f-display); font-weight: 700; font-size: .62rem; letter-spacing: .09em; color: rgba(255, 255, 255, .72); margin-bottom: 3px;}
+.idcard .ic-name-en {font-family: var(--f-display); font-weight: 700; font-size: calc(.62 * var(--cu, 1rem)); letter-spacing: .09em; color: rgba(255, 255, 255, .72); margin-bottom: 3px;}
 html[dir="rtl"] .idcard .ic-info p {text-align: right;}
 html[dir="ltr"] .idcard .ic-info p {text-align: left;}
 .idcard .ic-wm {position: absolute; z-index: 0; pointer-events: none; inset-inline-end: 5%; top: 30%; height: 50%; opacity: .045; -webkit-mask-image: linear-gradient(180deg, #000 40%, transparent 100%); mask-image: linear-gradient(180deg, #000 40%, transparent 100%);}
@@ -1737,25 +1737,25 @@ html[dir="ltr"] .idcard .ic-info p {text-align: left;}
 .idcard .ic-wm.dark:not(.ent) img {filter: brightness(0);}
 .idcard .front > :not(.ic-wm):not(.ic-guil),
 .idcard .back > :not(.ic-wm) {position: relative; z-index: 1;}
-.idcard .ic-role {font-size: .74rem; color: var(--ca); font-weight: 600;}
-.idcard .ic-ent {font-size: .7rem; color: rgba(255, 255, 255, .72);}
-.idcard .ic-loc {display: flex; align-items: center; gap: 6px; font-size: .7rem; color: rgba(255, 255, 255, .86); margin-top: 2px;}
+.idcard .ic-role {font-size: calc(.74 * var(--cu, 1rem)); color: var(--ca); font-weight: 600;}
+.idcard .ic-ent {font-size: calc(.7 * var(--cu, 1rem)); color: rgba(255, 255, 255, .72);}
+.idcard .ic-loc {display: flex; align-items: center; gap: 6px; font-size: calc(.7 * var(--cu, 1rem)); color: rgba(255, 255, 255, .86); margin-top: 2px;}
 .idcard .ic-loc .flag {width: 16px; height: 12px;}
 .idcard .ic-nat {display: inline-flex; padding-inline-start: 6px; border-inline-start: 1px solid rgba(255, 255, 255, .25);}
-.idcard .ic-mrz {position: relative; margin-inline: -14px; padding: 5px 14px 7px; background: color-mix(in srgb, var(--ca) 12%, transparent); display: grid; font-family: var(--f-mono); font-size: .54rem; letter-spacing: .16em; color: rgba(255, 255, 255, .75); white-space: nowrap; overflow: hidden;}
+.idcard .ic-mrz {position: relative; margin-inline: -14px; padding: 5px 14px 7px; background: color-mix(in srgb, var(--ca) 12%, transparent); display: grid; font-family: var(--f-mono); font-size: calc(.54 * var(--cu, 1rem)); letter-spacing: .16em; color: rgba(255, 255, 255, .75); white-space: nowrap; overflow: hidden;}
 .idcard .back {transform: rotateY(180deg); color: var(--c2); padding: 0 14px 12px; display: grid; grid-template-rows: auto 1fr auto; gap: 8px;
   background: radial-gradient(120% 90% at 100% 100%, color-mix(in srgb, var(--c1) 13%, #fff) 0%, transparent 60%), radial-gradient(90% 70% at 0% 100%, color-mix(in srgb, var(--ca) 22%, #fff) 0%, transparent 55%), linear-gradient(165deg, #ffffff 0%, color-mix(in srgb, var(--c1) 5%, #fff) 100%);}
 .idcard .back::after {content: ""; position: absolute; inset: 0; pointer-events: none; background-image: repeating-radial-gradient(circle at -10% 120%, color-mix(in srgb, var(--c1) 7%, transparent) 0 1px, transparent 1px 9px);}
 .idcard .back dd {color: var(--c2);}
 .idcard .ic-strip {margin-inline: -14px; height: 22%; min-height: 34px; background: linear-gradient(180deg, var(--c2), var(--c1) 60%, var(--c2));}
-.idcard .ic-back {margin: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px 10px; align-content: start; font-size: .62rem;}
+.idcard .ic-back {margin: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px 10px; align-content: start; font-size: calc(.62 * var(--cu, 1rem));}
 .idcard .ic-back div:first-child {grid-column: 1 / -1;}
-.idcard .ic-back dt {color: color-mix(in srgb, var(--c1) 60%, #8a6c2e); font-weight: 700; font-size: .6rem;}
+.idcard .ic-back dt {color: color-mix(in srgb, var(--c1) 60%, #8a6c2e); font-weight: 700; font-size: calc(.6 * var(--cu, 1rem));}
 .idcard .ic-back dd {margin: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
 .idcard .ic-back .mono {font-family: var(--f-mono); letter-spacing: .05em; text-align: start;}
 .idcard .ic-bars {position: relative; height: 22px; direction: ltr; overflow: hidden;}
 .idcard .ic-bars i {position: absolute; top: 0; bottom: 0; background: var(--c2);}
-.idcard .ic-svc {display: inline-flex; align-items: center; gap: 5px; width: fit-content; margin-top: 3px; padding: 1px 8px 1px 7px; border-radius: 999px; font-size: .66rem; font-weight: 800; color: var(--c2); background: linear-gradient(135deg, color-mix(in srgb, var(--ca) 50%, #fff), var(--ca));}
+.idcard .ic-svc {display: inline-flex; align-items: center; gap: 5px; width: fit-content; margin-top: 3px; padding: 1px 8px 1px 7px; border-radius: 999px; font-size: calc(.66 * var(--cu, 1rem)); font-weight: 800; color: var(--c2); background: linear-gradient(135deg, color-mix(in srgb, var(--ca) 50%, #fff), var(--ca));}
 .idcard .ic-svc svg {width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; flex: none;}
 .idcard .ic-svc.ph {opacity: .55;}
 .idcard .ic-back dd.gold {color: var(--c1);}
@@ -1763,7 +1763,7 @@ html[dir="ltr"] .idcard .ic-info p {text-align: left;}
 .idcard .ic-plate {height: 42px; max-width: 56%; flex: none; display: flex; align-items: center; justify-content: center; padding: 4px 9px; border-radius: 10px; background: #fff; box-shadow: 0 6px 16px rgba(0, 0, 0, .28), inset 0 0 0 1px color-mix(in srgb, var(--ca) 45%, transparent); animation: plateIn .5s var(--spring) both;}
 .idcard .ic-plate.sq {width: 46px; height: 46px; padding: 5px; border-radius: 12px;}
 .idcard .ic-plate img {height: 100%; width: auto; max-width: 100%; object-fit: contain; display: block;}
-.idcard .ic-plate.txt {font-family: var(--f-display); font-weight: 900; font-size: .72rem; color: var(--c1); padding-inline: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.idcard .ic-plate.txt {font-family: var(--f-display); font-weight: 900; font-size: calc(.72 * var(--cu, 1rem)); color: var(--c1); padding-inline: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .idcard .ic-bny {margin-inline-start: auto; height: 24px; display: flex; align-items: center; gap: 6px; opacity: .95;}
 .idcard .ic-bny img {height: 100%; width: auto; display: block;}
 .idcard .ic-bny::before {content: ""; width: 1px; height: 18px; background: color-mix(in srgb, var(--ca) 55%, transparent);}
@@ -2082,3 +2082,6 @@ html[data-theme="dark"] .tp-grid button.on { background: var(--gold); color: #13
 .rtpath span { background: color-mix(in srgb, var(--gold, #b8893b) 10%, var(--panel)); color: var(--ink); border-radius: 8px; padding: 3px 8px; font-weight: 700; }
 .rtpath span.bad { background: color-mix(in srgb, var(--c-bad, #c0392b) 10%, var(--panel)); }
 .rtpath .i { width: 12px; height: 12px; opacity: .55; }
+/* لا يكبّر متصفح الجوال النصوص من تلقاء نفسه (يُفسد البطاقات والجداول) */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+.offcard { overflow: hidden; }
