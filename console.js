@@ -2005,7 +2005,7 @@ function supEntHTML() {
   ents.push({ k: '*', e: { ar: 'باقي الجهات', colors: ['#94a3b8'] }, n: -1 });
   var row = function (x, i) {
     var r = supRt(x.k), topV = r.top.length > 1 ? '*' : r.top[0] || '', sup = SUP.map[x.k] ? SUP.list.filter(function (y) { return y.k === SUP.map[x.k]; })[0] : null;
-    var path = [r.mgr ? (sup ? sup.name : 'المسؤول المباشر') : '', r.hr ? 'الموارد البشرية' : '', r.top.length ? fins.filter(function (f) { return r.top.indexOf(f.email) > -1; }).map(function (f) { return f.name; }).join(' أو ') : ''].filter(Boolean);
+    var path = [r.mgr ? (sup ? sup.name : 'المسؤول المباشر') : '', r.hr ? 'الموارد البشرية' : '', r.top.length ? fins.filter(function (f) { return r.top.indexOf(f.email) > -1 && !(r.mgr && sup && String(sup.email).toLowerCase() === f.email); }).map(function (f) { return f.name; }).join(' أو ') : ''].filter(Boolean);
     return '<div class="supent"><div class="en"><i style="background:' + esc((x.e.colors || ['#475569'])[0]) + '"></i><b>' + esc(x.e.ar) + '</b><small>' + (x.n < 0 ? 'كل جهة لم يُضبط مسارها' : x.n ? nq(x.n, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') : 'لا منسوبين بعد') + '</small></div>' +
       '<div class="rtc"><div class="rtst"><button type="button" class="rtt' + (r.mgr ? ' on' : '') + '" data-rt="' + i + ':mgr">' + ic(r.mgr ? 'check' : 'plus') + 'المسؤول المباشر</button><button type="button" class="rtt' + (r.hr ? ' on' : '') + '" data-rt="' + i + ':hr">' + ic(r.hr ? 'check' : 'plus') + 'الموارد البشرية</button></div>' +
       '<div class="rtsel">' + (r.mgr ? ssel('supEnt' + i, opts, SUP.map[x.k] || '', 'يختاره المنسوب', function (v) { supSync(); if (v) SUP.map[x.k] = v; else delete SUP.map[x.k]; drawSup(); }, 'المسؤول المباشر لـ' + x.e.ar) : '') +
