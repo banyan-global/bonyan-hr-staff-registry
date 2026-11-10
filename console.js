@@ -1559,11 +1559,17 @@ function rwPrefill() {
   if (RW.type === 'travel' && s) { if (!d.fromCountry && s.c && s.c.cc !== '—') d.fromCountry = s.c.n; if (!d.fromCity && s.r && s.r.addrCity) d.fromCity = String(s.r.addrCity); if (!d.transport) d.transport = 'طيران'; }
   if (RW.type !== 'leave' && !rwNeedSup()) return;
   if (!d.contact && s && RW.type === 'leave') d.contact = s.phone || '';
+  if (!d.supervisor && s) { var es = supOfEnt(s, sups); if (es) d.supervisor = es.id; }
   if (!d.supervisor && s) {
     var last = reqRows().filter(function (r) { return r.ref === s.ref && r.data && r.data.supervisor; })[0];
     if (last && sups.some(function (x) { return x.id === last.data.supervisor; })) d.supervisor = last.data.supervisor;
     else { var m = gn(String((s.r && s.r.manager) || '')); if (m) { var hit = sups.filter(function (x) { var n2 = gn(x.name).replace(/^(د|أ|ا|م)\.?\s*/, ''); return n2 && (m.indexOf(n2) > -1 || n2.indexOf(m) > -1); })[0]; if (hit) d.supervisor = hit.id; } }
   }
+}
+/* مسؤول جهة المنسوب كما ربطه مدير النظام في قائمة المسؤولين المباشرين */
+function supOfEnt(s, sups) {
+  var v = s && s.ent ? s.ent.v : ''; if (!v) return null;
+  return (sups || []).filter(function (x) { return (x.ents || []).some(function (e) { return entOf(e).v === v; }); })[0] || null;
 }
 /* حقل «المسؤول المباشر» المشترك بين كل النماذج */
 function rwSupField(t) {
@@ -1977,8 +1983,23 @@ function drawFin() {
 var SUP = null;
 function supOpen() {
   var d = formsData(); if (!d) return;
-  SUP = { list: (d.sups || []).map(function (x) { return { id: x.id, name: x.name, email: x.email || '', title: x.title || '' }; }), err: '', busy: false, paste: '' };
+  SUP = { list: (d.sups || []).map(function (x, i) { return { id: x.id, name: x.name, email: x.email || '', title: x.title || '', k: 'k' + i }; }), err: '', busy: false, paste: '', map: {}, seq: 1000 };
+  (d.sups || []).forEach(function (x, i) { (x.ents || []).forEach(function (e) { var cf = supEnts().filter(function (c) { return entOf(c.ar).v === entOf(e).v; })[0]; SUP.map[cf ? cf.ar : e] = 'k' + i; }); });
   drawSup();
+}
+function supEnts() { return (CFG.ENTITIES || []).filter(function (e) { return e.v !== 'other' && e.ar; }); }
+function supKey() { return 'k' + (SUP.seq++); }
+function supEntHTML() {
+  var opts = [{ v: '', n: 'بدون ربط', d: 'يختار المنسوب مسؤوله بنفسه', ic: 'x' }].concat(SUP.list.filter(function (x) { return String(x.name).trim(); }).map(function (x) { return { v: x.k, n: x.name, d: x.title || '', ic: 'user' }; }));
+  var cnt = {}; STAFF.forEach(function (s) { cnt[s.ent.v] = (cnt[s.ent.v] || 0) + 1; });
+  var ents = supEnts().map(function (e) { return { e: e, n: cnt[entOf(e.ar).v] || 0 }; }).sort(function (a, b) { return b.n - a.n; });
+  var done = ents.filter(function (x) { return SUP.map[x.e.ar]; }).length;
+  return '<details class="supents" open><summary>' + ic('link') + 'ربط الجهات بمسؤوليها <span class="sec">' + done + ' من ' + ents.length + '</span></summary>' +
+    '<p>يُختار مسؤول الجهة تلقائيًا لمنسوبيها عند تقديم أي طلب، ويبقى للمنسوب تغييره إن كان مسؤوله شخصًا آخر.</p><div class="supentl">' +
+    ents.map(function (x, i) {
+      return '<div class="supent' + (SUP.map[x.e.ar] ? ' on' : '') + '"><div class="en"><i style="background:' + esc((x.e.colors || ['#475569'])[0]) + '"></i><b>' + esc(x.e.ar) + '</b><small>' + (x.n ? nq(x.n, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') : 'لا منسوبين بعد') + '</small></div>' +
+        ssel('supEnt' + i, opts, SUP.map[x.e.ar] || '', 'بدون ربط', (function (ar) { return function (v) { supSync(); if (v) SUP.map[ar] = v; else delete SUP.map[ar]; drawSup(); }; })(x.e.ar), 'مسؤول ' + x.e.ar) + '</div>';
+    }).join('') + '</div></details>';
 }
 function supSync() { var el = document.getElementById('supLayer'); if (!el || !SUP) return; el.querySelectorAll('[data-sp]').forEach(function (x) { var p = x.dataset.sp.split(':'); SUP.list[+p[0]][p[1]] = x.value; }); var t = document.getElementById('supPaste'); if (t) SUP.paste = t.value; }
 function drawSup() {
@@ -1993,22 +2014,22 @@ function drawSup() {
       '<button type="button" class="ib del" data-spdel="' + i + '" aria-label="حذف">' + ic('x') + '</button></li>'; }).join('') : '<li class="empty">لا يوجد مسؤولون بعد. أضف من المنسوبين أو الصق القائمة.</li>';
   el.innerHTML = '<div class="mscrim" data-spclose="1"></div><section class="mdl fem supm" role="dialog" aria-modal="true" aria-labelledby="supT"><header class="mh">' + tile('emerald', 'users') + '<div><h2 id="supT">المسؤولون المباشرون</h2><p>يختار المنسوب مسؤوله من هذه القائمة عند تقديم أي طلب خطوته الأولى «المسؤول المباشر»، فيصله الطلب أولًا</p></div><button class="ib mx" data-spclose="1" aria-label="إغلاق">' + ic('plus') + '</button></header>' +
     '<div class="abody"><ol class="suplist">' + rows + '</ol>' +
-    '<div class="supadd"><div class="fef"><label>إضافة من سجل المنسوبين</label>' + ssel('supPick', opts, '', 'ابحث باسم المنسوب', function (v) { supSync(); var s = byRef(v); if (s) SUP.list.push({ id: '', name: s.name, title: s.job !== '—' ? s.job : '', email: s.mail }); drawSup(); }, 'إضافة من المنسوبين') + '</div>' +
-    '<button type="button" class="btn" id="supNew">' + ic('plus') + 'إضافة يدويًا</button></div>' +
+    '<div class="supadd"><div class="fef"><label>إضافة من سجل المنسوبين</label>' + ssel('supPick', opts, '', 'ابحث باسم المنسوب', function (v) { supSync(); var s = byRef(v); if (s) SUP.list.push({ id: '', name: s.name, title: s.job !== '—' ? s.job : '', email: s.mail, k: supKey() }); drawSup(); }, 'إضافة من المنسوبين') + '</div>' +
+    '<button type="button" class="btn" id="supNew">' + ic('plus') + 'إضافة يدويًا</button></div>' + supEntHTML() +
     '<details class="suppaste"' + (SUP.paste ? ' open' : '') + '><summary>' + ic('doc') + 'لصق قائمة كاملة</summary><p>كل سطر: الاسم، ثم البريد (ويمكن إضافة الصفة بعدهما). مثال:<br><span class="ltr">د. فلان الفلاني, name@example.com</span></p><textarea id="supPaste" rows="5" dir="auto" placeholder="الاسم, البريد">' + esc(SUP.paste) + '</textarea><button type="button" class="btn" id="supParse">' + ic('plus') + 'إضافة الأسطر إلى القائمة</button></details>' +
     '<div class="note">' + ic('info') + '<span>البريد لا يظهر للمنسوبين؛ يرون الاسم والصفة فقط. ويصل المسؤول رابط خاص بكل طلب يعتمده أو يعدّله أو يرفضه منه، أو من المنصة إن كان له حساب.</span></div></div>' +
     '<footer class="mf"><div class="lerr" role="alert">' + esc(SUP.err) + '</div><button class="btn" data-spclose="1">إلغاء</button><button class="btn goldb" id="supSave"' + (SUP.busy ? ' disabled' : '') + '>' + ic('check') + (SUP.busy ? 'جارٍ الحفظ…' : 'حفظ القائمة') + '</button></footer></section>';
   document.body.appendChild(el);
   el.querySelectorAll('[data-spclose]').forEach(function (b) { b.onclick = function () { el.remove(); SUP = null; }; });
-  el.querySelectorAll('[data-spdel]').forEach(function (b) { b.onclick = function () { supSync(); SUP.list.splice(+b.dataset.spdel, 1); drawSup(); }; });
-  document.getElementById('supNew').onclick = function () { supSync(); SUP.list.push({ id: '', name: '', title: '', email: '' }); drawSup(); var x = el.querySelectorAll('[data-sp$=":name"]'); var l = document.querySelector('#supLayer [data-sp="' + (SUP.list.length - 1) + ':name"]'); if (l) l.focus(); };
+  el.querySelectorAll('[data-spdel]').forEach(function (b) { b.onclick = function () { supSync(); var gk = SUP.list[+b.dataset.spdel].k; Object.keys(SUP.map).forEach(function (e) { if (SUP.map[e] === gk) delete SUP.map[e]; }); SUP.list.splice(+b.dataset.spdel, 1); drawSup(); }; });
+  document.getElementById('supNew').onclick = function () { supSync(); SUP.list.push({ id: '', name: '', title: '', email: '', k: supKey() }); drawSup(); var x = el.querySelectorAll('[data-sp$=":name"]'); var l = document.querySelector('#supLayer [data-sp="' + (SUP.list.length - 1) + ':name"]'); if (l) l.focus(); };
   document.getElementById('supParse').onclick = function () {
     supSync(); var n0 = SUP.list.length, dup = 0;
     SUP.paste.split(/\n+/).forEach(function (line) {
       var m = /([^\s<>,;،]+@[^\s<>,;،]+\.[^\s<>,;،]+)/.exec(line); if (!m) return;
       var em = m[1].toLowerCase(), rest = line.replace(m[0], '').replace(/[<>"'{}]/g, ' ').split(/[,;،\t|]+/).map(function (x) { return x.replace(/\b(name|email)\s*:/gi, '').trim(); }).filter(Boolean);
       if (SUP.list.some(function (x) { return String(x.email).toLowerCase() === em; })) { dup++; return; }
-      SUP.list.push({ id: '', name: rest[0] || '', title: rest[1] || '', email: em });
+      SUP.list.push({ id: '', name: rest[0] || '', title: rest[1] || '', email: em, k: supKey() });
     });
     SUP.err = SUP.list.length > n0 ? '' : dup ? 'هذه العناوين موجودة في القائمة مسبقًا.' : 'لم نجد بريدًا صحيحًا في الأسطر.'; if (SUP.list.length > n0 || dup) SUP.paste = ''; drawSup();
   };
@@ -2017,7 +2038,7 @@ function drawSup() {
     var bad = SUP.list.filter(function (x) { return String(x.name).trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(x.email).trim()); })[0];
     if (bad) { SUP.err = 'أكمل الاسم والبريد الصحيح لكل مسؤول' + (bad.name ? ': ' + bad.name : '') + '.'; drawSup(); return; }
     SUP.busy = true; drawSup();
-    api({ action: 'reqSupsSave', sups: SUP.list }).then(function (j) { seed('reqForms', j); var L = document.getElementById('supLayer'); if (L) L.remove(); SUP = null; toast('حُفظت قائمة المسؤولين المباشرين'); render(); })
+    api({ action: 'reqSupsSave', sups: SUP.list.map(function (x) { return { id: x.id, name: x.name, email: x.email, title: x.title, ents: Object.keys(SUP.map).filter(function (e) { return SUP.map[e] === x.k; }) }; }) }).then(function (j) { seed('reqForms', j); var L = document.getElementById('supLayer'); if (L) L.remove(); SUP = null; toast('حُفظت قائمة المسؤولين المباشرين'); render(); })
       .catch(function (e) { SUP.busy = false; SUP.err = errText(e); drawSup(); });
   };
 }

@@ -277,14 +277,21 @@ function req_sups_save(array $b): array {
     $in = is_array($b['sups'] ?? null) ? $b['sups'] : [];
     if (count($in) > 80) throw new HttpError('القائمة أطول من المسموح');
     $old = []; foreach (req_sups() as $s) $old[$s['id']] = $s;
-    $out = []; $seen = [];
+    $out = []; $seen = []; $entSeen = [];
     foreach ($in as $s) {
         $name = req_str($s['name'] ?? '', 80); $email = strtolower(trim((string)($s['email'] ?? ''))); $title = req_str($s['title'] ?? '', 80);
         if (mb_strlen($name) < 2) throw new HttpError('اكتب اسم كل مسؤول');
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new HttpError('بريد غير صحيح: ' . $name);
         if (isset($seen[$email])) throw new HttpError('البريد نفسه مكرر: ' . $email); $seen[$email] = 1;
         $id = preg_match('/^[a-f0-9]{8}$/', (string)($s['id'] ?? '')) ? (string)$s['id'] : bin2hex(random_bytes(4));
-        $out[] = ['id' => $id, 'name' => $name, 'email' => $email, 'title' => $title];
+        /* الجهات التي يكون مسؤولها المباشر الافتراضي (يُختار تلقائيًا لمنسوبيها، ويبقى لهم تغييره) */
+        $ents = [];
+        foreach (array_slice(is_array($s['ents'] ?? null) ? $s['ents'] : [], 0, 30) as $e) {
+            $e = req_str($e, 120); if ($e === '') continue;
+            if (isset($entSeen[$e])) throw new HttpError('الجهة «' . $e . '» مربوطة بأكثر من مسؤول'); $entSeen[$e] = 1; $ents[] = $e;
+        }
+        $o = ['id' => $id, 'name' => $name, 'email' => $email, 'title' => $title]; if ($ents) $o['ents'] = $ents;
+        $out[] = $o;
     }
     setting_set('leave_sups', json_encode($out, JSON_UNESCAPED_UNICODE));
     $added = array_filter($out, fn($s) => !isset($old[$s['id']])); $gone = array_diff_key($old, array_column($out, null, 'id'));
@@ -430,7 +437,7 @@ function req_forms(): array {
             'total' => array_sum($cnt[$t] ?? []), 'pending' => $cnt[$t]['pending'] ?? 0];
     }
     /* المنسوب يرى أسماء المسؤولين فقط ليختار منها؛ البريد لمن يدير النماذج */
-    $supsOut = array_map(fn($s) => $isAdmin ? $s : ['id' => $s['id'], 'name' => $s['name'], 'title' => $s['title'] ?? ''], $sups);
+    $supsOut = array_map(fn($s) => $isAdmin ? $s : ['id' => $s['id'], 'name' => $s['name'], 'title' => $s['title'] ?? '', 'ents' => $s['ents'] ?? []], $sups);
     $finals = array_map(fn($f) => $isAdmin ? $f : ['email' => '', 'name' => $f['name']], req_finals());
     return ['ok' => true, 'forms' => $forms, 'roles' => array_intersect_key(ROLE_NAMES, array_flip(REQ_STEP_ROLES)), 'canEdit' => $isAdmin, 'sups' => $supsOut, 'leaveKinds' => LEAVE_KINDS, 'finals' => $finals, 'iAmFinal' => req_is_final((string)$u['email'])];
 }
