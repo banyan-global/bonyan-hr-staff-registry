@@ -211,9 +211,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
             elseif ($pe && $pe < date('Y-m-d', strtotime($o['to'] . ' +6 months'))) $o['passNote'] = 'ينتهي الجواز في ' . $pe . '، أي قبل مرور ستة أشهر على العودة؛ تشترط دول كثيرة صلاحية ستة أشهر';
             elseif (!$pe) $o['passNote'] = 'تاريخ انتهاء الجواز غير مسجّل في ملف المنسوب';
         }
-        foreach (q("SELECT no, data FROM requests WHERE ref=? AND type IN ('travel','leave') AND status IN ('pending','approved')", [$ref])->fetchAll() as $x) {
-            $xd = json_decode($x['data'], true) ?: []; if (($xd['from'] ?? '') !== '' && ($xd['to'] ?? '') !== '' && $xd['from'] <= $o['to'] && $xd['to'] >= $o['from']) throw new HttpError('تتداخل هذه التواريخ مع الطلب ' . $x['no'] . ' (' . $xd['from'] . ' إلى ' . $xd['to'] . ')');
-        }
+        /* لا تعارض بين أمر الإركاب وأي طلب آخر (قد تكون التذكرة لسفر الإجازة نفسها) */
     }
     if ($type === 'access') {
         if ($o['dur'] === 'مؤقتة') { if (!$o['until']) throw new HttpError('حدد تاريخ انتهاء الصلاحية المؤقتة'); if ($o['until'] < $today) throw new HttpError('تاريخ انتهاء الصلاحية لا يكون في الماضي'); }
