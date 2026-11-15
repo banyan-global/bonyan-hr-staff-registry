@@ -75,7 +75,7 @@ const REQ_CHAINS = [
 ];
 /* إصدار المسار الموحّد: عند تغييره يُعاد ضبط مسارات كل النماذج على المسار الافتراضي أعلاه مرة واحدة (مع إبقاء حالة التفعيل) */
 const REQ_FLOW_VER = '2';
-const REQ_ST = ['pending' => 'قيد الإجراء', 'approved' => 'معتمد', 'rejected' => 'مرفوض', 'cancelled' => 'ملغى'];
+const REQ_ST = ['pending' => 'قيد الإجراء', 'returned' => 'بانتظار تعديل الموظف', 'approved' => 'معتمد', 'rejected' => 'مرفوض', 'cancelled' => 'ملغى'];
 /* أنواع الإجازة الستة في النظام السابق، و«بدون راتب» التي كانت في المنصة */
 const LEAVE_KINDS = ['اعتيادية (سنوية)', 'تعويضية', 'مرضية', 'دراسة / تدريب', 'طارئة (اضطرارية)', 'أمومة', 'حج', 'زواج', 'وفاة قريب', 'بدون راتب', 'أخرى'];
 /* الأنواع التي لها رصيد مستقل لا يُتجاوز (المرضية تُتجاوز بأجر مخفّض فتُنبّه ولا تُمنع) */
@@ -119,6 +119,8 @@ function req_clean_leave(array $d, bool $strict = true): array {
     }
     return $o;
 }
+/* رقم الطلب الجاري تعديله (عند إعادة الإرسال) حتى لا يُعدّ متداخلًا مع نفسه */
+function req_except(): string { return (string)($GLOBALS['REQ_EXCEPT_NO'] ?? ''); }
 function req_mins(string $t): ?int { return preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $t, $m) ? (int)$m[1] * 60 + (int)$m[2] : null; }
 /* بيانات الأنواع المبنية بالمخطط: التحقق ثم الحقول المحسوبة */
 function req_clean_schema(string $type, array $d, string $ref = ''): array {
@@ -161,12 +163,12 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
         if ($type === 'ot') $o['weekend'] = in_array($w, site()['work']['weekend'], true);
         /* لا يتداخل مع طلب من النوع نفسه في اليوم نفسه (حتى لا يُحتسب الإضافي مرتين) */
         $a0 = req_mins($o['fromT']); $b0 = $a0 + $o['mins'];
-        foreach (q("SELECT no, data FROM requests WHERE ref=? AND type=? AND status IN ('pending','approved')", [$ref, $type])->fetchAll() as $x) {
+        foreach (q("SELECT no, data FROM requests WHERE ref=? AND type=? AND status IN ('pending','returned','approved') AND no<>?", [$ref, $type, req_except()])->fetchAll() as $x) {
             $xd = json_decode($x['data'], true) ?: []; if (($xd['day'] ?? '') !== $o['day']) continue;
             $xa = req_mins((string)($xd['fromT'] ?? '')); $xb = $xa + (int)($xd['mins'] ?? 0);
             if ($xa !== null && $a0 < $xb && $xa < $b0) throw new HttpError('يتداخل هذا الوقت مع الطلب ' . $x['no'] . ' (' . ($xd['fromT'] ?? '') . '–' . ($xd['toT'] ?? '') . ')');
         }
-        if ($type === 'perm') foreach (q("SELECT no, data FROM requests WHERE ref=? AND type IN ('leave','travel') AND status IN ('pending','approved')", [$ref])->fetchAll() as $x) {
+        if ($type === 'perm') foreach (q("SELECT no, data FROM requests WHERE ref=? AND type IN ('leave','travel') AND status IN ('pending','returned','approved') AND no<>?", [$ref, req_except()])->fetchAll() as $x) {
             $xd = json_decode($x['data'], true) ?: []; if (($xd['from'] ?? '') <= $o['day'] && ($xd['to'] ?? '') >= $o['day']) throw new HttpError('هذا اليوم ضمن الطلب ' . $x['no'] . '؛ لا يلزم استئذان');
         }
     }
@@ -174,7 +176,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
         if ($o['start'] < date('Y-m')) throw new HttpError('شهر بداية الخصم لا يكون في الماضي');
         $o['inst'] = round($o['amount'] / max(1, $o['months']), 2);
         $o['end'] = date('Y-m', strtotime($o['start'] . '-01 +' . ($o['months'] - 1) . ' month'));
-        foreach (q("SELECT no, data FROM requests WHERE ref=? AND type='loan' AND status IN ('pending','approved')", [$ref])->fetchAll() as $x) {
+        foreach (q("SELECT no, data FROM requests WHERE ref=? AND type='loan' AND status IN ('pending','returned','approved') AND no<>?", [$ref, req_except()])->fetchAll() as $x) {
             $xd = json_decode($x['data'], true) ?: []; if (($xd['end'] ?? '') >= date('Y-m')) throw new HttpError('لديك سلفة قائمة (' . $x['no'] . ') لم تُسدَّد بعد');
         }
     }
@@ -187,7 +189,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
             /* أيام التأخر عن العودة: أيام العمل بين اليوم التالي لنهاية الإجازة ويوم المباشرة */
             for ($t = strtotime($back); $t < strtotime($o['day']); $t += 86400) if (!in_array((int)date('w', $t), site()['work']['weekend'], true)) $o['lateDays']++;
             if ($o['day'] < $o['linkTo']) throw new HttpError('تاريخ المباشرة قبل نهاية ' . ($x['type'] === 'leave' ? 'الإجازة' : 'المهمة') . ' المرتبطة');
-            $dup = q1("SELECT no FROM requests WHERE ref=? AND type='resume' AND status IN ('pending','approved') AND data LIKE ?", [$ref, '%"link":"' . $o['link'] . '"%']);
+            $dup = q1("SELECT no FROM requests WHERE ref=? AND type='resume' AND status IN ('pending','returned','approved') AND data LIKE ? AND no<>?", [$ref, '%"link":"' . $o['link'] . '"%', req_except()]);
             if ($dup) throw new HttpError('سبق تقديم إشعار مباشرة لهذا الطلب: ' . $dup['no']);
         } elseif ($o['kind'] !== 'تعيين جديد') throw new HttpError('اختر الإجازة أو المهمة التي عدت منها');
     }
@@ -198,10 +200,10 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
     if ($type === 'resign') {
         if ($o['lastDay'] < $today) throw new HttpError('آخر يوم عمل لا يكون في الماضي');
         $o['notice'] = req_days($today, $o['lastDay']) - 1;
-        $dup = q1("SELECT no FROM requests WHERE ref=? AND type='resign' AND status IN ('pending','approved')", [$ref]); if ($dup) throw new HttpError('سبق تقديم طلب استقالة: ' . $dup['no']);
+        $dup = q1("SELECT no FROM requests WHERE ref=? AND type='resign' AND status IN ('pending','returned','approved') AND no<>?", [$ref, req_except()]); if ($dup) throw new HttpError('سبق تقديم طلب استقالة: ' . $dup['no']);
     }
     if ($type === 'clear') {
-        $dup = q1("SELECT no FROM requests WHERE ref=? AND type='clear' AND status IN ('pending','approved')", [$ref]); if ($dup) throw new HttpError('سبق فتح إخلاء طرف لهذا المنسوب: ' . $dup['no']);
+        $dup = q1("SELECT no FROM requests WHERE ref=? AND type='clear' AND status IN ('pending','returned','approved') AND no<>?", [$ref, req_except()]); if ($dup) throw new HttpError('سبق فتح إخلاء طرف لهذا المنسوب: ' . $dup['no']);
     }
     if ($type === 'hire' && $o['needBy'] < $today) throw new HttpError('تاريخ الاحتياج لا يكون في الماضي');
     if ($type === 'travel') {
@@ -281,7 +283,7 @@ function req_clean(string $type, array $d, string $ref = ''): array {
 }
 /* منع التداخل: لا تُقبل إجازة تتقاطع مع إجازة أخرى للمنسوب نفسه قيد الإجراء أو معتمدة */
 function req_leave_overlap(string $ref, array $o, string $exceptNo = ''): void {
-    foreach (q("SELECT no, data FROM requests WHERE ref=? AND type='leave' AND status IN ('pending','approved') AND no<>?", [$ref, $exceptNo])->fetchAll() as $x) {
+    foreach (q("SELECT no, data FROM requests WHERE ref=? AND type='leave' AND status IN ('pending','returned','approved') AND no<>?", [$ref, $exceptNo])->fetchAll() as $x) {
         $d = json_decode($x['data'], true) ?: [];
         if (($d['from'] ?? '') && ($d['to'] ?? '') && $d['from'] <= $o['to'] && $d['to'] >= $o['from'])
             throw new HttpError('تتداخل هذه الفترة مع الطلب ' . $x['no'] . ' (من ' . $d['from'] . ' إلى ' . $d['to'] . '). عدّل التاريخين أو ألغِ الطلب السابق.');
@@ -347,6 +349,7 @@ function req_sups_save(array $b): array {
         $out[] = $o;
     }
     setting_set('leave_sups', json_encode($out, JSON_UNESCAPED_UNICODE));
+    if (is_array($b['watchers'] ?? null) && function_exists('req_watchers_save')) { req_watchers_save($b['watchers']); audit_log('', 'تحديث متابعي الطلبات', count(req_watchers()) . ' متابعًا', $me['_label']); }
     if (is_array($b['routes'] ?? null)) {
         $fin = array_column(req_finals(), 'name', 'email'); $R = [];
         foreach (array_slice($b['routes'], 0, 40, true) as $e => $r) {
@@ -545,6 +548,7 @@ function req_forms(): array {
     $finals = array_map(fn($f) => $isAdmin ? $f : ['email' => '', 'name' => $f['name']], req_finals());
     return ['ok' => true, 'forms' => $forms, 'roles' => array_intersect_key(ROLE_NAMES, array_flip(REQ_STEP_ROLES)), 'canEdit' => $isAdmin, 'sups' => $supsOut, 'leaveKinds' => LEAVE_KINDS, 'finals' => $finals, 'iAmFinal' => req_is_final((string)$u['email']),
         /* مسارات الجهات: كاملة لمن يدير النماذج، ولغيره هل يمر الطلب بالمسؤول المباشر فقط */
+        'watchers' => function_exists('req_watchers') ? ($isAdmin ? req_watchers() : array_map(fn($w) => ['name' => $w['name']], req_watchers())) : [], 'iWatch' => function_exists('req_is_watcher') && req_is_watcher((string)$u['email']),
         'routes' => $isAdmin ? (object)req_routes() : (object)array_map(fn($r) => ['mgr' => $r['mgr']], req_routes())];
 }
 function req_forms_save(array $b): array {
@@ -913,9 +917,10 @@ function req_create(array $b): array {
         else req_mail_staff($r, 'استلمنا طلبك', 'وصل طلبك إلى ' . ($chain[0]['who'] ?? $chain[0]['label']) . '، وسيصلك بريد عند كل خطوة في مساره.');
         req_mail_approvers($r, $chain[0]);
     }
+    try { req_watch_event($r, 'new', '', (string)$u['email']); } catch (Throwable $e) { error_log('[bonyan-hr] watch ' . $e->getMessage()); }
     return ['ok' => true, 'request' => req_out($u, $r)];
 }
-function req_out(array $u, array $r): array { $cd = req_can_decide($u, $r); $fe = req_is_final((string)$u['email']); return req_row($r) + ['canDecide' => $cd, 'canEdit' => $cd && req_step_can_edit($r), 'canFinal' => !($cd && $fe) && req_can_final($u, $r), 'approveFinal' => $cd && $fe]; }
+function req_out(array $u, array $r): array { $cd = req_can_decide($u, $r); $fe = req_is_final((string)$u['email']); $tr = function_exists('req_talk_role') ? req_talk_role($u, $r) : ''; return req_row($r) + ['talk' => $tr, 'msgs' => $tr !== '' ? req_msgs($r['no']) : [], 'canDecide' => $cd, 'canEdit' => $cd && req_step_can_edit($r), 'canFinal' => !($cd && $fe) && req_can_final($u, $r), 'approveFinal' => $cd && $fe]; }
 function req_list(array $b): array {
     $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
     if (has_perm($u, 'staff.view') && empty($b['asStaff'])) {
@@ -996,6 +1001,7 @@ function req_apply(array $r, string $actor, string $decision, string $note, ?arr
         elseif ($status === 'rejected') req_mail_staff($r, 'لم يُعتمد طلبك', 'لم يُعتمد طلبك. السبب: ' . $note);
         else { req_mail_staff($r, 'تقدّم طلبك خطوة', 'وافقت ' . $lab . ' على طلبك، وهو الآن عند ' . $chain[$stage]['label'] . '.'); req_mail_approvers($r, $chain[$stage]); }
     }
+    try { req_watch_event(q1('SELECT * FROM requests WHERE id=?', [$r['id']]) ?: $r, 'step', ($decision === 'reject' ? 'لم يعتمده ' : 'اعتمده ') . ($actorName ?: $actor) . ($decision === 'reject' && $note !== '' ? ' (السبب: ' . $note . ')' : ''), $actorEmail); } catch (Throwable $e) { error_log('[bonyan-hr] watch ' . $e->getMessage()); }
     return $r;
 }
 function req_decide(array $b): array {
@@ -1011,7 +1017,7 @@ function req_cancel(array $b): array {
     $r = q1('SELECT * FROM requests WHERE no=?', [(string)($b['no'] ?? '')]); if (!$r) throw new HttpError('not_found', 404);
     $own = my_staff_ref($u) === $r['ref'];
     if (!$own && !has_perm($u, 'staff.edit')) throw new HttpError('forbidden', 403);
-    if ($r['status'] !== 'pending') throw new HttpError('لا يمكن إلغاء طلب بعد صدور القرار فيه');
+    if (!in_array($r['status'], ['pending', 'returned'], true)) throw new HttpError('لا يمكن إلغاء طلب بعد صدور القرار فيه');
     q("UPDATE requests SET status='cancelled', updated_at=? WHERE id=?", [now(), $r['id']]);
     audit_log($r['ref'], 'إلغاء ' . REQ_TYPES[$r['type']][1], $r['no'], $u['_label']);
     if (!$own) req_mail_staff($r, 'أُلغي طلبك', 'ألغت الموارد البشرية طلبك قبل صدور القرار فيه. للاستفسار تواصل معها.');

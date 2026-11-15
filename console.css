@@ -2114,3 +2114,27 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .satts a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line-2); color: var(--navy); font-size: 13px; font-weight: 700; text-decoration: none; }
 .satts a .i { width: 15px; height: 15px; }
 @media print { .satts a { border: 0; padding: 0; } }
+/* محادثة الطلب */
+.rqtalk { margin-top: 14px; }
+.rqtalk .ssub { display: flex; align-items: center; gap: 6px; }
+.rqtalk .ssub .i { width: 16px; height: 16px; }
+.rqret { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.rqret span { flex: 1; min-width: 200px; }
+.tklist { display: grid; gap: 8px; margin: 8px 0 12px; }
+.tkm { max-width: 88%; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--panel); }
+.tkm.boss { justify-self: start; background: color-mix(in srgb, #2456b5 7%, var(--panel)); border-color: color-mix(in srgb, #2456b5 22%, transparent); border-start-start-radius: 4px; }
+.tkm.staff { justify-self: end; background: color-mix(in srgb, var(--gold, #b8893b) 9%, var(--panel)); border-color: color-mix(in srgb, var(--gold, #b8893b) 28%, transparent); border-start-end-radius: 4px; }
+.tkh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.tkh b { font-size: 13px; }
+.tkh em { font-style: normal; font-size: 11px; font-weight: 800; border-radius: 99px; padding: 1px 8px; background: var(--bg-2, #eef1f6); color: var(--mute); }
+.tkh em.edit { background: color-mix(in srgb, var(--gold, #b8893b) 18%, var(--panel)); color: #8a6a1f; }
+.tkh em.resubmit { background: color-mix(in srgb, #16a34a 14%, var(--panel)); color: #15803d; }
+.tkh small { color: var(--mute); font-size: 11.5px; margin-inline-start: auto; }
+.tkm p { margin: 0; font-size: 13.5px; line-height: 1.8; white-space: pre-wrap; }
+.tkempty { color: var(--mute); font-size: 13px; margin: 6px 0 10px; }
+.tkbox textarea { width: 100%; }
+.tkbtns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 8px; }
+.ntf.srv b { color: var(--navy); }
+@media print { .rqtalk .tkbox, .rqret .btn { display: none; } }
+.tkbox textarea { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; background: var(--panel); color: var(--ink); resize: vertical; min-height: 70px; }
+.tkbox textarea:focus { outline: none; border-color: var(--gold, #b8893b); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold, #b8893b) 18%, transparent); }

@@ -731,7 +731,7 @@ function ntfItems() {
 function ntfHTML(items) {
   items = items || ntfItems();
   return '<div class="dh"><span>التنبيهات</span><span>' + (items.length ? nq(items.length, 'تنبيه واحد', 'تنبيهان', 'تنبيهات', 'تنبيهًا') : 'لا جديد') + '</span></div>' +
-    (items.length ? items.map(function (x) { return '<button class="ntf"' + (x[4] ? ' data-open="' + esc(x[4]) + '"' : ' data-go="' + (x[5] || 'home') + '"') + '>' + tile(x[0], x[1]) + '<div><b>' + esc(x[2]) + '</b><span>' + esc(x[3]) + '</span></div></button>'; }).join('')
+    (items.length ? items.map(function (x) { return '<button class="ntf' + (x[6] ? ' srv' : '') + '"' + (x[6] ? ' data-rqn="' + esc(x[6]) + '"' : x[4] ? ' data-open="' + esc(x[4]) + '"' : ' data-go="' + (x[5] || 'home') + '"') + '>' + tile(x[0], x[1]) + '<div><b>' + esc(x[2]) + '</b><span>' + esc(x[3]) + '</span></div></button>'; }).join('')
       : '<div class="empty" style="padding:22px 16px">لا توجد تنبيهات الآن. الوثائق سارية ولا تسجيلات جديدة.</div>');
 }
 function topHTML() {
@@ -1500,7 +1500,7 @@ function rwFields(t) { var f = formOf(t || RW.type); return f && f.fields ? f.fi
 var LKINDS = ['اعتيادية (سنوية)', 'تعويضية', 'مرضية', 'دراسة / تدريب', 'طارئة (اضطرارية)', 'أمومة', 'حج', 'زواج', 'وفاة قريب', 'بدون راتب', 'أخرى'];
 function myRows() { return reqRows().filter(function (r) { return r.mine !== false && (role === 'staff' || (ME && r.ref === ME.ref)); }); }
 function apprRows() { return reqRows().filter(function (r) { return r.mine === false; }); }
-var RST = { pending: ['warn', 'قيد الإجراء'], approved: ['ok', 'معتمد'], rejected: ['bad', 'مرفوض'], cancelled: ['mute', 'ملغى'] };
+var RST = { pending: ['warn', 'قيد الإجراء'], returned: ['warn', 'بانتظار تعديل الموظف'], approved: ['ok', 'معتمد'], rejected: ['bad', 'مرفوض'], cancelled: ['mute', 'ملغى'] };
 function reqRows() { var c = need('reqs', function () { return api({ action: 'reqList', asStaff: role === 'staff' ? 1 : 0 }).then(function (j) { return j.rows; }); }, 60000); return c.data || []; }
 function reqPendingForMe() { return reqRows().filter(function (r) { return r.canDecide; }); }
 /* لأصحاب الاعتماد النهائي المباشر: الطلبات قيد الإجراء التي ليست في خطوتهم، ويستطيعون اعتمادها نهائيًا */
@@ -1749,8 +1749,9 @@ function rwBind() {
     if (RW.i < RW_STEPS.length - 1) { RW.i++; if (RW.i === 1) rwPrefill(); render(); rwTop(); return; }
     var d = {}; Object.keys(RW.d).forEach(function (k) { if (k !== 'agree') d[k] = RW.d[k]; });
     RW.busy = true; render();
-    api({ action: 'reqCreate', type: RW.type, ref: role === 'staff' ? '' : RW.ref, data: d }).then(function (j) {
-      var rows = reqRows().slice(); j.request.mine = true; rows.unshift(j.request); seed('reqs', rows); delete CACHE.audit;
+    var resub = RW.resub;
+    api(resub ? { action: 'reqResubmit', no: resub, data: d } : { action: 'reqCreate', type: RW.type, ref: role === 'staff' ? '' : RW.ref, data: d }).then(function (j) {
+      var rows = reqRows().slice(); j.request.mine = true; if (resub) rows = rows.map(function (x) { return x.no === resub ? j.request : x; }); else rows.unshift(j.request); seed('reqs', rows); delete CACHE.audit;
       RW = { i: 0, type: '', ref: '', d: {}, busy: false, err: '' };
       if (role === 'staff') { TAB.myreq = 'list'; location.hash = 'myreq'; } else { TAB.reqs = 'all'; }
       render(); reqOpen(j.request.no, true);
@@ -2035,6 +2036,7 @@ var SUP = null;
 function supOpen() {
   var d = formsData(); if (!d) return;
   SUP = { list: (d.sups || []).map(function (x, i) { return { id: x.id, name: x.name, email: x.email || '', title: x.title || '', k: 'k' + i }; }), err: '', busy: false, paste: '', map: {}, seq: 1000, rt: {} };
+  SUP.w = {}; (d.watchers || []).forEach(function (w) { if (w.email) SUP.w[w.email] = w.mail || 'new'; });
   Object.keys(d.routes || {}).forEach(function (k) { var r = d.routes[k], cf = k === '*' ? null : supEnts().filter(function (c) { return entOf(c.ar).v === entOf(k).v; })[0]; SUP.rt[k === '*' ? '*' : cf ? cf.ar : k] = { mgr: !!r.mgr, hr: !!r.hr, top: (r.top || []).slice() }; });
   (d.sups || []).forEach(function (x, i) { (x.ents || []).forEach(function (e) { var cf = supEnts().filter(function (c) { return entOf(c.ar).v === entOf(e).v; })[0]; SUP.map[cf ? cf.ar : e] = 'k' + i; }); });
   drawSup();
@@ -2077,7 +2079,7 @@ function drawSup() {
   el.innerHTML = '<div class="mscrim" data-spclose="1"></div><section class="mdl fem supm" role="dialog" aria-modal="true" aria-labelledby="supT"><header class="mh">' + tile('emerald', 'users') + '<div><h2 id="supT">المسؤولون المباشرون</h2><p>يختار المنسوب مسؤوله من هذه القائمة عند تقديم أي طلب خطوته الأولى «المسؤول المباشر»، فيصله الطلب أولًا</p></div><button class="ib mx" data-spclose="1" aria-label="إغلاق">' + ic('plus') + '</button></header>' +
     '<div class="abody"><ol class="suplist">' + rows + '</ol>' +
     '<div class="supadd"><div class="fef"><label>إضافة من سجل المنسوبين</label>' + ssel('supPick', opts, '', 'ابحث باسم المنسوب', function (v) { supSync(); var s = byRef(v); if (s) SUP.list.push({ id: '', name: s.name, title: s.job !== '—' ? s.job : '', email: s.mail, k: supKey() }); drawSup(); }, 'إضافة من المنسوبين') + '</div>' +
-    '<button type="button" class="btn" id="supNew">' + ic('plus') + 'إضافة يدويًا</button></div>' + supEntHTML() +
+    '<button type="button" class="btn" id="supNew">' + ic('plus') + 'إضافة يدويًا</button></div>' + supEntHTML() + supWatchHTML() +
     '<details class="suppaste"' + (SUP.paste ? ' open' : '') + '><summary>' + ic('doc') + 'لصق قائمة كاملة</summary><p>كل سطر: الاسم، ثم البريد (ويمكن إضافة الصفة بعدهما). مثال:<br><span class="ltr">د. فلان الفلاني, name@example.com</span></p><textarea id="supPaste" rows="5" dir="auto" placeholder="الاسم, البريد">' + esc(SUP.paste) + '</textarea><button type="button" class="btn" id="supParse">' + ic('plus') + 'إضافة الأسطر إلى القائمة</button></details>' +
     '<div class="note">' + ic('info') + '<span>البريد لا يظهر للمنسوبين؛ يرون الاسم والصفة فقط. ويصل المسؤول رابط خاص بكل طلب يعتمده أو يعدّله أو يرفضه منه، أو من المنصة إن كان له حساب.</span></div></div>' +
     '<footer class="mf"><div class="lerr" role="alert">' + esc(SUP.err) + '</div><button class="btn" data-spclose="1">إلغاء</button><button class="btn goldb" id="supSave"' + (SUP.busy ? ' disabled' : '') + '>' + ic('check') + (SUP.busy ? 'جارٍ الحفظ…' : 'حفظ القائمة') + '</button></footer></section>';
@@ -2101,11 +2103,105 @@ function drawSup() {
     var bad = SUP.list.filter(function (x) { return String(x.name).trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(x.email).trim()); })[0];
     if (bad) { SUP.err = 'أكمل الاسم والبريد الصحيح لكل مسؤول' + (bad.name ? ': ' + bad.name : '') + '.'; drawSup(); return; }
     SUP.busy = true; drawSup();
-    api({ action: 'reqSupsSave', sups: SUP.list.map(function (x) { return { id: x.id, name: x.name, email: x.email, title: x.title, ents: Object.keys(SUP.map).filter(function (e) { return e !== '*' && SUP.map[e] === x.k && supRt(e).mgr; }) }; }), routes: (function () { var o = {}; SUP._ents.forEach(function (x) { o[x.k] = supRt(x.k); }); return o; })() }).then(function (j) { seed('reqForms', j); var L = document.getElementById('supLayer'); if (L) L.remove(); SUP = null; toast('حُفظت قائمة المسؤولين المباشرين'); render(); })
+    api({ action: 'reqSupsSave', sups: SUP.list.map(function (x) { return { id: x.id, name: x.name, email: x.email, title: x.title, ents: Object.keys(SUP.map).filter(function (e) { return e !== '*' && SUP.map[e] === x.k && supRt(e).mgr; }) }; }), routes: (function () { var o = {}; SUP._ents.forEach(function (x) { o[x.k] = supRt(x.k); }); return o; })(), watchers: Object.keys(SUP.w || {}).filter(function (e) { return SUP.w[e] && SUP.w[e] !== 'off'; }).map(function (e) { return { email: e, mail: SUP.w[e] }; }) }).then(function (j) { seed('reqForms', j); var L = document.getElementById('supLayer'); if (L) L.remove(); SUP = null; toast('حُفظت قائمة المسؤولين المباشرين'); render(); })
       .catch(function (e) { SUP.busy = false; SUP.err = errText(e); drawSup(); });
   };
 }
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && document.getElementById('supLayer') && !document.querySelector('.ss-pop')) { document.getElementById('supLayer').remove(); SUP = null; } });
+
+/* ============ متابعة الطلبات: الإشعارات، ومحادثة الطلب، وطلب التعديل ============ */
+var NOTES = { notes: [], unread: 0 }, NTK = { 'new': ['sapphire', 'doc'], step: ['emerald', 'check'], reply: ['gold', 'chat'], ask: ['sapphire', 'chat'], edit: ['gold', 'edit'], resubmit: ['emerald', 'refresh'] };
+function notesPull() {
+  if (typeof SESSION === 'undefined' || !SESSION) return;
+  api({ action: 'noteList' }).then(function (j) { var a = (NOTES.notes[0] || {}).id, ch = j.unread !== NOTES.unread || (j.notes[0] || {}).id !== a; NOTES = j; if (ch) bellRefresh(); }, function () {});
+}
+setInterval(function () { if (!document.hidden) notesPull(); }, 60000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) notesPull(); });
+(function () {
+  var _items = ntfItems;
+  ntfItems = function () {
+    var srv = (NOTES.notes || []).filter(function (n) { return !n.read; }).slice(0, 8).map(function (n) { var k = NTK[n.k] || ['sapphire', 'bell']; return [k[0], k[1], n.t, n.b + ' · ' + agoTxt(n.at), '', '', n.no || '_']; });
+    return srv.concat(_items());
+  };
+})();
+function agoTxt(at) { var t = pdt(at), m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'الآن' : m < 60 ? 'قبل ' + m + ' د' : m < 1440 ? 'قبل ' + Math.round(m / 60) + ' س' : fd(new Date(t), { day: 'numeric', month: 'short' }); }
+function bellRefresh() {
+  var b = document.getElementById('bell'), n = document.getElementById('ntf'); if (!b || !n) return;
+  var N = ntfItems(), c = b.querySelector('.n');
+  if (N.length) { if (!c) { c = document.createElement('span'); c.className = 'n'; b.appendChild(c); } c.textContent = N.length; } else if (c) c.remove();
+  n.innerHTML = ntfHTML(N);
+}
+document.addEventListener('click', function (e) {
+  var x = e.target.closest && e.target.closest('[data-rqn]'); if (!x) return;
+  e.preventDefault(); e.stopPropagation();
+  var no = x.dataset.rqn; NOTES.notes.forEach(function (n) { if (n.no === no) n.read = true; }); NOTES.unread = NOTES.notes.filter(function (n) { return !n.read; }).length;
+  api({ action: 'noteRead', no: no === '_' ? '' : no, all: no === '_' ? 1 : 0 }).catch(function () {});
+  var p = document.getElementById('ntf'); if (p) p.hidden = true; bellRefresh();
+  if (no !== '_') reqGo(no);
+}, true);
+
+/* فتح طلب برقمه (من الإشعار أو من رابط البريد ‎#rq=رقم) حتى لو لم يكن في القائمة المحمّلة بعد */
+function reqGo(no) {
+  if (reqByNo(no)) { reqOpen(no); return; }
+  api({ action: 'reqList', asStaff: role === 'staff' ? 1 : 0 }).then(function (j) { seed('reqs', j.rows); if (reqByNo(no)) reqOpen(no); else toast('لا تملك صلاحية عرض هذا الطلب'); }).catch(function (e) { toast(errText(e)); });
+}
+function rqHash() {
+  var m = /^#rq=([A-Z]{2}-\d{4}-\d{3,6})$/.exec(location.hash || ''); if (!m) return;
+  var no = m[1], tries = 0;
+  history.replaceState(null, '', location.pathname + location.search + (role === 'staff' ? '#myreq' : '#reqs'));
+  (function wait() { if (typeof SESSION !== 'undefined' && SESSION && (role === 'staff' ? ME : true)) { route(); reqGo(no); } else if (tries++ < 60) setTimeout(wait, 500); })();
+}
+window.addEventListener('hashchange', rqHash);
+setTimeout(rqHash, 400);
+setTimeout(notesPull, 1500);
+
+(function () {
+  var _open = reqOpen;
+  reqOpen = function (no, fresh) { _open(no, fresh); var r = reqByNo(no); if (r) talkMount(r); };
+})();
+function talkMount(r) {
+  var body = document.querySelector('#reqLayer .rqbody'); if (!body) return;
+  var own = !!(ME && ME.ref === r.ref), M = r.msgs || [], T = r.talk || '';
+  var ban = r.status === 'returned' ? '<div class="note warn rqret">' + ic('edit') + '<span>' + (own ? '<b>طُلب منك تعديل هذا الطلب.</b> عدّل ما طُلب ثم أعد إرساله، فيكمل مساره من المرحلة نفسها.' : 'أُعيد الطلب إلى الموظف للتعديل، ويكمل مساره بعد إعادة إرساله.') + '</span>' + (own || can('edit') ? '<button class="btn sm goldb" id="rqResub">' + ic('edit') + 'تعديل وإعادة إرسال</button>' : '') + '</div>' : '';
+  if (!T && !M.length && !ban) return;
+  var who = function (m) { return m.role === 'staff' ? 'staff' : 'boss'; };
+  var kindTag = { ask: 'استفسار', edit: 'طلب تعديل', reply: 'رد', resubmit: 'أُعيد الإرسال' };
+  var sec = document.createElement('div'); sec.className = 'rqtalk';
+  sec.innerHTML = ban + '<div class="ssub">' + ic('chat') + 'المحادثة حول الطلب</div>' +
+    (M.length ? '<div class="tklist">' + M.map(function (m) { return '<div class="tkm ' + who(m) + '"><div class="tkh"><b>' + esc(m.by) + '</b><em class="' + m.k + '">' + (kindTag[m.k] || '') + '</em><small>' + esc(agoTxt(m.at)) + '</small></div><p>' + esc(m.body) + '</p></div>'; }).join('') + '</div>'
+      : '<p class="tkempty">' + (T === 'staff' ? 'لا رسائل على طلبك.' : 'لا رسائل بعد. اكتب استفسارك ويصل الموظف بريد وإشعار.') + '</p>') +
+    (T ? '<div class="tkbox"><textarea id="tkTxt" rows="2" maxlength="1500" placeholder="' + (T === 'staff' ? 'اكتب ردك…' : 'اكتب استفسارك أو ما تريد تعديله…') + '"></textarea><div class="lerr" id="tkErr" role="alert"></div><div class="tkbtns">' +
+      (T === 'staff' ? '<button class="btn sm goldb" data-tk="reply">' + ic('send') + 'إرسال الرد</button>'
+        : '<button class="btn sm" data-tk="ask">' + ic('chat') + 'إرسال استفسار</button>' + (r.status === 'pending' ? '<button class="btn sm goldb" data-tk="edit" title="يُعاد الطلب إلى الموظف ليعدّله">' + ic('edit') + 'طلب تعديل من الموظف</button>' : '')) + '</div></div>' : '');
+  body.appendChild(sec);
+  sec.querySelectorAll('[data-tk]').forEach(function (b) { b.onclick = function () {
+    var t = document.getElementById('tkTxt'), er = document.getElementById('tkErr'), v = t.value.trim();
+    if (v.length < 2) { er.textContent = b.dataset.tk === 'edit' ? 'اكتب ما تريد من الموظف تعديله.' : 'اكتب رسالتك.'; t.focus(); return; }
+    if (b.dataset.tk === 'edit' && b.dataset.sure !== '1') { b.dataset.sure = '1'; b.innerHTML = ic('edit') + 'تأكيد: إعادة الطلب للموظف'; er.textContent = ''; return; }
+    sec.querySelectorAll('[data-tk]').forEach(function (x) { x.disabled = true; });
+    api({ action: 'reqMsg', no: r.no, kind: b.dataset.tk, body: v }).then(function (j) {
+      seed('reqs', reqRows().map(function (x) { return x.no === r.no ? Object.assign(j.request, { mine: x.mine }) : x; }));
+      reqOpen(r.no); softRender(); toast(b.dataset.tk === 'edit' ? 'أُعيد الطلب إلى الموظف للتعديل وأُبلغ' : b.dataset.tk === 'reply' ? 'وصل ردك' : 'وصل استفسارك إلى الموظف');
+    }).catch(function (e) { sec.querySelectorAll('[data-tk]').forEach(function (x) { x.disabled = false; }); er.textContent = errText(e); });
+  }; });
+  var rs = document.getElementById('rqResub'); if (rs) rs.onclick = function () {
+    var L = document.getElementById('reqLayer'); if (L) L.remove(); document.body.classList.remove('no-scroll');
+    RW = { i: 1, type: r.type, ref: own ? '' : r.ref, d: JSON.parse(JSON.stringify(r.data || {})), busy: false, err: '', resub: r.no };
+    if (role === 'staff') { TAB.myreq = 'new'; location.hash = 'myreq-new'; } else { TAB.reqs = 'new'; location.hash = 'reqs'; }
+    render(); toast('عدّل الطلب ' + r.no + ' ثم أعد إرساله');
+  };
+  if (location.hash.indexOf('talk') > -1) { var tx = document.getElementById('tkTxt'); if (tx) tx.focus(); }
+}
+
+/* متابعو الطلبات (من أصحاب الاعتماد النهائي): يصلهم كل طلب جديد وكل خطوة في الجرس، وبالبريد حسب الاختيار */
+function supWatchHTML() {
+  var fins = ((formsData() || {}).finals || []).filter(function (f) { return f.email; }); if (!fins.length) return '';
+  var opts = [{ v: 'off', n: 'لا يتابع', ic: 'x' }, { v: 'none', n: 'إشعارات المنصة فقط', d: 'بلا بريد، مع الملخص اليومي', ic: 'bell' }, { v: 'new', n: 'الطلبات الجديدة والردود', d: 'بالبريد، والباقي في المنصة والملخص اليومي', ic: 'mail' }, { v: 'all', n: 'كل خطوة', d: 'بريد عند كل اعتماد أو رفض أيضًا', ic: 'send' }];
+  return '<details class="supents" open><summary>' + ic('eye') + 'متابعو الطلبات</summary><p>يصل المتابع كل طلب جديد وأين وصل في جرس المنصة، ويستطيع الاستفسار من الموظف أو طلب تعديل الطلب، ويصله ملخص يومي كل صباح. اختر ما يصله بالبريد.</p><div class="supentl">' +
+    fins.map(function (f, i) { var v = SUP.w[f.email] || 'off';
+      return '<div class="supent' + (v !== 'off' ? ' on' : '') + '"><div class="en"><i style="background:#b8893b"></i><b>' + esc(f.name) + '</b><small>من أصحاب الاعتماد النهائي</small></div><div class="rtc">' +
+        ssel('supW' + i, opts, v, 'لا يتابع', function (x) { supSync(); SUP.w[f.email] = x; drawSup(); }, 'متابعة ' + f.name) + '</div></div>'; }).join('') + '</div></details>';
+}
 
 /* ================= الدخول السريع: جهاز محفوظ + البصمة (مفاتيح المرور) ================= */
 var PK_OK = !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);

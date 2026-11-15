@@ -14,12 +14,16 @@ require __DIR__ . '/../files.php';
 require __DIR__ . '/../mail.php';
 require __DIR__ . '/../staff.php';
 require __DIR__ . '/../admin.php';
+require __DIR__ . '/../export.php';
+require __DIR__ . '/../requests.php';
+require __DIR__ . '/../reqtalk.php';
 
 $r = make_backup('المهمة اليومية');
 echo 'backup: ', $r['name'], "\n";
 q('DELETE FROM sessions WHERE expires_at < ?', [now()]);
 q('DELETE FROM login_codes WHERE expires_at < ?', [date('Y-m-d H:i:s', time() - 86400)]);
 q('DELETE FROM kv WHERE expires_at IS NOT NULL AND expires_at < ?', [now()]);
+try { req_watch_digest_tick(); echo "watch digest\n"; } catch (Throwable $e) { echo 'watch digest error: ', $e->getMessage(), "\n"; }
 
 if (date('w') === '0' || in_array('--digest', $argv, true)) {
     $list = hr_recipients();
