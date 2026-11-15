@@ -1803,6 +1803,7 @@ function reqSheetHTML(r) {
       (d.substitute ? kv([['الموظف البديل', d.substitute], ['مسماه الوظيفي', d.subTitle || ''], ['رقمه الوظيفي', d.subNo || '']]) : '')
     : (r.view || []).filter(function (x) { return !x[3]; }).reduce(function (a, x, i, A) { if (i % 3 === 0) a.push(A.slice(i, i + 3)); return a; }, []).map(function (g) { return kv(g.map(function (x) { return [x[0], /^\d{4}-\d{2}-\d{2}$/.test(x[1]) ? fdx(pdate(x[1])) : /^\d{4}-\d{2}$/.test(x[1]) ? fmonth(x[1]) : x[1]]; })); }).join('');
   /* أمر الإركاب: بيانات الجواز من ملف المنسوب للحجز */
+  if ((r.atts || []).length) det += '<div class="ssub">المرفقات</div><div class="satts">' + r.atts.map(function (f) { return '<a href="' + API + '?action=file&id=' + esc(f.id) + '" target="_blank" rel="noopener">' + ic('file') + esc(f.n) + '</a>'; }).join('') + '</div>';
   if (r.type === 'travel' && (st.passportNo || st.nameLatin)) det += '<div class="ssub">بيانات السفر من ملف المنسوب</div>' + kv([['الاسم كما في الجواز', st.nameLatin || ''], ['رقم الجواز', st.passportNo || ''], ['انتهاء الجواز', st.passportExpiry ? fdx(pdate(st.passportExpiry)) : ''], ['تاريخ الميلاد', st.birthDate ? fdx(pdate(st.birthDate)) : '']]);
   var note = r.type !== 'leave' ? (r.view || []).filter(function (x) { return x[3]; }).map(function (x) { return x[0] + ': ' + x[1]; }).join('\n') : d.reason || d.note;
   return '<div class="sheet" id="reqSheet"><div class="shead"><div class="sorg"><img class="smark" src="' + (BA.ink || LOGO) + '" alt="بنيان"><div><b>مجموعة بنيان العالمية</b><small>Bonyan International Group</small><em>إدارة الموارد البشرية</em></div></div><div class="smeta">رمز النموذج<b>' + esc(r.form) + '</b>الإصدار 1.0<span>رقم المعاملة</span><b>' + esc(r.no) + '</b></div></div>' +
@@ -3107,7 +3108,8 @@ function rwSchemaCheck() {
   if (RW.type === 'travel' && cmpOn()) { var cm = cmpList(); if (!cm.length) return 'أضف بيانات من يرافقك من أسرتك';
     for (var j = 0; j < cm.length; j++) { var p = cm[j], no = 'المرافق ' + (j + 1) + ': ';
       if (String(p.name || '').trim().length < 3) return no + 'اكتب الاسم كما في الجواز'; if (!p.rel) return no + 'اختر صلة القرابة';
-      if (!p.birth || p.birth > ymd(new Date())) return no + 'اكتب تاريخ الميلاد'; if (!/^[A-Za-z0-9\- ]{5,30}$/.test(asciiD(p.doc || '').trim())) return no + 'اكتب رقم الجواز أو الهوية بالحروف الإنجليزية والأرقام'; } }
+      if (!p.birth || p.birth > ymd(new Date())) return no + 'اكتب تاريخ الميلاد'; if (!/^[A-Za-z0-9\- ]{5,30}$/.test(asciiD(p.doc || '').trim())) return no + 'اكتب رقم الجواز أو الهوية بالحروف الإنجليزية والأرقام';
+      if (p._up) return no + 'انتظر حتى يكتمل رفع صورة الجواز'; if (!p.pass) return no + 'أرفق صورة واضحة من جوازه'; } }
   if ((RW.type === 'perm' || RW.type === 'ot') && !(c.mins > 0)) return 'وقت النهاية يجب أن يكون بعد وقت البداية';
   if (RW.type === 'perm' && c.mins > 300) return 'الاستئذان خمس ساعات على الأكثر؛ للمدة الأطول قدّم طلب إجازة';
   if (RW.type === 'resume' && d.kind !== 'تعيين جديد' && !d.link) return 'اختر الإجازة أو المهمة التي عدت منها';
@@ -4147,7 +4149,10 @@ function cmpHTML() {
       '<div class="fld"><label>الاسم كما في الجواز</label><input type="text" data-cmp="' + i + ':name" value="' + esc(p.name || '') + '" maxlength="80" placeholder="الاسم الكامل"></div>' +
       '<div class="fld"><label>صلة القرابة</label>' + ssel('cmpRel' + i, CMP_REL.map(function (r) { return { v: r, n: r, ic: 'users' }; }), p.rel || '', 'اختر صلة القرابة', function (v) { rwSync(); cmpList()[i].rel = v; RW.err = ''; render(); }, 'صلة القرابة') + '</div>' +
       '<div class="fld"><label>تاريخ الميلاد</label><input type="date" data-cmp="' + i + ':birth" value="' + esc(p.birth || '') + '" max="' + ymd(new Date()) + '"></div>' +
-      '<div class="fld"><label>رقم الجواز أو الهوية</label><input type="text" dir="ltr" data-cmp="' + i + ':doc" value="' + esc(p.doc || '') + '" maxlength="30" placeholder="A1234567" autocomplete="off"></div></div></div>';
+      '<div class="fld"><label>رقم الجواز أو الهوية</label><input type="text" dir="ltr" data-cmp="' + i + ':doc" value="' + esc(p.doc || '') + '" maxlength="30" placeholder="A1234567" autocomplete="off"></div>' +
+      '<div class="fld wide"><label>صورة واضحة من الجواز</label>' + (p._up ? '<div class="cmpf busy"><span class="spin"></span><span>جارٍ رفع الصورة…</span></div>'
+        : p.pass ? '<div class="cmpf ok">' + ic('check') + '<span>صورة الجواز مرفقة' + (p.passName ? ' <small>' + esc(p.passName) + '</small>' : '') + '</span><a href="' + API + '?action=file&id=' + esc(p.pass) + '" target="_blank" rel="noopener">عرض</a><label class="cmpchg">تغيير<input type="file" hidden data-cmpfile="' + i + '" accept="image/*,application/pdf"></label></div>'
+        : '<label class="cmpf pick">' + ic('pass') + '<span><b>إرفاق صورة الجواز</b><small>صفحة البيانات كاملة وواضحة، صورة أو PDF</small></span><input type="file" hidden data-cmpfile="' + i + '" accept="image/*,application/pdf"></label>') + '</div></div></div>';
   }).join('') + '</div>' +
     '<small class="fhint">تُستخدم هذه البيانات لحجز التذاكر والسكن فقط، فاكتب الاسم ورقم الجواز كما هما في الجواز.</small></div>';
 }
@@ -4161,8 +4166,32 @@ function cmpHTML() {
     if (a.dataset.cmpadd) cmpList().push({}); else cmpList().splice(+a.dataset.cmpdel, 1);
     RW.err = ''; render();
   }, true);
-  document.addEventListener('change', function (ev) { if (ev.target.matches && ev.target.matches('[data-cmp$=":birth"]')) { rwSync(); render(); } });
+  document.addEventListener('change', function (ev) {
+    if (ev.target.matches && ev.target.matches('[data-cmp$=":birth"]')) { rwSync(); render(); return; }
+    var fi = ev.target.matches && ev.target.matches('[data-cmpfile]') ? ev.target : null; if (!fi || !fi.files || !fi.files[0]) return;
+    var i = +fi.dataset.cmpfile, file = fi.files[0]; rwSync(); var P = cmpList()[i] = cmpList()[i] || {};
+    if (file.size > 12 * 1024 * 1024) { toast('الملف أكبر من ١٢ ميغابايت'); return; }
+    P._up = true; render();
+    cmpShrink(file).then(function (data) { return api({ action: 'reqFile', ref: RW.ref || '', name: P.name || ('مرافق ' + (i + 1)), data: data }); })
+      .then(function (j) { P.pass = j.file.id; P.passName = file.name; P._up = false; RW.err = ''; render(); }, function (e) { P._up = false; toast(errText(e)); render(); });
+  });
 })();
+
+/* الصور الكبيرة تُصغَّر قبل الرفع (حتى ٢٢٠٠ بكسل) مع بقائها واضحة القراءة؛ ملفات PDF تُرفع كما هي */
+function cmpShrink(file) {
+  return new Promise(function (ok, no) {
+    var rd = new FileReader(); rd.onerror = function () { no(new Error('تعذّرت قراءة الملف')); };
+    rd.onload = function () {
+      var url = String(rd.result);
+      if (!/^image\/(jpeg|png|webp)/.test(file.type) || file.size < 1.5 * 1024 * 1024) { ok(url); return; }
+      var im = new Image(); im.onerror = function () { ok(url); };
+      im.onload = function () { var k = Math.min(1, 2200 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+        var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height); ok(c.toDataURL('image/jpeg', 0.88)); };
+      im.src = url;
+    };
+    rd.readAsDataURL(file);
+  });
+}
 
 window.addEventListener('hashchange', route);
 boot();

@@ -134,7 +134,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
             $v = $raw === '' ? '' : ($kind === 'int' ? (int)$raw : round((float)$raw, 2));
             if ($v !== '' && is_array($opt) && ($v < $opt[0] || $v > $opt[1])) throw new HttpError($lab . ': القيمة بين ' . $opt[0] . ' و' . $opt[1]);
         } elseif ($kind === 'seg') $v = in_array($v, (array)$opt, true) ? $v : '';
-        elseif ($kind === 'people') $v = req_clean_people($v);
+        elseif ($kind === 'people') $v = req_clean_people($v, $ref);
         elseif ($kind === 'url') { $v = req_str(trim((string)$v), 300); if ($v !== '' && !preg_match('~^https?://[^\s<>"]+$~i', $v)) throw new HttpError($lab . ': اكتب رابطًا كاملًا يبدأ بـ https://'); }
         elseif ($kind === 'reqref') {
             $v = strtoupper(trim((string)$v));
@@ -235,7 +235,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
 }
 const REQ_RELATIONS = ['الزوجة', 'الزوج', 'ابن', 'ابنة', 'الأب', 'الأم', 'أخ', 'أخت', 'أخرى'];
 /* المرافقون في أمر الإركاب: الاسم كما في الجواز وصلة القرابة وتاريخ الميلاد ورقم الجواز أو الهوية (تكفي للحجز) */
-function req_clean_people($v): array {
+function req_clean_people($v, string $ref = ''): array {
     $out = [];
     foreach (array_slice(is_array($v) ? $v : [], 0, 8) as $i => $p) {
         if (!is_array($p)) continue; $n = $i + 1;
@@ -245,12 +245,35 @@ function req_clean_people($v): array {
         if (!in_array($rel, REQ_RELATIONS, true)) throw new HttpError('المرافق ' . $n . ': اختر صلة القرابة');
         if (!$birth || $birth > date('Y-m-d')) throw new HttpError('المرافق ' . $n . ': اكتب تاريخ الميلاد');
         if (!preg_match('/^[A-Z0-9\- ]{5,30}$/', $doc)) throw new HttpError('المرافق ' . $n . ': اكتب رقم الجواز أو الهوية بالحروف الإنجليزية والأرقام');
-        $out[] = ['name' => $name, 'rel' => $rel, 'birth' => $birth, 'doc' => $doc];
+        /* صورة الجواز: ملف رُفع مسبقًا لنفس المنسوب (خانة مخفية عن ملفه) */
+        $pass = (string)($p['pass'] ?? '');
+        if (!preg_match('/^[a-f0-9]{32}$/', $pass) || !q1("SELECT id FROM files WHERE id=? AND ref=? AND kind='_reqcmp' AND archived_at IS NULL", [$pass, $ref])) throw new HttpError('المرافق ' . $n . ': أرفق صورة واضحة من جوازه');
+        $out[] = ['name' => $name, 'rel' => $rel, 'birth' => $birth, 'doc' => $doc, 'pass' => $pass];
     }
     return $out;
 }
 function req_age_txt(int $a): string { return $a < 2 ? 'رضيع (أقل من سنتين)' : ($a === 2 ? 'سنتان' : ($a <= 10 ? $a . ' سنوات' : $a . ' سنة')); }
 function req_age(string $birth, string $at): int { return max(0, (int)date_diff(date_create($birth), date_create($at ?: 'today'))->y); }
+/* رفع صورة جواز مرافق قبل تقديم أمر الإركاب (للمنسوب نفسه، أو للموارد البشرية نيابة عنه) */
+function req_file_up(array $b): array {
+    $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
+    $mine = (string)my_staff_ref($u); $ref = (string)($b['ref'] ?? '') ?: $mine;
+    if ($ref === '' || ($ref !== $mine && !has_perm($u, 'staff.edit'))) throw new HttpError('forbidden', 403);
+    if (!staff_get($ref)) throw new HttpError('not_found', 404);
+    upload_budget($ref, (string)($b['data'] ?? ''));
+    $f = file_store($ref, '_reqcmp', (string)($b['data'] ?? ''), 1, 'جواز مرافق - ' . (clean_name($b['name'] ?? '') ?: 'مرافق'), (string)($u['_label'] ?? $u['email']), false);
+    return ['ok' => true, 'file' => $f];
+}
+/* من يرى صورة جواز مرافق: من يعتمد الطلب الذي يحملها (بحسابه أو برابط القرار) */
+function req_file_allowed(array $f, ?array $u): bool {
+    $rt = (string)($_GET['rt'] ?? ''); $tok = null;
+    if (preg_match('/^[a-f0-9]{48}$/', $rt)) $tok = json_decode((string)(kv_get('ract:' . hash('sha256', $rt)) ?? ''), true);
+    foreach (q("SELECT * FROM requests WHERE ref=? AND type='travel' AND data LIKE ?", [$f['ref'], '%' . $f['id'] . '%'])->fetchAll() as $r) {
+        if ($u && (req_can_decide($u, $r) || req_is_final((string)$u['email']))) return true;
+        if (is_array($tok) && (string)($tok['no'] ?? '') === $r['no']) return true;
+    }
+    return false;
+}
 /* يتحقق من بيانات كل نوع ويعيدها نظيفة */
 function req_clean(string $type, array $d, string $ref = ''): array {
     if ($type === 'leave') return req_clean_leave($d, true);
@@ -285,6 +308,7 @@ function req_row(array $r, bool $full = true): array {
         $o['data'] = json_decode($r['data'], true) ?: [];
         if ($r['type'] === 'leave' && isset($o['data']['kind'])) $o['data']['kind'] = leave_kind_norm((string)$o['data']['kind']);
         $o['createdBy'] = $r['created_by'];
+        if ($r['type'] === 'travel') foreach ((array)($o['data']['companions'] ?? []) as $i => $p) if (!empty($p['pass'])) $o['atts'][] = ['n' => 'جواز المرافق ' . ($i + 1) . ' · ' . ($p['name'] ?? ''), 'id' => (string)$p['pass']];
         $o['staff'] = ['entity' => (string)($d['entity'] ?? ''), 'jobTitle' => (string)($d['jobTitle'] ?? ''), 'department' => (string)($d['department'] ?? ''),
             'manager' => (string)($d['manager'] ?? ''), 'mobile' => (string)($d['mobile'] ?? ''), 'email' => req_staff_email($s),
             'employeeNo' => (string)($d['employeeNo'] ?? ''), 'workCountry' => (string)($d['workCountry'] ?? '')];
@@ -600,7 +624,7 @@ function req_view_rows(array $r): array {
         $cm = is_array($d['companions'] ?? null) ? $d['companions'] : [];
         if ($cm) {
             $o[] = ['المرافقون من الأسرة', count($cm) === 1 ? 'مرافق واحد' : (count($cm) === 2 ? 'مرافقان' : count($cm) . ' مرافقين')];
-            foreach ($cm as $i => $p) $o[] = ['المرافق ' . ($i + 1), $p['name'] . ' · ' . $p['rel'] . ' · ' . req_age_txt(req_age((string)$p['birth'], (string)($d['from'] ?? ''))) . ' · ' . $p['doc']];
+            foreach ($cm as $i => $p) $o[] = ['المرافق ' . ($i + 1), $p['name'] . ' · ' . $p['rel'] . ' · ' . req_age_txt(req_age((string)$p['birth'], (string)($d['from'] ?? ''))) . ' · ' . $p['doc'] . (!empty($p['pass']) ? ' · صورة الجواز مرفقة' : '')];
         } elseif (isset($d['family'])) $o[] = ['المرافقون من الأسرة', 'لا يوجد'];
         if (($d['passNote'] ?? '') !== '') $o[] = ['تنبيه الجواز', (string)$d['passNote']];
         if (($d['supName'] ?? '') !== '') $o[] = ['المسؤول المباشر', (string)$d['supName']];

@@ -64,6 +64,7 @@ function file_serve(): void {
         $self = (string)($_GET['t'] ?? '');
         $allowed = $self !== '' && hash_equals((string)kv_get('self_' . $f['ref']), $self);
     }
+    if (!$allowed && $f['kind'] === '_reqcmp' && function_exists('req_file_allowed')) $allowed = req_file_allowed($f, $u);
     if (!$allowed) throw new HttpError('auth_required', 401);
     assert_ref_visible($u, (string)$f['ref']);
     if ($f['archived_at'] && !($u && has_perm($u, 'staff.edit'))) throw new HttpError('not_found', 404);

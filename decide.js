@@ -39,6 +39,7 @@
       var long = r.view.filter(function (x) { return x[3]; }), h0 = '<h2 class="sec">بيانات الطلب</h2>' + table([['اسم الموظف', r.name], ['المسمى الوظيفي', s.jobTitle], s.employeeNo ? ['الرقم الوظيفي', s.employeeNo] : null,
         ['الجهة / القسم', (s.entity || '') + (s.department ? ' - ' + s.department : '')]].concat(r.view.filter(function (x) { return !x[3]; }).map(function (x) { return [x[0], /^\d{4}-\d{2}-\d{2}$/.test(x[1]) ? fd(x[1]) : x[1], x[2] && !/^\d{4}-\d{2}-\d{2}$/.test(x[1]) ? 1 : 0]; })));
       long.forEach(function (x) { h0 += '<div class="box"><b>' + esc(x[0]) + '</b>' + esc(x[1]) + '</div>'; });
+      if ((r.atts || []).length) h0 += '<div class="box"><b>المرفقات</b>' + r.atts.map(function (f) { return '<a class="att" href="api/?action=file&id=' + encodeURIComponent(f.id) + '&rt=' + encodeURIComponent(T) + '" target="_blank" rel="noopener">📎 ' + esc(f.n) + '</a>'; }).join('') + '</div>';
       r.chain.forEach(function (c) { if (c.decision && c.note) h0 += '<div class="box' + (c.decision === 'reject' ? ' r' : '') + '"><b>' + (c.decision === 'reject' ? 'سبب الرفض من ' : 'ملاحظة ') + esc(c.label) + '</b>' + esc(c.note) + '</div>'; });
       return h0;
     }

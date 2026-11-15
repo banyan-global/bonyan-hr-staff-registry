@@ -2099,3 +2099,18 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .cmpg .fld { margin: 0; }
 .cmpadd { margin-top: 10px; }
 @media (max-width: 640px) { .cmpg { grid-template-columns: 1fr; } }
+.cmpf { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 10px 14px; border-radius: 14px; border: 1.5px dashed var(--line); font-size: 13px; }
+.cmpf .i { width: 20px; height: 20px; flex: none; }
+.cmpf span { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.cmpf small { color: var(--mute); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmpf.pick { cursor: pointer; color: var(--navy); background: color-mix(in srgb, var(--navy) 4%, var(--panel)); }
+.cmpf.pick:hover { border-color: var(--navy); }
+.cmpf.ok { border-style: solid; border-color: color-mix(in srgb, #16a34a 40%, transparent); background: color-mix(in srgb, #16a34a 7%, var(--panel)); color: #15803d; }
+.cmpf.ok a, .cmpf .cmpchg { font-weight: 800; color: var(--navy); cursor: pointer; text-decoration: none; flex: none; }
+.cmpf.busy { color: var(--mute); }
+.cmpf .spin { width: 18px; height: 18px; flex: none; border: 2px solid var(--line); border-top-color: var(--navy); border-radius: 50%; animation: cmpspin .8s linear infinite; display: block; }
+@keyframes cmpspin { to { transform: rotate(360deg); } }
+.satts { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 12px; }
+.satts a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line-2); color: var(--navy); font-size: 13px; font-weight: 700; text-decoration: none; }
+.satts a .i { width: 15px; height: 15px; }
+@media print { .satts a { border: 0; padding: 0; } }
