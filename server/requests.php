@@ -23,6 +23,8 @@ const REQ_TYPES = [
     'hire'   => ['HN', 'طلب احتياج وظيفي', 'BNY-F-HR-14'],
     'access' => ['AC', 'طلب صلاحية على نظام', 'BNY-F-HR-17'],
     'safety' => ['SF', 'بلاغ سلامة وصحة مهنية', 'BNY-F-HR-18'],
+    'med'    => ['MD', 'طلب علاج', 'BNY-F-HR-19'],
+    'dues'   => ['DU', 'طلب مستحقات مالية', 'BNY-F-HR-20'],
 ];
 /* الأنواع المبنية بمخطط حقول: [المفتاح، الاسم، النوع، إلزامي، خيارات أو حدود، تلميح]
    الأنواع: text · area · date · time · month · int · money · seg · reqref (طلب إجازة/إركاب معتمد للمنسوب نفسه)
@@ -55,6 +57,18 @@ const REQ_SCHEMA = [
     'hire' => [['title', 'المسمى الوظيفي المطلوب', 'text', 1, [2, 120]], ['entity', 'الجهة', 'entity', 1, [2, 120]], ['country', 'دولة العمل', 'country', 1], ['department', 'الإدارة أو القسم', 'text', 0, [0, 120]], ['count', 'العدد المطلوب', 'int', 1, [1, 50]],
         ['contract', 'نوع العقد', 'seg', 1, ['دوام كامل', 'دوام جزئي', 'مؤقت', 'تعاقد']], ['needBy', 'تاريخ الاحتياج', 'date', 1], ['budget', 'الراتب أو الميزانية التقديرية', 'money', 0, [0, 10000000]],
         ['quals', 'المؤهلات والخبرات المطلوبة', 'area', 1, [3, 1500]], ['reason', 'مبرر الاحتياج', 'area', 1, [3, 1500]]],
+    /* طلب علاج: للموظف أو أحد أفراد أسرته — ما المطلوب (خطاب تحويل، تغطية، تعويض) مع التقرير أو الفاتورة */
+    'med' => [['kind', 'نوع العلاج', 'seg', 1, ['مراجعة طبية', 'علاج أسنان', 'عملية أو تنويم', 'فحوصات أو تحاليل', 'صرف أدوية', 'علاج طبيعي', 'أخرى']],
+        ['forWhom', 'المستفيد', 'seg', 1, ['الموظف نفسه', 'أحد أفراد أسرته']], ['patient', 'اسم المستفيد وصلة قرابته', 'text', 0, [0, 120], 'مثال: محمد (ابن)'],
+        ['need', 'المطلوب', 'seg', 1, ['خطاب تحويل للمستشفى', 'تغطية تكلفة العلاج', 'تعويض عن مبلغ دفعته']],
+        ['facility', 'المستشفى أو الجهة الطبية', 'text', 1, [2, 160], 'مثال: مستشفى الحمادي'], ['city', 'المدينة', 'text', 0, [0, 80]],
+        ['date', 'تاريخ العلاج أو موعده', 'date', 1], ['cost', 'التكلفة أو المبلغ (ر.س)', 'money', 0, [0, 1000000]],
+        ['file', 'التقرير الطبي أو الفاتورة', 'file', 0], ['details', 'وصف الحالة والعلاج المطلوب', 'area', 1, [5, 1500]]],
+    /* مستحقات مالية: ما يطالب به الموظف من راتب أو بدل أو مكافأة أو تعويض، بالمبلغ والعملة والفترة */
+    'dues' => [['kind', 'نوع المستحق', 'seg', 1, ['راتب متأخر أو ناقص', 'بدل سكن أو نقل أو اتصال', 'مكافأة أو حافز', 'عمل إضافي غير مصروف', 'تعويض عن مصروفات', 'مستحقات نهاية الخدمة', 'أخرى']],
+        ['amount', 'المبلغ المطالب به', 'num', 1, [1, 10000000]], ['cur', 'العملة', 'seg', 1, ['ريال سعودي', 'روبية إندونيسية', 'دولار أمريكي', 'أخرى']],
+        ['month', 'عن شهر', 'month', 0], ['method', 'طريقة الصرف المفضلة', 'seg', 0, ['مع الراتب القادم', 'تحويل بنكي مستقل']],
+        ['file', 'مستند داعم (فاتورة أو كشف)', 'file', 0], ['details', 'تفاصيل المطالبة وسببها', 'area', 1, [5, 1500]]]
 ];
 /* مسار الاعتماد الافتراضي لكل نوع: [نوع الخطوة، القيمة، اسم الخطوة]
    manager = المسؤول المباشر الذي يختاره المنسوب من قائمة المسؤولين (كما في النظام السابق) */
@@ -72,6 +86,8 @@ const REQ_CHAINS = [
     'hire'   => [['manager', '', 'المسؤول المباشر'], ['role', 'hr', 'الموارد البشرية']],
     'access' => [['manager', '', 'المسؤول المباشر'], ['role', 'hr', 'الموارد البشرية']],
     'safety' => [['manager', '', 'المسؤول المباشر'], ['role', 'hr', 'الموارد البشرية']],
+    'med'    => [['manager', '', 'المسؤول المباشر'], ['role', 'hr', 'الموارد البشرية']],
+    'dues'   => [['manager', '', 'المسؤول المباشر'], ['role', 'hr', 'الموارد البشرية']],
 ];
 /* إصدار المسار الموحّد: عند تغييره يُعاد ضبط مسارات كل النماذج على المسار الافتراضي أعلاه مرة واحدة (مع إبقاء حالة التفعيل) */
 const REQ_FLOW_VER = '2';
@@ -135,7 +151,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
         if ($kind === 'date') $v = req_date($v);
         elseif ($kind === 'time') $v = req_mins(trim((string)$v)) === null ? '' : trim((string)$v);
         elseif ($kind === 'month') $v = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', trim((string)$v)) ? trim((string)$v) : '';
-        elseif ($kind === 'int' || $kind === 'money') {
+        elseif ($kind === 'int' || $kind === 'money' || $kind === 'num') {
             $raw = str_replace(['٫', '٬', ','], ['.', '', ''], trim(to_ascii_digits((string)$v)));
             if ($raw !== '' && !preg_match($kind === 'int' ? '/^\d+$/' : '/^\d+(\.\d+)?$/', $raw)) throw new HttpError('اكتب ' . $lab . ' بالأرقام فقط');
             $v = $raw === '' ? '' : ($kind === 'int' ? (int)$raw : round((float)$raw, 2));
@@ -146,6 +162,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
             if ($v === 'أخرى') { $ot = req_str($d[$k . 'Other'] ?? '', 160); if (mb_strlen(trim($ot)) < 2) throw new HttpError('حدّد ' . $lab . ' (أخرى)'); $o[$k . 'Other'] = $ot; }
         }
         elseif ($kind === 'people') $v = req_clean_people($v, $ref);
+        elseif ($kind === 'file') { $v = (string)$v; if ($v !== '' && (!preg_match('/^[a-f0-9]{32}$/', $v) || !q1("SELECT id FROM files WHERE id=? AND ref=? AND kind='_reqcmp' AND archived_at IS NULL", [$v, $ref]))) $v = ''; if ($req && $v === '') throw new HttpError('أرفق ' . $lab); }
         elseif ($kind === 'url') { $v = req_str(trim((string)$v), 300); if ($v !== '' && !preg_match('~^https?://[^\s<>"]+$~i', $v)) throw new HttpError($lab . ': اكتب رابطًا كاملًا يبدأ بـ https://'); }
         elseif ($kind === 'reqref') {
             $v = strtoupper(trim((string)$v));
@@ -180,6 +197,10 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
         if ($type === 'perm') foreach (q("SELECT no, data FROM requests WHERE ref=? AND type IN ('leave','travel') AND status IN ('pending','returned','approved') AND no<>?", [$ref, req_except()])->fetchAll() as $x) {
             $xd = json_decode($x['data'], true) ?: []; if (($xd['from'] ?? '') <= $o['day'] && ($xd['to'] ?? '') >= $o['day']) throw new HttpError('هذا اليوم ضمن الطلب ' . $x['no'] . '؛ لا يلزم استئذان');
         }
+    }
+    if ($type === 'med') {
+        if ($o['forWhom'] === 'أحد أفراد أسرته') { if (mb_strlen(trim((string)$o['patient'])) < 3) throw new HttpError('اكتب اسم المستفيد وصلة قرابته'); } else $o['patient'] = '';
+        if ($o['need'] === 'تعويض عن مبلغ دفعته' && !($o['cost'] > 0)) throw new HttpError('اكتب المبلغ الذي دفعته');
     }
     if ($type === 'loan') {
         if ($o['start'] < date('Y-m')) throw new HttpError('شهر بداية الخصم لا يكون في الماضي');
@@ -280,7 +301,7 @@ function req_file_up(array $b): array {
 function req_file_allowed(array $f, ?array $u): bool {
     $rt = (string)($_GET['rt'] ?? ''); $tok = null;
     if (preg_match('/^[a-f0-9]{48}$/', $rt)) $tok = json_decode((string)(kv_get('ract:' . hash('sha256', $rt)) ?? ''), true);
-    foreach (q("SELECT * FROM requests WHERE ref=? AND type='travel' AND data LIKE ?", [$f['ref'], '%' . $f['id'] . '%'])->fetchAll() as $r) {
+    foreach (q("SELECT * FROM requests WHERE ref=? AND data LIKE ?", [$f['ref'], '%' . $f['id'] . '%'])->fetchAll() as $r) {
         if ($u && (req_can_decide($u, $r) || req_is_final((string)$u['email']))) return true;
         if (is_array($tok) && (string)($tok['no'] ?? '') === $r['no']) return true;
     }
@@ -320,6 +341,7 @@ function req_row(array $r, bool $full = true): array {
         $o['data'] = json_decode($r['data'], true) ?: [];
         if ($r['type'] === 'leave' && isset($o['data']['kind'])) $o['data']['kind'] = leave_kind_norm((string)$o['data']['kind']);
         $o['createdBy'] = $r['created_by'];
+        foreach (REQ_SCHEMA[$r['type']] ?? [] as $f) if ($f[2] === 'file' && !empty($o['data'][$f[0]])) $o['atts'][] = ['n' => $f[1], 'id' => (string)$o['data'][$f[0]]];
         if ($r['type'] === 'travel') foreach ((array)($o['data']['companions'] ?? []) as $i => $p) if (!empty($p['pass'])) $o['atts'][] = ['n' => 'جواز المرافق ' . ($i + 1) . ' · ' . ($p['name'] ?? ''), 'id' => (string)$p['pass']];
         $o['staff'] = ['entity' => (string)($d['entity'] ?? ''), 'jobTitle' => (string)($d['jobTitle'] ?? ''), 'department' => (string)($d['department'] ?? ''),
             'manager' => (string)($d['manager'] ?? ''), 'mobile' => (string)($d['mobile'] ?? ''), 'email' => req_staff_email($s),
@@ -391,6 +413,8 @@ const REQ_FORM_INFO = [
     'clear'  => 'إخلاء طرف عند انتهاء الخدمة: لا يكتمل حتى تُسلَّم كل العهد المسجّلة على المنسوب، وبعد اعتماده يصبح ملفه «منتهية خدمته» ويبقى في السجل.',
     'hire'   => 'احتياج إدارة إلى موظف: المسمى والعدد ونوع العقد والمؤهلات والمبرر. بعد اعتماده تُعلن الوظيفة من صفحة التوظيف.',
     'access' => 'طلب صلاحية على نظام من أنظمة المجموعة: النظام والصلاحية ومدتها (دائمة أو مؤقتة) والمبرر.',
+    'med'    => 'طلب علاج للموظف أو أحد أفراد أسرته: نوع العلاج والجهة الطبية والموعد، والمطلوب (خطاب تحويل أو تغطية أو تعويض)، مع التقرير أو الفاتورة.',
+    'dues'   => 'مطالبة بمستحقات مالية: راتب متأخر أو بدل أو مكافأة أو تعويض مصروفات، بالمبلغ والعملة والفترة، مع مستند داعم.',
     'safety' => 'بلاغ سلامة وصحة مهنية: حادث أو إصابة أو خطر محتمل، بدرجة الخطورة والموقع والتاريخ والمصابين.',
 ];
 const REQ_STEP_ROLES = ['hr', 'ceo', 'admin']; /* «اطلاع فقط» لا يملك صلاحية الاعتماد؛ لشخص بعينه اختر «حساب محدد» */
@@ -608,6 +632,8 @@ function req_summary(array $r): string {
     if ($r['type'] === 'leave' && ($d['medOrg'] ?? '') !== '') return 'إجازة مرضية · ' . ($d['days'] ?? 0) . ' يومًا · من ' . ($d['from'] ?? '') . ' إلى ' . ($d['to'] ?? '') . ' · ' . $d['medOrg'];
     if ($r['type'] === 'perm') return ($d['kind'] ?? 'استئذان') . ' · ' . ($d['day'] ?? '') . ' · من ' . req_t12((string)($d['fromT'] ?? '')) . ' إلى ' . req_t12((string)($d['toT'] ?? ''));
     if ($r['type'] === 'ot') return 'عمل إضافي ' . req_hours((int)($d['mins'] ?? 0)) . ' · ' . ($d['day'] ?? '');
+    if ($r['type'] === 'med') return ($d['kind'] ?? 'علاج') . ' · ' . ($d['facility'] ?? '') . (($d['forWhom'] ?? '') === 'أحد أفراد أسرته' ? ' · لأحد أفراد الأسرة' : '');
+    if ($r['type'] === 'dues') return ($d['kind'] === 'أخرى' ? ($d['kindOther'] ?? 'مستحقات') : ($d['kind'] ?? 'مستحقات')) . ' · ' . number_format((float)($d['amount'] ?? 0)) . ' ' . (($d['cur'] ?? '') === 'أخرى' ? ($d['curOther'] ?? '') : ($d['cur'] ?? ''));
     if ($r['type'] === 'loan') return 'سلفة ' . number_format((float)($d['amount'] ?? 0)) . ' ر.س على ' . ($d['months'] ?? 0) . ' أقساط من ' . ($d['start'] ?? '');
     if ($r['type'] === 'resume') return ($d['kind'] ?? 'مباشرة') . ' · ' . ($d['day'] ?? '') . (!empty($d['lateDays']) ? ' · تأخر ' . ar_days((int)$d['lateDays']) . ' عمل' : '');
     if ($r['type'] === 'train') return 'تدريب: ' . ($d['program'] ?? '') . ' · ' . ($d['provider'] ?? '');
@@ -651,6 +677,9 @@ function req_view_rows(array $r): array {
         foreach (REQ_SCHEMA[$t] as $f) {
             $v = $d[$f[0]] ?? ''; if ($v === '' || $v === null) continue;
             if ($f[2] === 'money') $v = number_format((float)$v, 2) . ' ر.س';
+            if ($f[2] === 'num') $v = number_format((float)$v, 2) . ($t === 'dues' ? ' ' . (($d['cur'] ?? '') === 'أخرى' ? ($d['curOther'] ?? '') : ($d['cur'] ?? '')) : '');
+            if ($t === 'dues' && $f[0] === 'cur') continue;
+            if ($f[2] === 'file') { $v = 'مرفق'; }
             if ($f[2] === 'area') continue;
             if ($f[2] === 'time') { $o[] = [$f[1], req_t12((string)$v)]; continue; }
             if ($f[2] === 'seg' && $v === 'أخرى' && ($d[$f[0] . 'Other'] ?? '') !== '') $v = 'أخرى: ' . $d[$f[0] . 'Other'];

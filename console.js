@@ -1489,11 +1489,12 @@ ALIAS['myreq-new'] = ['myreq', 'new']; ALIAS['myreq-list'] = ['myreq', 'list']; 
 var RT2 = { leave: ['emerald', 'umbrella', 'إجازة', 'LV'], travel: ['amethyst', 'plane', 'أمر إركاب', 'TR'], cert: ['gold', 'cert', 'تعريف بالراتب', 'CR'],
   perm: ['teal', 'clock', 'استئذان', 'PM'], ot: ['sapphire', 'timer', 'عمل إضافي', 'OT'], loan: ['garnet', 'coins', 'سلفة', 'LN'], resume: ['slate', 'door', 'مباشرة عمل', 'RS'], train: ['gold', 'book', 'تدريب', 'TN'],
   resign: ['slate', 'out', 'استقالة', 'RG'], clear: ['teal', 'box', 'إخلاء طرف', 'CL'], hire: ['amethyst', 'userok', 'احتياج وظيفي', 'HN'],
-  access: ['sapphire', 'key', 'صلاحية على نظام', 'AC'], safety: ['garnet', 'shield', 'بلاغ سلامة', 'SF'] };
+  access: ['sapphire', 'key', 'صلاحية على نظام', 'AC'], safety: ['garnet', 'shield', 'بلاغ سلامة', 'SF'], med: ['teal', 'plus', 'طلب علاج', 'MD'], dues: ['emerald', 'wallet', 'مستحقات مالية', 'DU'] };
 /* بطاقات «نوع الطلب» في النموذج: [النوع، الاسم، الوصف، اللون، الأيقونة] */
 var RW_TYPES = [['leave', 'إجازة', 'اعتيادية أو مرضية أو اضطرارية', '#1f8f6a', 'umbrella'], ['perm', 'استئذان', 'تأخر صباحي أو خروج مبكر أو أثناء الدوام', '#15718a', 'clock'], ['travel', 'أمر إركاب', 'مهمة رسمية داخلية أو خارجية', '#5b3fc4', 'plane'],
   ['resume', 'مباشرة عمل', 'العودة بعد إجازة أو مهمة', '#3b4b6a', 'door'], ['ot', 'عمل إضافي', 'ساعات خارج الدوام', '#1d3f86', 'timer'], ['loan', 'سلفة على الراتب', 'تُخصم أقساطًا شهرية', '#9a2a43', 'coins'],
   ['cert', 'خطاب تعريف', 'بالراتب أو بدونه، أو شهادة خبرة', '#b98f25', 'cert'], ['train', 'طلب تدريب', 'ترشيح لبرنامج تدريبي', '#c08b3f', 'book'],
+  ['med', 'طلب علاج', 'لك أو لأحد أفراد أسرتك: تحويل أو تغطية أو تعويض', '#0f7a8a', 'plus'], ['dues', 'مستحقات مالية', 'راتب أو بدل أو مكافأة أو تعويض مصروفات', '#1f8f6a', 'wallet'],
   ['access', 'صلاحية على نظام', 'دخول أو صلاحية على نظام من أنظمة المجموعة', '#1d5fa8', 'key'], ['safety', 'بلاغ سلامة', 'حادث أو إصابة أو خطر في مقر العمل', '#a8323e', 'shield'],
   ['resign', 'استقالة', 'بآخر يوم عمل وأسبابها', '#475569', 'out'], ['clear', 'إخلاء طرف', 'عند انتهاء الخدمة (للموارد البشرية)', '#15718a', 'box', 1], ['hire', 'احتياج وظيفي', 'طلب موظف لإدارة (للموارد البشرية)', '#5539c2', 'userok', 1]];
 function rwFields(t) { var f = formOf(t || RW.type); return f && f.fields ? f.fields : null; }
@@ -1516,6 +1517,8 @@ function reqSum(r) {
   if (r.type === 'perm') return (d.kind || 'استئذان') + '، ' + hm(d.mins);
   if (r.type === 'ot') return 'عمل إضافي ' + hm(d.mins);
   if (r.type === 'loan') return 'سلفة ' + n(+d.amount || 0) + ' ر.س على ' + (d.months || 0) + ' أقساط';
+  if (r.type === 'med') return (d.kind || 'علاج') + (d.facility ? '، ' + d.facility : '');
+  if (r.type === 'dues') return (d.kind === 'أخرى' ? d.kindOther || 'مستحقات' : d.kind || 'مستحقات') + '، ' + n(+d.amount || 0) + ' ' + (d.cur === 'أخرى' ? d.curOther || '' : d.cur || '');
   if (r.type === 'resume') return (d.kind || 'مباشرة عمل') + (d.lateDays ? '، تأخر ' + dn(d.lateDays) : '');
   if (r.type === 'train') return d.program || 'طلب تدريب';
   if (r.type === 'resign') return 'استقالة، آخر يوم ' + fdx(pdate(d.lastDay), { day: 'numeric', month: 'short' });
@@ -1683,7 +1686,7 @@ function rwBody() {
       rwFields().forEach(function (f) { var v = d[f[0]]; if (['fromCountry', 'fromCity', 'toCountry', 'toCity', 'from', 'to', 'family', 'companions'].indexOf(f[0]) > -1 || v === '' || v == null) return; rows.push([f[1], f[2] === 'money' ? n(+v) + ' ر.س' : esc(v)]); });
       var cmps = d.family === CMP_YES ? cmpList() : [];
       rows.push(['المرافقون من الأسرة', cmps.length ? cmps.map(function (p) { return '<div>' + esc(p.name || '') + ' · ' + esc(p.rel || '') + (cmpAge(p.birth) ? ' · ' + cmpAge(p.birth) : '') + ' · <span class="ltr">' + esc(p.doc || '') + '</span></div>'; }).join('') : 'لا يوجد']); }
-    else rwFields().forEach(function (f) { var v = d[f[0]]; if (v === '' || v == null) return; rows.push([f[1], f[2] === 'date' ? fdx(pdate(v)) : f[2] === 'money' ? n(+v) + ' ر.س' : f[2] === 'month' ? fmonth(v) : f[2] === 'time' || f[2] === 'reqref' ? '<span class="ltr">' + esc(v) + '</span>' : esc(v)]); });
+    else rwFields().forEach(function (f) { var v = d[f[0]]; if (v === '' || v == null || (RW.type === 'dues' && f[0] === 'cur')) return; if (f[2] === 'seg' && v === 'أخرى' && d[f[0] + 'Other']) v = 'أخرى: ' + d[f[0] + 'Other']; rows.push([f[1], f[2] === 'file' ? ic('check') + ' مرفق' + (d[f[0] + 'Name'] ? ' (' + esc(d[f[0] + 'Name']) + ')' : '') : f[2] === 'num' ? n(+v) + ' ' + esc(d.cur === 'أخرى' ? d.curOther || '' : d.cur || '') : f[2] === 'date' ? fdx(pdate(v)) : f[2] === 'money' ? n(+v) + ' ر.س' : f[2] === 'month' ? fmonth(v) : f[2] === 'time' || f[2] === 'reqref' ? '<span class="ltr">' + esc(v) + '</span>' : esc(v)]); });
     var ex = rwExtra(); if (ex) rows.push(['', ex]);
     var sp2 = ((formsData() || {}).sups || []).filter(function (x) { return x.id === d.supervisor; })[0]; if (sp2) rows.push(['المسؤول المباشر', esc(sp2.name)]); }
   return kvHTML(rows) + '<label class="consent"><input type="checkbox" id="rwAgree"' + (RW.d.agree ? ' checked' : '') + '><span>أقر بصحة البيانات' + (RW.type === 'leave' ? '، وأتعهد بالعودة إلى العمل في اليوم التالي لانتهاء الإجازة وإبلاغ مديري بأي طارئ' : RW.type === 'travel' ? '، وأتعهد بتقديم إشعار المباشرة عند عودتي من المهمة' : '') + '.</span></label>';
@@ -3198,6 +3201,10 @@ function rwSchemaBody() {
     var k = f[0], lab = f[1], kind = f[2], req = !!f[3], opt = f[4], ph = f[5] || '', id = 'rw_' + k;
     if (RW.type === 'access' && k === 'until' && d.dur !== 'مؤقتة') return;
     if (RW.type === 'travel' && k === 'advance' && d.kind === 'سفر في إجازة') return;
+    if (RW.type === 'med' && k === 'patient' && d.forWhom !== 'أحد أفراد أسرته') return;
+    if (RW.type === 'med' && k === 'patient') req = true;
+    if (RW.type === 'med' && k === 'cost' && d.need === 'تعويض عن مبلغ دفعته') { req = true; lab = 'المبلغ الذي دفعته (ر.س)'; }
+    if (kind === 'file') { h += rwFileField(k, lab, req); return; }
     if (kind === 'entity') { if (!d[k]) { var me0 = rwStaff(); if (me0 && me0.r && me0.r.entity) d[k] = me0.r.entity; }
       h += '<div class="fld"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, (CFG.ENTITIES || []).filter(function (e) { return e.v !== 'other' && e.ar; }).map(function (e) { return { v: e.ar, n: e.ar, ic: 'building' }; }), d[k] || '', 'اختر الجهة', function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab) + '</div>'; return; }
     if (kind === 'url') { h += rwField(id, lab, rwIn(k, 'url', ph, ' dir="ltr" autocomplete="off"'), req, true); return; }
@@ -3211,9 +3218,9 @@ function rwSchemaBody() {
     else if (kind === 'area') h += rwField(id, lab, '<textarea id="' + id + '" data-rw="' + k + '" maxlength="' + (opt ? opt[1] : 1200) + '" placeholder="' + esc(ph || (req ? '' : 'اختياري')) + '">' + esc(d[k] || '') + '</textarea>', req, true);
     else if (kind === 'date') h += rwField(id, lab, rwIn(k, 'date'), req, F.some(function (g) { return g[2] === 'time'; }));
     else if (kind === 'time') h += rwField(id, lab, rwIn(k, 'time', '', ' dir="ltr" step="300"'), req);
-    else if (kind === 'month') { var now = ymNow(), ms = []; for (var i = 0; i < 12; i++) ms.push(ymAdd(now, i));
+    else if (kind === 'month') { var now = ymNow(), ms = []; for (var i = 0; i < 12; i++) ms.push(ymAdd(now, RW.type === 'dues' ? -i : i));
       h += '<div class="fld"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, ms.map(function (m) { return { v: m, n: fmonth(m), ic: 'calendar' }; }), d[k] || '', 'اختر الشهر', function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab) + '</div>'; }
-    else if (kind === 'int' || kind === 'money') h += rwField(id, lab, rwIn(k, 'text', opt ? (kind === 'money' ? 'مثال: ' + Math.max(opt[0], 1000) : 'من ' + opt[0] + ' إلى ' + opt[1]) : '', ' dir="ltr" inputmode="' + (kind === 'int' ? 'numeric' : 'decimal') + '" data-rwlive="1" data-num="1" autocomplete="off"'), req);
+    else if (kind === 'int' || kind === 'money' || kind === 'num') h += rwField(id, lab, rwIn(k, 'text', opt ? (kind !== 'int' ? 'مثال: ' + Math.max(opt[0], 1000) : 'من ' + opt[0] + ' إلى ' + opt[1]) : '', ' dir="ltr" inputmode="' + (kind === 'int' ? 'numeric' : 'decimal') + '" data-rwlive="1" data-num="1" autocomplete="off"'), req);
     else if (kind === 'reqref') { var ro = rwRefOpts(opt || []);
       h += '<div class="fld wide"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + (ro.length ? ssel(id, [{ v: '', n: 'بدون ربط', ic: 'x' }].concat(ro), d[k] || '', 'اختر الإجازة أو المهمة التي عدت منها', function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab)
         : '<div class="note">' + ic('info') + '<span>' + ((opt || []).indexOf('resign') > -1 ? 'لا يوجد طلب استقالة معتمد لهذا المنسوب؛ يمكن المتابعة دون ربط.' : 'لا توجد إجازة أو مهمة معتمدة لربطها. إن كانت مباشرة بعد تعيين جديد فاختر «تعيين جديد».') + '</span></div>') + '</div>'; }
@@ -3253,14 +3260,18 @@ function rwSchemaCheck() {
   for (var i = 0; i < F.length; i++) { var f = F[i], v = d[f[0]];
     if (f[3] && (v === '' || v == null)) return (f[2] === 'seg' || f[2] === 'month' || f[2] === 'reqref' ? 'اختر ' : 'اكتب ') + f[1];
     if (f[2] === 'seg' && v === 'أخرى' && String(d[f[0] + 'Other'] || '').trim().length < 2) return 'حدّد ' + f[1] + ' (أخرى)';
-    if ((f[2] === 'int' || f[2] === 'money') && v !== '' && v != null && !(f[2] === 'int' ? /^\d+$/ : /^\d+(\.\d{1,2})?$/).test(String(v))) return 'اكتب ' + f[1] + ' بالأرقام فقط' + (f[2] === 'int' ? ' (عدد صحيح)' : '');
-    if ((f[2] === 'int' || f[2] === 'money') && v !== '' && v != null && f[4] && (+v < f[4][0] || +v > f[4][1])) return f[1] + ': القيمة بين ' + n(f[4][0]) + ' و' + n(f[4][1]);
+    if (f[2] === 'file' && f[3] && !v) return 'أرفق ' + f[1];
+    if (f[2] === 'file' && RW.d[f[0] + '_up']) return 'انتظر حتى يكتمل رفع الملف';
+    if ((f[2] === 'int' || f[2] === 'money' || f[2] === 'num') && v !== '' && v != null && !(f[2] === 'int' ? /^\d+$/ : /^\d+(\.\d{1,2})?$/).test(String(v))) return 'اكتب ' + f[1] + ' بالأرقام فقط' + (f[2] === 'int' ? ' (عدد صحيح)' : '');
+    if ((f[2] === 'int' || f[2] === 'money' || f[2] === 'num') && v !== '' && v != null && f[4] && (+v < f[4][0] || +v > f[4][1])) return f[1] + ': القيمة بين ' + n(f[4][0]) + ' و' + n(f[4][1]);
     if (f[2] === 'area' && f[3] && String(v || '').trim().length < (f[4] ? f[4][0] : 3)) return 'اكتب ' + f[1] + ' (' + (f[4] ? f[4][0] : 3) + ' أحرف على الأقل)'; }
   if (RW.type === 'travel' && cmpOn()) { var cm = cmpList(); if (!cm.length) return 'أضف بيانات من يرافقك من أسرتك';
     for (var j = 0; j < cm.length; j++) { var p = cm[j], no = 'المرافق ' + (j + 1) + ': ';
       if (String(p.name || '').trim().length < 3) return no + 'اكتب الاسم كما في الجواز'; if (!p.rel) return no + 'اختر صلة القرابة'; if (p.rel === 'أخرى' && String(p.relOther || '').trim().length < 2) return no + 'حدّد صلة القرابة';
       if (!p.birth || p.birth > ymd(new Date())) return no + 'اكتب تاريخ الميلاد'; if (!/^[A-Za-z0-9\- ]{5,30}$/.test(asciiD(p.doc || '').trim())) return no + 'اكتب رقم الجواز أو الهوية بالحروف الإنجليزية والأرقام';
       if (p._up) return no + 'انتظر حتى يكتمل رفع صورة الجواز'; if (!p.pass) return no + 'أرفق صورة واضحة من جوازه'; } }
+  if (RW.type === 'med' && RW.d.forWhom === 'أحد أفراد أسرته' && String(RW.d.patient || '').trim().length < 3) return 'اكتب اسم المستفيد وصلة قرابته';
+  if (RW.type === 'med' && RW.d.need === 'تعويض عن مبلغ دفعته' && !(+RW.d.cost > 0)) return 'اكتب المبلغ الذي دفعته';
   if ((RW.type === 'perm' || RW.type === 'ot') && !(c.mins > 0)) return 'وقت النهاية يجب أن يكون بعد وقت البداية';
   if (RW.type === 'perm' && c.mins > 300) return 'الاستئذان خمس ساعات على الأكثر؛ للمدة الأطول قدّم طلب إجازة';
   if (RW.type === 'resume' && d.kind !== 'تعيين جديد' && !d.link) return 'اختر الإجازة أو المهمة التي عدت منها';
@@ -4355,6 +4366,22 @@ new MutationObserver(function () {
   var x = document.querySelector('[data-ofocus="1"]'); if (!x || x === document.activeElement || x.dataset.done) return;
   x.dataset.done = '1'; var k = x.id || x.dataset.cmp; if (window._ofk === k) return; window._ofk = k; setTimeout(function () { try { x.focus({ preventScroll: false }); } catch (e) { } }, 30);
 }).observe(document.body, { childList: true, subtree: true });
+
+/* حقل مرفق في النماذج (تقرير طبي، فاتورة، مستند داعم): يُرفع فورًا ويُحفظ معرّفه في الطلب */
+function rwFileField(k, lab, req) {
+  var d = RW.d, id = d[k], up = d[k + '_up'];
+  return '<div class="fld wide"><label>' + esc(lab) + (req ? ' <i class="rq">*</i>' : ' <small class="opt">اختياري</small>') + '</label>' + (up ? '<div class="cmpf busy"><span class="spin"></span><span>جارٍ رفع الملف…</span></div>'
+    : id ? '<div class="cmpf ok">' + ic('check') + '<span>تم إرفاق الملف' + (d[k + 'Name'] ? ' <small>' + esc(d[k + 'Name']) + '</small>' : '') + '</span><a href="' + API + '?action=file&id=' + esc(id) + '" target="_blank" rel="noopener">عرض</a><label class="cmpchg">تغيير<input type="file" hidden data-rwfile="' + k + '" accept="image/*,application/pdf"></label></div>'
+    : '<label class="cmpf pick">' + ic('file') + '<span><b>إرفاق ملف</b><small>صورة واضحة أو PDF، حتى ١٢ ميغابايت</small></span><input type="file" hidden data-rwfile="' + k + '" accept="image/*,application/pdf"></label>') + '</div>';
+}
+document.addEventListener('change', function (ev) {
+  var fi = ev.target.matches && ev.target.matches('[data-rwfile]') ? ev.target : null; if (!fi || !fi.files || !fi.files[0] || typeof RW === 'undefined' || !RW) return;
+  var k = fi.dataset.rwfile, file = fi.files[0]; rwSync();
+  if (file.size > 12 * 1024 * 1024) { toast('الملف أكبر من ١٢ ميغابايت'); return; }
+  RW.d[k + '_up'] = 1; render();
+  cmpShrink(file).then(function (data) { return api({ action: 'reqFile', ref: RW.ref || '', name: (RT2[RW.type] || [, , 'طلب'])[2] + ' - ' + file.name, data: data }); })
+    .then(function (j) { RW.d[k] = j.file.id; RW.d[k + 'Name'] = file.name; delete RW.d[k + '_up']; RW.err = ''; render(); }, function (e) { delete RW.d[k + '_up']; toast(errText(e)); render(); });
+});
 
 window.addEventListener('hashchange', route);
 boot();
