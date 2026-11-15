@@ -2159,3 +2159,34 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .rqacts.sec .btn { justify-content: center; }
 }
 .mf.rqfoot .rqdec[hidden] { display: none; }
+/* صف أزرار واحد مرتب: القرار والتواصل يمينًا، والطباعة والحذف أيقونتان يسارًا */
+.mf.rqfoot { flex-wrap: nowrap; }
+.mf.rqfoot .rqdec, .mf.rqfoot [data-rqdec="reject"][hidden] { display: none !important; }
+.rqacts.pri { flex: 1 1 auto; min-width: 0; }
+.rqacts.sec { flex: none; flex-wrap: nowrap; }
+.rqacts.sec .btn.ico { padding-inline: 12px; }
+.rqacts.sec .btn.danger { width: 42px; padding: 0; justify-content: center; font-size: 0; gap: 0; color: #b42318; border-color: color-mix(in srgb, #b42318 25%, transparent); }
+.rqacts.sec .btn.danger .i { width: 18px; height: 18px; }
+.rqacts.sec .btn.danger.sure { width: auto; padding-inline: 12px; font-size: 13px; gap: 6px; background: #b42318; color: #fff; }
+.btn.tkrej { color: #b42318; border-color: color-mix(in srgb, #b42318 25%, transparent); background: var(--panel); }
+.btn.sm.danger { background: #b42318; border-color: #b42318; color: #fff; }
+.tkmode.reject { color: #b42318; }
+@media (max-width: 860px) { .mf.rqfoot { flex-wrap: wrap; } }
+@media (max-width: 640px) {
+  .rqacts.pri { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rqacts.sec { display: flex; width: 100%; }
+  .rqacts.sec .btn.ico:not(.danger) { flex: 1; }
+}
+@media (max-width: 640px) {
+  .rqm2 .mf.rqfoot .rqacts.sec .btn.danger { flex: 0 0 44px; width: 44px; }
+  .rqm2 .mf.rqfoot .rqacts.sec .btn.danger.sure { flex: 1 1 auto; width: auto; }
+  .rqm2 .mf.rqfoot .rqacts.sec .btn.ico:not(.danger) { flex: 1 1 auto; }
+}
+/* أيقونتا الطباعة والحذف في رأس نافذة الطلب */
+.mh .mhacts { display: flex; gap: 6px; margin-inline-start: auto; align-items: center; width: auto !important; }
+.mh .mhacts + [data-rqclose] { margin-inline-start: 6px; }
+.mh .mhacts .btn.ico { width: 40px; height: 40px; padding: 0; justify-content: center; font-size: 0; gap: 0; border-radius: 12px; flex: none !important; }
+.mh .mhacts .btn.ico .i { width: 18px; height: 18px; }
+.mh .mhacts .btn.danger.sure { width: auto; padding-inline: 12px; font-size: 13px; gap: 6px; }
+.mf.rqfoot[hidden] { display: none !important; }
+@media (max-width: 640px) { .mh .mhacts .btn.ico { width: 38px; height: 38px; } }

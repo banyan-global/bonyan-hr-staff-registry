@@ -2182,30 +2182,51 @@ function talkMount(r) {
   var req = boss && r.status === 'pending' ? mk('tkEditReq', 'tkedit', 'edit', 'طلب تعديل', 'يُعاد الطلب إلى الموظف ليعدّله ثم يكمل مساره') : null;
   var rep = T === 'staff' && M.length ? mk('tkRep', 'tkask', 'chat', last && (last.k === 'ask' || last.k === 'edit') ? 'الرد على الاستفسار' : 'مراسلة المعتمد') : null;
   var rs = r.status === 'returned' && (own || can('edit')) ? mk('rqResub', 'goldb', 'edit', 'تعديل وإعادة إرسال') : null;
+  /* لا مربع ملاحظة دائم: سبب الرفض يُكتب في مربع يفتح عند ضغط «رفض» */
+  var rj = null; if (rej) { rj = mk('tkRej', 'tkrej', 'x', 'رفض', 'يُرفض الطلب ويصل الموظف السبب'); rej.hidden = true; }
+  if (pr) { pr.innerHTML = ic('dl'); pr.title = 'طباعة الطلب أو حفظه PDF'; pr.setAttribute('aria-label', pr.title); pr.classList.add('ico'); }
+  if (del) { del.classList.add('ico', 'danger'); del.title = 'حذف الطلب نهائيًا (لمدير النظام)'; del.setAttribute('aria-label', del.title); }
   var pri = document.createElement('div'); pri.className = 'rqacts pri';
-  [rs, ap, fin, ed, ask, req, rep, rej, cn].forEach(function (x) { if (x) pri.appendChild(x); });
+  [rs, ap, fin, ed, ask, req, rep, rj, cn].forEach(function (x) { if (x) pri.appendChild(x); });
   var sc = document.createElement('div'); sc.className = 'rqacts sec';
-  [pr, del].forEach(function (x) { if (x) sc.appendChild(x); });
+  [del, pr].forEach(function (x) { if (x) sc.appendChild(x); }); /* الحذف أبعد عن زر الإغلاق */
   foot.innerHTML = ''; foot.classList.add('rqfoot');
-  if (note) foot.appendChild(note);
+  if (note) { note.hidden = true; foot.appendChild(note); }
+  if (rej) foot.appendChild(rej);
   if (pri.children.length) foot.appendChild(pri);
-  foot.appendChild(sc);
+  /* الطباعة والحذف أيقونتان في رأس النافذة بجانب زر الإغلاق */
+  var hd = L.querySelector('.mh'), xb = hd && hd.querySelector('[data-rqclose]');
+  if (hd && xb) { sc.className = 'rqacts sec mhacts'; hd.insertBefore(sc, xb); } else foot.appendChild(sc);
+  if (!pri.children.length) foot.hidden = true;
   /* ---- صندوق الكتابة يفتح عند الحاجة ---- */
   var MODE = '';
+  if (rej && !document.getElementById('tkBox')) {
+    /* من يملك الرفض بلا صلاحية محادثة: صندوق للسبب فقط */
+    var sx = document.createElement('div'); sx.className = 'rqtalk'; sx.innerHTML = '<div class="tkbox" id="tkBox" hidden><div class="tkmode" id="tkMode"></div><textarea id="tkTxt" rows="3" maxlength="1500"></textarea><div class="lerr" id="tkErr" role="alert"></div><div class="tkbtns"><button class="btn sm goldb" type="button" id="tkSend"></button><button class="btn sm" type="button" id="tkCancel">إلغاء</button></div></div>'; body.appendChild(sx);
+  }
   var openBox = function (mode) {
-    var box = document.getElementById('tkBox'); if (!box) return; MODE = mode; box.hidden = false; if (note) note.hidden = true;
-    var lab = { ask: [ic('chat') + 'استفسار إلى الموظف', 'اكتب سؤالك، ويصل الموظف بريد وإشعار للرد…', 'إرسال الاستفسار'], edit: [ic('edit') + 'طلب تعديل من الموظف', 'اكتب ما تريد تعديله؛ يُعاد الطلب إليه ويكمل مساره بعد إعادة الإرسال…', 'إعادة الطلب للتعديل'], reply: [ic('chat') + 'ردّك', 'اكتب ردك…', 'إرسال الرد'] }[mode];
+    var box = document.getElementById('tkBox'); if (!box) return; MODE = mode; box.hidden = false;
+    var lab = { reject: [ic('x') + 'سبب عدم الاعتماد', 'اكتب السبب؛ يصل إلى الموظف مع قرار الرفض…', 'تأكيد الرفض'], ask: [ic('chat') + 'استفسار إلى الموظف', 'اكتب سؤالك، ويصل الموظف بريد وإشعار للرد…', 'إرسال الاستفسار'], edit: [ic('edit') + 'طلب تعديل من الموظف', 'اكتب ما تريد تعديله؛ يُعاد الطلب إليه ويكمل مساره بعد إعادة الإرسال…', 'إعادة الطلب للتعديل'], reply: [ic('chat') + 'ردّك', 'اكتب ردك…', 'إرسال الرد'] }[mode];
+    document.getElementById('tkSend').className = 'btn sm ' + (mode === 'reject' ? 'danger' : 'goldb');
     document.getElementById('tkMode').innerHTML = lab[0]; document.getElementById('tkMode').className = 'tkmode ' + mode;
-    var t = document.getElementById('tkTxt'); t.placeholder = lab[1]; document.getElementById('tkSend').innerHTML = ic(mode === 'edit' ? 'edit' : 'send') + lab[2]; document.getElementById('tkErr').textContent = '';
+    var t = document.getElementById('tkTxt'); t.placeholder = lab[1]; document.getElementById('tkSend').innerHTML = ic(mode === 'edit' ? 'edit' : mode === 'reject' ? 'x' : 'send') + lab[2]; document.getElementById('tkErr').textContent = '';
     box.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(function () { t.focus(); }, 250);
   };
+  var tt0 = document.getElementById('tkTxt'); if (tt0) tt0.oninput = function () { var e1 = document.getElementById('tkErr'), e2 = document.getElementById('rqErr'); if (e1) e1.textContent = ''; if (e2) e2.textContent = ''; };
   if (ask) ask.onclick = function () { openBox('ask'); };
   if (req) req.onclick = function () { openBox('edit'); };
   if (rep) rep.onclick = function () { openBox('reply'); };
-  var cx = document.getElementById('tkCancel'); if (cx) cx.onclick = function () { document.getElementById('tkBox').hidden = true; MODE = ''; if (note) note.hidden = false; };
+  if (rj) rj.onclick = function () { openBox('reject'); };
+  var cx = document.getElementById('tkCancel'); if (cx) cx.onclick = function () { document.getElementById('tkBox').hidden = true; MODE = ''; };
   var sd = document.getElementById('tkSend'); if (sd) sd.onclick = function () {
     var t = document.getElementById('tkTxt'), er = document.getElementById('tkErr'), v = t.value.trim();
-    if (v.length < 2) { er.textContent = MODE === 'edit' ? 'اكتب ما تريد من الموظف تعديله.' : 'اكتب رسالتك.'; t.focus(); return; }
+    if (v.length < (MODE === 'reject' ? 3 : 2)) { er.textContent = MODE === 'reject' ? 'اكتب سبب الرفض ليصل إلى الموظف.' : MODE === 'edit' ? 'اكتب ما تريد من الموظف تعديله.' : 'اكتب رسالتك.'; t.focus(); return; }
+    if (MODE === 'reject') {
+      /* يمر عبر زر الرفض الأصلي (نفس التحقق والإرسال)، ويظهر خطؤه هنا */
+      var nt = document.getElementById('rqNote'), oe = document.getElementById('rqErr'); if (nt) nt.value = v;
+      if (oe && oe.parentNode !== er.parentNode) { oe.className = 'lerr'; er.parentNode.insertBefore(oe, er); er.textContent = ''; }
+      rej.click(); return;
+    }
     sd.disabled = true;
     api({ action: 'reqMsg', no: r.no, kind: MODE, body: v }).then(function (j) {
       seed('reqs', reqRows().map(function (x) { return x.no === r.no ? Object.assign(j.request, { mine: x.mine }) : x; }));
