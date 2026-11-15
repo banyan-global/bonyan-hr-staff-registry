@@ -1568,6 +1568,7 @@ var RW_STEPS = [['نوع الطلب', 'إجازة أو استئذان أو غي�
 function rwDays() { var d = RW.d; if (!d.from || !d.to) return 0; var a = pdate(d.from), b = pdate(d.to); return a && b && b >= a ? Math.round((b - a) / DAY) + 1 : 0; }
 function rwField(id, label, html, req, wide) { return '<div class="fld' + (wide ? ' wide' : '') + '"><label for="' + id + '">' + label + (req ? ' <i class="rq">*</i>' : '') + '</label>' + html + '</div>'; }
 function rwIn(k, type, ph, extra) { return '<input id="rw_' + k + '" data-rw="' + k + '" type="' + (type || 'text') + '" value="' + esc(RW.d[k] == null ? '' : RW.d[k]) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + (extra || '') + '>'; }
+var LV_REL = ['الأب أو الأم', 'الزوج أو الزوجة', 'الابن أو الابنة', 'الأخ أو الأخت', 'الجد أو الجدة', 'قريب آخر'];
 function rwSeg(k, opts) { return '<div class="seg2" role="group">' + opts.map(function (o) { return '<button type="button" data-rwseg="' + k + '" data-v="' + esc(o) + '" aria-pressed="' + (RW.d[k] === o) + '">' + esc(o) + '</button>'; }).join('') + '</div>'; }
 function rwStaff() { return RW.ref ? byRef(RW.ref) : (role === 'staff' ? ME : null); }
 function rwNeedSup(t) { t = t || RW.type || 'leave'; var rt = rtOf(rwStaff()); if (rt) return !!rt.mgr; var f = formOf(t); return f ? f.steps.some(function (x) { return x.kind === 'manager'; }) : t === 'leave'; }
@@ -1655,6 +1656,10 @@ function rwBody() {
       '<div class="fld wide">' + (rwDays() ? '<div class="note">' + ic('calendar') + '<span>مدة الإجازة <b>' + dn(rwDays()) + '</b> أيامًا تقويمية شاملة يومي البداية والنهاية.</span></div>' + (typeof quotaNote === 'function' ? quotaNote(RW.d.kind, rwDays()) : '') : (RW.d.from && RW.d.to ? '<div class="note warn">' + ic('alert') + '<span>تاريخ النهاية يجب أن يكون في يوم البداية أو بعده.</span></div>' : '')) + '</div>' +
       (med ? rwField('rw_medOrg', 'الجهة الطبية', rwIn('medOrg', 'text', 'المستشفى أو المركز الصحي'), true) + rwField('rw_medNo', 'رقم التقرير الطبي', rwIn('medNo', 'text', 'اختياري', ' dir="ltr"')) +
         '<div class="fld wide"><small class="fhint">' + ic('info') + 'سلّم أصل التقرير الطبي للموارد البشرية عند عودتك.</small></div>' : '') +
+      (RW.d.kind === 'وفاة قريب' ? '<div class="fld wide"><label>صلة القرابة بالمتوفى <i class="rq">*</i></label>' + ssel('rwRel', LV_REL.map(function (x) { return { v: x, n: x, ic: 'users' }; }), RW.d.relation || '', 'اختر صلة القرابة', function (v) { rwSync(); RW.d.relation = v; RW.err = ''; render(); }, 'صلة القرابة') + '<small class="fhint">تختلف مدة إجازة الوفاة بحسب درجة القرابة.</small></div>' : '') +
+      rwField('rw_abroad', 'هل ستسافر أثناء الإجازة؟', rwSeg('abroad', ['لا', 'داخل البلد', 'خارج البلد']), true, true) +
+      (RW.d.abroad === 'خارج البلد' ? rwField('rw_exitVisa', 'تحتاج تأشيرة خروج وعودة؟', rwSeg('exitVisa', ['نعم', 'لا']), false, true) +
+        '<div class="fld wide"><div class="note">' + ic('plane') + '<span>لتذاكر السفر لك ولمن يرافقك من أسرتك، قدّم بعد هذا الطلب «أمر إركاب» بنوع <b>سفر في إجازة</b>.</span></div></div>' : '') +
       rwField('rw_reason', 'سبب الإجازة', '<textarea id="rw_reason" data-rw="reason" maxlength="1500" placeholder="اكتب السبب باختصار">' + esc(RW.d.reason || '') + '</textarea>', true, true) +
       rwSupField('leave') +
       '<div class="fld wide"><div class="fsub">' + ic('users') + 'الموظف البديل أثناء الإجازة</div></div>' +
@@ -1667,6 +1672,8 @@ function rwBody() {
   if (RW.type === 'leave') { var sp = ((formsData() || {}).sups || []).filter(function (x) { return x.id === d.supervisor; })[0];
     rows.push(['الإجازة', esc(d.kind) + '، ' + dn(rwDays())], ['المدة', fdx(pdate(d.from)) + ' إلى ' + fdx(pdate(d.to))], ['السبب', esc(d.reason || '')]);
     if (d.kind === 'مرضية' && d.medOrg) rows.push(['الجهة الطبية', esc(d.medOrg) + (d.medNo ? ' · تقرير <span class="ltr">' + esc(d.medNo) + '</span>' : '')]);
+    if (d.kind === 'وفاة قريب' && d.relation) rows.push(['صلة القرابة بالمتوفى', esc(d.relation)]);
+    if (d.abroad) rows.push(['السفر أثناء الإجازة', d.abroad === 'لا' ? 'لا يسافر' : esc(d.abroad) + (d.abroad === 'خارج البلد' && d.exitVisa === 'نعم' ? ' · يحتاج تأشيرة خروج وعودة' : '')]);
     if (sp) rows.push(['المسؤول المباشر', esc(sp.name)]);
     rows.push(['الموظف البديل', esc(d.substitute || '') + (d.subTitle ? ' · ' + esc(d.subTitle) : '') + (d.subNo ? ' · <span class="ltr">' + esc(d.subNo) + '</span>' : '')], ['رقم التواصل', '<span class="ltr">' + esc(d.contact || '') + '</span>']);
     if (d.address) rows.push(['العنوان أثناء الإجازة', esc(d.address)]); }
@@ -1710,6 +1717,8 @@ function rwValidate() {
     if (RW.type !== 'leave') return rwFields() ? rwSchemaCheck() : 'انتظر حتى يكتمل تحميل النموذج';
     if (!d.kind) return 'اختر نوع الإجازة'; if (!rwDays()) return 'تاريخ النهاية يجب أن يكون في يوم البداية أو بعده';
     if (d.kind === 'مرضية' && String(d.medOrg || '').trim().length < 2) return 'اكتب الجهة الطبية التي أصدرت التقرير';
+    if (d.kind === 'وفاة قريب' && !d.relation) return 'اختر صلة القرابة بالمتوفى';
+    if (!d.abroad) return 'حدّد هل ستسافر أثناء الإجازة';
     if (String(d.reason || '').trim().length < 3) return 'اكتب سبب الإجازة (3 أحرف على الأقل)';
     if (rwNeedSup() && !d.supervisor) return 'اختر المسؤول المباشر';
     if (!String(d.substitute || '').trim() || !String(d.subTitle || '').trim()) return 'اكتب اسم الموظف البديل ومسماه الوظيفي';
@@ -1790,7 +1799,7 @@ VIEWS.myreq = function () {
 /* ---------- the official request sheet (view · decide · print) ---------- */
 function reqSheetHTML(r) {
   var d = r.data || {}, st = r.staff || {}, kv = function (a) { return '<div class="srow">' + a.map(function (x) { return '<div class="sf"><span>' + x[0] + '</span><b>' + (x[1] === '' || x[1] == null ? '—' : esc(x[1])) + '</b></div>'; }).join('') + '</div>'; };
-  var det = r.type === 'leave' ? kv([['نوع الإجازة', d.kind], ['من', fdx(pdate(d.from))], ['إلى', fdx(pdate(d.to))], ['المدة', dn(d.days || 0)]]) + (d.medOrg ? kv([['الجهة الطبية', d.medOrg], ['رقم التقرير الطبي', d.medNo || '']]) : '') + kv([['المسؤول المباشر', d.supName || ''], ['رقم التواصل', d.contact], ['العنوان أثناء الإجازة', d.address || '']]) +
+  var det = r.type === 'leave' ? kv([['نوع الإجازة', d.kind], ['من', fdx(pdate(d.from))], ['إلى', fdx(pdate(d.to))], ['المدة', dn(d.days || 0)]]) + (d.medOrg ? kv([['الجهة الطبية', d.medOrg], ['رقم التقرير الطبي', d.medNo || '']]) : '') + (d.relation || d.abroad ? kv([['صلة القرابة بالمتوفى', d.relation || ''], ['السفر أثناء الإجازة', d.abroad === 'لا' ? 'لا يسافر' : d.abroad || ''], ['تأشيرة خروج وعودة', d.abroad === 'خارج البلد' ? (d.exitVisa === 'نعم' ? 'يحتاجها' : d.exitVisa === 'لا' ? 'لا يحتاجها' : '') : '']].filter(function (x) { return x[1]; })) : '') + kv([['المسؤول المباشر', d.supName || ''], ['رقم التواصل', d.contact], ['العنوان أثناء الإجازة', d.address || '']]) +
       (d.substitute ? kv([['الموظف البديل', d.substitute], ['مسماه الوظيفي', d.subTitle || ''], ['رقمه الوظيفي', d.subNo || '']]) : '')
     : (r.view || []).filter(function (x) { return !x[3]; }).reduce(function (a, x, i, A) { if (i % 3 === 0) a.push(A.slice(i, i + 3)); return a; }, []).map(function (g) { return kv(g.map(function (x) { return [x[0], /^\d{4}-\d{2}-\d{2}$/.test(x[1]) ? fdx(pdate(x[1])) : /^\d{4}-\d{2}$/.test(x[1]) ? fmonth(x[1]) : x[1]]; })); }).join('');
   /* أمر الإركاب: بيانات الجواز من ملف المنسوب للحجز */
@@ -3037,6 +3046,10 @@ function rwSchemaBody() {
   F.forEach(function (f) {
     var k = f[0], lab = f[1], kind = f[2], req = !!f[3], opt = f[4], ph = f[5] || '', id = 'rw_' + k;
     if (RW.type === 'access' && k === 'until' && d.dur !== 'مؤقتة') return;
+    if (RW.type === 'travel' && k === 'advance' && d.kind === 'سفر في إجازة') return;
+    if (kind === 'entity') { if (!d[k]) { var me0 = rwStaff(); if (me0 && me0.r && me0.r.entity) d[k] = me0.r.entity; }
+      h += '<div class="fld"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, (CFG.ENTITIES || []).filter(function (e) { return e.v !== 'other' && e.ar; }).map(function (e) { return { v: e.ar, n: e.ar, ic: 'building' }; }), d[k] || '', 'اختر الجهة', function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab) + '</div>'; return; }
+    if (kind === 'url') { h += rwField(id, lab, rwIn(k, 'url', ph, ' dir="ltr" autocomplete="off"'), req, true); return; }
     /* أكثر من أربعة خيارات: قائمة منسدلة بدل الأزرار حتى لا تزدحم على الجوال */
     if (kind === 'seg' && opt.length > 4) h += '<div class="fld wide"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, opt.map(function (o) { return { v: o, n: o, ic: RT2[RW.type] ? RT2[RW.type][1] : 'doc' }; }), d[k] || '', 'اختر ' + lab, function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab) + '</div>';
     else if (kind === 'seg') h += rwField(id, lab, rwSeg(k, opt), req, true);
@@ -3076,7 +3089,9 @@ function rwExtra() {
   if (t === 'loan' && c.inst) return '<div class="note">' + ic('coins') + '<span>القسط الشهري <b>' + n(c.inst) + ' ر.س</b>' + (c.end ? ' من ' + fmonth(RW.d.start) + ' حتى ' + fmonth(c.end) : '') + '. تظهر الأقساط في استقطاعات الرواتب كل شهر.</span></div>';
   if (t === 'resume' && c.late != null) return c.before ? '<div class="note warn">' + ic('alert') + '<span>تاريخ المباشرة قبل نهاية الإجازة أو المهمة المرتبطة.</span></div>' : '<div class="note' + (c.late ? ' warn' : '') + '">' + ic(c.late ? 'alert' : 'check') + '<span>' + (c.late ? 'تأخرت عن العودة <b>' + dn(c.late) + '</b> عمل، تُخصم من رصيدك السنوي بعد الاعتماد.' : 'عدت في موعدك. شكرًا لك.') + '</span></div>';
   if (t === 'train' && c.days) return '<div class="note">' + ic('calendar') + '<span>مدة البرنامج <b>' + dn(c.days) + '</b></span></div>';
-  if (t === 'travel' && (c.days || c.scope)) return '<div class="note">' + ic('plane') + '<span>' + (c.scope ? 'مهمة <b>' + c.scope + '</b>' : '') + (c.scope && c.days ? '، ' : '') + (c.days ? 'مدتها <b>' + dn(c.days) + '</b> شاملة يومي الرحلة والعودة' : '') + '. تُحتسب أيامها حضورًا مبرّرًا بعد الاعتماد.</span></div>';
+  if (t === 'travel' && (c.days || c.scope)) return RW.d.kind === 'سفر في إجازة'
+    ? '<div class="note">' + ic('plane') + '<span>سفر' + (c.scope ? ' <b>' + c.scope + '</b>' : '') + ' في إجازة' + (c.days ? '، مدته <b>' + dn(c.days) + '</b>' : '') + '. تأكد أن عندك طلب إجازة بهذه التواريخ.</span></div>'
+    : '<div class="note">' + ic('plane') + '<span>' + (c.scope ? 'مهمة <b>' + c.scope + '</b>' : '') + (c.scope && c.days ? '، ' : '') + (c.days ? 'مدتها <b>' + dn(c.days) + '</b> شاملة يومي الرحلة والعودة' : '') + '. تُحتسب أيامها حضورًا مبرّرًا بعد الاعتماد.</span></div>';
   if (t === 'travel' && RW.d.from && RW.d.to && !c.days) return '<div class="note warn">' + ic('alert') + '<span>تاريخ العودة يجب أن يكون في يوم الرحلة أو بعده.</span></div>';
   if (t === 'safety' && /حرجة|مرتفعة/.test(RW.d.level || '')) return '<div class="note warn">' + ic('alert') + '<span>إن كان الخطر قائمًا الآن فأبلغ مسؤولك هاتفيًا فورًا، ثم أكمل البلاغ هنا للتوثيق.</span></div>';
   return '';
@@ -4116,22 +4131,24 @@ document.addEventListener('click', function (e) {
 }, true);
 
 /* ---------- المرافقون من الأسرة في أمر الإركاب ---------- */
-var CMP_REL = ['الزوجة', 'الزوج', 'ابن', 'ابنة', 'الأب', 'الأم', 'أخ', 'أخت', 'أخرى'], CMP_YES = 'نعم، يرافقني أفراد من أسرتي';
+var CMP_REL = ['الزوجة', 'الزوج', 'ابن', 'ابنة', 'الأب', 'الأم', 'أخ', 'أخت', 'أخرى'], CMP_YES = 'نعم';
 function cmpOn() { return RW.d.family === CMP_YES; }
 function cmpList() { if (!Array.isArray(RW.d.companions)) RW.d.companions = []; return RW.d.companions; }
 function cmpAge(b) { var x = pdate(b), at = pdate(RW.d.from) || new Date(); if (!x) return ''; var a = at.getFullYear() - x.getFullYear(); if (at.getMonth() < x.getMonth() || (at.getMonth() === x.getMonth() && at.getDate() < x.getDate())) a--; return a >= 0 ? (a < 2 ? 'رضيع' : (a < 12 ? 'طفل، ' : '') + (a === 2 ? 'سنتان' : a <= 10 ? a + ' سنوات' : a + ' سنة')) : ''; }
 function cmpHTML() {
   if (!cmpOn()) return '';
   var L = cmpList(); if (!L.length) L.push({});
-  return '<div class="fld wide cmpw"><label>المرافقون من الأسرة <i class="rq">*</i></label><div class="cmpl">' + L.map(function (p, i) {
+  var cnt = [1, 2, 3, 4, 5, 6, 7, 8].map(function (k) { return { v: String(k), n: k === 1 ? 'مرافق واحد' : k === 2 ? 'مرافقان' : k + (k <= 10 ? ' مرافقين' : ' مرافقًا'), ic: 'users' }; });
+  return '<div class="fld"><label>عدد المرافقين <i class="rq">*</i></label>' + ssel('cmpCount', cnt, String(L.length), 'اختر العدد', function (v) { rwSync(); var L2 = cmpList(), k = +v; while (L2.length < k) L2.push({}); L2.length = k; RW.err = ''; render(); }, 'عدد المرافقين') + '</div>' +
+    '<div class="fld wide cmpw"><label>بيانات المرافقين <i class="rq">*</i></label><div class="cmpl">' + L.map(function (p, i) {
     var age = cmpAge(p.birth);
     return '<div class="cmp"><div class="cmph"><span class="cmpn">' + (i + 1) + '</span><b>' + (p.name ? esc(p.name) : 'المرافق ' + (i + 1)) + '</b>' + (p.rel ? '<em>' + esc(p.rel) + '</em>' : '') + (age ? '<small>' + age + '</small>' : '') +
-      (L.length > 1 ? '<button type="button" class="cmpdel" data-cmpdel="' + i + '" aria-label="حذف المرافق">' + ic('trash') + '</button>' : '') + '</div><div class="cmpg">' +
+      '</div><div class="cmpg">' +
       '<div class="fld"><label>الاسم كما في الجواز</label><input type="text" data-cmp="' + i + ':name" value="' + esc(p.name || '') + '" maxlength="80" placeholder="الاسم الكامل"></div>' +
       '<div class="fld"><label>صلة القرابة</label>' + ssel('cmpRel' + i, CMP_REL.map(function (r) { return { v: r, n: r, ic: 'users' }; }), p.rel || '', 'اختر صلة القرابة', function (v) { rwSync(); cmpList()[i].rel = v; RW.err = ''; render(); }, 'صلة القرابة') + '</div>' +
       '<div class="fld"><label>تاريخ الميلاد</label><input type="date" data-cmp="' + i + ':birth" value="' + esc(p.birth || '') + '" max="' + ymd(new Date()) + '"></div>' +
       '<div class="fld"><label>رقم الجواز أو الهوية</label><input type="text" dir="ltr" data-cmp="' + i + ':doc" value="' + esc(p.doc || '') + '" maxlength="30" placeholder="A1234567" autocomplete="off"></div></div></div>';
-  }).join('') + '</div>' + (L.length < 8 ? '<button type="button" class="btn sm cmpadd" data-cmpadd="1">' + ic('plus') + 'إضافة مرافق آخر</button>' : '') +
+  }).join('') + '</div>' +
     '<small class="fhint">تُستخدم هذه البيانات لحجز التذاكر والسكن فقط، فاكتب الاسم ورقم الجواز كما هما في الجواز.</small></div>';
 }
 (function () {

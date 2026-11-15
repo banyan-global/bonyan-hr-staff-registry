@@ -30,11 +30,11 @@ const REQ_TYPES = [
    القوائم التي تزيد على أربعة خيارات تظهر في النموذج قائمةً منسدلة بدل الأزرار (حتى لا تزدحم على الجوال) */
 const REQ_SCHEMA = [
     /* أمر الإركاب: بيانات الجواز والميلاد والتواصل والجهة تُؤخذ من ملف المنسوب، فلا يُعاد طلبها (كانت في النظام السابق) */
-    'travel' => [['fromCountry', 'دولة الانطلاق', 'country', 1], ['fromCity', 'مدينة الانطلاق', 'city', 1, 'fromCountry'], ['toCountry', 'دولة الوجهة', 'country', 1], ['toCity', 'مدينة الوجهة', 'city', 1, 'toCountry'],
+    'travel' => [['kind', 'نوع السفر', 'seg', 1, ['مهمة رسمية', 'سفر في إجازة']], ['fromCountry', 'دولة الانطلاق', 'country', 1], ['fromCity', 'مدينة الانطلاق', 'city', 1, 'fromCountry'], ['toCountry', 'دولة الوجهة', 'country', 1], ['toCity', 'مدينة الوجهة', 'city', 1, 'toCountry'],
         ['from', 'تاريخ الرحلة', 'date', 1], ['to', 'تاريخ العودة', 'date', 1], ['transport', 'وسيلة السفر', 'seg', 1, ['طيران', 'بري', 'لا يلزم']], ['stay', 'السكن', 'seg', 1, ['يلزم سكن', 'لا يلزم']],
-        ['family', 'هل يرافقك أحد من أسرتك؟', 'seg', 0, ['لا', 'نعم، يرافقني أفراد من أسرتي']], ['companions', 'المرافقون من الأسرة', 'people', 0],
-        ['advance', 'سلفة مصاريف المهمة (ر.س)', 'money', 0, [0, 1000000]], ['purpose', 'الغرض من المهمة', 'area', 1, [3, 1500], 'مثال: زيارة إشرافية لمراكز التدريب'],
-        ['booking', 'ملاحظات الحجز', 'area', 0, [0, 600], 'اختياري: موعد مفضّل للرحلة أو شركة طيران أو مرافق']],
+        ['family', 'هل يرافقك أحد من أسرتك؟', 'seg', 0, ['لا', 'نعم']], ['companions', 'المرافقون من الأسرة', 'people', 0],
+        ['advance', 'سلفة مصاريف المهمة (ر.س)', 'money', 0, [0, 1000000]], ['purpose', 'الغرض من السفر', 'area', 1, [3, 1500], 'مثال: زيارة إشرافية لمراكز التدريب، أو قضاء الإجازة السنوية مع الأسرة'],
+        ['booking', 'ملاحظات الحجز', 'area', 0, [0, 600], 'اختياري: موعد أو رحلة مفضّلة، شركة طيران، مقعد أو وجبة خاصة']],
     'cert' => [['kind', 'نوع الخطاب', 'seg', 1, ['تعريف بالراتب', 'تعريف بدون راتب', 'شهادة خبرة']], ['purpose', 'الغرض من الخطاب', 'seg', 1, ['بنك', 'سفارة', 'جهة حكومية', 'أخرى']],
         ['to', 'الجهة الموجّه إليها', 'text', 1, [2, 160], 'مثال: البنك الأهلي، سفارة إندونيسيا'], ['lang', 'لغة الخطاب', 'seg', 1, ['العربية', 'الإنجليزية']], ['note', 'ملاحظات', 'area', 0, [0, 800]]],
     'access' => [['system', 'النظام', 'text', 1, [2, 120], 'مثال: منصة مسار، البريد الرسمي، نظام المحاسبة'], ['perm', 'الصلاحية المطلوبة', 'text', 1, [2, 200], 'مثال: اطلاع على تقارير الحضور'],
@@ -48,11 +48,11 @@ const REQ_SCHEMA = [
     'loan' => [['amount', 'مبلغ السلفة', 'money', 1, [100, 200000]], ['months', 'عدد الأقساط الشهرية', 'int', 1, [1, 24]], ['start', 'شهر بداية الخصم', 'month', 1], ['reason', 'سبب السلفة', 'area', 1, [3, 800]]],
     'resume' => [['kind', 'نوع المباشرة', 'seg', 1, ['عودة من إجازة', 'عودة من مهمة رسمية', 'تعيين جديد']], ['link', 'الطلب المرتبط', 'reqref', 0, ['leave', 'travel']], ['day', 'تاريخ المباشرة الفعلي', 'date', 1], ['note', 'ملاحظات', 'area', 0, [0, 800]]],
     'train' => [['program', 'اسم البرنامج التدريبي', 'text', 1, [3, 160]], ['provider', 'الجهة المنفذة', 'text', 1, [2, 160]], ['mode', 'طريقة التنفيذ', 'seg', 1, ['حضوري', 'عن بعد', 'مدمج']], ['from', 'تاريخ البداية', 'date', 1], ['to', 'تاريخ النهاية', 'date', 1],
-        ['cost', 'التكلفة التقديرية (ر.س)', 'money', 0, [0, 1000000]], ['benefit', 'العائد المتوقع على العمل', 'area', 1, [3, 1200]]],
+        ['cost', 'التكلفة التقديرية (ر.س)', 'money', 0, [0, 1000000]], ['url', 'رابط البرنامج أو إعلانه', 'url', 0, [0, 300], 'اختياري: https://…'], ['benefit', 'العائد المتوقع على العمل', 'area', 1, [3, 1200]]],
     'resign' => [['lastDay', 'آخر يوم عمل مقترح', 'date', 1], ['reason', 'أسباب الاستقالة', 'area', 1, [3, 1500]], ['note', 'ملاحظات للتسليم', 'area', 0, [0, 800], 'المهام التي ستسلّمها ولمن']],
     'clear' => [['why', 'سبب إخلاء الطرف', 'seg', 1, ['استقالة', 'انتهاء العقد', 'إنهاء خدمة', 'نقل إلى جهة أخرى']], ['link', 'طلب الاستقالة المرتبط', 'reqref', 0, ['resign']], ['lastDay', 'آخر يوم عمل', 'date', 1],
         ['dues', 'المستحقات والالتزامات', 'area', 0, [0, 1200], 'مثال: رصيد إجازات، سلفة متبقية، مكافأة نهاية الخدمة'], ['note', 'ملاحظات', 'area', 0, [0, 800]]],
-    'hire' => [['title', 'المسمى الوظيفي المطلوب', 'text', 1, [2, 120]], ['entity', 'الجهة', 'text', 1, [2, 120]], ['department', 'الإدارة أو القسم', 'text', 0, [0, 120]], ['count', 'العدد المطلوب', 'int', 1, [1, 50]],
+    'hire' => [['title', 'المسمى الوظيفي المطلوب', 'text', 1, [2, 120]], ['entity', 'الجهة', 'entity', 1, [2, 120]], ['country', 'دولة العمل', 'country', 1], ['department', 'الإدارة أو القسم', 'text', 0, [0, 120]], ['count', 'العدد المطلوب', 'int', 1, [1, 50]],
         ['contract', 'نوع العقد', 'seg', 1, ['دوام كامل', 'دوام جزئي', 'مؤقت', 'تعاقد']], ['needBy', 'تاريخ الاحتياج', 'date', 1], ['budget', 'الراتب أو الميزانية التقديرية', 'money', 0, [0, 10000000]],
         ['quals', 'المؤهلات والخبرات المطلوبة', 'area', 1, [3, 1500]], ['reason', 'مبرر الاحتياج', 'area', 1, [3, 1500]]],
 ];
@@ -79,6 +79,7 @@ const REQ_ST = ['pending' => 'قيد الإجراء', 'approved' => 'معتمد'
 /* أنواع الإجازة الستة في النظام السابق، و«بدون راتب» التي كانت في المنصة */
 const LEAVE_KINDS = ['اعتيادية (سنوية)', 'تعويضية', 'مرضية', 'دراسة / تدريب', 'طارئة (اضطرارية)', 'أمومة', 'حج', 'زواج', 'وفاة قريب', 'بدون راتب', 'أخرى'];
 /* الأنواع التي لها رصيد مستقل لا يُتجاوز (المرضية تُتجاوز بأجر مخفّض فتُنبّه ولا تُمنع) */
+const LEAVE_RELATIONS = ['الأب أو الأم', 'الزوج أو الزوجة', 'الابن أو الابنة', 'الأخ أو الأخت', 'الجد أو الجدة', 'قريب آخر'];
 const LEAVE_STRICT = ['طارئة (اضطرارية)', 'أمومة', 'حج', 'زواج', 'وفاة قريب'];
 const LEAVE_KIND_OLD = ['اعتيادية' => 'اعتيادية (سنوية)', 'اضطرارية' => 'طارئة (اضطرارية)'];
 const CERT_KINDS = ['تعريف بالراتب', 'شهادة خبرة', 'تعريف بدون راتب'];
@@ -100,6 +101,10 @@ function req_clean_leave(array $d, bool $strict = true): array {
         'supervisor' => req_str($d['supervisor'] ?? '', 40), 'supName' => req_str($d['supName'] ?? '', 120)];
     /* الإجازة المرضية: الجهة الطبية ورقم التقرير (كنموذج HR-02 في مسار) */
     if ($o['kind'] === 'مرضية') { $o['medOrg'] = req_str($d['medOrg'] ?? '', 160); $o['medNo'] = req_str($d['medNo'] ?? '', 60); }
+    /* إجازة الوفاة تختلف مدتها بدرجة القرابة، والسفر خارج البلد قد يلزمه تأشيرة خروج وعودة وتذاكر */
+    if ($o['kind'] === 'وفاة قريب') $o['relation'] = in_array($d['relation'] ?? '', LEAVE_RELATIONS, true) ? (string)$d['relation'] : '';
+    $o['abroad'] = in_array($d['abroad'] ?? '', ['لا', 'داخل البلد', 'خارج البلد'], true) ? (string)$d['abroad'] : '';
+    if ($o['abroad'] === 'خارج البلد') $o['exitVisa'] = in_array($d['exitVisa'] ?? '', ['نعم', 'لا'], true) ? (string)$d['exitVisa'] : '';
     if (!$o['kind']) throw new HttpError('اختر نوع الإجازة');
     if (!$o['from'] || !$o['to'] || $o['to'] < $o['from']) throw new HttpError('تاريخ النهاية يجب أن يكون في يوم البداية أو بعده');
     $o['days'] = req_days($o['from'], $o['to']);
@@ -109,6 +114,8 @@ function req_clean_leave(array $d, bool $strict = true): array {
         if ($o['substitute'] === '' || $o['subTitle'] === '') throw new HttpError('اكتب اسم الموظف البديل ومسماه الوظيفي');
         if (strlen(preg_replace('/\D/', '', to_ascii_digits($o['contact']))) < 6) throw new HttpError('اكتب رقم تواصل صحيحًا مع رمز الدولة');
         if ($o['kind'] === 'مرضية' && mb_strlen(trim($o['medOrg'])) < 2) throw new HttpError('اكتب الجهة الطبية التي أصدرت التقرير');
+        if ($o['kind'] === 'وفاة قريب' && ($o['relation'] ?? '') === '') throw new HttpError('اختر صلة القرابة بالمتوفى');
+        if ($o['abroad'] === '') throw new HttpError('حدّد هل ستسافر أثناء الإجازة');
     }
     return $o;
 }
@@ -128,6 +135,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
             if ($v !== '' && is_array($opt) && ($v < $opt[0] || $v > $opt[1])) throw new HttpError($lab . ': القيمة بين ' . $opt[0] . ' و' . $opt[1]);
         } elseif ($kind === 'seg') $v = in_array($v, (array)$opt, true) ? $v : '';
         elseif ($kind === 'people') $v = req_clean_people($v);
+        elseif ($kind === 'url') { $v = req_str(trim((string)$v), 300); if ($v !== '' && !preg_match('~^https?://[^\s<>"]+$~i', $v)) throw new HttpError($lab . ': اكتب رابطًا كاملًا يبدأ بـ https://'); }
         elseif ($kind === 'reqref') {
             $v = strtoupper(trim((string)$v));
             if ($v !== '') { $x = q1("SELECT * FROM requests WHERE no=? AND ref=? AND status='approved'", [$v, $ref]); if (!$x || !in_array($x['type'], (array)$opt, true)) throw new HttpError('الطلب المرتبط غير صحيح'); }
@@ -200,7 +208,8 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
         if ($o['to'] < $o['from']) throw new HttpError('تاريخ العودة يجب أن يكون في يوم الرحلة أو بعده');
         if ($o['from'] < date('Y-m-d', strtotime('-30 days'))) throw new HttpError('تاريخ الرحلة أقدم من 30 يومًا؛ تواصل مع الموارد البشرية');
         $o['days'] = req_days($o['from'], $o['to']);
-        if ($o['days'] > 180) throw new HttpError('مدة المهمة أطول من المسموح في طلب واحد');
+        if ($o['days'] > 180) throw new HttpError('مدة السفر أطول من المسموح في طلب واحد');
+        if ($o['kind'] === 'سفر في إجازة') $o['advance'] = ''; /* سلفة المصاريف للمهمات الرسمية فقط */
         $o['scope'] = $o['fromCountry'] === $o['toCountry'] ? 'داخلية' : 'خارجية';
         $o['origin'] = $o['fromCity'] . '، ' . $o['fromCountry']; $o['dest'] = $o['toCity'] . '، ' . $o['toCountry'];
         $o['hotel'] = $o['stay'] === 'يلزم سكن';
@@ -214,7 +223,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
             elseif (!$pe) $o['passNote'] = 'تاريخ انتهاء الجواز غير مسجّل في ملف المنسوب';
         }
         /* لا تعارض بين أمر الإركاب وأي طلب آخر (قد تكون التذكرة لسفر الإجازة نفسها) */
-        if (($o['family'] ?? '') !== 'نعم، يرافقني أفراد من أسرتي') { $o['family'] = 'لا'; $o['companions'] = []; }
+        if (($o['family'] ?? '') !== 'نعم') { $o['family'] = 'لا'; $o['companions'] = []; }
         elseif (!$o['companions']) throw new HttpError('أضف بيانات من يرافقك من أسرتك (مرافق واحد على الأقل)');
     }
     if ($type === 'access') {
@@ -334,7 +343,7 @@ function req_sups_save(array $b): array {
    أو «المسؤول المباشر» (للإجازة: يختاره المنسوب من القائمة). التعديل يسري على الطلبات الجديدة فقط. */
 const REQ_FORM_INFO = [
     'leave'  => 'إجازة اعتيادية أو تعويضية أو مرضية أو دراسية أو طارئة، بتاريخ البداية والنهاية والسبب والموظف البديل، والجهة الطبية للمرضية.',
-    'travel' => 'أمر إركاب لمهمة رسمية: من أين وإلى أين، وتاريخا الرحلة والعودة، والغرض، ووسيلة السفر والسكن والسلفة. بيانات الجواز والميلاد والتواصل تُؤخذ من ملف المنسوب.',
+    'travel' => 'أمر إركاب لمهمة رسمية أو لسفر في إجازة: من أين وإلى أين، وتاريخا الرحلة والعودة، والغرض، ووسيلة السفر والسكن والسلفة، ومن يرافقه من أسرته. بيانات الجواز والميلاد والتواصل تُؤخذ من ملف المنسوب.',
     'cert'   => 'خطاب تعريف بالراتب أو بدونه أو شهادة خبرة، بغرضه والجهة الموجّه إليها ولغته.',
     'perm'   => 'تأخر صباحي أو خروج مبكر أو خروج أثناء الدوام، بالتاريخ والساعات والسبب. الاستئذان المعتمد يبرّر التأخير في كشف الحضور الشهري.',
     'ot'     => 'ساعات عمل خارج الدوام بالتاريخ والوقت والمهام. تظهر الساعات المعتمدة في الحضور وفي مستحقات الشهر بالرواتب.',
@@ -556,7 +565,7 @@ function req_t12(string $v): string {
 function req_summary(array $r): string {
     $d = json_decode($r['data'], true) ?: [];
     if ($r['type'] === 'leave') return 'إجازة ' . leave_kind_norm((string)($d['kind'] ?? '')) . ' · ' . ar_days((int)($d['days'] ?? 0)) . ' · من ' . ($d['from'] ?? '') . ' إلى ' . ($d['to'] ?? '');
-    if ($r['type'] === 'travel') return 'مهمة إلى ' . ($d['dest'] ?? '') . ' · ' . ar_days((int)($d['days'] ?? 0)) . ' · من ' . ($d['from'] ?? '') . (!empty($d['companions']) ? ' · مع ' . count($d['companions']) . ' من الأسرة' : '');
+    if ($r['type'] === 'travel') return (($d['kind'] ?? '') === 'سفر في إجازة' ? 'سفر في إجازة إلى ' : 'مهمة إلى ') . ($d['dest'] ?? '') . ' · ' . ar_days((int)($d['days'] ?? 0)) . ' · من ' . ($d['from'] ?? '') . (!empty($d['companions']) ? ' · مع ' . count($d['companions']) . ' من الأسرة' : '');
     if ($r['type'] === 'leave' && ($d['medOrg'] ?? '') !== '') return 'إجازة مرضية · ' . ($d['days'] ?? 0) . ' يومًا · من ' . ($d['from'] ?? '') . ' إلى ' . ($d['to'] ?? '') . ' · ' . $d['medOrg'];
     if ($r['type'] === 'perm') return ($d['kind'] ?? 'استئذان') . ' · ' . ($d['day'] ?? '') . ' · من ' . req_t12((string)($d['fromT'] ?? '')) . ' إلى ' . req_t12((string)($d['toT'] ?? ''));
     if ($r['type'] === 'ot') return 'عمل إضافي ' . req_hours((int)($d['mins'] ?? 0)) . ' · ' . ($d['day'] ?? '');
@@ -585,7 +594,7 @@ function req_view_rows(array $r): array {
     $d = json_decode($r['data'], true) ?: []; $t = $r['type']; $o = [];
     if ($t === 'travel') {
         $money = !empty($d['advance']) ? number_format((float)$d['advance'], 2) . ' ' . (($d['currency'] ?? 'SAR') === 'SAR' ? 'ر.س' : $d['currency']) : 'لا يوجد';
-        if (isset($d['toCountry'])) $o = [['من', (string)($d['origin'] ?? '')], ['إلى', (string)($d['dest'] ?? '')], ['نوع المهمة', (string)($d['scope'] ?? '')], ['تاريخ الرحلة', (string)($d['from'] ?? ''), 1], ['تاريخ العودة', (string)($d['to'] ?? ''), 1],
+        if (isset($d['toCountry'])) $o = [['نوع السفر', (string)(($d['kind'] ?? '') ?: 'مهمة رسمية')], ['من', (string)($d['origin'] ?? '')], ['إلى', (string)($d['dest'] ?? '')], ['النطاق', (string)($d['scope'] ?? '')], ['تاريخ الرحلة', (string)($d['from'] ?? ''), 1], ['تاريخ العودة', (string)($d['to'] ?? ''), 1],
             ['المدة', ar_days((int)($d['days'] ?? 0))], ['وسيلة السفر', (string)($d['transport'] ?? '')], ['السكن', (string)($d['stay'] ?? '')], ['السلفة', $money]];
         else $o = [['الوجهة', (string)($d['dest'] ?? '')], ['من', (string)($d['from'] ?? ''), 1], ['إلى', (string)($d['to'] ?? ''), 1], ['المدة', ar_days((int)($d['days'] ?? 0))], ['وسيلة السفر', (string)($d['transport'] ?? '') . (!empty($d['hotel']) ? ' مع سكن' : '')], ['السلفة', $money]];
         $cm = is_array($d['companions'] ?? null) ? $d['companions'] : [];
@@ -694,6 +703,8 @@ function lv_rows(array $r): array {
     $rows[] = ['عدد الأيام', ($d['days'] ?? 0) . ' يوم'];
     $rows[] = ['سبب الإجازة', (string)($d['reason'] ?? ($d['note'] ?? ''))];
     if (!empty($d['medOrg'])) $rows[] = ['الجهة الطبية', (string)$d['medOrg'] . (!empty($d['medNo']) ? ' · تقرير رقم ' . $d['medNo'] : '')];
+    if (!empty($d['relation'])) $rows[] = ['صلة القرابة بالمتوفى', (string)$d['relation']];
+    if (!empty($d['abroad'])) $rows[] = ['السفر أثناء الإجازة', $d['abroad'] === 'لا' ? 'لا يسافر' : (string)$d['abroad'] . (($d['exitVisa'] ?? '') === 'نعم' ? ' · يحتاج تأشيرة خروج وعودة' : '')];
     $rows[] = ['رقم التواصل', (string)(($d['contact'] ?? '') ?: ($sd['mobile'] ?? '')), 1];
     $rows[] = ['البريد الإلكتروني', req_staff_email($s), 1];
     if (!empty($d['address'])) $rows[] = ['العنوان أثناء الإجازة', (string)$d['address']];
