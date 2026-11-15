@@ -1672,7 +1672,9 @@ function rwBody() {
     if (d.address) rows.push(['العنوان أثناء الإجازة', esc(d.address)]); }
   else if (rwFields()) {
     if (RW.type === 'travel') { rows.push(['من', esc(d.fromCity || '') + '، ' + esc(d.fromCountry || '')], ['إلى', esc(d.toCity || '') + '، ' + esc(d.toCountry || '')], ['المدة', fdx(pdate(d.from)) + ' إلى ' + fdx(pdate(d.to)) + '، ' + dn(rwDays())]);
-      rwFields().forEach(function (f) { var v = d[f[0]]; if (['fromCountry', 'fromCity', 'toCountry', 'toCity', 'from', 'to'].indexOf(f[0]) > -1 || v === '' || v == null) return; rows.push([f[1], f[2] === 'money' ? n(+v) + ' ر.س' : esc(v)]); }); }
+      rwFields().forEach(function (f) { var v = d[f[0]]; if (['fromCountry', 'fromCity', 'toCountry', 'toCity', 'from', 'to', 'family', 'companions'].indexOf(f[0]) > -1 || v === '' || v == null) return; rows.push([f[1], f[2] === 'money' ? n(+v) + ' ر.س' : esc(v)]); });
+      var cmps = d.family === CMP_YES ? cmpList() : [];
+      rows.push(['المرافقون من الأسرة', cmps.length ? cmps.map(function (p) { return '<div>' + esc(p.name || '') + ' · ' + esc(p.rel || '') + (cmpAge(p.birth) ? ' · ' + cmpAge(p.birth) : '') + ' · <span class="ltr">' + esc(p.doc || '') + '</span></div>'; }).join('') : 'لا يوجد']); }
     else rwFields().forEach(function (f) { var v = d[f[0]]; if (v === '' || v == null) return; rows.push([f[1], f[2] === 'date' ? fdx(pdate(v)) : f[2] === 'money' ? n(+v) + ' ر.س' : f[2] === 'month' ? fmonth(v) : f[2] === 'time' || f[2] === 'reqref' ? '<span class="ltr">' + esc(v) + '</span>' : esc(v)]); });
     var ex = rwExtra(); if (ex) rows.push(['', ex]);
     var sp2 = ((formsData() || {}).sups || []).filter(function (x) { return x.id === d.supervisor; })[0]; if (sp2) rows.push(['المسؤول المباشر', esc(sp2.name)]); }
@@ -3038,6 +3040,7 @@ function rwSchemaBody() {
     /* أكثر من أربعة خيارات: قائمة منسدلة بدل الأزرار حتى لا تزدحم على الجوال */
     if (kind === 'seg' && opt.length > 4) h += '<div class="fld wide"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, opt.map(function (o) { return { v: o, n: o, ic: RT2[RW.type] ? RT2[RW.type][1] : 'doc' }; }), d[k] || '', 'اختر ' + lab, function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab) + '</div>';
     else if (kind === 'seg') h += rwField(id, lab, rwSeg(k, opt), req, true);
+    else if (kind === 'people') h += cmpHTML();
     else if (kind === 'country') h += '<div class="fld"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, countryOpts(), d[k] || '', 'اختر الدولة', function (v) { rwSync(); if (RW.d[k] !== v) { RW.d[k] = v; F.forEach(function (g) { if (g[2] === 'city' && g[4] === k) RW.d[g[0]] = ''; }); } RW.err = ''; render(); }, lab) + '</div>';
     else if (kind === 'city') { var cs = d[opt] ? citiesOf(d[opt]) : [];
       h += rwField(id, lab, '<input id="' + id + '" data-rw="' + k + '" type="text" value="' + esc(d[k] || '') + '" list="' + id + '_l" autocomplete="off" placeholder="' + (d[opt] ? 'اكتب المدينة أو اخترها' : 'اختر الدولة أولًا') + '"' + (d[opt] ? '' : ' disabled') + ' maxlength="80"><datalist id="' + id + '_l">' + cs.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist>', req); }
@@ -3086,6 +3089,10 @@ function rwSchemaCheck() {
     if ((f[2] === 'int' || f[2] === 'money') && v !== '' && v != null && !(f[2] === 'int' ? /^\d+$/ : /^\d+(\.\d{1,2})?$/).test(String(v))) return 'اكتب ' + f[1] + ' بالأرقام فقط' + (f[2] === 'int' ? ' (عدد صحيح)' : '');
     if ((f[2] === 'int' || f[2] === 'money') && v !== '' && v != null && f[4] && (+v < f[4][0] || +v > f[4][1])) return f[1] + ': القيمة بين ' + n(f[4][0]) + ' و' + n(f[4][1]);
     if (f[2] === 'area' && f[3] && String(v || '').trim().length < (f[4] ? f[4][0] : 3)) return 'اكتب ' + f[1] + ' (' + (f[4] ? f[4][0] : 3) + ' أحرف على الأقل)'; }
+  if (RW.type === 'travel' && cmpOn()) { var cm = cmpList(); if (!cm.length) return 'أضف بيانات من يرافقك من أسرتك';
+    for (var j = 0; j < cm.length; j++) { var p = cm[j], no = 'المرافق ' + (j + 1) + ': ';
+      if (String(p.name || '').trim().length < 3) return no + 'اكتب الاسم كما في الجواز'; if (!p.rel) return no + 'اختر صلة القرابة';
+      if (!p.birth || p.birth > ymd(new Date())) return no + 'اكتب تاريخ الميلاد'; if (!/^[A-Za-z0-9\- ]{5,30}$/.test(asciiD(p.doc || '').trim())) return no + 'اكتب رقم الجواز أو الهوية بالحروف الإنجليزية والأرقام'; } }
   if ((RW.type === 'perm' || RW.type === 'ot') && !(c.mins > 0)) return 'وقت النهاية يجب أن يكون بعد وقت البداية';
   if (RW.type === 'perm' && c.mins > 300) return 'الاستئذان خمس ساعات على الأكثر؛ للمدة الأطول قدّم طلب إجازة';
   if (RW.type === 'resume' && d.kind !== 'تعيين جديد' && !d.link) return 'اختر الإجازة أو المهمة التي عدت منها';
@@ -4107,6 +4114,38 @@ document.addEventListener('click', function (e) {
   if (v !== 'تأخر صباحي' && fr && auto.fromT && fr.value === auto.fromT) { fr.value = ''; auto.fromT = ''; }
   RW._autoT = auto;
 }, true);
+
+/* ---------- المرافقون من الأسرة في أمر الإركاب ---------- */
+var CMP_REL = ['الزوجة', 'الزوج', 'ابن', 'ابنة', 'الأب', 'الأم', 'أخ', 'أخت', 'أخرى'], CMP_YES = 'نعم، يرافقني أفراد من أسرتي';
+function cmpOn() { return RW.d.family === CMP_YES; }
+function cmpList() { if (!Array.isArray(RW.d.companions)) RW.d.companions = []; return RW.d.companions; }
+function cmpAge(b) { var x = pdate(b), at = pdate(RW.d.from) || new Date(); if (!x) return ''; var a = at.getFullYear() - x.getFullYear(); if (at.getMonth() < x.getMonth() || (at.getMonth() === x.getMonth() && at.getDate() < x.getDate())) a--; return a >= 0 ? (a < 2 ? 'رضيع' : (a < 12 ? 'طفل، ' : '') + (a === 2 ? 'سنتان' : a <= 10 ? a + ' سنوات' : a + ' سنة')) : ''; }
+function cmpHTML() {
+  if (!cmpOn()) return '';
+  var L = cmpList(); if (!L.length) L.push({});
+  return '<div class="fld wide cmpw"><label>المرافقون من الأسرة <i class="rq">*</i></label><div class="cmpl">' + L.map(function (p, i) {
+    var age = cmpAge(p.birth);
+    return '<div class="cmp"><div class="cmph"><span class="cmpn">' + (i + 1) + '</span><b>' + (p.name ? esc(p.name) : 'المرافق ' + (i + 1)) + '</b>' + (p.rel ? '<em>' + esc(p.rel) + '</em>' : '') + (age ? '<small>' + age + '</small>' : '') +
+      (L.length > 1 ? '<button type="button" class="cmpdel" data-cmpdel="' + i + '" aria-label="حذف المرافق">' + ic('trash') + '</button>' : '') + '</div><div class="cmpg">' +
+      '<div class="fld"><label>الاسم كما في الجواز</label><input type="text" data-cmp="' + i + ':name" value="' + esc(p.name || '') + '" maxlength="80" placeholder="الاسم الكامل"></div>' +
+      '<div class="fld"><label>صلة القرابة</label>' + ssel('cmpRel' + i, CMP_REL.map(function (r) { return { v: r, n: r, ic: 'users' }; }), p.rel || '', 'اختر صلة القرابة', function (v) { rwSync(); cmpList()[i].rel = v; RW.err = ''; render(); }, 'صلة القرابة') + '</div>' +
+      '<div class="fld"><label>تاريخ الميلاد</label><input type="date" data-cmp="' + i + ':birth" value="' + esc(p.birth || '') + '" max="' + ymd(new Date()) + '"></div>' +
+      '<div class="fld"><label>رقم الجواز أو الهوية</label><input type="text" dir="ltr" data-cmp="' + i + ':doc" value="' + esc(p.doc || '') + '" maxlength="30" placeholder="A1234567" autocomplete="off"></div></div></div>';
+  }).join('') + '</div>' + (L.length < 8 ? '<button type="button" class="btn sm cmpadd" data-cmpadd="1">' + ic('plus') + 'إضافة مرافق آخر</button>' : '') +
+    '<small class="fhint">تُستخدم هذه البيانات لحجز التذاكر والسكن فقط، فاكتب الاسم ورقم الجواز كما هما في الجواز.</small></div>';
+}
+(function () {
+  var _sync = rwSync;
+  rwSync = function () { _sync.apply(this, arguments); document.querySelectorAll('[data-cmp]').forEach(function (e) { var p = e.dataset.cmp.split(':'), L = cmpList(); L[+p[0]] = L[+p[0]] || {}; L[+p[0]][p[1]] = p[1] === 'doc' ? asciiD(e.value).toUpperCase() : e.value; }); };
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest && ev.target.closest('[data-cmpadd],[data-cmpdel],[data-rwseg="family"]'); if (!a || typeof RW === 'undefined' || !RW) return;
+    if (a.dataset.rwseg === 'family') { setTimeout(function () { if (cmpOn() && !cmpList().length) { cmpList().push({}); render(); } }, 0); return; }
+    ev.preventDefault(); ev.stopPropagation(); rwSync();
+    if (a.dataset.cmpadd) cmpList().push({}); else cmpList().splice(+a.dataset.cmpdel, 1);
+    RW.err = ''; render();
+  }, true);
+  document.addEventListener('change', function (ev) { if (ev.target.matches && ev.target.matches('[data-cmp$=":birth"]')) { rwSync(); render(); } });
+})();
 
 window.addEventListener('hashchange', route);
 boot();

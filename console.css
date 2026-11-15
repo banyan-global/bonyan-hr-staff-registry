@@ -2085,3 +2085,17 @@ html[data-theme="dark"] .tp-grid button.on { background: var(--gold); color: #13
 /* لا يكبّر متصفح الجوال النصوص من تلقاء نفسه (يُفسد البطاقات والجداول) */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .offcard { overflow: hidden; }
+/* المرافقون من الأسرة في أمر الإركاب */
+.cmpl { display: grid; gap: 10px; }
+.cmp { border: 1px solid var(--line-2); border-radius: 16px; background: var(--panel); padding: 12px; }
+.cmph { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; min-width: 0; }
+.cmph b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmph em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--gold, #b8893b); background: color-mix(in srgb, var(--gold, #b8893b) 12%, var(--panel)); border-radius: 99px; padding: 2px 9px; }
+.cmph small { color: var(--mute); font-size: 12px; }
+.cmpn { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: color-mix(in srgb, var(--navy) 10%, var(--panel)); color: var(--navy); }
+.cmpdel { margin-inline-start: auto; flex: none; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line-2); background: transparent; color: var(--c-bad, #c0392b); display: grid; place-items: center; cursor: pointer; }
+.cmpdel .i { width: 16px; height: 16px; }
+.cmpg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cmpg .fld { margin: 0; }
+.cmpadd { margin-top: 10px; }
+@media (max-width: 640px) { .cmpg { grid-template-columns: 1fr; } }

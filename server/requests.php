@@ -32,6 +32,7 @@ const REQ_SCHEMA = [
     /* أمر الإركاب: بيانات الجواز والميلاد والتواصل والجهة تُؤخذ من ملف المنسوب، فلا يُعاد طلبها (كانت في النظام السابق) */
     'travel' => [['fromCountry', 'دولة الانطلاق', 'country', 1], ['fromCity', 'مدينة الانطلاق', 'city', 1, 'fromCountry'], ['toCountry', 'دولة الوجهة', 'country', 1], ['toCity', 'مدينة الوجهة', 'city', 1, 'toCountry'],
         ['from', 'تاريخ الرحلة', 'date', 1], ['to', 'تاريخ العودة', 'date', 1], ['transport', 'وسيلة السفر', 'seg', 1, ['طيران', 'بري', 'لا يلزم']], ['stay', 'السكن', 'seg', 1, ['يلزم سكن', 'لا يلزم']],
+        ['family', 'هل يرافقك أحد من أسرتك؟', 'seg', 0, ['لا', 'نعم، يرافقني أفراد من أسرتي']], ['companions', 'المرافقون من الأسرة', 'people', 0],
         ['advance', 'سلفة مصاريف المهمة (ر.س)', 'money', 0, [0, 1000000]], ['purpose', 'الغرض من المهمة', 'area', 1, [3, 1500], 'مثال: زيارة إشرافية لمراكز التدريب'],
         ['booking', 'ملاحظات الحجز', 'area', 0, [0, 600], 'اختياري: موعد مفضّل للرحلة أو شركة طيران أو مرافق']],
     'cert' => [['kind', 'نوع الخطاب', 'seg', 1, ['تعريف بالراتب', 'تعريف بدون راتب', 'شهادة خبرة']], ['purpose', 'الغرض من الخطاب', 'seg', 1, ['بنك', 'سفارة', 'جهة حكومية', 'أخرى']],
@@ -126,6 +127,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
             $v = $raw === '' ? '' : ($kind === 'int' ? (int)$raw : round((float)$raw, 2));
             if ($v !== '' && is_array($opt) && ($v < $opt[0] || $v > $opt[1])) throw new HttpError($lab . ': القيمة بين ' . $opt[0] . ' و' . $opt[1]);
         } elseif ($kind === 'seg') $v = in_array($v, (array)$opt, true) ? $v : '';
+        elseif ($kind === 'people') $v = req_clean_people($v);
         elseif ($kind === 'reqref') {
             $v = strtoupper(trim((string)$v));
             if ($v !== '') { $x = q1("SELECT * FROM requests WHERE no=? AND ref=? AND status='approved'", [$v, $ref]); if (!$x || !in_array($x['type'], (array)$opt, true)) throw new HttpError('الطلب المرتبط غير صحيح'); }
@@ -133,7 +135,7 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
             $max = is_array($opt) ? (int)$opt[1] : ($kind === 'area' ? 1200 : 160); $v = req_str($v, $max);
             if ($v !== '' && is_array($opt) && mb_strlen(trim($v)) < (int)$opt[0]) throw new HttpError('اكتب ' . $lab . ' (' . $opt[0] . ' أحرف على الأقل)');
         }
-        if ($req && ($v === '' || $v === null)) throw new HttpError(($kind === 'seg' || $kind === 'reqref' ? 'اختر ' : 'اكتب ') . $lab);
+        if ($req && ($v === '' || $v === null || $v === [])) throw new HttpError(($kind === 'seg' || $kind === 'reqref' ? 'اختر ' : 'اكتب ') . $lab);
         $o[$k] = $v;
     }
     $o['supervisor'] = req_str($d['supervisor'] ?? '', 40); $o['supName'] = '';
@@ -212,6 +214,8 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
             elseif (!$pe) $o['passNote'] = 'تاريخ انتهاء الجواز غير مسجّل في ملف المنسوب';
         }
         /* لا تعارض بين أمر الإركاب وأي طلب آخر (قد تكون التذكرة لسفر الإجازة نفسها) */
+        if (($o['family'] ?? '') !== 'نعم، يرافقني أفراد من أسرتي') { $o['family'] = 'لا'; $o['companions'] = []; }
+        elseif (!$o['companions']) throw new HttpError('أضف بيانات من يرافقك من أسرتك (مرافق واحد على الأقل)');
     }
     if ($type === 'access') {
         if ($o['dur'] === 'مؤقتة') { if (!$o['until']) throw new HttpError('حدد تاريخ انتهاء الصلاحية المؤقتة'); if ($o['until'] < $today) throw new HttpError('تاريخ انتهاء الصلاحية لا يكون في الماضي'); }
@@ -220,6 +224,24 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
     if ($type === 'safety' && $o['day'] > $today) throw new HttpError('تاريخ الحدث لا يكون في المستقبل');
     return $o;
 }
+const REQ_RELATIONS = ['الزوجة', 'الزوج', 'ابن', 'ابنة', 'الأب', 'الأم', 'أخ', 'أخت', 'أخرى'];
+/* المرافقون في أمر الإركاب: الاسم كما في الجواز وصلة القرابة وتاريخ الميلاد ورقم الجواز أو الهوية (تكفي للحجز) */
+function req_clean_people($v): array {
+    $out = [];
+    foreach (array_slice(is_array($v) ? $v : [], 0, 8) as $i => $p) {
+        if (!is_array($p)) continue; $n = $i + 1;
+        $name = req_str($p['name'] ?? '', 80); $rel = (string)($p['rel'] ?? ''); $birth = req_date($p['birth'] ?? ''); $doc = strtoupper(req_str(to_ascii_digits((string)($p['doc'] ?? '')), 30));
+        if ($name === '' && $rel === '' && !$birth && $doc === '') continue;
+        if (mb_strlen($name) < 3) throw new HttpError('المرافق ' . $n . ': اكتب الاسم كما في الجواز');
+        if (!in_array($rel, REQ_RELATIONS, true)) throw new HttpError('المرافق ' . $n . ': اختر صلة القرابة');
+        if (!$birth || $birth > date('Y-m-d')) throw new HttpError('المرافق ' . $n . ': اكتب تاريخ الميلاد');
+        if (!preg_match('/^[A-Z0-9\- ]{5,30}$/', $doc)) throw new HttpError('المرافق ' . $n . ': اكتب رقم الجواز أو الهوية بالحروف الإنجليزية والأرقام');
+        $out[] = ['name' => $name, 'rel' => $rel, 'birth' => $birth, 'doc' => $doc];
+    }
+    return $out;
+}
+function req_age_txt(int $a): string { return $a < 2 ? 'رضيع (أقل من سنتين)' : ($a === 2 ? 'سنتان' : ($a <= 10 ? $a . ' سنوات' : $a . ' سنة')); }
+function req_age(string $birth, string $at): int { return max(0, (int)date_diff(date_create($birth), date_create($at ?: 'today'))->y); }
 /* يتحقق من بيانات كل نوع ويعيدها نظيفة */
 function req_clean(string $type, array $d, string $ref = ''): array {
     if ($type === 'leave') return req_clean_leave($d, true);
@@ -534,7 +556,7 @@ function req_t12(string $v): string {
 function req_summary(array $r): string {
     $d = json_decode($r['data'], true) ?: [];
     if ($r['type'] === 'leave') return 'إجازة ' . leave_kind_norm((string)($d['kind'] ?? '')) . ' · ' . ar_days((int)($d['days'] ?? 0)) . ' · من ' . ($d['from'] ?? '') . ' إلى ' . ($d['to'] ?? '');
-    if ($r['type'] === 'travel') return 'مهمة إلى ' . ($d['dest'] ?? '') . ' · ' . ar_days((int)($d['days'] ?? 0)) . ' · من ' . ($d['from'] ?? '');
+    if ($r['type'] === 'travel') return 'مهمة إلى ' . ($d['dest'] ?? '') . ' · ' . ar_days((int)($d['days'] ?? 0)) . ' · من ' . ($d['from'] ?? '') . (!empty($d['companions']) ? ' · مع ' . count($d['companions']) . ' من الأسرة' : '');
     if ($r['type'] === 'leave' && ($d['medOrg'] ?? '') !== '') return 'إجازة مرضية · ' . ($d['days'] ?? 0) . ' يومًا · من ' . ($d['from'] ?? '') . ' إلى ' . ($d['to'] ?? '') . ' · ' . $d['medOrg'];
     if ($r['type'] === 'perm') return ($d['kind'] ?? 'استئذان') . ' · ' . ($d['day'] ?? '') . ' · من ' . req_t12((string)($d['fromT'] ?? '')) . ' إلى ' . req_t12((string)($d['toT'] ?? ''));
     if ($r['type'] === 'ot') return 'عمل إضافي ' . req_hours((int)($d['mins'] ?? 0)) . ' · ' . ($d['day'] ?? '');
@@ -566,6 +588,11 @@ function req_view_rows(array $r): array {
         if (isset($d['toCountry'])) $o = [['من', (string)($d['origin'] ?? '')], ['إلى', (string)($d['dest'] ?? '')], ['نوع المهمة', (string)($d['scope'] ?? '')], ['تاريخ الرحلة', (string)($d['from'] ?? ''), 1], ['تاريخ العودة', (string)($d['to'] ?? ''), 1],
             ['المدة', ar_days((int)($d['days'] ?? 0))], ['وسيلة السفر', (string)($d['transport'] ?? '')], ['السكن', (string)($d['stay'] ?? '')], ['السلفة', $money]];
         else $o = [['الوجهة', (string)($d['dest'] ?? '')], ['من', (string)($d['from'] ?? ''), 1], ['إلى', (string)($d['to'] ?? ''), 1], ['المدة', ar_days((int)($d['days'] ?? 0))], ['وسيلة السفر', (string)($d['transport'] ?? '') . (!empty($d['hotel']) ? ' مع سكن' : '')], ['السلفة', $money]];
+        $cm = is_array($d['companions'] ?? null) ? $d['companions'] : [];
+        if ($cm) {
+            $o[] = ['المرافقون من الأسرة', count($cm) === 1 ? 'مرافق واحد' : (count($cm) === 2 ? 'مرافقان' : count($cm) . ' مرافقين')];
+            foreach ($cm as $i => $p) $o[] = ['المرافق ' . ($i + 1), $p['name'] . ' · ' . $p['rel'] . ' · ' . req_age_txt(req_age((string)$p['birth'], (string)($d['from'] ?? ''))) . ' · ' . $p['doc']];
+        } elseif (isset($d['family'])) $o[] = ['المرافقون من الأسرة', 'لا يوجد'];
         if (($d['passNote'] ?? '') !== '') $o[] = ['تنبيه الجواز', (string)$d['passNote']];
         if (($d['supName'] ?? '') !== '') $o[] = ['المسؤول المباشر', (string)$d['supName']];
         if (($d['purpose'] ?? '') !== '') $o[] = ['الغرض من المهمة', (string)$d['purpose'], 0, 1];
