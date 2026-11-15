@@ -1652,12 +1652,12 @@ function rwBody() {
   if (RW.i === 1) {
     if (RW.type !== 'leave') return rwFields() ? rwSchemaBody() : '<div class="empty">جارٍ تحميل النموذج…</div>';
     var med = RW.d.kind === 'مرضية';
-    return '<div class="form"><div class="fld wide"><label>نوع الإجازة <i class="rq">*</i></label>' + ssel('rwKind', leaveKindOpts(), RW.d.kind || '', 'اختر نوع الإجازة', function (v) { rwSync(); RW.d.kind = v; RW.err = ''; render(); }, 'نوع الإجازة') + '</div>' +
+    return '<div class="form"><div class="fld wide"><label>نوع الإجازة <i class="rq">*</i></label>' + ssel('rwKind', leaveKindOpts(), RW.d.kind || '', 'اختر نوع الإجازة', function (v) { rwSync(); RW.d.kind = v; RW.err = ''; render(); }, 'نوع الإجازة') + '</div>' + (RW.d.kind === 'أخرى' ? rwOther('kind', 'نوع الإجازة') : '') +
       rwField('rw_from', 'تاريخ البداية', rwIn('from', 'date'), true) + rwField('rw_to', 'تاريخ النهاية', rwIn('to', 'date'), true) +
       '<div class="fld wide">' + (rwDays() ? '<div class="note">' + ic('calendar') + '<span>مدة الإجازة <b>' + dn(rwDays()) + '</b> أيامًا تقويمية شاملة يومي البداية والنهاية.</span></div>' + (typeof quotaNote === 'function' ? quotaNote(RW.d.kind, rwDays()) : '') : (RW.d.from && RW.d.to ? '<div class="note warn">' + ic('alert') + '<span>تاريخ النهاية يجب أن يكون في يوم البداية أو بعده.</span></div>' : '')) + '</div>' +
       (med ? rwField('rw_medOrg', 'الجهة الطبية', rwIn('medOrg', 'text', 'المستشفى أو المركز الصحي'), true) + rwField('rw_medNo', 'رقم التقرير الطبي', rwIn('medNo', 'text', 'اختياري', ' dir="ltr"')) +
         '<div class="fld wide"><small class="fhint">' + ic('info') + 'سلّم أصل التقرير الطبي للموارد البشرية عند عودتك.</small></div>' : '') +
-      (RW.d.kind === 'وفاة قريب' ? '<div class="fld wide"><label>صلة القرابة بالمتوفى <i class="rq">*</i></label>' + ssel('rwRel', LV_REL.map(function (x) { return { v: x, n: x, ic: 'users' }; }), RW.d.relation || '', 'اختر صلة القرابة', function (v) { rwSync(); RW.d.relation = v; RW.err = ''; render(); }, 'صلة القرابة') + '<small class="fhint">تختلف مدة إجازة الوفاة بحسب درجة القرابة.</small></div>' : '') +
+      (RW.d.kind === 'وفاة قريب' ? '<div class="fld wide"><label>صلة القرابة بالمتوفى <i class="rq">*</i></label>' + ssel('rwRel', LV_REL.map(function (x) { return { v: x, n: x, ic: 'users' }; }), RW.d.relation || '', 'اختر صلة القرابة', function (v) { rwSync(); RW.d.relation = v; RW.err = ''; render(); }, 'صلة القرابة') + '<small class="fhint">تختلف مدة إجازة الوفاة بحسب درجة القرابة.</small></div>' + (RW.d.relation === 'قريب آخر' ? rwOther('relation', 'صلة القرابة') : '') : '') +
       rwField('rw_abroad', 'هل ستسافر أثناء الإجازة؟', rwSeg('abroad', ['لا', 'داخل البلد', 'خارج البلد']), true, true) +
       (RW.d.abroad === 'خارج البلد' ? rwField('rw_exitVisa', 'تحتاج تأشيرة خروج وعودة؟', rwSeg('exitVisa', ['نعم', 'لا']), false, true) +
         '<div class="fld wide"><div class="note">' + ic('plane') + '<span>لتذاكر السفر لك ولمن يرافقك من أسرتك، قدّم بعد هذا الطلب «أمر إركاب» بنوع <b>سفر في إجازة</b>.</span></div></div>' : '') +
@@ -1671,9 +1671,9 @@ function rwBody() {
   }
   var s = rwStaff(), d = RW.d, rows = [['المنسوب', s ? esc(s.name) + ' <span class="ref">' + esc(s.ref) + '</span>' : '—'], ['نوع الطلب', RT2[RW.type][2]]];
   if (RW.type === 'leave') { var sp = ((formsData() || {}).sups || []).filter(function (x) { return x.id === d.supervisor; })[0];
-    rows.push(['الإجازة', esc(d.kind) + '، ' + dn(rwDays())], ['المدة', fdx(pdate(d.from)) + ' إلى ' + fdx(pdate(d.to))], ['السبب', esc(d.reason || '')]);
+    rows.push(['الإجازة', esc(d.kind) + (d.kind === 'أخرى' && d.kindOther ? ': ' + esc(d.kindOther) : '') + '، ' + dn(rwDays())], ['المدة', fdx(pdate(d.from)) + ' إلى ' + fdx(pdate(d.to))], ['السبب', esc(d.reason || '')]);
     if (d.kind === 'مرضية' && d.medOrg) rows.push(['الجهة الطبية', esc(d.medOrg) + (d.medNo ? ' · تقرير <span class="ltr">' + esc(d.medNo) + '</span>' : '')]);
-    if (d.kind === 'وفاة قريب' && d.relation) rows.push(['صلة القرابة بالمتوفى', esc(d.relation)]);
+    if (d.kind === 'وفاة قريب' && d.relation) rows.push(['صلة القرابة بالمتوفى', esc(d.relation) + (d.relationOther ? ': ' + esc(d.relationOther) : '')]);
     if (d.abroad) rows.push(['السفر أثناء الإجازة', d.abroad === 'لا' ? 'لا يسافر' : esc(d.abroad) + (d.abroad === 'خارج البلد' && d.exitVisa === 'نعم' ? ' · يحتاج تأشيرة خروج وعودة' : '')]);
     if (sp) rows.push(['المسؤول المباشر', esc(sp.name)]);
     rows.push(['الموظف البديل', esc(d.substitute || '') + (d.subTitle ? ' · ' + esc(d.subTitle) : '') + (d.subNo ? ' · <span class="ltr">' + esc(d.subNo) + '</span>' : '')], ['رقم التواصل', '<span class="ltr">' + esc(d.contact || '') + '</span>']);
@@ -1719,6 +1719,8 @@ function rwValidate() {
     if (!d.kind) return 'اختر نوع الإجازة'; if (!rwDays()) return 'تاريخ النهاية يجب أن يكون في يوم البداية أو بعده';
     if (d.kind === 'مرضية' && String(d.medOrg || '').trim().length < 2) return 'اكتب الجهة الطبية التي أصدرت التقرير';
     if (d.kind === 'وفاة قريب' && !d.relation) return 'اختر صلة القرابة بالمتوفى';
+    if (d.kind === 'وفاة قريب' && d.relation === 'قريب آخر' && String(d.relationOther || '').trim().length < 2) return 'حدّد صلة القرابة بالمتوفى';
+    if (d.kind === 'أخرى' && String(d.kindOther || '').trim().length < 2) return 'حدّد نوع الإجازة (أخرى)';
     if (!d.abroad) return 'حدّد هل ستسافر أثناء الإجازة';
     if (String(d.reason || '').trim().length < 3) return 'اكتب سبب الإجازة (3 أحرف على الأقل)';
     if (rwNeedSup() && !d.supervisor) return 'اختر المسؤول المباشر';
@@ -1801,7 +1803,7 @@ VIEWS.myreq = function () {
 /* ---------- the official request sheet (view · decide · print) ---------- */
 function reqSheetHTML(r) {
   var d = r.data || {}, st = r.staff || {}, kv = function (a) { return '<div class="srow">' + a.map(function (x) { return '<div class="sf"><span>' + x[0] + '</span><b>' + (x[1] === '' || x[1] == null ? '—' : esc(x[1])) + '</b></div>'; }).join('') + '</div>'; };
-  var det = r.type === 'leave' ? kv([['نوع الإجازة', d.kind], ['من', fdx(pdate(d.from))], ['إلى', fdx(pdate(d.to))], ['المدة', dn(d.days || 0)]]) + (d.medOrg ? kv([['الجهة الطبية', d.medOrg], ['رقم التقرير الطبي', d.medNo || '']]) : '') + (d.relation || d.abroad ? kv([['صلة القرابة بالمتوفى', d.relation || ''], ['السفر أثناء الإجازة', d.abroad === 'لا' ? 'لا يسافر' : d.abroad || ''], ['تأشيرة خروج وعودة', d.abroad === 'خارج البلد' ? (d.exitVisa === 'نعم' ? 'يحتاجها' : d.exitVisa === 'لا' ? 'لا يحتاجها' : '') : '']].filter(function (x) { return x[1]; })) : '') + kv([['المسؤول المباشر', d.supName || ''], ['رقم التواصل', d.contact], ['العنوان أثناء الإجازة', d.address || '']]) +
+  var det = r.type === 'leave' ? kv([['نوع الإجازة', d.kind + (d.kindOther ? ': ' + d.kindOther : '')], ['من', fdx(pdate(d.from))], ['إلى', fdx(pdate(d.to))], ['المدة', dn(d.days || 0)]]) + (d.medOrg ? kv([['الجهة الطبية', d.medOrg], ['رقم التقرير الطبي', d.medNo || '']]) : '') + (d.relation || d.abroad ? kv([['صلة القرابة بالمتوفى', (d.relation || '') + (d.relationOther ? ': ' + d.relationOther : '')], ['السفر أثناء الإجازة', d.abroad === 'لا' ? 'لا يسافر' : d.abroad || ''], ['تأشيرة خروج وعودة', d.abroad === 'خارج البلد' ? (d.exitVisa === 'نعم' ? 'يحتاجها' : d.exitVisa === 'لا' ? 'لا يحتاجها' : '') : '']].filter(function (x) { return x[1]; })) : '') + kv([['المسؤول المباشر', d.supName || ''], ['رقم التواصل', d.contact], ['العنوان أثناء الإجازة', d.address || '']]) +
       (d.substitute ? kv([['الموظف البديل', d.substitute], ['مسماه الوظيفي', d.subTitle || ''], ['رقمه الوظيفي', d.subNo || '']]) : '')
     : (r.view || []).filter(function (x) { return !x[3]; }).reduce(function (a, x, i, A) { if (i % 3 === 0) a.push(A.slice(i, i + 3)); return a; }, []).map(function (g) { return kv(g.map(function (x) { return [x[0], /^\d{4}-\d{2}-\d{2}$/.test(x[1]) ? fdx(pdate(x[1])) : /^\d{4}-\d{2}$/.test(x[1]) ? fmonth(x[1]) : x[1]]; })); }).join('');
   /* أمر الإركاب: بيانات الجواز من ملف المنسوب للحجز */
@@ -3200,8 +3202,8 @@ function rwSchemaBody() {
       h += '<div class="fld"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, (CFG.ENTITIES || []).filter(function (e) { return e.v !== 'other' && e.ar; }).map(function (e) { return { v: e.ar, n: e.ar, ic: 'building' }; }), d[k] || '', 'اختر الجهة', function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab) + '</div>'; return; }
     if (kind === 'url') { h += rwField(id, lab, rwIn(k, 'url', ph, ' dir="ltr" autocomplete="off"'), req, true); return; }
     /* أكثر من أربعة خيارات: قائمة منسدلة بدل الأزرار حتى لا تزدحم على الجوال */
-    if (kind === 'seg' && opt.length > 4) h += '<div class="fld wide"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, opt.map(function (o) { return { v: o, n: o, ic: RT2[RW.type] ? RT2[RW.type][1] : 'doc' }; }), d[k] || '', 'اختر ' + lab, function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab) + '</div>';
-    else if (kind === 'seg') h += rwField(id, lab, rwSeg(k, opt), req, true);
+    if (kind === 'seg' && opt.length > 4) h += '<div class="fld wide"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, opt.map(function (o) { return { v: o, n: o, ic: RT2[RW.type] ? RT2[RW.type][1] : 'doc' }; }), d[k] || '', 'اختر ' + lab, function (v) { rwSync(); RW.d[k] = v; RW.err = ''; render(); }, lab) + '</div>' + (d[k] === 'أخرى' ? rwOther(k, lab) : '');
+    else if (kind === 'seg') h += rwField(id, lab, rwSeg(k, opt), req, true) + (d[k] === 'أخرى' ? rwOther(k, lab) : '');
     else if (kind === 'people') h += cmpHTML();
     else if (kind === 'country') h += '<div class="fld"><label>' + lab + (req ? ' <i class="rq">*</i>' : '') + '</label>' + ssel(id, countryOpts(), d[k] || '', 'اختر الدولة', function (v) { rwSync(); if (RW.d[k] !== v) { RW.d[k] = v; F.forEach(function (g) { if (g[2] === 'city' && g[4] === k) RW.d[g[0]] = ''; }); } RW.err = ''; render(); }, lab) + '</div>';
     else if (kind === 'city') { var cs = d[opt] ? citiesOf(d[opt]) : [];
@@ -3250,12 +3252,13 @@ function rwSchemaCheck() {
   var d = RW.d, F = rwFields(), c = rwCalc();
   for (var i = 0; i < F.length; i++) { var f = F[i], v = d[f[0]];
     if (f[3] && (v === '' || v == null)) return (f[2] === 'seg' || f[2] === 'month' || f[2] === 'reqref' ? 'اختر ' : 'اكتب ') + f[1];
+    if (f[2] === 'seg' && v === 'أخرى' && String(d[f[0] + 'Other'] || '').trim().length < 2) return 'حدّد ' + f[1] + ' (أخرى)';
     if ((f[2] === 'int' || f[2] === 'money') && v !== '' && v != null && !(f[2] === 'int' ? /^\d+$/ : /^\d+(\.\d{1,2})?$/).test(String(v))) return 'اكتب ' + f[1] + ' بالأرقام فقط' + (f[2] === 'int' ? ' (عدد صحيح)' : '');
     if ((f[2] === 'int' || f[2] === 'money') && v !== '' && v != null && f[4] && (+v < f[4][0] || +v > f[4][1])) return f[1] + ': القيمة بين ' + n(f[4][0]) + ' و' + n(f[4][1]);
     if (f[2] === 'area' && f[3] && String(v || '').trim().length < (f[4] ? f[4][0] : 3)) return 'اكتب ' + f[1] + ' (' + (f[4] ? f[4][0] : 3) + ' أحرف على الأقل)'; }
   if (RW.type === 'travel' && cmpOn()) { var cm = cmpList(); if (!cm.length) return 'أضف بيانات من يرافقك من أسرتك';
     for (var j = 0; j < cm.length; j++) { var p = cm[j], no = 'المرافق ' + (j + 1) + ': ';
-      if (String(p.name || '').trim().length < 3) return no + 'اكتب الاسم كما في الجواز'; if (!p.rel) return no + 'اختر صلة القرابة';
+      if (String(p.name || '').trim().length < 3) return no + 'اكتب الاسم كما في الجواز'; if (!p.rel) return no + 'اختر صلة القرابة'; if (p.rel === 'أخرى' && String(p.relOther || '').trim().length < 2) return no + 'حدّد صلة القرابة';
       if (!p.birth || p.birth > ymd(new Date())) return no + 'اكتب تاريخ الميلاد'; if (!/^[A-Za-z0-9\- ]{5,30}$/.test(asciiD(p.doc || '').trim())) return no + 'اكتب رقم الجواز أو الهوية بالحروف الإنجليزية والأرقام';
       if (p._up) return no + 'انتظر حتى يكتمل رفع صورة الجواز'; if (!p.pass) return no + 'أرفق صورة واضحة من جوازه'; } }
   if ((RW.type === 'perm' || RW.type === 'ot') && !(c.mins > 0)) return 'وقت النهاية يجب أن يكون بعد وقت البداية';
@@ -3417,7 +3420,7 @@ function drawAN() {
   if (k === 'promotion') f += fldH('an_newTitle', 'المسمى الوظيفي الجديد', inp('newTitle', 'text', s ? 'الحالي: ' + (s.job || '—') : ''), true) + fldH('an_newGrade', 'المرتبة أو الدرجة الجديدة', inp('newGrade', 'text', 'اختياري'));
   if (k === 'transfer') f += fldH('an_newEntity', 'الجهة الجديدة', inp('newEntity', 'text', s ? 'الحالية: ' + s.ent.n : '')) + fldH('an_newDepartment', 'الإدارة الجديدة', inp('newDepartment', 'text', 'اختياري')) + fldH('an_newManager', 'المدير المباشر الجديد', inp('newManager', 'text', 'اختياري'));
   if (k === 'raise') f += fldH('an_newSalary', 'الراتب الشهري الجديد' + (s ? ' (' + s.cur + ')' : ''), inp('newSalary', 'number', s && s.base ? 'الحالي: ' + n(s.base) : '', ' min="0" dir="ltr"'), true);
-  if (k === 'termination') f += fldH('an_lastDay', 'آخر يوم عمل', inp('lastDay', 'date'), true) + fldH('r', 'السبب', segH('reason', ['انتهاء العقد', 'عدم اجتياز فترة التجربة', 'فصل لمخالفة جسيمة', 'إعادة هيكلة', 'أخرى'], d.reason), true, true);
+  if (k === 'termination') f += fldH('an_lastDay', 'آخر يوم عمل', inp('lastDay', 'date'), true) + fldH('r', 'السبب', segH('reason', ['انتهاء العقد', 'عدم اجتياز فترة التجربة', 'فصل لمخالفة جسيمة', 'إعادة هيكلة', 'أخرى'], d.reason), true, true) + (d.reason === 'أخرى' ? fldH('an_reasonOther', 'حدّد السبب', inp('reasonOther', 'text', 'اكتب السبب…', d.reasonOther ? '' : ' data-ofocus="1"'), true, true) : '');
   var body = '<div class="form">' + fldH('anRef', 'المنسوب', ssel('anRef', staffOpts(), AN.ref, 'اختر المنسوب', function (v) { syncAN(); AN.ref = v; drawAN(); }, 'المنسوب'), true, true) +
     '<div class="fld wide"><label>نوع الإجراء <i class="rq">*</i></label><div class="ccards sm" role="radiogroup">' + Object.keys(AK).map(function (x) { return '<button type="button" class="ccard" role="radio" data-ank="' + x + '" aria-checked="' + (k === x) + '">' + tile(AK[x][0], AK[x][1], 'ti') + '<b>' + AK[x][2] + '</b><small>' + AK[x][3] + '</small>' + (kinds[x] && kinds[x].approve ? '<em class="needap">يعتمده المدير العام</em>' : '') + '</button>'; }).join('') + '</div></div>' +
     (k ? fldH('an_title', 'الموضوع', inp('title', 'text', 'يُكتب تلقائيًا إن تُرك فارغًا')) + fldH('an_effective', 'تاريخ النفاذ', inp('effective', 'date'), true) + f +
@@ -4295,7 +4298,8 @@ function cmpHTML() {
     return '<div class="cmp"><div class="cmph"><span class="cmpn">' + (i + 1) + '</span><b>' + (p.name ? esc(p.name) : 'المرافق ' + (i + 1)) + '</b>' + (p.rel ? '<em>' + esc(p.rel) + '</em>' : '') + (age ? '<small>' + age + '</small>' : '') +
       '</div><div class="cmpg">' +
       '<div class="fld"><label>الاسم كما في الجواز</label><input type="text" data-cmp="' + i + ':name" value="' + esc(p.name || '') + '" maxlength="80" placeholder="الاسم الكامل"></div>' +
-      '<div class="fld"><label>صلة القرابة</label>' + ssel('cmpRel' + i, CMP_REL.map(function (r) { return { v: r, n: r, ic: 'users' }; }), p.rel || '', 'اختر صلة القرابة', function (v) { rwSync(); cmpList()[i].rel = v; RW.err = ''; render(); }, 'صلة القرابة') + '</div>' +
+      '<div class="fld"><label>صلة القرابة</label>' + ssel('cmpRel' + i, CMP_REL.map(function (r) { return { v: r, n: r, ic: 'users' }; }), p.rel || '', 'اختر صلة القرابة', function (v) { rwSync(); cmpList()[i].rel = v; RW.err = ''; render(); }, 'صلة القرابة') +
+        (p.rel === 'أخرى' ? '<input type="text" data-cmp="' + i + ':relOther" value="' + esc(p.relOther || '') + '" maxlength="60" placeholder="حدّد صلة القرابة، مثال: ابن الأخ" style="margin-top:8px"' + (p.relOther ? '' : ' data-ofocus="1"') + '>' : '') + '</div>' +
       '<div class="fld"><label>تاريخ الميلاد</label><input type="date" data-cmp="' + i + ':birth" value="' + esc(p.birth || '') + '" max="' + ymd(new Date()) + '"></div>' +
       '<div class="fld"><label>رقم الجواز أو الهوية</label><input type="text" dir="ltr" data-cmp="' + i + ':doc" value="' + esc(p.doc || '') + '" maxlength="30" placeholder="A1234567" autocomplete="off"></div>' +
       '<div class="fld wide"><label>صورة واضحة من الجواز</label>' + (p._up ? '<div class="cmpf busy"><span class="spin"></span><span>جارٍ رفع الصورة…</span></div>'
@@ -4340,6 +4344,17 @@ function cmpShrink(file) {
     rd.readAsDataURL(file);
   });
 }
+
+/* خانة «أخرى»: تظهر تحت الاختيار مباشرة ليُكتب التحديد */
+function rwOther(k, lab) {
+  var v = RW.d[k + 'Other'] || '';
+  return '<div class="fld wide oth"><label for="rw_' + k + 'Other">حدّد ' + esc(lab.replace(/[؟?]$/, '')) + ' <i class="rq">*</i></label><input id="rw_' + k + 'Other" data-rw="' + k + 'Other" type="text" maxlength="160" value="' + esc(v) + '" placeholder="اكتب هنا…"' + (v ? '' : ' data-ofocus="1"') + '></div>';
+}
+/* يوضع المؤشر في خانة «أخرى» فور ظهورها (مرة واحدة) */
+new MutationObserver(function () {
+  var x = document.querySelector('[data-ofocus="1"]'); if (!x || x === document.activeElement || x.dataset.done) return;
+  x.dataset.done = '1'; var k = x.id || x.dataset.cmp; if (window._ofk === k) return; window._ofk = k; setTimeout(function () { try { x.focus({ preventScroll: false }); } catch (e) { } }, 30);
+}).observe(document.body, { childList: true, subtree: true });
 
 window.addEventListener('hashchange', route);
 boot();

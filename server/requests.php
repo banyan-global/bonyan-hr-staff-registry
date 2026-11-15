@@ -104,7 +104,8 @@ function req_clean_leave(array $d, bool $strict = true): array {
     /* الإجازة المرضية: الجهة الطبية ورقم التقرير (كنموذج HR-02 في مسار) */
     if ($o['kind'] === 'مرضية') { $o['medOrg'] = req_str($d['medOrg'] ?? '', 160); $o['medNo'] = req_str($d['medNo'] ?? '', 60); }
     /* إجازة الوفاة تختلف مدتها بدرجة القرابة، والسفر خارج البلد قد يلزمه تأشيرة خروج وعودة وتذاكر */
-    if ($o['kind'] === 'وفاة قريب') $o['relation'] = in_array($d['relation'] ?? '', LEAVE_RELATIONS, true) ? (string)$d['relation'] : '';
+    if ($o['kind'] === 'وفاة قريب') { $o['relation'] = in_array($d['relation'] ?? '', LEAVE_RELATIONS, true) ? (string)$d['relation'] : ''; if ($o['relation'] === 'قريب آخر') $o['relationOther'] = req_str($d['relationOther'] ?? '', 120); }
+    if ($o['kind'] === 'أخرى') $o['kindOther'] = req_str($d['kindOther'] ?? '', 120);
     $o['abroad'] = in_array($d['abroad'] ?? '', ['لا', 'داخل البلد', 'خارج البلد'], true) ? (string)$d['abroad'] : '';
     if ($o['abroad'] === 'خارج البلد') $o['exitVisa'] = in_array($d['exitVisa'] ?? '', ['نعم', 'لا'], true) ? (string)$d['exitVisa'] : '';
     if (!$o['kind']) throw new HttpError('اختر نوع الإجازة');
@@ -117,6 +118,8 @@ function req_clean_leave(array $d, bool $strict = true): array {
         if (strlen(preg_replace('/\D/', '', to_ascii_digits($o['contact']))) < 6) throw new HttpError('اكتب رقم تواصل صحيحًا مع رمز الدولة');
         if ($o['kind'] === 'مرضية' && mb_strlen(trim($o['medOrg'])) < 2) throw new HttpError('اكتب الجهة الطبية التي أصدرت التقرير');
         if ($o['kind'] === 'وفاة قريب' && ($o['relation'] ?? '') === '') throw new HttpError('اختر صلة القرابة بالمتوفى');
+        if (($o['relation'] ?? '') === 'قريب آخر' && mb_strlen(trim($o['relationOther'] ?? '')) < 2) throw new HttpError('حدّد صلة القرابة بالمتوفى');
+        if ($o['kind'] === 'أخرى' && mb_strlen(trim($o['kindOther'] ?? '')) < 2) throw new HttpError('حدّد نوع الإجازة (أخرى)');
         if ($o['abroad'] === '') throw new HttpError('حدّد هل ستسافر أثناء الإجازة');
     }
     return $o;
@@ -137,7 +140,11 @@ function req_clean_schema(string $type, array $d, string $ref = ''): array {
             if ($raw !== '' && !preg_match($kind === 'int' ? '/^\d+$/' : '/^\d+(\.\d+)?$/', $raw)) throw new HttpError('اكتب ' . $lab . ' بالأرقام فقط');
             $v = $raw === '' ? '' : ($kind === 'int' ? (int)$raw : round((float)$raw, 2));
             if ($v !== '' && is_array($opt) && ($v < $opt[0] || $v > $opt[1])) throw new HttpError($lab . ': القيمة بين ' . $opt[0] . ' و' . $opt[1]);
-        } elseif ($kind === 'seg') $v = in_array($v, (array)$opt, true) ? $v : '';
+        } elseif ($kind === 'seg') {
+            $v = in_array($v, (array)$opt, true) ? $v : '';
+            /* «أخرى»: يُكتب التحديد في خانة مرافقة */
+            if ($v === 'أخرى') { $ot = req_str($d[$k . 'Other'] ?? '', 160); if (mb_strlen(trim($ot)) < 2) throw new HttpError('حدّد ' . $lab . ' (أخرى)'); $o[$k . 'Other'] = $ot; }
+        }
         elseif ($kind === 'people') $v = req_clean_people($v, $ref);
         elseif ($kind === 'url') { $v = req_str(trim((string)$v), 300); if ($v !== '' && !preg_match('~^https?://[^\s<>"]+$~i', $v)) throw new HttpError($lab . ': اكتب رابطًا كاملًا يبدأ بـ https://'); }
         elseif ($kind === 'reqref') {
@@ -247,12 +254,13 @@ function req_clean_people($v, string $ref = ''): array {
         if ($name === '' && $rel === '' && !$birth && $doc === '') continue;
         if (mb_strlen($name) < 3) throw new HttpError('المرافق ' . $n . ': اكتب الاسم كما في الجواز');
         if (!in_array($rel, REQ_RELATIONS, true)) throw new HttpError('المرافق ' . $n . ': اختر صلة القرابة');
+        $relO = $rel === 'أخرى' ? req_str($p['relOther'] ?? '', 60) : ''; if ($rel === 'أخرى' && mb_strlen(trim($relO)) < 2) throw new HttpError('المرافق ' . $n . ': حدّد صلة القرابة');
         if (!$birth || $birth > date('Y-m-d')) throw new HttpError('المرافق ' . $n . ': اكتب تاريخ الميلاد');
         if (!preg_match('/^[A-Z0-9\- ]{5,30}$/', $doc)) throw new HttpError('المرافق ' . $n . ': اكتب رقم الجواز أو الهوية بالحروف الإنجليزية والأرقام');
         /* صورة الجواز: ملف رُفع مسبقًا لنفس المنسوب (خانة مخفية عن ملفه) */
         $pass = (string)($p['pass'] ?? '');
         if (!preg_match('/^[a-f0-9]{32}$/', $pass) || !q1("SELECT id FROM files WHERE id=? AND ref=? AND kind='_reqcmp' AND archived_at IS NULL", [$pass, $ref])) throw new HttpError('المرافق ' . $n . ': أرفق صورة واضحة من جوازه');
-        $out[] = ['name' => $name, 'rel' => $rel, 'birth' => $birth, 'doc' => $doc, 'pass' => $pass];
+        $out[] = ['name' => $name, 'rel' => $relO !== '' ? $relO : $rel, 'birth' => $birth, 'doc' => $doc, 'pass' => $pass];
     }
     return $out;
 }
@@ -645,6 +653,7 @@ function req_view_rows(array $r): array {
             if ($f[2] === 'money') $v = number_format((float)$v, 2) . ' ر.س';
             if ($f[2] === 'area') continue;
             if ($f[2] === 'time') { $o[] = [$f[1], req_t12((string)$v)]; continue; }
+            if ($f[2] === 'seg' && $v === 'أخرى' && ($d[$f[0] . 'Other'] ?? '') !== '') $v = 'أخرى: ' . $d[$f[0] . 'Other'];
             $o[] = [$f[1], (string)$v, in_array($f[2], ['date', 'month', 'reqref'], true) ? 1 : 0];
         }
         if ($t === 'perm' || $t === 'ot') $o[] = ['المدة', req_hours((int)($d['mins'] ?? 0))];
@@ -747,13 +756,13 @@ function lv_rows(array $r): array {
     $rows = [['رقم الطلب', $r['no'], 1], ['اسم الموظف', $s ? staff_name($s) : $r['ref']], ['المسمى الوظيفي', (string)($sd['jobTitle'] ?? '')]];
     if (!empty($sd['employeeNo'])) $rows[] = ['الرقم الوظيفي', (string)$sd['employeeNo']];
     $rows[] = ['الجهة / القسم', trim((string)($sd['entity'] ?? '') . (!empty($sd['department']) ? ' - ' . $sd['department'] : ''))];
-    $rows[] = ['نوع الإجازة', leave_kind_norm((string)($d['kind'] ?? ''))];
+    $rows[] = ['نوع الإجازة', leave_kind_norm((string)($d['kind'] ?? '')) . (!empty($d['kindOther']) ? ': ' . $d['kindOther'] : '')];
     $f0 = (string)($d['from'] ?? ''); $t0 = (string)($d['to'] ?? '');
     $rows[] = ['فترة الإجازة', $f0 === $t0 ? ar_date($f0) : 'من ' . ar_date($f0, substr($f0, 0, 4) !== substr($t0, 0, 4)) . ' إلى ' . ar_date($t0)];
     $rows[] = ['عدد الأيام', ar_days((int)($d['days'] ?? 0))];
     $rows[] = ['سبب الإجازة', (string)($d['reason'] ?? ($d['note'] ?? ''))];
     if (!empty($d['medOrg'])) $rows[] = ['الجهة الطبية', (string)$d['medOrg'] . (!empty($d['medNo']) ? ' · تقرير رقم ' . $d['medNo'] : '')];
-    if (!empty($d['relation'])) $rows[] = ['صلة القرابة بالمتوفى', (string)$d['relation']];
+    if (!empty($d['relation'])) $rows[] = ['صلة القرابة بالمتوفى', (string)$d['relation'] . (!empty($d['relationOther']) ? ': ' . $d['relationOther'] : '')];
     if (!empty($d['abroad'])) $rows[] = ['السفر أثناء الإجازة', $d['abroad'] === 'لا' ? 'لا يسافر' : (string)$d['abroad'] . (($d['exitVisa'] ?? '') === 'نعم' ? ' · يحتاج تأشيرة خروج وعودة' : '')];
     $rows[] = ['رقم التواصل', (string)(($d['contact'] ?? '') ?: ($sd['mobile'] ?? '')), 1];
     $rows[] = ['البريد الإلكتروني', req_staff_email($s), 1];

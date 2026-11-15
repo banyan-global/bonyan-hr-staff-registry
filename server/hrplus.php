@@ -136,7 +136,8 @@ function act_save(array $b): array {
     if ($k === 'raise') { $d['newSalary'] = round((float)to_ascii_digits((string)($in['newSalary'] ?? '0')), 2); $d['oldSalary'] = (float)preg_replace('/[^\d.]/', '', (string)($sd['salary'] ?? '')); $d['cur'] = pay_cur($sd);
         if ($d['newSalary'] <= 0) throw new HttpError('اكتب الراتب الجديد'); }
     if ($k === 'termination') { $d['lastDay'] = hrp_date($in['lastDay'] ?? ''); $d['reason'] = in_array($in['reason'] ?? '', ['انتهاء العقد', 'عدم اجتياز فترة التجربة', 'فصل لمخالفة جسيمة', 'إعادة هيكلة', 'أخرى'], true) ? $in['reason'] : '';
-        if (!$d['lastDay'] || !$d['reason']) throw new HttpError('اكتب آخر يوم عمل واختر السبب'); }
+        if (!$d['lastDay'] || !$d['reason']) throw new HttpError('اكتب آخر يوم عمل واختر السبب');
+        if ($d['reason'] === 'أخرى') { $d['reasonOther'] = hrp_str($in['reasonOther'] ?? '', 160); if (mb_strlen(trim($d['reasonOther'])) < 2) throw new HttpError('حدّد سبب إنهاء الخدمة'); } }
     if ($d['title'] === '') $d['title'] = in_array($k, ['notice', 'thanks'], true) ? ACT_KINDS[$k][0] : act_summary($k, $d, false);
     $d['byId'] = (int)$u['id'];
     $need = (bool)ACT_KINDS[$k][1]; $st = $need ? 'pending' : 'issued';
@@ -187,7 +188,7 @@ function act_apply(array $a, string $actor): void {
     if ($a['kind'] === 'promotion') { $set('jobTitle', $d['newTitle'] ?? ''); $set('grade', $d['newGrade'] ?? ''); }
     if ($a['kind'] === 'transfer') { $set('entity', $d['newEntity'] ?? ''); $set('department', $d['newDepartment'] ?? ''); $set('manager', $d['newManager'] ?? ''); }
     if ($a['kind'] === 'raise' && (string)($d['newSalary'] ?? '') !== '' && (string)($s['data']['salary'] ?? '') !== (string)$d['newSalary']) { $s['data']['salary'] = (string)$d['newSalary']; $ch[] = 'الراتب: (تغيّر — القيمة لا تُكتب في السجل)'; }
-    if ($a['kind'] === 'termination') { $set('serviceStatus', 'إنهاء خدمة قيد الإخلاء'); $set('serviceEnd', $d['lastDay'] ?? ''); $set('endReason', $d['reason'] ?? ''); }
+    if ($a['kind'] === 'termination') { $set('serviceStatus', 'إنهاء خدمة قيد الإخلاء'); $set('serviceEnd', $d['lastDay'] ?? ''); $set('endReason', ($d['reason'] ?? '') === 'أخرى' && !empty($d['reasonOther']) ? $d['reasonOther'] : ($d['reason'] ?? '')); }
     if (!$ch) return;
     $s['updated_at'] = now(); staff_put($s);
     audit_log($a['ref'], 'تحديث الملف بقرار ' . $a['no'], implode(' · ', $ch), $actor);
