@@ -730,9 +730,10 @@ function ntfItems() {
 }
 function ntfHTML(items) {
   items = items || ntfItems();
-  return '<div class="dh"><span>التنبيهات</span><span>' + (items.length ? nq(items.length, 'تنبيه واحد', 'تنبيهان', 'تنبيهات', 'تنبيهًا') : 'لا جديد') + '</span></div>' +
-    (items.length ? items.map(function (x) { return '<button class="ntf' + (x[6] ? ' srv' : '') + '"' + (x[6] ? ' data-rqn="' + esc(x[6]) + '"' : x[4] ? ' data-open="' + esc(x[4]) + '"' : ' data-go="' + (x[5] || 'home') + '"') + '>' + tile(x[0], x[1]) + '<div><b>' + esc(x[2]) + '</b><span>' + esc(x[3]) + '</span></div></button>'; }).join('')
-      : '<div class="empty" style="padding:22px 16px">لا توجد تنبيهات الآن. الوثائق سارية ولا تسجيلات جديدة.</div>');
+  var srv = items.filter(function (x) { return x[6]; }).length;
+  return '<div class="nfh"><b>التنبيهات</b>' + (items.length ? '<span class="nfc">' + items.length + '</span>' : '') + (srv ? '<button class="nfall" data-rqn="_">' + ic('check') + 'قراءة الكل</button>' : '') + '</div>' +
+    (items.length ? '<div class="nfl">' + items.map(function (x) { return '<button class="ntf' + (x[6] ? ' srv' : '') + '"' + (x[6] ? ' data-rqn="' + esc(x[6]) + '"' : x[4] ? ' data-open="' + esc(x[4]) + '"' : ' data-go="' + (x[5] || 'home') + '"') + '>' + tile(x[0], x[1]) + '<div class="nft"><b>' + esc(x[2]) + '</b>' + (x[3] ? '<span>' + esc(x[3]) + '</span>' : '') + '</div>' + (x[6] ? '<i class="nfd" aria-label="جديد"></i>' : '') + '</button>'; }).join('') + '</div>'
+      : '<div class="nfe">' + ic('bell') + '<b>لا توجد تنبيهات</b><span>كل شيء على ما يرام.</span></div>');
 }
 function topHTML() {
   var u = meUser(), t = [TITLES[view][0], TABL[view] && Object.keys(TABL[view]).length > 1 ? TABL[view][TAB[view]] : ''], N = ntfItems();
