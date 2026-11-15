@@ -11,18 +11,25 @@ declare(strict_types=1);
 
 const REQ_WATCH_MODES = ['new', 'all', 'none'];
 
-/* المتابعون: من أصحاب الاعتماد النهائي. الافتراضي (قبل أي ضبط): د. عبدالله، بريد الطلبات الجديدة والردود */
+/* المتابعون: أصحاب الاعتماد النهائي ومالك المنصة. الافتراضي قبل أي ضبط: د. عبدالله (الطلبات الجديدة والردود)،
+   والمالك (كل خطوة). «off» يُحفظ صراحة حتى لا يعود الافتراضي */
+function req_watch_cands(): array {
+    $c = []; foreach (req_finals() as $f) $c[$f['email']] = ['email' => $f['email'], 'name' => (string)$f['name'], 'final' => true];
+    $ow = function_exists('owner_user') ? owner_user() : null;
+    if ($ow && !isset($c[strtolower((string)$ow['email'])])) { $e = strtolower((string)$ow['email']); $c[$e] = ['email' => $e, 'name' => (string)($ow['name'] ?: $ow['email']), 'final' => false, 'owner' => true]; }
+    return $c;
+}
 function req_watchers(): array {
-    $v = json_decode((string)(setting('req_watchers') ?: ''), true);
-    $fin = array_column(req_finals(), 'name', 'email');
-    if (!is_array($v)) { $v = []; foreach ($fin as $e => $n) if (mb_strpos($n, 'عبدالله') !== false) { $v[] = ['email' => $e, 'mail' => 'new']; break; } }
-    $o = [];
-    foreach ($v as $w) { $e = strtolower(trim((string)($w['email'] ?? ''))); if (isset($fin[$e])) $o[$e] = ['email' => $e, 'name' => $fin[$e], 'mail' => in_array($w['mail'] ?? '', REQ_WATCH_MODES, true) ? $w['mail'] : 'new']; }
-    return array_values($o);
+    $v = json_decode((string)(setting('req_watchers') ?: ''), true); $c = req_watch_cands(); $set = [];
+    foreach (is_array($v) ? $v : [] as $w) { $e = strtolower(trim((string)($w['email'] ?? ''))); if (isset($c[$e])) $set[$e] = in_array($w['mail'] ?? '', array_merge(REQ_WATCH_MODES, ['off']), true) ? $w['mail'] : 'new'; }
+    if (!is_array($v)) foreach ($c as $e => $x) if (mb_strpos($x['name'], 'عبدالله') !== false && !empty($x['final'])) { $set[$e] = 'new'; break; }
+    foreach ($c as $e => $x) if (!empty($x['owner']) && !isset($set[$e])) $set[$e] = 'all';
+    $o = []; foreach ($set as $e => $m) if ($m !== 'off') $o[] = ['email' => $e, 'name' => $c[$e]['name'], 'mail' => $m, 'final' => !empty($c[$e]['final'])];
+    return $o;
 }
 function req_watchers_save(array $in): void {
-    $fin = array_column(req_finals(), 'name', 'email'); $o = [];
-    foreach (array_slice($in, 0, 10) as $w) { $e = strtolower(trim((string)($w['email'] ?? ''))); if (isset($fin[$e])) $o[$e] = ['email' => $e, 'mail' => in_array($w['mail'] ?? '', REQ_WATCH_MODES, true) ? $w['mail'] : 'new']; }
+    $c = req_watch_cands(); $o = [];
+    foreach (array_slice($in, 0, 12) as $w) { $e = strtolower(trim((string)($w['email'] ?? ''))); if (isset($c[$e])) $o[$e] = ['email' => $e, 'mail' => in_array($w['mail'] ?? '', array_merge(REQ_WATCH_MODES, ['off']), true) ? $w['mail'] : 'new']; }
     setting_set('req_watchers', json_encode(array_values($o), JSON_UNESCAPED_UNICODE));
 }
 function req_is_watcher(string $email): bool { $email = strtolower($email); foreach (req_watchers() as $w) if ($w['email'] === $email) return true; return false; }
@@ -59,9 +66,9 @@ function req_watch_event(array $r, string $ev, string $line = '', string $skip =
     $where = $r['status'] === 'pending' ? 'عند ' . ($chain[(int)$r['stage']]['who'] ?? $chain[(int)$r['stage']]['label'] ?? '') : (REQ_ST[$r['status']] ?? $r['status']);
     foreach (req_watchers() as $w) {
         if (in_array($w['email'], $mine, true) || $w['email'] === strtolower($skip)) continue;
-        $title = ['new' => 'طلب جديد: ' . $tn, 'step' => $tn . ' · ' . $name, 'reply' => 'رد الموظف: ' . $name, 'resubmit' => 'عدّل ' . $name . ' طلبه'][$ev] ?? $tn;
+        $title = ['new' => 'طلب جديد: ' . $tn, 'step' => $tn . ' · ' . $name, 'reply' => 'رد الموظف: ' . $name, 'sask' => 'استفسار من ' . $name, 'resubmit' => 'عدّل ' . $name . ' طلبه'][$ev] ?? $tn;
         note_add($w['email'], $title, ($ev === 'new' ? $name . ' · ' . req_summary($r) . ' · ' . $where : $line . ($line !== '' ? ' · ' : '') . $where) . ' · ' . $r['no'], $r['no'], $ev);
-        $send = $w['mail'] === 'all' || ($w['mail'] === 'new' && in_array($ev, ['new', 'reply', 'resubmit'], true));
+        $send = $w['mail'] === 'all' || ($w['mail'] === 'new' && in_array($ev, ['new', 'reply', 'sask', 'resubmit'], true));
         if ($send) try { req_watch_mail($r, $w, $ev, $line); } catch (Throwable $e) { error_log('[bonyan-hr] watch mail ' . $e->getMessage()); }
     }
 }
@@ -69,14 +76,14 @@ function req_watch_mail(array $r, array $w, string $ev, string $line): void {
     $s = staff_get($r['ref']); $name = $s ? staff_name($s) : $r['ref']; $tn = REQ_TYPES[$r['type']][1] ?? 'طلب';
     $open = $r['status'] === 'pending';
     $btns = [[mx_url('rq=' . $r['no']), $open ? '💬 استفسار أو طلب تعديل' : 'عرض الطلب في المنصة', 'primary']];
-    if ($open) array_unshift($btns, [(string)cfg('site_url') . 'decide.html#t=' . req_tok_issue($r, (int)$r['stage'], $w['email'], $w['name']) . '&a=approve', '✓ اعتماد نهائي', 'success']);
-    $head = ['new' => ['طلب جديد من ' . $name, 'قدّم ' . $name . ' ' . $tn . '. هذه تفاصيله وأين وصل في مساره، وتستطيع اعتماده نهائيًا أو التواصل معه من الأزرار أدناه.', 'blue'],
+    if ($open && req_is_final($w['email'])) array_unshift($btns, [(string)cfg('site_url') . 'decide.html#t=' . req_tok_issue($r, (int)$r['stage'], $w['email'], $w['name']) . '&a=approve', '✓ اعتماد نهائي', 'success']);
+    $head = ['new' => ['طلب جديد من ' . $name, 'قدّم ' . $name . ' ' . $tn . '. هذه تفاصيله وأين وصل في مساره، وتستطيع ' . (req_is_final($w['email']) ? 'اعتماده نهائيًا أو ' : '') . 'التواصل معه من الأزرار أدناه.', 'blue'],
         'step' => [$tn . ': ' . $line, 'تحديث على طلب ' . $name . '.', 'blue'],
-        'reply' => ['رد ' . $name . ' على استفسارك', $line, 'gold'],
+        'reply' => ['رد ' . $name . ' على استفسارك', $line, 'gold'], 'sask' => ['استفسار من ' . $name . ' عن طلبه', $line, 'gold'],
         'resubmit' => ['عدّل ' . $name . ' طلبه وأعاد إرساله', 'أجرى الموظف التعديل المطلوب، والطلب الآن ' . ($open ? 'يكمل مساره.' : (REQ_ST[$r['status']] ?? '')), 'green']][$ev] ?? [$tn, $line, 'blue'];
-    $rows = array_merge([['رقم الطلب', $r['no'], 1], ['مقدّم الطلب', $name], ['نوع الطلب', $tn]], array_map(fn($v) => [$v[0], (string)$v[1], $v[2] ?? 0], req_view_rows($r)));
+    $rows = array_merge([['رقم الطلب', $r['no'], 1], ['مقدّم الطلب', $name], ['نوع الطلب', $tn]], req_mail_rows($r));
     $html = mx_page(['tone' => $head[2], 'badge' => $tn, 'title' => $head[0], 'lead' => $head[1],
-        'body' => ($ev === 'reply' ? '' : mx_rows($rows, 'تفاصيل الطلب')) . req_chain_html($r) . req_thread_html($r['no']), 'buttons' => $btns,
+        'body' => (in_array($ev, ['reply', 'sask'], true) ? '' : ($r['type'] === 'leave' ? lv_table(lv_rows($r)) . lv_sub($r) : mx_rows($rows, 'تفاصيل الطلب'))) . req_chain_html($r) . req_thread_html($r['no']), 'buttons' => $btns,
         'foot' => 'يصلك هذا البريد لأنك متابع لطلبات المنسوبين. تغيّر ما يصلك بالبريد من «النماذج الإدارية» ← «إدارة القائمة».']);
     send_mail($w['email'], $head[0] . ' · ' . $r['no'], $html, $head[0] . "\n" . mx_url('rq=' . $r['no']), 'Bonyan HR', logo_inline());
 }
@@ -97,7 +104,7 @@ function req_talk_role(array $u, array $r): string {
     $mail = strtolower((string)$u['email']);
     if (my_staff_ref($u) === $r['ref']) return 'staff';
     if (req_private($r)) return is_owner($u) ? 'boss' : '';
-    if (req_is_watcher($mail) || req_is_final($mail)) return 'boss';
+    if (req_is_watcher($mail) || req_is_final($mail) || is_owner($u)) return 'boss';
     if (req_can_decide($u, $r) || strpos((string)$r['chain'], '"email":"' . $mail . '"') !== false) return 'approver';
     if (has_perm($u, 'requests.approve') || has_perm($u, 'staff.edit')) return 'hr';
     return '';
@@ -130,13 +137,16 @@ function req_msg(array $b): array {
     } else {
         /* رد الموظف: إلى من سأله (بريد وإشعار)، والمتابعين */
         $askers = []; foreach (q("SELECT DISTINCT by_email, by_name FROM req_msgs WHERE req_no=? AND kind IN ('ask','edit')", [$r['no']])->fetchAll() as $a) $askers[$a['by_email']] = $a['by_name'];
+        /* استفسار يبدأه الموظف: يصل المعتمد الحالي */
+        $init = !$askers;
+        if (!$askers && $r['status'] === 'pending') { $ch = json_decode($r['chain'], true) ?: []; foreach (req_step_emails($ch[(int)$r['stage']] ?? []) as $e => $n) $askers[$e] = $n; }
         foreach ($askers as $e => $n) {
             if (req_is_watcher($e)) continue; /* المتابع يصله من req_watch_event */
-            note_add($e, 'رد ' . $name, mb_substr($body, 0, 180), $r['no'], 'reply');
-            $html = mx_page(['tone' => 'gold', 'badge' => $tn, 'title' => 'رد ' . $name . ' على استفسارك', 'lead' => 'على الطلب ' . $r['no'] . '.', 'body' => mx_note($body, 'gold', $name) . req_thread_html($r['no']), 'buttons' => [[mx_url('rq=' . $r['no']), 'فتح الطلب والمحادثة', 'primary']]]);
-            try { send_mail($e, 'رد ' . $name . ' · ' . $r['no'], $html, $body, 'Bonyan HR', logo_inline()); } catch (Throwable $ex) { }
+            note_add($e, ($init ? 'استفسار من ' : 'رد ') . $name, mb_substr($body, 0, 180), $r['no'], 'reply');
+            $html = mx_page(['tone' => 'gold', 'badge' => $tn, 'title' => $init ? 'استفسار من ' . $name . ' عن طلبه' : 'رد ' . $name . ' على استفسارك', 'lead' => 'على الطلب ' . $r['no'] . '. ردّك من المنصة يصل إليه مباشرة.', 'body' => mx_note($body, 'gold', $name) . req_thread_html($r['no']), 'buttons' => [[mx_url('rq=' . $r['no']), 'فتح الطلب والمحادثة', 'primary']]]);
+            try { send_mail($e, ($init ? 'استفسار من ' : 'رد ') . $name . ' · ' . $r['no'], $html, $body, 'Bonyan HR', logo_inline()); } catch (Throwable $ex) { }
         }
-        req_watch_event($r, 'reply', mb_substr($body, 0, 300));
+        req_watch_event($r, $init ? 'sask' : 'reply', mb_substr($body, 0, 300));
     }
     return ['ok' => true, 'request' => req_out($u, $r)];
 }

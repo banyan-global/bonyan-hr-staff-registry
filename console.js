@@ -1906,7 +1906,7 @@ function bindTrack() {
 /* ---------- النماذج الإدارية ومسؤولو الاعتماد (يحددهم مدير النظام) ---------- */
 function formsData() { return need('reqForms', function () { return api({ action: 'reqForms' }); }, 120000).data; }
 function formOf(t) { var d = formsData(); return d ? d.forms.filter(function (f) { return f.type === t; })[0] : null; }
-function formOn(t) { var f = formOf(t); return !f || f.on; }
+function formOn(t) { if (t === 'train') return false; /* أُوقف نموذج التدريب */ var f = formOf(t), fd = formsData(); return f ? f.on : !(fd && fd.forms); }
 function flowText(t) {
   var f = formOf(t); if (!t) return 'اختر نوع الطلب، وسيظهر هنا مسار اعتماده.';
   if (!f) return 'يمر الطلب بمسار اعتماد، ويصلك بريد عند كل خطوة.';
@@ -2103,7 +2103,7 @@ function drawSup() {
     var bad = SUP.list.filter(function (x) { return String(x.name).trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(x.email).trim()); })[0];
     if (bad) { SUP.err = 'أكمل الاسم والبريد الصحيح لكل مسؤول' + (bad.name ? ': ' + bad.name : '') + '.'; drawSup(); return; }
     SUP.busy = true; drawSup();
-    api({ action: 'reqSupsSave', sups: SUP.list.map(function (x) { return { id: x.id, name: x.name, email: x.email, title: x.title, ents: Object.keys(SUP.map).filter(function (e) { return e !== '*' && SUP.map[e] === x.k && supRt(e).mgr; }) }; }), routes: (function () { var o = {}; SUP._ents.forEach(function (x) { o[x.k] = supRt(x.k); }); return o; })(), watchers: Object.keys(SUP.w || {}).filter(function (e) { return SUP.w[e] && SUP.w[e] !== 'off'; }).map(function (e) { return { email: e, mail: SUP.w[e] }; }) }).then(function (j) { seed('reqForms', j); var L = document.getElementById('supLayer'); if (L) L.remove(); SUP = null; toast('حُفظت قائمة المسؤولين المباشرين'); render(); })
+    api({ action: 'reqSupsSave', sups: SUP.list.map(function (x) { return { id: x.id, name: x.name, email: x.email, title: x.title, ents: Object.keys(SUP.map).filter(function (e) { return e !== '*' && SUP.map[e] === x.k && supRt(e).mgr; }) }; }), routes: (function () { var o = {}; SUP._ents.forEach(function (x) { o[x.k] = supRt(x.k); }); return o; })(), watchers: (function () { var fd1 = formsData() || {}; return ((fd1.watchCands && fd1.watchCands.length ? fd1.watchCands : fd1.finals) || []).filter(function (f) { return f.email; }).map(function (f) { return { email: f.email, mail: SUP.w[f.email] || 'off' }; }); })() }).then(function (j) { seed('reqForms', j); var L = document.getElementById('supLayer'); if (L) L.remove(); SUP = null; toast('حُفظت قائمة المسؤولين المباشرين'); render(); })
       .catch(function (e) { SUP.busy = false; SUP.err = errText(e); drawSup(); });
   };
 }
@@ -2180,7 +2180,7 @@ function talkMount(r) {
   var mk = function (id, cls, icon, txt, title) { var x = document.createElement('button'); x.type = 'button'; x.className = 'btn ' + cls; x.id = id; x.innerHTML = ic(icon) + txt; if (title) x.title = title; return x; };
   var ask = boss ? mk('tkAsk', 'tkask', 'chat', 'استفسار', 'اسأل الموظف عن الطلب') : null;
   var req = boss && r.status === 'pending' ? mk('tkEditReq', 'tkedit', 'edit', 'طلب تعديل', 'يُعاد الطلب إلى الموظف ليعدّله ثم يكمل مساره') : null;
-  var rep = T === 'staff' && M.length ? mk('tkRep', 'tkask', 'chat', last && (last.k === 'ask' || last.k === 'edit') ? 'الرد على الاستفسار' : 'مراسلة المعتمد') : null;
+  var rep = T === 'staff' && (M.length || r.status === 'pending') ? mk('tkRep', 'tkask', 'chat', last && (last.k === 'ask' || last.k === 'edit') ? 'الرد على الاستفسار' : M.length ? 'مراسلة المعتمد' : 'استفسار عن الطلب') : null;
   var rs = r.status === 'returned' && (own || can('edit')) ? mk('rqResub', 'goldb', 'edit', 'تعديل وإعادة إرسال') : null;
   /* لا مربع ملاحظة دائم: سبب الرفض يُكتب في مربع يفتح عند ضغط «رفض» */
   var rj = null; if (rej) { rj = mk('tkRej', 'tkrej', 'x', 'رفض', 'يُرفض الطلب ويصل الموظف السبب'); rej.hidden = true; }
@@ -2206,7 +2206,7 @@ function talkMount(r) {
   }
   var openBox = function (mode) {
     var box = document.getElementById('tkBox'); if (!box) return; MODE = mode; box.hidden = false;
-    var lab = { reject: [ic('x') + 'سبب عدم الاعتماد', 'اكتب السبب؛ يصل إلى الموظف مع قرار الرفض…', 'تأكيد الرفض'], ask: [ic('chat') + 'استفسار إلى الموظف', 'اكتب سؤالك، ويصل الموظف بريد وإشعار للرد…', 'إرسال الاستفسار'], edit: [ic('edit') + 'طلب تعديل من الموظف', 'اكتب ما تريد تعديله؛ يُعاد الطلب إليه ويكمل مساره بعد إعادة الإرسال…', 'إعادة الطلب للتعديل'], reply: [ic('chat') + 'ردّك', 'اكتب ردك…', 'إرسال الرد'] }[mode];
+    var lab = { reject: [ic('x') + 'سبب عدم الاعتماد', 'اكتب السبب؛ يصل إلى الموظف مع قرار الرفض…', 'تأكيد الرفض'], ask: [ic('chat') + 'استفسار إلى الموظف', 'اكتب سؤالك، ويصل الموظف بريد وإشعار للرد…', 'إرسال الاستفسار'], edit: [ic('edit') + 'طلب تعديل من الموظف', 'اكتب ما تريد تعديله؛ يُعاد الطلب إليه ويكمل مساره بعد إعادة الإرسال…', 'إعادة الطلب للتعديل'], reply: M.length ? [ic('chat') + 'ردّك', 'اكتب ردك…', 'إرسال الرد'] : [ic('chat') + 'استفسار عن الطلب', 'اكتب سؤالك؛ يصل إلى من يعتمد طلبك الآن…', 'إرسال'] }[mode];
     document.getElementById('tkSend').className = 'btn sm ' + (mode === 'reject' ? 'danger' : 'goldb');
     document.getElementById('tkMode').innerHTML = lab[0]; document.getElementById('tkMode').className = 'tkmode ' + mode;
     var t = document.getElementById('tkTxt'); t.placeholder = lab[1]; document.getElementById('tkSend').innerHTML = ic(mode === 'edit' ? 'edit' : mode === 'reject' ? 'x' : 'send') + lab[2]; document.getElementById('tkErr').textContent = '';
@@ -2246,11 +2246,11 @@ function talkMount(r) {
 
 /* متابعو الطلبات (من أصحاب الاعتماد النهائي): يصلهم كل طلب جديد وكل خطوة في الجرس، وبالبريد حسب الاختيار */
 function supWatchHTML() {
-  var fins = ((formsData() || {}).finals || []).filter(function (f) { return f.email; }); if (!fins.length) return '';
+  var fd0 = formsData() || {}, fins = (fd0.watchCands && fd0.watchCands.length ? fd0.watchCands : (fd0.finals || [])).filter(function (f) { return f.email; }); if (!fins.length) return '';
   var opts = [{ v: 'off', n: 'لا يتابع', ic: 'x' }, { v: 'none', n: 'إشعارات المنصة فقط', d: 'بلا بريد، مع الملخص اليومي', ic: 'bell' }, { v: 'new', n: 'الطلبات الجديدة والردود', d: 'بالبريد، والباقي في المنصة والملخص اليومي', ic: 'mail' }, { v: 'all', n: 'كل خطوة', d: 'بريد عند كل اعتماد أو رفض أيضًا', ic: 'send' }];
   return '<details class="supents" open><summary>' + ic('eye') + 'متابعو الطلبات</summary><p>يصل المتابع كل طلب جديد وأين وصل في جرس المنصة، ويستطيع الاستفسار من الموظف أو طلب تعديل الطلب، ويصله ملخص يومي كل صباح. اختر ما يصله بالبريد.</p><div class="supentl">' +
     fins.map(function (f, i) { var v = SUP.w[f.email] || 'off';
-      return '<div class="supent' + (v !== 'off' ? ' on' : '') + '"><div class="en"><i style="background:#b8893b"></i><b>' + esc(f.name) + '</b><small>من أصحاب الاعتماد النهائي</small></div><div class="rtc">' +
+      return '<div class="supent' + (v !== 'off' ? ' on' : '') + '"><div class="en"><i style="background:#b8893b"></i><b>' + esc(f.name) + '</b><small>' + (f.owner ? 'مالك المنصة' : 'من أصحاب الاعتماد النهائي') + '</small></div><div class="rtc">' +
         ssel('supW' + i, opts, v, 'لا يتابع', function (x) { supSync(); SUP.w[f.email] = x; drawSup(); }, 'متابعة ' + f.name) + '</div></div>'; }).join('') + '</div></details>';
 }
 

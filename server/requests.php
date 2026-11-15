@@ -75,6 +75,8 @@ const REQ_CHAINS = [
 ];
 /* إصدار المسار الموحّد: عند تغييره يُعاد ضبط مسارات كل النماذج على المسار الافتراضي أعلاه مرة واحدة (مع إبقاء حالة التفعيل) */
 const REQ_FLOW_VER = '2';
+/* نماذج أُوقفت: لا تُقدَّم ولا تظهر في القوائم، وتبقى طلباتها السابقة كما هي */
+const REQ_RETIRED = ['train'];
 const REQ_ST = ['pending' => 'قيد الإجراء', 'returned' => 'بانتظار تعديل الموظف', 'approved' => 'معتمد', 'rejected' => 'مرفوض', 'cancelled' => 'ملغى'];
 /* أنواع الإجازة الستة في النظام السابق، و«بدون راتب» التي كانت في المنصة */
 const LEAVE_KINDS = ['اعتيادية (سنوية)', 'تعويضية', 'مرضية', 'دراسة / تدريب', 'طارئة (اضطرارية)', 'أمومة', 'حج', 'زواج', 'وفاة قريب', 'بدون راتب', 'أخرى'];
@@ -529,6 +531,7 @@ function req_forms(): array {
     $cnt = []; foreach (q('SELECT type, status, COUNT(*) n FROM requests GROUP BY type, status')->fetchAll() as $r) $cnt[$r['type']][$r['status']] = (int)$r['n'];
     $sups = req_sups();
     foreach (REQ_TYPES as $t => $T) {
+        if (in_array($t, REQ_RETIRED, true)) continue;
         $steps = array_map(function ($s) use ($sups, $isAdmin) {
             $k = (string)($s['kind'] ?? 'role');
             if ($k === 'manager') $people = array_map(fn($p) => ['id' => 0, 'name' => $p['name']], $sups);
@@ -548,7 +551,7 @@ function req_forms(): array {
     $finals = array_map(fn($f) => $isAdmin ? $f : ['email' => '', 'name' => $f['name']], req_finals());
     return ['ok' => true, 'forms' => $forms, 'roles' => array_intersect_key(ROLE_NAMES, array_flip(REQ_STEP_ROLES)), 'canEdit' => $isAdmin, 'sups' => $supsOut, 'leaveKinds' => LEAVE_KINDS, 'finals' => $finals, 'iAmFinal' => req_is_final((string)$u['email']),
         /* مسارات الجهات: كاملة لمن يدير النماذج، ولغيره هل يمر الطلب بالمسؤول المباشر فقط */
-        'watchers' => function_exists('req_watchers') ? ($isAdmin ? req_watchers() : array_map(fn($w) => ['name' => $w['name']], req_watchers())) : [], 'iWatch' => function_exists('req_is_watcher') && req_is_watcher((string)$u['email']),
+        'watchers' => function_exists('req_watchers') ? ($isAdmin ? req_watchers() : array_map(fn($w) => ['name' => $w['name']], req_watchers())) : [], 'watchCands' => $isAdmin && function_exists('req_watch_cands') ? array_values(req_watch_cands()) : [], 'iWatch' => function_exists('req_is_watcher') && req_is_watcher((string)$u['email']),
         'routes' => $isAdmin ? (object)req_routes() : (object)array_map(fn($r) => ['mgr' => $r['mgr']], req_routes())];
 }
 function req_forms_save(array $b): array {
@@ -710,7 +713,25 @@ function lv_frame(string $entity, string $title, string $content): string {
     return mx_page(['eyebrow' => $entity . ' · الإجازات', 'title' => $plain, 'tone' => $tone, 'icon' => $icon, 'badge' => $badge, 'pre' => $plain,
         'body' => '<div style="font-size:14.5px;line-height:2;color:' . MX['ink'] . ';">' . $content . '</div>']);
 }
-function lv_table(array $rows): string { return mx_rows($rows, 'تفاصيل الطلب'); }
+/* جدول الإجازة في البريد: ثلاث مجموعات واضحة بدل قائمة طويلة */
+function lv_table(array $rows): string {
+    $G = [['بيانات الموظف', ['رقم الطلب', 'اسم الموظف', 'المسمى الوظيفي', 'الرقم الوظيفي', 'الجهة / القسم']],
+        ['تفاصيل الإجازة', ['نوع الإجازة', 'فترة الإجازة', 'عدد الأيام', 'السفر أثناء الإجازة', 'صلة القرابة بالمتوفى', 'الجهة الطبية', 'سبب الإجازة', 'المسؤول المباشر']],
+        ['التواصل أثناء الإجازة', ['رقم التواصل', 'البريد الإلكتروني', 'العنوان أثناء الإجازة']]];
+    $by = []; foreach ($rows as $r) $by[$r[0]] = $r; $h = '';
+    foreach ($G as [$t, $labels]) { $part = []; foreach ($labels as $l) if (isset($by[$l])) { $part[] = $by[$l]; unset($by[$l]); } $h .= mx_rows($part, $t); }
+    return $h . ($by ? mx_rows(array_values($by), 'تفاصيل أخرى') : '');
+}
+/* صفوف الطلب للبريد: التواريخ بالعربية (15 نوفمبر 2026) */
+function req_mail_rows(array $r): array {
+    return array_map(fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v[1]) ? [$v[0], ar_date((string)$v[1])] : (preg_match('/^\d{4}-\d{2}$/', (string)$v[1]) ? [$v[0], ar_date($v[1] . '-01')] : [$v[0], (string)$v[1], $v[2] ?? 0]), req_view_rows($r));
+}
+/* تاريخ عربي مقروء: 15 نوفمبر 2026 */
+function ar_date(string $d, bool $year = true): string {
+    $t = strtotime($d); if (!$t) return $d;
+    $m = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'][(int)date('n', $t) - 1];
+    return (int)date('j', $t) . ' ' . $m . ($year ? ' ' . date('Y', $t) : '');
+}
 function lv_changes(array $ch): string {
     if (!$ch) return mx_note('لا توجد تغييرات في البيانات الأساسية للطلب.', 'navy');
     $h = '';
@@ -727,8 +748,9 @@ function lv_rows(array $r): array {
     if (!empty($sd['employeeNo'])) $rows[] = ['الرقم الوظيفي', (string)$sd['employeeNo']];
     $rows[] = ['الجهة / القسم', trim((string)($sd['entity'] ?? '') . (!empty($sd['department']) ? ' - ' . $sd['department'] : ''))];
     $rows[] = ['نوع الإجازة', leave_kind_norm((string)($d['kind'] ?? ''))];
-    $rows[] = ['فترة الإجازة', lv_date((string)($d['from'] ?? '')) . ' إلى ' . lv_date((string)($d['to'] ?? ''))];
-    $rows[] = ['عدد الأيام', ($d['days'] ?? 0) . ' يوم'];
+    $f0 = (string)($d['from'] ?? ''); $t0 = (string)($d['to'] ?? '');
+    $rows[] = ['فترة الإجازة', $f0 === $t0 ? ar_date($f0) : 'من ' . ar_date($f0, substr($f0, 0, 4) !== substr($t0, 0, 4)) . ' إلى ' . ar_date($t0)];
+    $rows[] = ['عدد الأيام', ar_days((int)($d['days'] ?? 0))];
     $rows[] = ['سبب الإجازة', (string)($d['reason'] ?? ($d['note'] ?? ''))];
     if (!empty($d['medOrg'])) $rows[] = ['الجهة الطبية', (string)$d['medOrg'] . (!empty($d['medNo']) ? ' · تقرير رقم ' . $d['medNo'] : '')];
     if (!empty($d['relation'])) $rows[] = ['صلة القرابة بالمتوفى', (string)$d['relation']];
@@ -826,7 +848,7 @@ function req_mail_staff(array $r, string $title, string $line, string $note = ''
     $tone = mx_guess_tone($title . ' ' . $line);
     $html = mx_page(['eyebrow' => 'الموارد البشرية · طلباتي', 'title' => $title, 'tone' => $tone, 'pre' => $line, 'lead' => esc_html($line),
         'badge' => ['green' => 'معتمد', 'red' => 'مرفوض', 'amber' => 'قيد الإجراء', 'gold' => 'عُدّل'][$tone] ?? '',
-        'body' => mx_rows(array_merge([['رقم الطلب', $r['no'], 1], ['نوع الطلب', REQ_TYPES[$r['type']][1] ?? '']], array_map(fn($v) => [$v[0], (string)$v[1], $v[2] ?? 0], req_view_rows($r)) ?: [['التفاصيل', req_summary($r)]]), 'تفاصيل الطلب') . ($note !== '' ? mx_note($note, $tone === 'red' ? 'red' : 'green', $tone === 'red' ? 'سبب عدم الاعتماد' : 'ملاحظة المعتمِد') : '') . req_chain_html($r),
+        'body' => mx_rows(array_merge([['رقم الطلب', $r['no'], 1], ['نوع الطلب', REQ_TYPES[$r['type']][1] ?? '']], req_mail_rows($r) ?: [['التفاصيل', req_summary($r)]]), 'تفاصيل الطلب') . ($note !== '' ? mx_note($note, $tone === 'red' ? 'red' : 'green', $tone === 'red' ? 'سبب عدم الاعتماد' : 'ملاحظة المعتمِد') : '') . req_chain_html($r),
         'buttons' => [[mx_url('myreq'), 'متابعة طلبي في المنصة', 'primary']]]);
     try { send_mail($to, $title . ' · ' . $r['no'], $html, $line . "\n" . $r['no'] . "\n" . req_summary($r) . "\n" . mx_url('myreq'), 'الموارد البشرية · مجموعة بنيان العالمية', logo_inline(), (string)cfg('hr_notify')); }
     catch (Throwable $e) { audit_log($r['ref'], 'تعذّر إرسال بريد الطلب', $r['no'] . ' · ' . $e->getMessage()); }
@@ -839,7 +861,7 @@ function req_mail_approvers(array $r, array $step): void {
     foreach (q("SELECT * FROM users WHERE active=1 AND role='admin'")->fetchAll() as $u) if (user_notify($u) && in_array('requests.approve', user_perms($u), true)) $list[strtolower($u['email'])] = 1;
     $s = staff_get($r['ref']); $name = $s ? staff_name($s) : $r['ref'];
     $staffMails = req_staff_emails($r['ref']);
-    $info = mx_rows(array_merge([['رقم الطلب', $r['no'], 1], ['مقدّم الطلب', $name]], array_map(fn($v) => [$v[0], (string)$v[1]], req_view_rows($r))), 'تفاصيل الطلب') . req_chain_html($r);
+    $info = mx_rows(array_merge([['رقم الطلب', $r['no'], 1], ['مقدّم الطلب', $name]], req_mail_rows($r)), 'تفاصيل الطلب') . req_chain_html($r);
     /* من يعتمد بالبريد (المسؤول المباشر أو شخص بلا حساب) يصله رابط قرار خاص به */
     $tokFor = !empty($step['email']) || !empty($step['emails']) ? req_step_emails($step) : [];
     $tname = REQ_TYPES[$r['type']][1];
@@ -880,6 +902,7 @@ function req_colleagues(array $b): array {
 function req_create(array $b): array {
     $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
     $type = (string)($b['type'] ?? ''); if (!isset(REQ_TYPES[$type])) throw new HttpError('نوع الطلب غير معروف');
+    if (in_array($type, REQ_RETIRED, true)) throw new HttpError('هذا النموذج لم يعد متاحًا');
     $mine = my_staff_ref($u);
     $ref = (string)($b['ref'] ?? '');
     if ($ref === '' || $ref === $mine) { if (!$mine) throw new HttpError('لا يوجد سجل منسوب لهذا الحساب'); $ref = $mine; $by = $u['name'] ?: $u['email']; }

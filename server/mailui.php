@@ -55,16 +55,31 @@ function mx_buttons(array $btns, bool $rtl = true): string {
 }
 /* بطاقة بيانات: [العنوان، القيمة، اتجاه يسار-يمين؟] */
 function mx_rows(array $rows, string $title = '', bool $rtl = true): string {
-    $S = $rtl ? 'right' : 'left'; $h = ''; $i = 0;
+    /* شبكة بطاقات: العنوان صغير فوق القيمة، وخانتان في الصف؛ القيم الطويلة تأخذ الصف كاملًا. تبقى واضحة على الجوال والكمبيوتر */
+    $S = $rtl ? 'right' : 'left'; $E = $rtl ? 'left' : 'right';
+    $items = [];
     foreach ($rows as $r) {
-        $v = (string)($r[1] ?? ''); if ($v === '') continue;
-        $val = !empty($r[2]) ? '<span dir="ltr" style="unicode-bidi:embed;">' . esc_html($v) . '</span>' : nl2br(esc_html($v));
-        $h .= '<tr><td style="padding:11px 16px;' . ($i++ ? 'border-top:1px solid ' . MX['line'] . ';' : '') . 'vertical-align:top;width:32%;font-size:12.5px;line-height:1.7;color:' . MX['mut'] . ';font-weight:700;text-align:' . $S . ';white-space:nowrap;">' . esc_html((string)$r[0]) . '</td>'
-            . '<td style="padding:11px 16px;' . ($i > 1 ? 'border-top:1px solid ' . MX['line'] . ';' : '') . 'vertical-align:top;font-size:14px;line-height:1.75;color:' . MX['ink'] . ';font-weight:800;text-align:' . $S . ';word-break:break-word;">' . $val . '</td></tr>';
+        $v = trim((string)($r[1] ?? '')); if ($v === '') continue;
+        $ltr = !empty($r[2]) || strpos($v, '@') !== false; $wide = !empty($r[3]) || mb_strlen($v) > ($ltr ? 13 : 24) || strpos($v, "\n") !== false;
+        $items[] = ['l' => (string)$r[0], 'v' => $v, 'ltr' => $ltr, 'wide' => $wide];
     }
-    if ($h === '') return '';
-    return ($title !== '' ? '<div style="margin:18px 2px 8px;font-size:12px;font-weight:800;color:' . MX['goldD'] . ';letter-spacing:.2px;text-align:' . $S . ';">' . esc_html($title) . '</div>' : '<div style="height:14px;line-height:14px;font-size:0;">&nbsp;</div>')
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:' . MX['soft'] . ';border:1px solid ' . MX['line'] . ';border-radius:16px;">' . $h . '</table>';
+    if (!$items) return '';
+    $cell = function (array $it, bool $wide, bool $first, bool $sep) use ($S, $E) {
+        $val = $it['ltr'] ? '<span dir="ltr" style="unicode-bidi:embed;">' . esc_html($it['v']) . '</span>' : nl2br(esc_html($it['v']));
+        return '<td ' . ($wide ? 'colspan="2" ' : 'width="50%" ') . 'style="padding:12px 16px;vertical-align:top;text-align:' . $S . ';' . ($first ? '' : 'border-top:1px solid ' . MX['line'] . ';') . ($sep ? 'border-' . $E . ':1px solid ' . MX['line'] . ';' : '') . '">'
+            . '<div style="font-size:11.5px;line-height:1.5;color:' . MX['mut'] . ';font-weight:700;margin-bottom:3px;">' . esc_html($it['l']) . '</div>'
+            . '<div style="font-size:14.5px;line-height:1.65;color:' . MX['ink'] . ';font-weight:800;word-break:break-word;">' . $val . '</div></td>';
+    };
+    $h = ''; $first = true; $n = count($items);
+    for ($i = 0; $i < $n; ) {
+        $a = $items[$i];
+        $b = $items[$i + 1] ?? null;
+        if (!$a['wide'] && $b && !$b['wide']) { $h .= '<tr>' . $cell($a, false, $first, true) . $cell($b, false, $first, false) . '</tr>'; $i += 2; }
+        else { $h .= '<tr>' . $cell($a, true, $first, false) . '</tr>'; $i++; }
+        $first = false;
+    }
+    return ($title !== '' ? '<div style="margin:20px 2px 8px;font-size:12.5px;font-weight:900;color:' . MX['goldD'] . ';text-align:' . $S . ';"><span style="display:inline-block;width:6px;height:6px;border-radius:3px;background:' . MX['goldD'] . ';vertical-align:middle;margin-' . $E . ':6px;"></span>' . esc_html($title) . '</div>' : '<div style="height:14px;line-height:14px;font-size:0;">&nbsp;</div>')
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:' . MX['soft'] . ';border:1px solid ' . MX['line'] . ';border-radius:16px;table-layout:fixed;">' . $h . '</table>';
 }
 /* ملاحظة ملوّنة */
 function mx_note(string $text, string $tone = 'navy', string $label = '', bool $rtl = true): string {
@@ -116,7 +131,7 @@ function mx_page(array $o): string {
         . '<tr><td bgcolor="' . MX['navy'] . '" style="background-color:' . MX['navy'] . ';background-image:radial-gradient(120% 140% at ' . ($rtl ? '100%' : '0%') . ' 0%,rgba(212,177,118,.22) 0%,rgba(212,177,118,0) 46%),linear-gradient(135deg,' . MX['navy3'] . ' 0%,' . MX['navy'] . ' 52%,' . MX['navy2'] . ' 100%);padding:22px 26px 20px;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'
         . '<td style="vertical-align:middle;text-align:' . $S . ';"><div style="font-size:17px;line-height:1.4;font-weight:900;color:#FFFFFF;">' . esc_html($org) . '</div>'
-        . '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:7px;"><tr><td style="background:rgba(212,177,118,.16);border:1px solid rgba(212,177,118,.5);border-radius:999px;padding:3px 11px;font-size:11.5px;line-height:1.6;font-weight:800;color:#EED6A2;white-space:nowrap;">' . esc_html((string)($o['eyebrow'] ?? '')) . '</td></tr></table></td>'
+        . (trim((string)($o['eyebrow'] ?? '')) !== '' ? '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:7px;"><tr><td style="background:rgba(212,177,118,.16);border:1px solid rgba(212,177,118,.5);border-radius:999px;padding:3px 11px;font-size:11.5px;line-height:1.6;font-weight:800;color:#EED6A2;white-space:nowrap;">' . esc_html((string)$o['eyebrow']) . '</td></tr></table>' : '<div style="margin-top:4px;font-size:12px;color:#C9D3E6;">منصة الموارد البشرية</div>') . '</td>'
         . '<td align="' . $E . '" width="64" style="vertical-align:middle;"><img src="cid:logo" width="58" alt="Bonyan" style="display:block;width:58px;height:auto;border:0;"></td></tr></table></td></tr>'
         . '<tr><td style="height:3px;line-height:3px;font-size:0;background:' . MX['gold'] . ';background-image:linear-gradient(90deg,#B8924F,' . MX['gold'] . ',' . MX['goldL'] . ',' . MX['gold'] . ',#B8924F);">&nbsp;</td></tr>'
         /* البطل: أيقونة الحالة والعنوان */
