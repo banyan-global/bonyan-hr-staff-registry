@@ -2160,37 +2160,67 @@ setTimeout(notesPull, 1500);
   reqOpen = function (no, fresh) { _open(no, fresh); var r = reqByNo(no); if (r) talkMount(r); };
 })();
 function talkMount(r) {
-  var body = document.querySelector('#reqLayer .rqbody'); if (!body) return;
-  var own = !!(ME && ME.ref === r.ref), M = r.msgs || [], T = r.talk || '';
-  var ban = r.status === 'returned' ? '<div class="note warn rqret">' + ic('edit') + '<span>' + (own ? '<b>طُلب منك تعديل هذا الطلب.</b> عدّل ما طُلب ثم أعد إرساله، فيكمل مساره من المرحلة نفسها.' : 'أُعيد الطلب إلى الموظف للتعديل، ويكمل مساره بعد إعادة إرساله.') + '</span>' + (own || can('edit') ? '<button class="btn sm goldb" id="rqResub">' + ic('edit') + 'تعديل وإعادة إرسال</button>' : '') + '</div>' : '';
-  if (!T && !M.length && !ban) return;
-  var who = function (m) { return m.role === 'staff' ? 'staff' : 'boss'; };
+  var L = document.getElementById('reqLayer'), body = L && L.querySelector('.rqbody'), foot = L && L.querySelector('.mf'); if (!body || !foot) return;
+  var own = !!(ME && ME.ref === r.ref), M = r.msgs || [], T = r.talk || '', boss = T && T !== 'staff', last = M[M.length - 1];
   var kindTag = { ask: 'استفسار', edit: 'طلب تعديل', reply: 'رد', resubmit: 'أُعيد الإرسال' };
-  var sec = document.createElement('div'); sec.className = 'rqtalk';
-  sec.innerHTML = ban + '<div class="ssub">' + ic('chat') + 'المحادثة حول الطلب</div>' +
-    (M.length ? '<div class="tklist">' + M.map(function (m) { return '<div class="tkm ' + who(m) + '"><div class="tkh"><b>' + esc(m.by) + '</b><em class="' + m.k + '">' + (kindTag[m.k] || '') + '</em><small>' + esc(agoTxt(m.at)) + '</small></div><p>' + esc(m.body) + '</p></div>'; }).join('') + '</div>'
-      : '<p class="tkempty">' + (T === 'staff' ? 'لا رسائل على طلبك.' : 'لا رسائل بعد. اكتب استفسارك ويصل الموظف بريد وإشعار.') + '</p>') +
-    (T ? '<div class="tkbox"><textarea id="tkTxt" rows="2" maxlength="1500" placeholder="' + (T === 'staff' ? 'اكتب ردك…' : 'اكتب استفسارك أو ما تريد تعديله…') + '"></textarea><div class="lerr" id="tkErr" role="alert"></div><div class="tkbtns">' +
-      (T === 'staff' ? '<button class="btn sm goldb" data-tk="reply">' + ic('send') + 'إرسال الرد</button>'
-        : '<button class="btn sm" data-tk="ask">' + ic('chat') + 'إرسال استفسار</button>' + (r.status === 'pending' ? '<button class="btn sm goldb" data-tk="edit" title="يُعاد الطلب إلى الموظف ليعدّله">' + ic('edit') + 'طلب تعديل من الموظف</button>' : '')) + '</div></div>' : '');
-  body.appendChild(sec);
-  sec.querySelectorAll('[data-tk]').forEach(function (b) { b.onclick = function () {
+  /* ---- المحادثة داخل الطلب ---- */
+  var ban = r.status === 'returned' ? '<div class="note warn rqret">' + ic('edit') + '<span>' + (own ? '<b>طُلب منك تعديل هذا الطلب.</b> عدّل ما طُلب ثم أعد إرساله، فيكمل مساره من المرحلة نفسها.' : 'أُعيد الطلب إلى الموظف للتعديل، ويكمل مساره بعد إعادة إرساله.') + '</span></div>' : '';
+  if (T || M.length || ban) {
+    var sec = document.createElement('div'); sec.className = 'rqtalk'; sec.id = 'rqTalk';
+    sec.innerHTML = ban + (M.length || T ? '<div class="ssub">' + ic('chat') + 'المحادثة حول الطلب' + (M.length ? ' <span class="tkn">' + M.length + '</span>' : '') + '</div>' : '') +
+      (M.length ? '<div class="tklist">' + M.map(function (m) { return '<div class="tkm ' + (m.role === 'staff' ? 'staff' : 'boss') + '"><div class="tkh"><b>' + esc(m.by) + '</b><em class="' + m.k + '">' + (kindTag[m.k] || '') + '</em><small>' + esc(agoTxt(m.at)) + '</small></div><p>' + esc(m.body) + '</p></div>'; }).join('') + '</div>'
+        : T ? '<p class="tkempty">' + (T === 'staff' ? 'لا رسائل على طلبك.' : 'لا رسائل بعد. اضغط «استفسار» أسفل النافذة، ويصل الموظف بريد وإشعار.') + '</p>' : '') +
+      (T ? '<div class="tkbox" id="tkBox" hidden><div class="tkmode" id="tkMode"></div><textarea id="tkTxt" rows="3" maxlength="1500"></textarea><div class="lerr" id="tkErr" role="alert"></div><div class="tkbtns"><button class="btn sm goldb" type="button" id="tkSend"></button><button class="btn sm" type="button" id="tkCancel">إلغاء</button></div></div>' : '');
+    body.appendChild(sec);
+  }
+  /* ---- ترتيب أزرار النافذة: القرار والتواصل يمينًا، والطباعة والحذف يسارًا ---- */
+  var g = function (sel) { return foot.querySelector(sel); };
+  var note = g('.rqdec'), ap = g('[data-rqdec="approve"]'), fin = g('[data-rqdec="final"]'), rej = g('[data-rqdec="reject"]'), ed = g('#rqEdit'), cn = g('#rqCancel'), del = g('#rqDel'), pr = g('#rqPrint');
+  if (fin) fin.innerHTML = ic('stamp') + 'اعتماد نهائي';
+  var mk = function (id, cls, icon, txt, title) { var x = document.createElement('button'); x.type = 'button'; x.className = 'btn ' + cls; x.id = id; x.innerHTML = ic(icon) + txt; if (title) x.title = title; return x; };
+  var ask = boss ? mk('tkAsk', 'tkask', 'chat', 'استفسار', 'اسأل الموظف عن الطلب') : null;
+  var req = boss && r.status === 'pending' ? mk('tkEditReq', 'tkedit', 'edit', 'طلب تعديل', 'يُعاد الطلب إلى الموظف ليعدّله ثم يكمل مساره') : null;
+  var rep = T === 'staff' && M.length ? mk('tkRep', 'tkask', 'chat', last && (last.k === 'ask' || last.k === 'edit') ? 'الرد على الاستفسار' : 'مراسلة المعتمد') : null;
+  var rs = r.status === 'returned' && (own || can('edit')) ? mk('rqResub', 'goldb', 'edit', 'تعديل وإعادة إرسال') : null;
+  var pri = document.createElement('div'); pri.className = 'rqacts pri';
+  [rs, ap, fin, ed, ask, req, rep, rej, cn].forEach(function (x) { if (x) pri.appendChild(x); });
+  var sc = document.createElement('div'); sc.className = 'rqacts sec';
+  [pr, del].forEach(function (x) { if (x) sc.appendChild(x); });
+  foot.innerHTML = ''; foot.classList.add('rqfoot');
+  if (note) foot.appendChild(note);
+  if (pri.children.length) foot.appendChild(pri);
+  foot.appendChild(sc);
+  /* ---- صندوق الكتابة يفتح عند الحاجة ---- */
+  var MODE = '';
+  var openBox = function (mode) {
+    var box = document.getElementById('tkBox'); if (!box) return; MODE = mode; box.hidden = false; if (note) note.hidden = true;
+    var lab = { ask: [ic('chat') + 'استفسار إلى الموظف', 'اكتب سؤالك، ويصل الموظف بريد وإشعار للرد…', 'إرسال الاستفسار'], edit: [ic('edit') + 'طلب تعديل من الموظف', 'اكتب ما تريد تعديله؛ يُعاد الطلب إليه ويكمل مساره بعد إعادة الإرسال…', 'إعادة الطلب للتعديل'], reply: [ic('chat') + 'ردّك', 'اكتب ردك…', 'إرسال الرد'] }[mode];
+    document.getElementById('tkMode').innerHTML = lab[0]; document.getElementById('tkMode').className = 'tkmode ' + mode;
+    var t = document.getElementById('tkTxt'); t.placeholder = lab[1]; document.getElementById('tkSend').innerHTML = ic(mode === 'edit' ? 'edit' : 'send') + lab[2]; document.getElementById('tkErr').textContent = '';
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(function () { t.focus(); }, 250);
+  };
+  if (ask) ask.onclick = function () { openBox('ask'); };
+  if (req) req.onclick = function () { openBox('edit'); };
+  if (rep) rep.onclick = function () { openBox('reply'); };
+  var cx = document.getElementById('tkCancel'); if (cx) cx.onclick = function () { document.getElementById('tkBox').hidden = true; MODE = ''; if (note) note.hidden = false; };
+  var sd = document.getElementById('tkSend'); if (sd) sd.onclick = function () {
     var t = document.getElementById('tkTxt'), er = document.getElementById('tkErr'), v = t.value.trim();
-    if (v.length < 2) { er.textContent = b.dataset.tk === 'edit' ? 'اكتب ما تريد من الموظف تعديله.' : 'اكتب رسالتك.'; t.focus(); return; }
-    if (b.dataset.tk === 'edit' && b.dataset.sure !== '1') { b.dataset.sure = '1'; b.innerHTML = ic('edit') + 'تأكيد: إعادة الطلب للموظف'; er.textContent = ''; return; }
-    sec.querySelectorAll('[data-tk]').forEach(function (x) { x.disabled = true; });
-    api({ action: 'reqMsg', no: r.no, kind: b.dataset.tk, body: v }).then(function (j) {
+    if (v.length < 2) { er.textContent = MODE === 'edit' ? 'اكتب ما تريد من الموظف تعديله.' : 'اكتب رسالتك.'; t.focus(); return; }
+    sd.disabled = true;
+    api({ action: 'reqMsg', no: r.no, kind: MODE, body: v }).then(function (j) {
       seed('reqs', reqRows().map(function (x) { return x.no === r.no ? Object.assign(j.request, { mine: x.mine }) : x; }));
-      reqOpen(r.no); softRender(); toast(b.dataset.tk === 'edit' ? 'أُعيد الطلب إلى الموظف للتعديل وأُبلغ' : b.dataset.tk === 'reply' ? 'وصل ردك' : 'وصل استفسارك إلى الموظف');
-    }).catch(function (e) { sec.querySelectorAll('[data-tk]').forEach(function (x) { x.disabled = false; }); er.textContent = errText(e); });
-  }; });
-  var rs = document.getElementById('rqResub'); if (rs) rs.onclick = function () {
-    var L = document.getElementById('reqLayer'); if (L) L.remove(); document.body.classList.remove('no-scroll');
+      var m0 = MODE; reqOpen(r.no); softRender(); toast(m0 === 'edit' ? 'أُعيد الطلب إلى الموظف للتعديل وأُبلغ' : m0 === 'reply' ? 'وصل ردك' : 'وصل استفسارك إلى الموظف');
+      var tl = document.getElementById('rqTalk'); if (tl) tl.scrollIntoView({ block: 'end' });
+    }).catch(function (e) { sd.disabled = false; er.textContent = errText(e); });
+  };
+  if (rs) rs.onclick = function () {
+    var L2 = document.getElementById('reqLayer'); if (L2) L2.remove(); document.body.classList.remove('no-scroll');
     RW = { i: 1, type: r.type, ref: own ? '' : r.ref, d: JSON.parse(JSON.stringify(r.data || {})), busy: false, err: '', resub: r.no };
     if (role === 'staff') { TAB.myreq = 'new'; location.hash = 'myreq-new'; } else { TAB.reqs = 'new'; location.hash = 'reqs'; }
     render(); toast('عدّل الطلب ' + r.no + ' ثم أعد إرساله');
   };
-  if (location.hash.indexOf('talk') > -1) { var tx = document.getElementById('tkTxt'); if (tx) tx.focus(); }
+  /* الموظف المطلوب منه الرد يجد الصندوق مفتوحًا */
+  if (T === 'staff' && last && (last.k === 'ask' || last.k === 'edit') && r.status !== 'returned') openBox('reply');
 }
 
 /* متابعو الطلبات (من أصحاب الاعتماد النهائي): يصلهم كل طلب جديد وكل خطوة في الجرس، وبالبريد حسب الاختيار */
