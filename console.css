@@ -2219,3 +2219,20 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .fld.oth input { border-color: color-mix(in srgb, var(--gold, #b8893b) 55%, var(--line)); }
 @keyframes othin { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .fld label small.opt { color: var(--mute); font-weight: 600; font-size: 11.5px; margin-inline-start: 4px; }
+/* شريط مراحل الطلب في القائمة: يتّسع داخل البطاقة ولا يخرج عنها، وتتقلّص الوصلات بدل أن ينزل لسطر جديد */
+.rqm { min-width: 0; }
+.rqm .stg { width: 100%; max-width: 100%; overflow: hidden; }
+@media (max-width: 640px) {
+  .rqm .stg li { flex: 1 1 auto; min-width: 0; }
+  .rqm .stg li:first-child { flex: 0 0 auto; }
+  .rqm .stg li + li::before { flex: 1 1 auto; width: auto; min-width: 6px; max-width: 30px; margin-inline: 4px; }
+  .rqm .stg li span { display: none; }
+  .rqm .stg li.now i { box-shadow: 0 0 0 3px var(--warn-w); }
+  .rqm .stg { padding-inline: 3px; }
+}
+@media (max-width: 640px) {
+  .rqm .stg { padding: 4px 4px; }
+  .rqm .stg li { gap: 0; }
+  .rqm .stg li + li::before { margin-inline: 3px; min-width: 4px; }
+}
+@media (max-width: 360px) { .rqm .stg i { width: 20px; height: 20px; font-size: 10.5px; } }
