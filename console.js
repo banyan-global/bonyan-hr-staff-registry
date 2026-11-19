@@ -4796,6 +4796,78 @@ function cusSelfForm() {
 var _bindHrxF2 = bindHrx;
 bindHrx = function () { _bindHrxF2(); var b = document.getElementById('cusSelfNew'); if (b) b.onclick = cusSelfForm; };
 
+/* ======================================================================
+   الرواتب: عرض «حسب الجهة» في جدول واحد، وبالضغط على جهة تخرج لوحة تفصيلية
+   بكل بيانات رواتبها، وتُغلق بالضغط خارجها — بدل تقسيم الشاشة إلى جدولين.
+   ====================================================================== */
+function payAgg() {
+  var paid = STAFF.filter(function (s) { return s.base > 0; }), tot = paid.reduce(function (a, s) { return a + sar(s); }, 0), nob = STAFF.filter(function (s) { return !s.iban; });
+  var byE = ENT.map(function (e) { var ss = paid.filter(function (s) { return s.ent.v === e.v; }), curs = {}; ss.forEach(function (s) { curs[s.cur] = (curs[s.cur] || 0) + s.base; });
+    return { e: e, ss: ss, curs: curs, sar: ss.reduce(function (a, s) { return a + sar(s); }, 0), nob: ss.filter(function (s) { return !s.iban; }).length }; }).filter(function (x) { return x.ss.length; }).sort(function (a, b) { return b.sar - a.sar; });
+  var allCur = {}; paid.forEach(function (s) { allCur[s.cur] = allCur[s.cur] || { n: 0, sum: 0, sar: 0 }; allCur[s.cur].n++; allCur[s.cur].sum += s.base; allCur[s.cur].sar += sar(s); });
+  var ck = Object.keys(allCur).sort(function (a, b) { return allCur[b].sar - allCur[a].sar; });
+  return { paid: paid, tot: tot, nob: nob, byE: byE, allCur: allCur, ck: ck, mx: byE.length ? byE[0].sar || 1 : 1 };
+}
+function payCurBand(A) {
+  if (!A.ck.length) return '';
+  return '<div class="paycur">' + A.ck.map(function (k) { var c = A.allCur[k];
+    return '<div class="pcur"><span class="ccy" style="background:' + curJ(k) + '">' + k + '</span><div class="pcur-v"><b>' + n(c.sum) + '</b><small>' + esc(curN(k)) + '</small></div><div class="pcur-m"><span>' + nq(c.n, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + '</span><b>' + (FX[k] ? pct(c.sar, A.tot) + '٪' : '—') + '</b></div></div>'; }).join('') + '</div>';
+}
+function payGridHTML() {
+  var A = payAgg();
+  var entT = A.byE.length ? '<div class="tw"><table class="etab paytab"><thead><tr><th>الجهة</th><th>العملات</th><th class="num">المنسوبون</th><th class="num">الإجمالي بعملة الصرف</th><th class="num">يعادل بالريال</th><th>الحصة</th><th></th></tr></thead><tbody>' +
+    A.byE.map(function (x) { var cs = Object.keys(x.curs);
+      return '<tr class="click" data-peo="' + esc(x.e.v) + '" tabindex="0" role="button" aria-label="تفاصيل رواتب ' + esc(x.e.n) + '"><td><div class="person"><span class="elg">' + elogo(x.e) + '</span><div><b>' + esc(x.e.n) + '</b>' + (x.nob ? '<span class="pwarn">' + ic('bank') + nq(x.nob, 'بلا حساب', 'بلا حساب', 'بلا حساب', 'بلا حساب') + '</span>' : '') + '</div></div></td>' +
+        '<td>' + cs.map(function (c) { return '<span class="ccy" style="background:' + curJ(c) + '">' + c + '</span>'; }).join(' ') + '</td><td class="num">' + x.ss.length + '</td>' +
+        '<td class="num">' + cs.map(function (c) { return '<div><b>' + n(x.curs[c]) + '</b> <small>' + esc(curS(c)) + '</small></div>'; }).join('') + '</td><td class="num"><b>' + n(x.sar) + '</b> <small>ر.س</small></td>' +
+        '<td style="min-width:130px"><div class="share"><i style="width:' + (x.sar / A.mx * 100) + '%;background:' + x.e.c + '"></i></div><small class="tn">' + pct(x.sar, A.tot) + '٪ من الإجمالي</small></td>' +
+        '<td class="pgo">' + ic('back') + '</td></tr>'; }).join('') +
+    '</tbody><tfoot><tr><td colspan="2"><b>الإجمالي</b></td><td class="num"><b>' + A.paid.length + '</b></td><td class="num">—</td><td class="num"><b>' + n(A.tot) + '</b> <small>ر.س</small></td><td colspan="2"></td></tr></tfoot></table></div>' : '<div class="empty">لا رواتب مسجّلة بعد.</div>';
+  return ptitle('الرواتب', 'الرواتب الشهرية كما في سجل المنسوبين، بعملة كل منسوب ومعها مكافئ تقريبي بالريال. اضغط أي جهة لتخرج كل تفاصيل رواتبها.', '<button class="btn" data-act="excel">' + ic('excel') + 'تصدير Excel</button>') +
+    '<div class="grid g4">' + kpi('gold', 'wallet', n(A.tot), 'ر.س', 'إجمالي الرواتب بالمكافئ', 'بأسعار صرف تقريبية') +
+    kpi('sapphire', 'users', A.paid.length, 'منسوبًا', 'لهم راتب مسجّل', nq(A.byE.length, 'جهة واحدة', 'جهتان', 'جهات', 'جهة') + '، ' + nq(A.ck.length, 'عملة واحدة', 'عملتان', 'عملات', 'عملة')) +
+    '<a class="kpilink" href="#banks" data-pfl="nobank">' + kpi('garnet', 'bank', A.nob.length, '', 'بلا حساب بنكي', '<span class="delta dn">يتعطل صرفهم</span>') + '</a>' +
+    kpi('slate', 'alert', STAFF.length - A.paid.length, '', 'بلا راتب مسجّل', 'يُضاف من سجل الراتب') + '</div>' +
+    pn('emerald', 'globe', 'حسب العملة', 'الرواتب كما سجّلها المنسوبون', '', '<div class="pb">' + (payCurBand(A) || '<div class="empty">لا رواتب مسجّلة.</div>') + '</div>') +
+    pn('sapphire', 'building', 'الرواتب حسب الجهة', nq(A.byE.length, 'جهة واحدة', 'جهتان', 'جهات', 'جهة'), '', '<div class="pb">' + entT + '</div>');
+}
+function payBanksHTML() {
+  var nob = STAFF.filter(function (s) { return !s.iban; }).sort(function (a, b) { return sar(b) - sar(a); });
+  var seg = '<div class="seg pseg"><a href="#payroll" data-pf="all">الكل</a><button aria-pressed="true">بلا حساب بنكي<b>' + nob.length + '</b></button></div>';
+  var tb = nob.length ? '<div class="tw"><table class="paytab"><thead><tr><th>المنسوب</th><th>الجهة</th><th class="num">الراتب الشهري</th><th>العملة</th><th>طريقة الاستلام</th><th></th></tr></thead><tbody>' +
+    nob.map(function (s) { return '<tr class="click" data-open="' + esc(s.ref) + '"><td><div class="person">' + av(s) + '<div><b>' + esc(s.name) + '</b><span>' + esc(s.job) + '</span></div></div></td><td>' + esc(s.ent.n) + '</td><td class="num">' + (s.base ? '<b>' + n(s.base) + '</b>' : '—') + '</td><td>' + s.cur + '</td><td>' + esc(s.r.payMethod || '—') + '</td><td class="acts2">' + (can('mail') ? '<button class="btn sm" data-msgbank="' + esc(s.ref) + '" data-stop="1">اطلب الحساب</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="emptyx">' + tile('emerald', 'check') + '<b>كل المنسوبين لهم حساب بنكي</b><p>لا أحد بلا حساب، فلا يتعطل صرف أحد.</p></div>';
+  return ptitle('الحسابات البنكية', 'المنسوبون الذين لم يسجّلوا حسابًا بنكيًا بعد — يتعطل صرف رواتبهم حتى يُسجَّل.', '<button class="btn" data-act="excel">' + ic('excel') + 'تصدير Excel</button>') +
+    '<div class="grid g3">' + kpi('garnet', 'bank', nob.length, '', 'بلا حساب بنكي', 'يتعطل صرفهم') + kpi('emerald', 'check', STAFF.filter(function (s) { return s.iban; }).length, '', 'لهم حساب', 'جاهزون للصرف') + kpi('sapphire', 'users', STAFF.length, '', 'كل المنسوبين', '') + '</div>' +
+    pn('garnet', 'bank', 'بانتظار الحساب البنكي', nq(nob.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا'), '', '<div class="pb">' + seg + tb + '</div>');
+}
+var _payWrap = VIEWS.payroll;
+VIEWS.payroll = function () { return PAYF === 'month' ? payMonthHTML() : PAYF === 'nobank' ? payBanksHTML() : payGridHTML(); };
+
+function openPayEntity(ev) {
+  var e = (ENT_MAP || {})[ev] || ENT.filter(function (x) { return x.v === ev; })[0]; if (!e) return;
+  var ss = STAFF.filter(function (s) { return s.ent.v === ev && s.base > 0; }).sort(function (a, b) { return sar(b) - sar(a); });
+  var noSal = STAFF.filter(function (s) { return s.ent.v === ev && !s.base; }).length, nob = ss.filter(function (s) { return !s.iban; }).length;
+  var curs = {}; ss.forEach(function (s) { curs[s.cur] = curs[s.cur] || { sum: 0, n: 0, sar: 0 }; curs[s.cur].sum += s.base; curs[s.cur].n++; curs[s.cur].sar += sar(s); });
+  var totSar = ss.reduce(function (a, s) { return a + sar(s); }, 0), ck = Object.keys(curs).sort(function (a, b) { return curs[b].sar - curs[a].sar; });
+  var cards = '<div class="paycur insheet">' + ck.map(function (k) { return '<div class="pcur"><span class="ccy" style="background:' + curJ(k) + '">' + k + '</span><div class="pcur-v"><b>' + n(curs[k].sum) + '</b><small>' + esc(curN(k)) + '</small></div><div class="pcur-m"><span>' + nq(curs[k].n, 'منسوب', 'منسوبان', 'منسوبين', 'منسوبًا') + '</span><b>' + (FX[k] ? n(curs[k].sar) + ' ر.س' : '—') + '</b></div></div>'; }).join('') + '</div>';
+  var rows = ss.length ? '<div class="tw"><table class="paytab"><thead><tr><th>المنسوب</th><th class="num">الراتب الشهري</th><th>العملة</th><th class="num">يعادل بالريال</th><th>طريقة الاستلام</th><th>الحساب البنكي</th></tr></thead><tbody>' +
+    ss.map(function (s) { return '<tr class="click" data-sopen="' + esc(s.ref) + '"><td><div class="person">' + av(s) + '<div><b>' + esc(s.name) + '</b><span>' + esc(s.job) + '</span></div></div></td><td class="num"><b>' + n(s.base) + '</b></td><td>' + s.cur + '</td><td class="num">' + (FX[s.cur] ? n(sar(s)) + ' <small>ر.س</small>' : '—') + '</td><td>' + esc(s.r.payMethod || '—') + '</td><td>' +
+      (s.iban ? '<span class="ltr">' + esc(s.iban) + '</span>' : '<span class="pill bad"><i></i>غير مسجل</span>' + (can('mail') ? ' <button class="btn sm" data-msgbank="' + esc(s.ref) + '" data-stop="1">اطلبه</button>' : '')) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="empty">لا رواتب مسجّلة في هذه الجهة بعد.</div>';
+  var el = layer('peLayer', { tile: '<span class="elg lg">' + elogo(e) + '</span>', t: esc(e.n), p: (e.full && e.full !== e.n ? esc(e.full) + ' · ' : '') + nq(ss.length, 'منسوب واحد له راتب', 'منسوبان', 'منسوبين', 'منسوبًا') + (noSal ? ' · ' + noSal + ' بلا راتب' : '') + (nob ? ' · ' + nob + ' بلا حساب بنكي' : '') },
+    '<div class="pesheet">' + cards + rows + '</div>',
+    '<button class="btn" data-lyclose="1">إغلاق</button>' + (can('pay') ? '<button class="btn goldb" id="peConf">' + ic('check') + 'تأكيد صرف رواتب هذه الجهة' : ''), 'paysheet');
+  el.querySelectorAll('[data-sopen]').forEach(function (b) { b.onclick = function (ev2) { if (ev2.target.closest('[data-stop]')) return; el.close(); openRec(b.dataset.sopen); }; });
+  el.querySelectorAll('[data-msgbank]').forEach(function (b) { b.onclick = function (ev2) { ev2.stopPropagation(); el.close(); msgTpl([b.dataset.msgbank], 'gap'); }; });
+  var pc = el.querySelector('#peConf'); if (pc) pc.onclick = function () { el.close(); PCF.ent = e.n; PCF.month = ymNow2(); location.hash = 'payconf'; };
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-peo]'); if (!b || view !== 'payroll') return;
+  openPayEntity(b.dataset.peo);
+});
+document.addEventListener('keydown', function (e) {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-peo]')) { e.preventDefault(); openPayEntity(e.target.dataset.peo); }
+});
+
 window.addEventListener('hashchange', route);
 boot();
 })();
