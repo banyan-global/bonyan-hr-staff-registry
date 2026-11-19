@@ -181,7 +181,7 @@ function my_fin(array $b): array {
     $ref = (string)($b['ref'] ?? '');
     if ($ref !== '' && has_perm($u, 'finance.view')) { if (in_array($ref, private_hidden_for($u), true)) throw new HttpError('not_found', 404); }
     else { $ref = (string)my_staff_ref($u); if ($ref === '' || !site_on('staff', 'myhr')) return ['ok' => true, 'off' => true]; }
-    $pay = site_on('staff', 'pay') || has_perm($u, 'finance.view') ? fin_salary($ref, $year) : null;
+    $pay = fin_salary($ref, $year); /* راتب كل منسوب يظهر له دائمًا، محسوبًا من تسجيله */
     return ['ok' => true, 'year' => $year, 'pay' => $pay, 'exp' => exp_rows($ref, $year), 'cats' => EXP_CATS];
 }
 /* سجل المصروفات لكل المنسوبين (الموارد البشرية) */

@@ -2431,3 +2431,4 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .opers:hover{background:var(--panel)}
 .opers b{font-size:14px;font-weight:700;display:block}.opers small{font-size:12px;color:var(--faint)}
 @media (max-width:560px){.otop::before,.otop .operson::before{display:none}.operson{min-width:0;width:100%}}
+.sareq{display:block;font-size:11px;font-weight:700;color:var(--gold);margin-top:2px}

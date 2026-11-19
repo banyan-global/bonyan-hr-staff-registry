@@ -2491,7 +2491,7 @@ function sideHTML() {
       staffOn('myreq') ? { v: 'myreq', n: 'طلباتي', d: isAppr ? 'طلباتك وما ينتظر اعتمادك' : 'إجازة واستئذان ومباشرة وسلفة', j: 'sapphire', i: 'doc', b: open + pendS, s: [['myreq-new', 'طلب جديد', view === 'myreq' && TAB.myreq === 'new'], ['myreq-list', 'متابعة طلباتي', view === 'myreq' && TAB.myreq === 'list', open]].concat(isAppr ? [['myreq-pend', 'بانتظار اعتمادي', view === 'myreq' && TAB.myreq === 'pend', pendS, 1]] : []) } : null,
       staffOn('myatt') ? { v: 'myatt', n: 'حضوري', d: 'الحضور والتأخير هذا الشهر', j: 'teal', i: 'finger' } : null,
       staffOn('mynews') ? { v: 'mynews', n: 'التعاميم', d: 'إعلانات الموارد البشرية', j: 'gold', i: 'bell', b: newsUnread() } : null,
-      staffOn('myhr') ? { v: 'myhr', n: 'سجلي المالي', d: 'رواتبي ومصاريفي وعهدي', j: 'emerald', i: 'coins', b: hrBadge('mine'), s: [['mypay', 'رواتبي', view === 'myhr' && TAB.myhr === 'pay'], ['myexp', 'مصاريفي', view === 'myhr' && TAB.myhr === 'exp'], ['mycus', 'عهدي', view === 'myhr' && TAB.myhr === 'cus', hrBadge('cus'), 1]] } : null,
+      staffOn('myhr') ? { v: 'myhr', n: 'سجلي المالي', d: 'الرواتب والمصاريف والعهد', j: 'emerald', i: 'coins', b: hrBadge('mine'), s: [['mypay', 'الرواتب', view === 'myhr' && TAB.myhr === 'pay'], ['myexp', 'المصاريف', view === 'myhr' && TAB.myhr === 'exp'], ['mycus', 'العهد', view === 'myhr' && TAB.myhr === 'cus', hrBadge('cus'), 1]] } : null,
       staffOn('myact') ? { v: 'myact', n: 'الإجراءات والخطابات', d: 'العلاوات والترقيات والإنذارات', j: 'garnet', i: 'stamp', b: hrBadge('acts') } : null,
       { v: 'myfile', n: 'ملفي وبطاقتي', d: 'بياناتك والبطاقة الرسمية', j: 'garnet', i: 'card', s: S('staff', 'update') ? [['update.html?me=1', 'تحديث بياناتي', false]] : [] }].filter(Boolean)]];
   } else {
@@ -4393,7 +4393,7 @@ document.addEventListener('change', function (ev) {
    ====================================================================== */
 P.coins = P.coins || P.wallet;
 TITLES.myhr = ['سجلي المالي'];
-TAB.myhr = 'pay'; TABL.myhr = { pay: 'رواتبي', exp: 'مصاريفي', cus: 'عهدي' };
+TAB.myhr = 'pay'; TABL.myhr = { pay: 'الرواتب', exp: 'المصاريف', cus: 'العهد' };
 ALIAS.mypay = ['myhr', 'pay']; ALIAS.myexp = ['myhr', 'exp']; ALIAS.mycus = ['myhr', 'cus'];
 STAFF_VIEWS.push('myact'); TITLES.myact = ['الإجراءات والخطابات']; TITLES.payconf = ['تأكيد صرف الرواتب'];
 TITLES.exps = ['المصروفات'];
@@ -4458,9 +4458,10 @@ function finSlipH(p, m) {
     if (x.k === 'unpaid') L.push(['minus', '−', 'إجازة بدون راتب', nq(x.days, 'يوم', 'يومان', 'أيام', 'يومًا') + ' × ' + fm(x.daily) + ' ' + c + ' لليوم', x.no, '−' + fm(x.amount), 'minus']);
   });
   if (L.length === 1) L.push(['plus', '✓', 'لا إضافات ولا خصومات', 'راتب كامل لهذا الشهر', '', '0', '']);
+  var SARC = (p.cur && p.cur !== 'SAR' && FX[p.cur]) ? FX[p.cur] : 0;
   var cf = m.conf, ST = { paid: ['ok', 'صُرف', 'أكّد ' + (cf ? esc(cf.by) : 'الإدارة') + ' صرف راتب ' + mName(m.m) + (cf ? ' في ' + fdx(pdate(cf.at), { day: 'numeric', month: 'long', year: 'numeric' }) : '') + '.'], wait: ['warn', 'بانتظار تأكيد الصرف', 'لم تؤكد الإدارة صرف هذا الشهر بعد. إن استلمته فسيُؤكَّد قريبًا.'], due: ['warn', 'مستحق هذا الشهر', 'يُصرف مع رواتب هذا الشهر، والقيمة نهائية بعد اعتماد مسيّر الرواتب.'], proj: ['mute', 'متوقع', 'تقدير مبني على راتبك الحالي، ويتغير بأي إضافي أو خصم يُعتمد لاحقًا.'] }[m.st];
   return pn('gold', 'doc', 'قسيمة ' + mName(m.m) + ' ' + m.m.slice(0, 4), 'تفاصيل الراتب ومصدر كل بند', '<span class="pill ' + ST[0] + '"><i></i>' + ST[1] + '</span>',
-    '<div class="fx-eq"><div><small>الأساسي</small><b>' + fm(m.base) + '</b></div><span class="op">+</span><div><small>إضافات</small><b style="color:var(--ok)">' + fm(m.add) + '</b></div><span class="op">−</span><div><small>خصومات</small><b style="color:var(--bad)">' + fm(m.ded) + '</b></div><span class="op">=</span><div class="net"><small>الصافي (' + c + ')</small><b>' + fm(m.net) + '</b></div></div>' +
+    '<div class="fx-eq"><div><small>الأساسي</small><b>' + fm(m.base) + '</b></div><span class="op">+</span><div><small>إضافات</small><b style="color:var(--ok)">' + fm(m.add) + '</b></div><span class="op">−</span><div><small>خصومات</small><b style="color:var(--bad)">' + fm(m.ded) + '</b></div><span class="op">=</span><div class="net"><small>الصافي (' + c + ')</small><b>' + fm(m.net) + '</b>' + (SARC ? '<em class="sareq">\u2248 ' + fm(Math.round(m.net * SARC)) + ' ر.س</em>' : '') + '</div></div>' +
     '<ul class="fx-lines">' + L.map(function (l) { return '<li class="fx-ln"><span class="fx-sg ' + l[0] + '">' + l[1] + '</span><div><b>' + l[2] + '</b><small>' + l[3] + '</small></div>' + (l[4] ? '<span class="ref">' + esc(l[4]) + '</span>' : '<span></span>') + '<span class="a ' + l[6] + '">' + l[5] + '</span></li>'; }).join('') + '</ul>' +
     '<div class="fx-foot">' + ic('clock') + '<span>' + ST[2] + '</span></div>');
 }
@@ -4469,11 +4470,12 @@ function finYearSel(p) {
   return ssel('finYr', ys.map(function (y) { return { v: String(y), n: String(y), ic: 'calendar' }; }), String(FIN.year), String(FIN.year), function (v) { FIN.year = +v; FIN.sel = null; render(); }, 'السنة', 'السنة');
 }
 function finPayH(d) {
-  var p = d.pay, head = function (acts) { return ptitle('رواتبي', 'رواتبك شهرًا بشهر بأثر رجعي، محسوبة من راتبك وقرارات العلاوة والعمل الإضافي والسلف والجزاءات والإجازات بدون راتب المعتمدة.', acts); };
+  var p = d.pay, head = function (acts) { return ptitle('الرواتب', 'رواتبك شهرًا بشهر بأثر رجعي، محسوبة من راتبك وقرارات العلاوة والعمل الإضافي والسلف والجزاءات والإجازات بدون راتب المعتمدة.', acts); };
   if (!p) return head('') + '<div class="note">' + ic('info') + '<span>عرض الرواتب غير مفعّل في بوابة المنسوب. تواصل مع الموارد البشرية.</span></div>';
   var M = finMonths(p), live = M.filter(function (m) { return m.st !== 'none'; });
   if (!p.salary || !live.length) return head(finYearSel(p)) + '<section class="pn"><div class="emptyx">' + tile('emerald', 'wallet') + '<b>لا رواتب لهذه السنة</b><p>' + (!p.salary ? 'لم يُسجَّل راتبك في ملفك بعد. تواصل مع الموارد البشرية.' : 'لم تبدأ خدمتك في هذه السنة.') + '</p></div></section>';
   var sel = FIN.sel = finSel(M), c = curL(p.cur), sum = function (a, k) { return a.reduce(function (s, m) { return s + (m[k] || 0); }, 0); };
+  var SARC = (p.cur && p.cur !== 'SAR' && FX[p.cur]) ? FX[p.cur] : 0;
   var paid = M.filter(function (m) { return m.st === 'paid'; }), wait = M.filter(function (m) { return m.st === 'wait'; }), due = M.filter(function (m) { return m.st === 'due'; })[0], done = M.filter(function (m) { return m.st === 'paid' || m.st === 'due' || m.st === 'wait'; });
   var otH = 0; done.forEach(function (m) { (m.lines || []).forEach(function (x) { if (x.k === 'ot') otH += x.hours; }); });
   var R0 = function (v) { return fm(Math.round(v)); };
@@ -4494,7 +4496,7 @@ function finPayH(d) {
   var lnH = Object.keys(LN).map(function (k) { var o = LN[k], segs = ''; for (var i = 0; i < o.n; i++) segs += '<i' + (i < o.paid ? '' : ' class="off"') + '></i>';
     return pn('garnet', 'coins', 'سلفة ' + fm(o.total) + ' ' + c, '<span class="ltr">' + esc(o.no) + '</span> · ' + o.n + ' أقساط', o.paid >= o.n ? '<span class="pill ok"><i></i>سُددت</span>' : '<span class="pill warn"><i></i>' + o.paid + ' من ' + o.n + '</span>',
       '<div class="fx-pb"><div class="fx-segs" style="grid-template-columns:repeat(' + Math.min(o.n, 24) + ',minmax(0,1fr))">' + segs + '</div><div class="fx-lr"><span>' + mName(o.months[0]) + '</span><span>' + mName(o.months[o.months.length - 1]) + '</span></div></div>'); }).join('');
-  return head(finYearSel(p)) + kp +
+  return head(finYearSel(p)) + (SARC ? '<div class="note">' + ic('globe') + '<span>راتبك بعملة ' + esc(curN(p.cur)) + '، والمبالغ هنا بعملتك. يعادل راتبك الأساسي الحالي نحو <b>' + fm(Math.round((p.salary || 0) * SARC)) + ' ر.س</b> شهريًا بأسعار صرف تقريبية، ويظهر مقابل كل مبلغ في القسيمة.</span></div>' : '') + kp +
     pn('emerald', 'chart', 'مسار راتبك في ' + FIN.year, 'الصافي بعد الإضافات والخصومات. اختر شهرًا لتظهر قسيمته', legend, '<div id="finChart">' + finChartH(p, M, sel) + '</div>') +
     '<div class="grid g21 fx-top"><div id="finSlip">' + finSlipH(p, M[sel]) + '</div><div class="fx-side">' + stH + lnH +
     '<div class="note">' + ic('info') + '<span><b>كيف يُحسب راتبك؟</b> ' + esc(p.rule) + '. الخصومات من أقساط السلف والجزاءات المعتمدة والإجازات بدون راتب.</span></div></div></div>';
@@ -4533,7 +4535,7 @@ function expBarH(cats, extra) {
 }
 function finExpH(d) {
   var cur = (d.pay && d.pay.cur) || 'SAR', c = curL(cur), all = d.exp || [], s = expSums(all, cur), rows = expFilter(all);
-  return ptitle('مصاريفي', 'كل ما صُرف لك أو عليك خلال العام: مستحقات وتعويضات علاج وسلف، وتذاكر ودورات واشتراكات دفعتها الجهة. تُضاف من طلباتك المعتمدة وما يسجّله قسم الموارد البشرية.', finYearSel(d.pay)) +
+  return ptitle('المصاريف', 'كل ما صُرف لك أو عليك خلال العام: مستحقات وتعويضات علاج وسلف، وتذاكر ودورات واشتراكات دفعتها الجهة. تُضاف من طلباتك المعتمدة وما يسجّله قسم الموارد البشرية.', finYearSel(d.pay)) +
     '<div class="grid g3 fx-k">' + kpi('gold', 'coins', fm(Math.round(s.tot)), c, 'إجمالي ' + FIN.year, (s.pend ? '+' + fm(s.pend) + ' ' + c + ' قيد الاعتماد' : 'ما صُرف لك وعليك') + (s.other ? ' · ' + nq(s.other, 'بند', 'بندان', 'بنود', 'بندًا') + ' بعملة أخرى' : '')) +
     kpi('emerald', 'wallet', fm(Math.round(s.inn)), c, 'صُرف لك', 'مستحقات وتعويضات وسلف وصلتك') + kpi('sapphire', 'building', fm(Math.round(s.out)), c, 'صُرف عليك', 'تذاكر ودورات وغيرها دفعتها الجهة') + '</div>' +
     expDistH(s, d.cats, c) + expBarH(d.cats) + pn('gold', 'coins', 'سجل المصروفات', nq(rows.length, 'بند واحد', 'بندان', 'بنود', 'بندًا'), '', '<div class="pb" id="fxList">' + expRowsH(rows, d.cats, true) + '</div>');
@@ -4546,7 +4548,7 @@ function finCusH() {
   var c = cusData(), d = c.data || {}, C = d.rows || [], open = C.filter(function (x) { return x.open; }), back = C.filter(function (x) { return !x.open; }), na = open.filter(function (x) { return !x.ackAt; }).length;
   var li = function (x) { return '<li class="' + (x.open ? '' : 'back') + '">' + tile(x.open ? 'teal' : 'slate', 'box') + '<div><b>' + esc(x.item) + '</b><small>' + esc(cusCatTxt(d, x.category)) + (x.serial ? ' · <span class="ltr">' + esc(x.serial) + '</span>' : '') + ' · استلمتها ' + fdx(pdate(x.issuedOn), { day: 'numeric', month: 'short', year: 'numeric' }) + (x.value ? ' · ' + fm(x.value) + ' ر.س' : '') + (x.open ? '' : ' · أعدتها ' + fdx(pdate(x.returnedOn), { day: 'numeric', month: 'short' })) + '</small></div>' +
     (x.open ? (x.ackAt ? '<span class="pill ok"><i></i>أقررت بالاستلام</span>' : '<button class="btn sm goldb" data-cus-ack="' + x.id + '">' + ic('check') + 'أقرّ باستلامها</button>') : '<span class="pill mute"><i></i>أُعيدت</span>') + '</li>'; };
-  var head = ptitle('عهدي', 'الأجهزة والمفاتيح وغيرها مما استلمته من جهتك. أقرّ باستلام كل عهدة، وتُطابَق هذه القائمة مع إخلاء الطرف عند انتهاء الخدمة.', d.self ? '<button class="btn goldb" id="cusSelfNew">' + ic('plus') + 'تسجيل عهدة استلمتها</button>' : '');
+  var head = ptitle('العهد', 'الأجهزة والمفاتيح وغيرها مما استلمته من جهتك. أقرّ باستلام كل عهدة، وتُطابَق هذه القائمة مع إخلاء الطرف عند انتهاء الخدمة.', d.self ? '<button class="btn goldb" id="cusSelfNew">' + ic('plus') + 'تسجيل عهدة استلمتها</button>' : '');
   if (!c.data) return head + '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ التحميل…') + '</div></div></section>';
   return head + '<div class="grid g3">' + kpi('teal', 'box', open.length, '', 'العهد لديك', open.some(function (x) { return x.value; }) ? 'قيمتها المسجّلة ' + fm(open.reduce(function (a, x) { return a + (x.value || 0); }, 0)) + ' ر.س' : '') +
     kpi('gold', 'userok', na, '', 'بانتظار إقرارك', na ? 'أقرّ باستلامها من القائمة' : 'أقررت بكل عهدك') + kpi('emerald', 'check', back.length, '', 'أعدتها', '') + '</div>' +
