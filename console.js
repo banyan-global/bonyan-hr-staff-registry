@@ -4868,6 +4868,57 @@ document.addEventListener('keydown', function (e) {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-peo]')) { e.preventDefault(); openPayEntity(e.target.dataset.peo); }
 });
 
+/* ======================================================================
+   الهيكل التنظيمي: مخطط إداري راقٍ — المجموعة ← الإدارة العليا ← الجهات،
+   وبالضغط على جهة تخرج لوحة بإداراتها ومنسوبيها.
+   ====================================================================== */
+function orgInitial(name) { var s = String(name || '').replace(/^(الدكتور|الأستاذ|الشيخ|المهندس|د|أ|ا|م|م\.د)\.?\s+/, '').trim(); return s.charAt(0) || '؟'; }
+function orgDeps(ss) { var deps = {}; ss.forEach(function (s) { var k = String(s.r.department || '').trim() || 'بدون إدارة محددة'; (deps[k] = deps[k] || []).push(s); });
+  return { deps: deps, names: Object.keys(deps).sort(function (a, b) { return a === 'بدون إدارة محددة' ? 1 : b === 'بدون إدارة محددة' ? -1 : deps[b].length - deps[a].length; }) }; }
+function orgPath(x) { var p = []; if (x.sup) p.push(esc(x.sup.name)); else if (!x.rt || x.rt.mgr) p.push('المسؤول المباشر'); if (x.rt && x.rt.hr) p.push('الموارد البشرية'); if (!x.rt || !x.rt.mgr || (x.rt.top && x.rt.top.length) || x.rt.top == null || x.rt.hr === false) p.push('الإدارة العليا'); return p; }
+function orgEnts() {
+  var q = ORG.q.trim().toLowerCase(), sups = (formsData() || {}).sups || [];
+  return ENT.map(function (e) {
+    if (ORG.ent && e.v !== ORG.ent) return null;
+    var ss = STAFF.filter(function (s) { return s.ent.v === e.v; }); if (!ss.length) return null;
+    if (q && !((e.n + ' ' + (e.full || '')).toLowerCase().indexOf(q) > -1) && !ss.some(function (s) { return (s.name + ' ' + s.job + ' ' + (s.r.department || '')).toLowerCase().indexOf(q) > -1; })) return null;
+    var d = orgDeps(ss);
+    return { e: e, ss: ss, depN: d.names.length, sup: supOfEnt({ ent: e }, sups), rt: rtOf({ ent: e }) };
+  }).filter(Boolean);
+}
+orgHTML = function () {
+  var fd = formsData() || {}, finals = fd.finals || [], ents = orgEnts();
+  var bar = '<section class="pn tbar"><div class="fbar">' + fsearch('orgq', ORG.q, 'ابحث باسم أو مسمى أو إدارة', 'بحث في الهيكل') + ssel('orge', entOpts(true, true), ORG.ent, 'الكل', function (v) { ORG.ent = v; render(); }, 'الجهة', 'الجهة') + '</div></section>';
+  var group = '<div class="otier"><div class="onode ogroup"><span class="olg xl"><img src="' + ((BA && BA.ink) || LOGO) + '" alt="بنيان"></span><div><b>مجموعة بنيان العالمية</b><small>Bonyan International Group</small><em>' + nq(STAFF.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' · ' + nq(ents.length || ENT.length, 'جهة واحدة', 'جهتان', 'جهات', 'جهة') + '</em></div></div></div>';
+  var top = finals.length ? '<div class="ostem"></div><div class="oband">' + ic('shield') + 'الإدارة العليا</div><div class="otier otop">' +
+    finals.map(function (f) { return '<div class="onode operson"><span class="av gold big">' + esc(orgInitial(f.name)) + '</span><div><b>' + esc(f.name) + '</b><small>اعتماد نهائي على أي طلب</small></div></div>'; }).join('') + '</div>' : '';
+  var grid = ents.length ? '<div class="ostem"></div><div class="oband">' + ic('building') + 'الجهات والكيانات <em>' + ents.length + '</em></div><div class="ogrid">' +
+    ents.map(function (x) { var path = orgPath(x);
+      return '<button type="button" class="onode oent click" data-oe="' + esc(x.e.v) + '" style="--ec:' + x.e.c + '" aria-label="هيكل ' + esc(x.e.n) + '"><div class="oent-h"><span class="olg">' + (elogo(x.e) || tile('slate', 'building')) + '</span><div class="oent-t"><b>' + esc(x.e.n) + '</b>' + (x.sup ? '<small class="ohead">' + ic('user') + esc(x.sup.name) + '</small>' : '<small class="ohead mu">مسؤولها غير محدد</small>') + '</div><span class="ogo">' + ic('back') + '</span></div>' +
+        '<div class="ometa"><span>' + ic('users') + nq(x.ss.length, 'منسوب', 'منسوبان', 'منسوبين', 'منسوبًا') + '</span><span>' + ic('building') + nq(x.depN, 'إدارة', 'إدارتان', 'إدارات', 'إدارة') + '</span></div>' +
+        '<div class="opath">' + path.map(function (p, i) { return (i ? '<i class="osep">' + ic('chev') + '</i>' : '') + '<span>' + p + '</span>'; }).join('') + '</div></button>'; }).join('') + '</div>' : '<section class="pn"><div class="pb"><div class="empty">لا نتائج مطابقة.</div></div></section>';
+  return bar + '<div class="note">' + ic('info') + '<span>يُبنى الهيكل من الجهات، ومن مسؤولي الاعتماد، ومن حقلي «الإدارة» و«المدير المباشر» في الملفات. اضغط أي جهة لعرض إداراتها ومنسوبيها.</span></div>' +
+    '<div class="orgx">' + group + top + grid + '</div>';
+};
+function orgEntDrawer(ev) {
+  var e = (ENT_MAP || {})[ev] || ENT.filter(function (x) { return x.v === ev; })[0]; if (!e) return;
+  var ss = STAFF.filter(function (s) { return s.ent.v === ev; }), d = orgDeps(ss), sup = supOfEnt({ ent: e }, (formsData() || {}).sups || []), rt = rtOf({ ent: e });
+  var cs = {}; ss.forEach(function (s) { cs[s.c.n] = (cs[s.c.n] || 0) + 1; });
+  var path = orgPath({ e: e, sup: sup, rt: rt });
+  var pathH = '<div class="oepath"><span class="oeplab">مسار الاعتماد</span><div class="oepchips">' + path.map(function (p, i) { return (i ? '<i>' + ic('chev') + '</i>' : '') + '<span class="ochip' + (i === 0 && sup ? ' head' : '') + '">' + esc(p) + '</span>'; }).join('') + '</div></div>';
+  var depsH = d.names.map(function (dn) { var L = d.deps[dn], mgr = {}; L.forEach(function (s) { var m = String(s.r.manager || '').trim(); if (m) mgr[m] = (mgr[m] || 0) + 1; }); var topM = Object.keys(mgr).sort(function (a, b) { return mgr[b] - mgr[a]; })[0];
+    return '<div class="oedep"><div class="oedep-h"><b>' + esc(dn) + '</b><em>' + L.length + '</em></div>' + (topM ? '<div class="oedep-m">' + ic('user') + 'المدير المباشر: <b>' + esc(topM) + '</b></div>' : '') +
+      '<div class="oedep-l">' + L.map(function (s) { return '<button type="button" class="opers click" data-sopen="' + esc(s.ref) + '">' + avP(s) + '<span><b>' + esc(s.name) + '</b><small>' + esc(s.job || '—') + '</small></span></button>'; }).join('') + '</div></div>'; }).join('');
+  var el = layer('oeLayer', { tile: '<span class="olg lg">' + (elogo(e) || tile('slate', 'building')) + '</span>', t: esc(e.full || e.n), p: nq(ss.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' · ' + nq(d.names.length, 'إدارة واحدة', 'إدارتان', 'إدارات', 'إدارة') + (Object.keys(cs).length ? ' · ' + Object.keys(cs).map(function (k) { return esc(k) + ' ' + cs[k]; }).join('، ') : '') },
+    '<div class="oesheet">' + (sup ? '<div class="oehead"><span class="av gold big">' + esc(orgInitial(sup.name)) + '</span><div><small>مسؤول الجهة</small><b>' + esc(sup.name) + '</b></div></div>' : '') + pathH + '<div class="oedeps">' + depsH + '</div></div>',
+    '<button class="btn" data-lyclose="1">إغلاق</button>', 'paysheet');
+  el.querySelectorAll('[data-sopen]').forEach(function (b) { b.onclick = function () { el.close(); openRec(b.dataset.sopen); }; });
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-oe]'); if (!b || view !== 'people' || TAB.people !== 'org') return;
+  orgEntDrawer(b.dataset.oe);
+});
+
 window.addEventListener('hashchange', route);
 boot();
 })();
