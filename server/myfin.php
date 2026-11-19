@@ -21,16 +21,20 @@ const CUS_GROUPS = [
     'أمن وسلامة' => ['جهاز لاسلكي', 'كاميرا مراقبة', 'طفاية حريق', 'معدات حماية شخصية'],
     'زي وملابس عمل' => ['زي رسمي', 'معطف مختبر', 'سترة ميدانية'],
 ];
-/* الأكثر استخدامًا حسب الجهة (يُطابَق بجزء من اسم الجهة) */
+/* مقترحات العهد حسب الجهة (يُطابَق بجزء من اسم الجهة، بالترتيب) */
 const CUS_SUGGEST = [
-    'جامعة' => ['سرير', 'مرتبة', 'خزانة ملابس', 'مكيف', 'مفتاح غرفة السكن', 'ثلاجة'],
-    'بنين' => ['سبورة ذكية أو شاشة تفاعلية', 'حاسب محمول', 'كتب ومراجع', 'أدوات مختبر', 'مفتاح فصل أو قاعة', 'أدوات رياضية'],
-    'بنات' => ['سبورة ذكية أو شاشة تفاعلية', 'حاسب محمول', 'كتب ومراجع', 'أدوات مختبر', 'مفتاح فصل أو قاعة', 'وسائل تعليمية'],
-    'الإنسانية' => ['خيمة', 'مولد كهربائي', 'حقيبة إسعافات أولية', 'سيارة', 'عهدة نقدية تشغيلية', 'معدات توزيع'],
-    'التمكين' => ['سرير', 'أواني وأدوات طبخ', 'غسالة', 'أدوات تدريب حرفي', 'جهاز لوحي', 'مفتاح غرفة السكن'],
-    'كينيا' => ['هاتف فضائي', 'مولد كهربائي', 'مضخة مياه', 'سيارة', 'خيمة', 'عهدة نقدية تشغيلية'],
-    '*' => ['حاسب محمول', 'جوال عمل', 'بطاقة دخول', 'مفتاح مكتب', 'حقيبة تدريبية', 'جهاز عرض (بروجكتر)'],
+    'عن بعد' => ['حاسب محمول', 'سماعات وميكروفون', 'كاميرا', 'جهاز إنترنت متنقل', 'شاشة', 'ملحقات (شاحن، فأرة، لوحة مفاتيح)', 'جهاز لوحي', 'جوال عمل', 'قرص تخزين خارجي', 'مكتب', 'كرسي', 'بطاقة موظف'],
+    'جامعة' => ['سرير', 'مرتبة', 'خزانة ملابس', 'مكيف', 'مفتاح غرفة السكن', 'ثلاجة', 'مفارش وبطانيات', 'غسالة', 'سخان مياه', 'ستائر', 'مكتب', 'كرسي', 'بطاقة دخول'],
+    'بنين' => ['سبورة ذكية أو شاشة تفاعلية', 'حاسب محمول', 'جهاز عرض (بروجكتر)', 'كتب ومراجع', 'أدوات مختبر', 'مفتاح فصل أو قاعة', 'أدوات رياضية', 'وسائل تعليمية', 'سبورة', 'طابعة', 'مكتب', 'كرسي', 'بطاقة موظف'],
+    'بنات' => ['سبورة ذكية أو شاشة تفاعلية', 'حاسب محمول', 'جهاز عرض (بروجكتر)', 'كتب ومراجع', 'أدوات مختبر', 'مفتاح فصل أو قاعة', 'وسائل تعليمية', 'أدوات رياضية', 'سبورة', 'طابعة', 'مكتب', 'كرسي', 'بطاقة موظف'],
+    'الإنسانية' => ['خيمة', 'مولد كهربائي', 'حقيبة إسعافات أولية', 'سيارة', 'عهدة نقدية تشغيلية', 'معدات توزيع', 'مضخة مياه', 'هاتف فضائي', 'جهاز لاسلكي', 'سترة ميدانية', 'بطاقة وقود', 'حاسب محمول', 'معدات حماية شخصية'],
+    'التمكين' => ['سرير', 'مرتبة', 'خزانة ملابس', 'أواني وأدوات طبخ', 'غسالة', 'ثلاجة', 'موقد أو فرن', 'أدوات تدريب حرفي', 'جهاز لوحي', 'مفتاح غرفة السكن', 'مفارش وبطانيات', 'مكيف', 'تلفاز'],
+    'كينيا' => ['هاتف فضائي', 'مولد كهربائي', 'مضخة مياه', 'سيارة', 'خيمة', 'عهدة نقدية تشغيلية', 'دراجة نارية', 'حاسب محمول', 'جوال عمل', 'حقيبة إسعافات أولية', 'بطاقة وقود', 'جهاز إنترنت متنقل'],
+    'كفاءة' => ['حاسب محمول', 'حاسب مكتبي', 'شاشة', 'جوال عمل', 'جهاز لوحي', 'كاميرا', 'سماعات وميكروفون', 'قرص تخزين خارجي', 'جهاز إنترنت متنقل', 'ملحقات (شاحن، فأرة، لوحة مفاتيح)', 'طابعة', 'بطاقة دخول'],
+    'تدريب' => ['حاسب محمول', 'جوال عمل', 'جهاز عرض (بروجكتر)', 'حقيبة تدريبية', 'بطاقة دخول', 'مفتاح مكتب', 'طابعة', 'كتب ومراجع', 'سبورة ذكية أو شاشة تفاعلية', 'سيارة', 'مكتب', 'كرسي', 'ختم الجهة'],
+    '*' => ['حاسب محمول', 'جوال عمل', 'بطاقة دخول', 'مفتاح مكتب', 'مكتب', 'كرسي', 'شاشة', 'طابعة', 'جهاز لوحي', 'خزانة ملفات', 'سيارة', 'بطاقة موظف'],
 ];
+function cus_suggest_for(string $entity): array { foreach (CUS_SUGGEST as $k => $l) if ($k !== '*' && mb_strpos($entity, $k) !== false) return $l; return CUS_SUGGEST['*']; }
 function cus_cat_all(): array { $a = []; foreach (CUS_GROUPS as $g) $a = array_merge($a, $g); return $a; }
 function cus_group_of(string $cat): string {
     foreach (CUS_GROUPS as $g => $items) if (in_array($cat, $items, true)) return $g;
@@ -68,16 +72,25 @@ function fin_raises(string $ref): array {
     usort($o, fn($a, $b) => strcmp($a['effective'], $b['effective']));
     return $o;
 }
-/* الراتب الأساسي لشهر: آخر علاوة نفذت قبل نهاية الشهر، وقبل أول علاوة يُعتمد الراتب السابق لها */
-function fin_base_for(string $ym, float $now, array $raises): float {
-    if (!$raises) return $now;
-    $end = date('Y-m-t', strtotime($ym . '-01')); $b = $raises[0]['old'] > 0 ? $raises[0]['old'] : $now;
-    foreach ($raises as $r) if ($r['effective'] <= $end) $b = $r['new'];
-    return $b;
+/* سجل الراتب اليدوي (تكتبه الموارد البشرية: «من شهر كذا الراتب كذا») */
+function fin_hist(string $ref): array { return array_map(fn($r) => ['from' => $r['from_ym'], 'amount' => (float)$r['amount']], q('SELECT from_ym, amount FROM salary_hist WHERE ref=? ORDER BY from_ym', [$ref])->fetchAll()); }
+/* الراتب الأساسي لشهر: آخر تغيير بدأ في هذا الشهر أو قبله (من سجل الراتب أو من علاوة معتمدة)، وقبل أول تغيير يُعتمد ما سبقه */
+function fin_base_for(string $ym, float $now, array $raises, array $hist = []): float {
+    $ev = [];
+    foreach ($raises as $r) $ev[] = [substr($r['effective'], 0, 7), $r['new']];
+    foreach ($hist as $h) $ev[] = [$h['from'], $h['amount']]; /* سجل الراتب اليدوي يغلب العلاوة في الشهر نفسه (الترتيب ثابت) */
+    if (!$ev) return $now;
+    usort($ev, fn($a, $b) => strcmp($a[0], $b[0]));
+    $b = null; foreach ($ev as $e) if ($e[0] <= $ym) $b = $e[1];
+    if ($b !== null) return $b;
+    if ($hist && $hist[0]['from'] === $ev[0][0]) return $hist[0]['amount'];
+    return $raises && $raises[0]['old'] > 0 ? $raises[0]['old'] : $now;
 }
 function fin_salary(string $ref, int $year): array {
     $s = staff_get($ref); if (!$s) throw new HttpError('not_found', 404);
     $sd = $s['data']; $now = fin_num($sd['salary'] ?? ''); $cur = pay_cur($sd); $raises = fin_raises($ref);
+    $hist = fin_hist($ref); if ($now <= 0 && $hist) $now = $hist[count($hist) - 1]['amount'];
+    $conf = []; foreach (q('SELECT * FROM pay_confirm WHERE ref=? AND ym LIKE ?', [$ref, $year . '-%'])->fetchAll() as $c) $conf[$c['ym']] = $c;
     $start = substr((string)($sd['startDate'] ?? ''), 0, 7); $thisM = date('Y-m');
     $ot = []; $loans = []; $unpaid = []; $pens = [];
     foreach (q("SELECT no, type, data FROM requests WHERE ref=? AND status='approved' AND type IN ('ot','loan','leave')", [$ref])->fetchAll() as $r) {
@@ -93,9 +106,10 @@ function fin_salary(string $ref, int $year): array {
     $months = [];
     for ($i = 1; $i <= 12; $i++) {
         $ym = sprintf('%04d-%02d', $year, $i);
-        $st = $ym < $thisM ? 'paid' : ($ym === $thisM ? 'due' : 'proj');
-        if (($start !== '' && $ym < $start) || $now <= 0) { $months[] = ['m' => $ym, 'st' => 'none']; continue; }
-        $base = fin_base_for($ym, $now, $raises); $h = $base / 30 / 8; $lines = [];
+        $cf = $conf[$ym] ?? null; $st = $cf ? 'paid' : ($ym < $thisM ? 'wait' : ($ym === $thisM ? 'due' : 'proj'));
+            $endM = substr((string)($sd['serviceEnd'] ?? ''), 0, 7);
+        if (($start !== '' && $ym < $start) || ($endM !== '' && $ym > $endM) || $now <= 0) { $months[] = ['m' => $ym, 'st' => 'none']; continue; }
+        $base = fin_base_for($ym, $now, $raises, $hist); $h = $base / 30 / 8; $lines = [];
         $o = $ot[$ym] ?? null; $otAmt = $o ? round($o['mins'] / 60 * $h * 1.5, 2) : 0;
         if ($o) $lines[] = ['k' => 'ot', 'amount' => $otAmt, 'hours' => round($o['mins'] / 60, 2), 'rate' => round($h * 1.5, 2), 'nos' => $o['nos']];
         $ded = 0.0;
@@ -113,7 +127,8 @@ function fin_salary(string $ref, int $year): array {
             $lines[] = ['k' => 'unpaid', 'amount' => $a, 'no' => $u['no'], 'days' => $days, 'daily' => round($base / 30, 2)]; $ded += $a;
         }
         $months[] = ['m' => $ym, 'st' => $st, 'base' => $base, 'add' => $otAmt, 'ded' => round($ded, 2), 'net' => round($base + $otAmt - $ded, 2), 'lines' => $lines,
-            'raise' => array_values(array_filter($raises, fn($r) => substr($r['effective'], 0, 7) === $ym))];
+            'raise' => array_values(array_filter($raises, fn($r) => substr($r['effective'], 0, 7) === $ym)),
+            'conf' => $cf ? ['at' => substr($cf['at'], 0, 16), 'by' => $cf['by_name'], 'amount' => (float)$cf['amount']] : null];
     }
     $yrs = []; $y0 = $start !== '' ? (int)substr($start, 0, 4) : (int)date('Y'); for ($y = max($y0, (int)date('Y') - 5); $y <= (int)date('Y'); $y++) $yrs[] = $y;
     return ['cur' => $cur, 'salary' => $now, 'start' => (string)($sd['startDate'] ?? ''), 'raises' => $raises, 'months' => $months, 'years' => array_reverse($yrs),
@@ -206,4 +221,85 @@ function exp_delete(array $b): array {
     q('DELETE FROM expenses WHERE id=?', [$id]);
     audit_log($e['ref'], 'حذف مصروف من السجل المالي', $e['title'] . ' · ' . $e['day'], hrp_label($u));
     return ['ok' => true];
+}
+
+/* ============================================================ تأكيد صرف الرواتب (الإدارة العليا والموارد البشرية ومدير النظام) */
+function pay_conf_rows(array $u, string $ym): array {
+    $hide = private_hidden_for($u); $year = (int)substr($ym, 0, 4); $i = (int)substr($ym, 5, 2) - 1; $rows = [];
+    foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $r) {
+        if (in_array($r['ref'], $hide, true)) continue;
+        $s = staff_get($r['ref']); if (!$s) continue;
+        if (fin_num($s['data']['salary'] ?? '') <= 0 && !q1('SELECT id FROM salary_hist WHERE ref=? LIMIT 1', [$r['ref']])) continue;
+        $f = fin_salary($r['ref'], $year); $m = $f['months'][$i] ?? null; if (!$m || $m['st'] === 'none') continue;
+        $rows[] = ['ref' => $r['ref'], 'name' => staff_name($s), 'entity' => (string)($s['data']['entity'] ?? ''), 'cur' => $f['cur'], 'base' => $m['base'], 'add' => $m['add'], 'ded' => $m['ded'], 'net' => $m['net'], 'conf' => $m['conf'], 'hist' => count(fin_hist($r['ref']))];
+    }
+    usort($rows, fn($a, $b) => strcmp($a['entity'], $b['entity']) ?: strcmp($a['name'], $b['name']));
+    return $rows;
+}
+function fin_ym($v): string { return preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string)$v) ? (string)$v : date('Y-m'); }
+function pay_conf_list(array $b): array {
+    $u = require_perm('finance.view'); $ym = fin_ym($b['month'] ?? '');
+    $months = []; for ($k = 0; $k < 14; $k++) $months[] = date('Y-m', strtotime(date('Y-m-01') . " -$k month"));
+    return ['ok' => true, 'month' => $ym, 'months' => $months, 'rows' => pay_conf_rows($u, $ym)];
+}
+function pay_confirm(array $b): array {
+    $u = require_perm('finance.view'); $ym = fin_ym($b['month'] ?? '');
+    if ($ym > date('Y-m')) throw new HttpError('لا يمكن تأكيد صرف شهر لم يأتِ بعد');
+    $scope = (string)($b['scope'] ?? ''); $undo = !empty($b['undo']);
+    $rows = pay_conf_rows($u, $ym);
+    if ($scope === 'entity') { $e = (string)($b['entity'] ?? ''); $rows = array_values(array_filter($rows, fn($r) => $r['entity'] === $e)); }
+    elseif ($scope === 'refs') { $refs = array_map('strval', (array)($b['refs'] ?? [])); $rows = array_values(array_filter($rows, fn($r) => in_array($r['ref'], $refs, true))); }
+    elseif ($scope !== 'all') throw new HttpError('حدّد من تؤكد صرف رواتبهم');
+    $mn = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'][(int)substr($ym, 5, 2) - 1] . ' ' . substr($ym, 0, 4);
+    $n = 0; $note = hrp_str($b['note'] ?? '', 300);
+    foreach ($rows as $r) {
+        if ($undo) { if (!$r['conf']) continue; q('DELETE FROM pay_confirm WHERE ym=? AND ref=?', [$ym, $r['ref']]); $n++; continue; }
+        if ($r['conf']) continue;
+        q('INSERT INTO pay_confirm (ym, ref, amount, cur, by_email, by_name, at, note) VALUES (?,?,?,?,?,?,?,?)', [$ym, $r['ref'], $r['net'], $r['cur'], (string)$u['email'], hrp_label($u), now(), $note]); $n++;
+        $to = hrp_staff_mail($r['ref']); if ($to) note_add($to, 'صُرف راتب ' . $mn, 'أكّدت الإدارة صرف راتبك لشهر ' . $mn . '. التفاصيل في «سجلي المالي».', '', 'ok');
+    }
+    if ($n) audit_log($scope === 'refs' && count($rows) === 1 ? $rows[0]['ref'] : '', $undo ? 'التراجع عن تأكيد صرف رواتب' : 'تأكيد صرف رواتب', $mn . ' · ' . $n . ' منسوب' . ($scope === 'entity' ? ' · ' . ($b['entity'] ?? '') : ($scope === 'all' ? ' · الكل' : '')), hrp_label($u));
+    return ['ok' => true, 'count' => $n, 'rows' => pay_conf_rows($u, $ym)];
+}
+/* سجل الراتب: «من شهر كذا الراتب كذا» — يصحح الرواتب السابقة ويحدد القادمة */
+function sal_hist_get(array $b): array {
+    $u = require_perm('finance.view'); $ref = (string)($b['ref'] ?? ''); $s = staff_get($ref);
+    if (!$s || in_array($ref, private_hidden_for($u), true)) throw new HttpError('not_found', 404);
+    return ['ok' => true, 'ref' => $ref, 'name' => staff_name($s), 'salary' => fin_num($s['data']['salary'] ?? ''), 'cur' => pay_cur($s['data']), 'start' => (string)($s['data']['startDate'] ?? ''), 'rows' => fin_hist($ref), 'raises' => fin_raises($ref)];
+}
+function sal_hist_save(array $b): array {
+    $u = require_perm('finance.view'); if (!has_perm($u, 'staff.edit')) throw new HttpError('forbidden', 403);
+    $ref = (string)($b['ref'] ?? ''); $s = staff_get($ref); if (!$s || in_array($ref, private_hidden_for($u), true)) throw new HttpError('not_found', 404);
+    $rows = [];
+    foreach ((array)($b['rows'] ?? []) as $r) {
+        $f = (string)($r['from'] ?? ''); $a = round(fin_num($r['amount'] ?? 0), 2);
+        if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $f)) throw new HttpError('اختر الشهر لكل سطر');
+        if ($a <= 0) throw new HttpError('اكتب الراتب لكل سطر');
+        $rows[$f] = $a;
+    }
+    ksort($rows);
+    q('DELETE FROM salary_hist WHERE ref=?', [$ref]);
+    foreach ($rows as $f => $a) q('INSERT INTO salary_hist (ref, from_ym, amount, by_name, at) VALUES (?,?,?,?,?)', [$ref, $f, $a, hrp_label($u), now()]);
+    /* الراتب الحالي في الملف = آخر سطر بدأ هذا الشهر أو قبله */
+    $curAmt = null; foreach ($rows as $f => $a) if ($f <= date('Y-m')) $curAmt = $a;
+    if ($curAmt !== null && fin_num($s['data']['salary'] ?? '') != $curAmt) { $s['data']['salary'] = (string)(floor($curAmt) == $curAmt ? (int)$curAmt : $curAmt); $s['updated_at'] = now(); staff_put($s); }
+    audit_log($ref, 'تعديل سجل الراتب', count($rows) . ' سطر (القيم لا تُكتب في السجل)', hrp_label($u));
+    return ['ok' => true] + sal_hist_get(['ref' => $ref]);
+}
+function ev_gone(): array { throw new HttpError('أُلغي قسم تقييم الأداء من المنصة', 410); }
+
+/* تسجيل المنسوب عهدة استلمها بنفسه (إن فتحها مدير النظام من الإعدادات) — تُعدّ مُقرًّا بها، وتراها الموارد البشرية وتعدّلها */
+function cus_self_save(array $b): array {
+    $u = hrp_me(); $ref = (string)my_staff_ref($u);
+    if ($ref === '' || !site_on('staff', 'cusself') || !site_on('staff', 'myhr')) throw new HttpError('تسجيل العهد من المنسوب غير مفعّل', 403);
+    $item = hrp_str($b['item'] ?? '', 160); if (mb_strlen($item) < 2) throw new HttpError('اكتب وصف العهدة');
+    $cat = cus_cat_clean($b);
+    $on = hrp_date($b['issuedOn'] ?? ''); if (!$on) throw new HttpError('اختر متى استلمتها'); if ($on > date('Y-m-d')) throw new HttpError('تاريخ الاستلام بعد اليوم');
+    $val = trim(to_ascii_digits((string)($b['value'] ?? ''))); $val = $val === '' ? null : round((float)$val, 2);
+    $cond = in_array($b['condOut'] ?? '', ['جديدة', 'مستعملة بحالة جيدة', 'تحتاج صيانة'], true) ? $b['condOut'] : 'جديدة';
+    q('INSERT INTO custody (ref, item, category, serial, value, issued_on, cond_out, note, created_by, created_at, ack_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        [$ref, $item, $cat, hrp_str($b['serial'] ?? '', 80), $val, $on, $cond, hrp_str($b['note'] ?? '', 600), 'سجّلها المنسوب بنفسه', now(), now()]);
+    $id = (int)db()->lastInsertId();
+    audit_log($ref, 'تسجيل المنسوب عهدة استلمها', $item . ' · ' . $cat . ' · ' . $on, hrp_label($u));
+    return ['ok' => true, 'row' => cus_row(q1('SELECT * FROM custody WHERE id=?', [$id]))];
 }

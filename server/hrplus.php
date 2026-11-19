@@ -117,7 +117,7 @@ function act_list(array $b): array {
         $rows = $ref !== '' ? q('SELECT * FROM hr_actions WHERE ref=? ORDER BY id DESC', [$ref])->fetchAll() : q('SELECT * FROM hr_actions ORDER BY id DESC LIMIT 600')->fetchAll();
         return ['ok' => true, 'rows' => array_map('act_row', private_filter($u, $rows)), 'kinds' => array_map(fn($k) => ['name' => $k[0], 'approve' => (bool)$k[1]], ACT_KINDS), 'canIssue' => has_perm($u, 'staff.edit'), 'canDecide' => hrp_is_top($u)];
     }
-    $ref = my_staff_ref($u); if (!$ref || !site_on('staff', 'myhr')) return ['ok' => true, 'rows' => []];
+    $ref = my_staff_ref($u); if (!$ref || !site_on('staff', 'myact')) return ['ok' => true, 'rows' => []];
     return ['ok' => true, 'rows' => array_map('act_row', q("SELECT * FROM hr_actions WHERE ref=? AND status='issued' ORDER BY id DESC", [$ref])->fetchAll())];
 }
 function act_save(array $b): array {
@@ -229,7 +229,8 @@ function cus_list(array $b): array {
         return ['ok' => true, 'rows' => array_map('cus_row', private_filter($u, $rows)), 'cats' => CUS_CATS, 'canEdit' => has_perm($u, 'staff.edit')] + cus_meta();
     }
     $ref = my_staff_ref($u); if (!$ref || !site_on('staff', 'myhr')) return ['ok' => true, 'rows' => []];
-    return ['ok' => true, 'rows' => array_map('cus_row', q('SELECT * FROM custody WHERE ref=? ORDER BY returned_on IS NULL DESC, id DESC', [$ref])->fetchAll())] + cus_meta();
+    $me = staff_get($ref); $ent = (string)($me['data']['entity'] ?? '');
+    return ['ok' => true, 'rows' => array_map('cus_row', q('SELECT * FROM custody WHERE ref=? ORDER BY returned_on IS NULL DESC, id DESC', [$ref])->fetchAll()), 'self' => site_on('staff', 'cusself'), 'ent' => $ent, 'mine' => cus_suggest_for($ent)] + cus_meta();
 }
 function cus_save(array $b): array {
     $u = require_perm('staff.edit');

@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 14;
+const BHR_SCHEMA_VERSION = 15;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -207,6 +207,13 @@ function migrate(PDO $pdo): void {
         amount DECIMAL(14,2) NOT NULL, cur CHAR(3) NOT NULL DEFAULT 'SAR', title VARCHAR(160) NOT NULL, note VARCHAR(600) NOT NULL DEFAULT '', req_no VARCHAR(24) NOT NULL DEFAULT '',
         created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, KEY k_ref (ref), KEY k_day (day))" . $T11);
     $pdo->exec("ALTER TABLE custody MODIFY category VARCHAR(120) NOT NULL DEFAULT ''");
+    /* ١٥) تأكيد صرف الرواتب شهريًا لكل منسوب، وسجل الراتب اليدوي (من شهر كذا الراتب كذا) */
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pay_confirm (
+        id INT AUTO_INCREMENT PRIMARY KEY, ym CHAR(7) NOT NULL, ref VARCHAR(40) NOT NULL, amount DECIMAL(14,2) NOT NULL DEFAULT 0, cur CHAR(3) NOT NULL DEFAULT 'SAR',
+        by_email VARCHAR(190) NOT NULL DEFAULT '', by_name VARCHAR(160) NOT NULL DEFAULT '', at DATETIME NOT NULL, note VARCHAR(300) NOT NULL DEFAULT '', UNIQUE KEY u_ym_ref (ym, ref), KEY k_ref (ref))" . $T11);
+    $pdo->exec("CREATE TABLE IF NOT EXISTS salary_hist (
+        id INT AUTO_INCREMENT PRIMARY KEY, ref VARCHAR(40) NOT NULL, from_ym CHAR(7) NOT NULL, amount DECIMAL(14,2) NOT NULL, by_name VARCHAR(160) NOT NULL DEFAULT '', at DATETIME NOT NULL,
+        UNIQUE KEY u_ref_from (ref, from_ym))" . $T11);
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {

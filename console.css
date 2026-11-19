@@ -2347,3 +2347,12 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .fx-k .kpi .tile{width:42px;height:42px;border-radius:13px}
   .fx-k .kpi .v{font-size:clamp(20px,6vw,28px)}
 }
+.pctab td.ck,.pctab th.ck{width:36px;text-align:center}
+.pctab input[type=checkbox]{width:18px;height:18px;accent-color:var(--navy)}
+.pctab td.num,.pctab th.num{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pctab .acts2{white-space:nowrap}
+.shrows{display:grid;gap:10px;margin-bottom:12px}
+.shrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;gap:10px;align-items:end}
+.shrow label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700}
+.shrow input{width:100%}
+.pcacts{display:flex;gap:6px;align-items:center;justify-content:flex-end}

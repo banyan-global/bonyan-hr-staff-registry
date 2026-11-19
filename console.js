@@ -2468,7 +2468,7 @@ function hrBadge(k) {
   if (k === 'apps') return j && j.apps ? j.apps.filter(function (x) { return x.status === 'new'; }).length : 0;
   if (k === 'acts') return a ? a.rows.filter(function (x) { return !x.ackAt; }).length : 0;
   if (k === 'cus') return c ? c.rows.filter(function (x) { return x.open && !x.ackAt; }).length : 0;
-  if (k === 'mine') return hrBadge('acts') + hrBadge('cus');
+  if (k === 'mine') return hrBadge('cus');
   return 0;
 }
 
@@ -2491,7 +2491,8 @@ function sideHTML() {
       staffOn('myreq') ? { v: 'myreq', n: 'طلباتي', d: isAppr ? 'طلباتك وما ينتظر اعتمادك' : 'إجازة واستئذان ومباشرة وسلفة', j: 'sapphire', i: 'doc', b: open + pendS, s: [['myreq-new', 'طلب جديد', view === 'myreq' && TAB.myreq === 'new'], ['myreq-list', 'متابعة طلباتي', view === 'myreq' && TAB.myreq === 'list', open]].concat(isAppr ? [['myreq-pend', 'بانتظار اعتمادي', view === 'myreq' && TAB.myreq === 'pend', pendS, 1]] : []) } : null,
       staffOn('myatt') ? { v: 'myatt', n: 'حضوري', d: 'الحضور والتأخير هذا الشهر', j: 'teal', i: 'finger' } : null,
       staffOn('mynews') ? { v: 'mynews', n: 'التعاميم', d: 'إعلانات الموارد البشرية', j: 'gold', i: 'bell', b: newsUnread() } : null,
-      staffOn('myhr') ? { v: 'myhr', n: 'سجلي المالي', d: 'رواتبي ومصاريفي وعهدي', j: 'emerald', i: 'coins', b: hrBadge('mine'), s: [['mypay', 'رواتبي', view === 'myhr' && TAB.myhr === 'pay'], ['myexp', 'مصاريفي', view === 'myhr' && TAB.myhr === 'exp'], ['mycus', 'عهدي', view === 'myhr' && TAB.myhr === 'cus', hrBadge('cus'), 1], ['myact', 'الإجراءات والخطابات', view === 'myhr' && TAB.myhr === 'act', hrBadge('acts'), 1]] } : null,
+      staffOn('myhr') ? { v: 'myhr', n: 'سجلي المالي', d: 'رواتبي ومصاريفي وعهدي', j: 'emerald', i: 'coins', b: hrBadge('mine'), s: [['mypay', 'رواتبي', view === 'myhr' && TAB.myhr === 'pay'], ['myexp', 'مصاريفي', view === 'myhr' && TAB.myhr === 'exp'], ['mycus', 'عهدي', view === 'myhr' && TAB.myhr === 'cus', hrBadge('cus'), 1]] } : null,
+      staffOn('myact') ? { v: 'myact', n: 'الإجراءات والخطابات', d: 'العلاوات والترقيات والإنذارات', j: 'garnet', i: 'stamp', b: hrBadge('acts') } : null,
       { v: 'myfile', n: 'ملفي وبطاقتي', d: 'بياناتك والبطاقة الرسمية', j: 'garnet', i: 'card', s: S('staff', 'update') ? [['update.html?me=1', 'تحديث بياناتي', false]] : [] }].filter(Boolean)]];
   } else {
     var pend = reqPendingForMe().length;
@@ -2505,10 +2506,10 @@ function sideHTML() {
         allowed('hract') ? { v: 'hract', n: 'الإجراءات الإدارية', d: 'إنذارات وترقيات ونقل وشكر', j: 'garnet', i: 'stamp', b: hrBadge('act') } : null,
         allowed('custody') ? { v: 'custody', n: 'العهد', d: 'ما لدى المنسوبين من أجهزة وغيرها', j: 'teal', i: 'box' } : null,
         allowed('exps') ? { v: 'exps', n: 'المصروفات', d: 'ما صُرف للمنسوبين أو عليهم', j: 'gold', i: 'coins' } : null,
-        allowed('evals') ? { v: 'evals', n: 'تقييم الأداء', d: 'بالمعايير مع اطلاع المنسوب', j: 'gold', i: 'medal' } : null,
         allowed('jobs') ? { v: 'jobs', n: 'التوظيف', d: 'الوظائف والمتقدمون والمقابلات', j: 'amethyst', i: 'userok', b: hrBadge('apps') } : null].filter(Boolean)],
       ['الإدارة', [
         allowed('payroll') ? { v: 'payroll', n: 'الرواتب', d: 'حسب الجهة والعملة', j: 'gold', i: 'wallet', b: 0, s: [['payroll', 'كشف الرواتب', view === 'payroll' && PAYF === 'all'], ['banks', 'الحسابات البنكية', view === 'payroll' && PAYF === 'nobank', CNT.nobank, 1], ['paymonth', 'مستحقات واستقطاعات الشهر', view === 'payroll' && PAYF === 'month']] } : null,
+        allowed('payconf') ? { v: 'payconf', n: 'تأكيد صرف الرواتب', d: 'لموظف أو لجهة أو للجميع', j: 'emerald', i: 'check' } : null,
         allowed('reports') ? { v: 'reports', n: 'التقارير', d: 'تصفية وتصدير وطباعة', j: 'sapphire', i: 'chart' } : null,
         can('sys') ? { v: 'system', n: 'النظام', d: 'الحسابات والإعدادات والسجل', j: 'slate', i: 'shield', s: [can('users') ? ['accounts', 'الموظفون والصلاحيات', view === 'system' && TAB.system === 'acc'] : null, can('settings') ? ['settings', 'إعدادات المنصة', view === 'system' && TAB.system === 'set'] : null, can('audit') ? ['log', 'سجل العمليات', view === 'system' && TAB.system === 'log'] : null, can('drive') || can('users') ? ['data', 'البيانات والنسخ', view === 'system' && TAB.system === 'data'] : null].filter(Boolean) } : null].filter(Boolean)]];
   }
@@ -2540,11 +2541,11 @@ var SET_GROUPS = [
     ['reqs', 'الطلبات', 'الإجازات وأوامر الإركاب والتعريفات ومسارات اعتمادها', 'stamp'], ['forms', 'النماذج الإدارية', 'صفحة النماذج ومسؤولي الاعتماد', 'file'],
     ['att', 'الحضور والانصراف', 'السجل الشهري واستيراد ملف جهاز البصمة', 'finger'], ['news', 'التعاميم والإعلانات', 'تصل المنسوبين في صفحاتهم مع متابعة القراءة', 'bell'],
     ['payroll', 'الرواتب', 'كشف الرواتب والحسابات البنكية (لمن يملك صلاحية المالية)', 'wallet'], ['acts', 'الإجراءات الإدارية', 'لفت النظر والإنذارات والترقيات والنقل والعلاوات وخطابات الشكر', 'stamp'], ['custody', 'العهد', 'ما يُسلَّم للمنسوبين ويُسترد عند انتهاء الخدمة', 'box'],
-    ['evals', 'تقييم الأداء', 'تقييم المنسوبين بالمعايير واطلاعهم عليه', 'medal'], ['jobs', 'التوظيف', 'إعلان الوظائف واستقبال المتقدمين والمقابلات', 'userok'], ['org', 'الهيكل التنظيمي', 'الجهات والإدارات ومن فيها', 'building'], ['reports', 'التقارير', 'تقارير قابلة للتصفية والتصدير والطباعة', 'chart']]],
+    ['jobs', 'التوظيف', 'إعلان الوظائف واستقبال المتقدمين والمقابلات', 'userok'], ['org', 'الهيكل التنظيمي', 'الجهات والإدارات ومن فيها', 'building'], ['reports', 'التقارير', 'تقارير قابلة للتصفية والتصدير والطباعة', 'chart']]],
   ['staff', 'بوابة المنسوب', 'ما يراه المنسوب حين يدخل ببريده. الإخفاء هنا يُطبَّق في الخادم أيضًا.', 'user', [
     ['card', 'البطاقة الرسمية', 'عرض بطاقته وتنزيلها', 'card'], ['docs', 'الوثائق', 'وثائقه وتواريخ انتهائها', 'pass'], ['pay', 'الراتب والحساب البنكي', 'يظهر له راتبه وبنكه؛ عند الإخفاء تظهر مقنّعة', 'wallet'],
     ['reqs', 'تقديم الطلبات', 'الإجازة والاستئذان والمباشرة والسلفة وغيرها من صفحته', 'stamp'], ['balance', 'رصيد الإجازات', 'المستحق والمستهلك والمتبقي', 'umbrella'], ['att', 'حضوري', 'سجل حضوره وتأخيره', 'finger'],
-    ['news', 'التعاميم', 'التعاميم الموجهة إليه', 'bell'], ['update', 'تحديث بياناتي', 'تعديل بياناته ورفع وثائقه بنفسه', 'edit'], ['myhr', 'سجلي المالي', 'رواتبه ومصاريفه وعهده والإجراءات الصادرة له', 'coins']]],
+    ['news', 'التعاميم', 'التعاميم الموجهة إليه', 'bell'], ['update', 'تحديث بياناتي', 'تعديل بياناته ورفع وثائقه بنفسه', 'edit'], ['myhr', 'سجلي المالي', 'رواتبه ومصاريفه وعهده', 'coins'], ['cusself', 'تسجيل العهد من المنسوب', 'يسجّل بنفسه ما استلمه من عهد ومتى استلمها، مع مقترحات حسب جهته', 'box'], ['myact', 'الإجراءات والخطابات', 'العلاوات والترقيات والإنذارات الصادرة له', 'stamp']]],
   ['home', 'لوحة القيادة', 'اللوحات التي تظهر في الصفحة الرئيسية للإدارة.', 'gauge', [
     ['hero', 'الترحيب والخريطة والساعات', '', 'globe'], ['kpis', 'المؤشرات الأربعة', '', 'chart'], ['qa', 'إجراءات سريعة', '', 'plus'], ['events', 'مناسبات قادمة', 'لا تظهر للإدارة والموارد البشرية والرئيس التنفيذي', 'calendar'],
     ['charts', 'حالة الملفات', '', 'pie'], ['quality', 'جودة البيانات والتوزيع والوثائق', '', 'gauge'], ['cal', 'تقويم انتهاء الوثائق', 'لا يظهر للرئيس التنفيذي', 'calendar'], ['ents', 'الجهات', '', 'building'], ['recent', 'أحدث المنسوبين وآخر العمليات', '«آخر العمليات» لمسؤول النظام وحده', 'history']]]
@@ -4392,11 +4393,12 @@ document.addEventListener('change', function (ev) {
    ====================================================================== */
 P.coins = P.coins || P.wallet;
 TITLES.myhr = ['سجلي المالي'];
-TAB.myhr = 'pay'; TABL.myhr = { pay: 'رواتبي', exp: 'مصاريفي', cus: 'عهدي', act: 'الإجراءات والخطابات' };
-ALIAS.mypay = ['myhr', 'pay']; ALIAS.myexp = ['myhr', 'exp']; ALIAS.mycus = ['myhr', 'cus']; ALIAS.myact = ['myhr', 'act'];
+TAB.myhr = 'pay'; TABL.myhr = { pay: 'رواتبي', exp: 'مصاريفي', cus: 'عهدي' };
+ALIAS.mypay = ['myhr', 'pay']; ALIAS.myexp = ['myhr', 'exp']; ALIAS.mycus = ['myhr', 'cus'];
+STAFF_VIEWS.push('myact'); TITLES.myact = ['الإجراءات والخطابات']; TITLES.payconf = ['تأكيد صرف الرواتب'];
 TITLES.exps = ['المصروفات'];
 var _allowedF0 = allowed;
-allowed = function (v) { if (v === 'exps') return role !== 'staff' && can('pay'); return _allowedF0(v); };
+allowed = function (v) { if (v === 'exps' || v === 'payconf') return role !== 'staff' && can('pay'); if (v === 'evals') return false; return _allowedF0(v); };
 
 function fm(x) { return Number(x || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
 function curL(c) { return !c || c === 'SAR' ? 'ر.س' : c; }
@@ -4411,7 +4413,7 @@ var EXPC = { ticket: ['sapphire', 'plane', 'var(--c-info)'], med: ['garnet', 'pl
 function finMonths(p) { return (p && p.months || []).map(function (m, i) { m.i = i; return m; }); }
 function finSel(M) {
   if (FIN.sel != null && M[FIN.sel] && M[FIN.sel].st !== 'none') return FIN.sel;
-  var d = M.filter(function (m) { return m.st === 'due'; })[0] || M.filter(function (m) { return m.st === 'paid'; }).pop() || M.filter(function (m) { return m.st !== 'none'; })[0];
+  var d = M.filter(function (m) { return m.st === 'due'; })[0] || M.filter(function (m) { return m.st === 'paid' || m.st === 'wait'; }).pop() || M.filter(function (m) { return m.st !== 'none'; })[0];
   return d ? d.i : 0;
 }
 function finTag(m, first) {
@@ -4442,7 +4444,7 @@ function finChartH(p, M, sel) {
   plot += live.map(function (m) { var s = m.i === sel, t = finTag(m, m.st === 'proj' && firstProj); if (m.st === 'proj') firstProj = false;
     return '<div class="fx-pt" style="right:' + ((m.i + .5) / 12 * 100).toFixed(3) + '%;top:' + y(m.net).toFixed(1) + 'px">' + (t && !s ? '<span class="fx-tag ' + t[1] + '">' + t[0] + '</span>' : '') + (s ? '<span class="fx-bub">' + fm(m.net) + '</span>' : '') +
       '<button type="button" class="fx-dot' + (s ? ' sel' : '') + (m.st === 'proj' ? ' proj' : '') + '" data-fm="' + m.i + '" aria-label="' + mName(m.m) + ': الصافي ' + fm(m.net) + ' ' + curL(p.cur) + '"></button></div>'; }).join('');
-  var SC = { paid: 'var(--c-ok)', due: 'var(--c-warn)', proj: 'var(--line)' };
+  var SC = { paid: 'var(--c-ok)', due: 'var(--c-warn)', wait: 'var(--c-warn)', proj: 'var(--line)' };
   var tiles = M.map(function (m) { return '<div>' + (m.st === 'none' ? '<div class="fx-mt none"><span>' + mName(m.m) + '</span><b>—</b></div>' : '<button type="button" class="fx-mt' + (m.st === 'proj' ? ' proj' : '') + '" data-fm="' + m.i + '" aria-pressed="' + (m.i === sel) + '"><span>' + mName(m.m) + '</span><b>' + fm(Math.round(m.net)) + '</b><i style="background:' + SC[m.st] + '"></i></button>') + '</div>'; }).join('');
   return '<div class="fx-pb"><div class="fx-scroll"><div class="fx-in"><div class="fx-row"><div class="fx-plot">' + plot + '</div><div class="fx-axis">' + grid.map(function (v) { return '<span style="top:' + y(v) + 'px">' + fm(Math.round(v)) + '</span>'; }).join('') + '</div></div>' +
     '<div class="fx-row"><div class="fx-tiles">' + tiles + '</div><div class="fx-axis"></div></div></div></div></div>';
@@ -4456,7 +4458,7 @@ function finSlipH(p, m) {
     if (x.k === 'unpaid') L.push(['minus', '−', 'إجازة بدون راتب', nq(x.days, 'يوم', 'يومان', 'أيام', 'يومًا') + ' × ' + fm(x.daily) + ' ' + c + ' لليوم', x.no, '−' + fm(x.amount), 'minus']);
   });
   if (L.length === 1) L.push(['plus', '✓', 'لا إضافات ولا خصومات', 'راتب كامل لهذا الشهر', '', '0', '']);
-  var ST = { paid: ['ok', 'صُرف', 'حُوّل إلى حسابك البنكي مع رواتب ' + mName(m.m) + '.'], due: ['warn', 'مستحق هذا الشهر', 'يُصرف مع رواتب هذا الشهر، والقيمة نهائية بعد اعتماد مسيّر الرواتب.'], proj: ['mute', 'متوقع', 'تقدير مبني على راتبك الحالي، ويتغير بأي إضافي أو خصم يُعتمد لاحقًا.'] }[m.st];
+  var cf = m.conf, ST = { paid: ['ok', 'صُرف', 'أكّد ' + (cf ? esc(cf.by) : 'الإدارة') + ' صرف راتب ' + mName(m.m) + (cf ? ' في ' + fdx(pdate(cf.at), { day: 'numeric', month: 'long', year: 'numeric' }) : '') + '.'], wait: ['warn', 'بانتظار تأكيد الصرف', 'لم تؤكد الإدارة صرف هذا الشهر بعد. إن استلمته فسيُؤكَّد قريبًا.'], due: ['warn', 'مستحق هذا الشهر', 'يُصرف مع رواتب هذا الشهر، والقيمة نهائية بعد اعتماد مسيّر الرواتب.'], proj: ['mute', 'متوقع', 'تقدير مبني على راتبك الحالي، ويتغير بأي إضافي أو خصم يُعتمد لاحقًا.'] }[m.st];
   return pn('gold', 'doc', 'قسيمة ' + mName(m.m) + ' ' + m.m.slice(0, 4), 'تفاصيل الراتب ومصدر كل بند', '<span class="pill ' + ST[0] + '"><i></i>' + ST[1] + '</span>',
     '<div class="fx-eq"><div><small>الأساسي</small><b>' + fm(m.base) + '</b></div><span class="op">+</span><div><small>إضافات</small><b style="color:var(--ok)">' + fm(m.add) + '</b></div><span class="op">−</span><div><small>خصومات</small><b style="color:var(--bad)">' + fm(m.ded) + '</b></div><span class="op">=</span><div class="net"><small>الصافي (' + c + ')</small><b>' + fm(m.net) + '</b></div></div>' +
     '<ul class="fx-lines">' + L.map(function (l) { return '<li class="fx-ln"><span class="fx-sg ' + l[0] + '">' + l[1] + '</span><div><b>' + l[2] + '</b><small>' + l[3] + '</small></div>' + (l[4] ? '<span class="ref">' + esc(l[4]) + '</span>' : '<span></span>') + '<span class="a ' + l[6] + '">' + l[5] + '</span></li>'; }).join('') + '</ul>' +
@@ -4472,15 +4474,15 @@ function finPayH(d) {
   var M = finMonths(p), live = M.filter(function (m) { return m.st !== 'none'; });
   if (!p.salary || !live.length) return head(finYearSel(p)) + '<section class="pn"><div class="emptyx">' + tile('emerald', 'wallet') + '<b>لا رواتب لهذه السنة</b><p>' + (!p.salary ? 'لم يُسجَّل راتبك في ملفك بعد. تواصل مع الموارد البشرية.' : 'لم تبدأ خدمتك في هذه السنة.') + '</p></div></section>';
   var sel = FIN.sel = finSel(M), c = curL(p.cur), sum = function (a, k) { return a.reduce(function (s, m) { return s + (m[k] || 0); }, 0); };
-  var paid = M.filter(function (m) { return m.st === 'paid'; }), due = M.filter(function (m) { return m.st === 'due'; })[0], done = M.filter(function (m) { return m.st === 'paid' || m.st === 'due'; });
+  var paid = M.filter(function (m) { return m.st === 'paid'; }), wait = M.filter(function (m) { return m.st === 'wait'; }), due = M.filter(function (m) { return m.st === 'due'; })[0], done = M.filter(function (m) { return m.st === 'paid' || m.st === 'due' || m.st === 'wait'; });
   var otH = 0; done.forEach(function (m) { (m.lines || []).forEach(function (x) { if (x.k === 'ot') otH += x.hours; }); });
   var R0 = function (v) { return fm(Math.round(v)); };
   var kp = '<div class="grid g4 fx-k">' +
-    kpi('emerald', 'wallet', R0(sum(paid, 'net')), c, 'صافي ما استلمته', paid.length ? nq(paid.length, 'شهر واحد', 'شهران', 'أشهر', 'شهرًا') + ' · متوسط ' + fm(Math.round(sum(paid, 'net') / paid.length)) : 'لا أشهر مصروفة بعد') +
+    kpi('emerald', 'wallet', R0(sum(paid, 'net')), c, 'صافي ما استلمته', paid.length ? nq(paid.length, 'شهر واحد', 'شهران', 'أشهر', 'شهرًا') + ' · متوسط ' + fm(Math.round(sum(paid, 'net') / paid.length)) + (wait.length ? ' · ' + nq(wait.length, 'شهر', 'شهران', 'أشهر', 'شهرًا') + ' بانتظار التأكيد' : '') : (wait.length ? nq(wait.length, 'شهر', 'شهران', 'أشهر', 'شهرًا') + ' بانتظار تأكيد الصرف' : 'لا أشهر مصروفة بعد')) +
     (due ? kpi('gold', 'timer', R0(due.net), c, 'مستحق ' + mName(due.m), 'المتوقع للسنة ' + R0(sum(live, 'net'))) : kpi('gold', 'chart', R0(sum(live, 'net')), c, 'إجمالي السنة', live.length + ' أشهر')) +
     kpi('sapphire', 'clock', R0(sum(done, 'add')), c, 'العمل الإضافي', otH ? fm(otH) + ' ساعة معتمدة' : 'لا عمل إضافي') +
     kpi('garnet', 'stamp', R0(sum(done, 'ded')), c, 'الخصومات', 'سلف · جزاءات · إجازات بدون راتب') + '</div>';
-  var legend = '<div class="fx-legend"><span><i class="fx-sw" style="background:var(--c-ok);border-radius:50%"></i>صُرف</span><span><i class="fx-sw" style="background:var(--c-warn);border-radius:50%"></i>مستحق</span><span><i class="fx-sw" style="border:2px dashed var(--faint);border-radius:50%"></i>متوقع</span></div>';
+  var legend = '<div class="fx-legend"><span><i class="fx-sw" style="background:var(--c-ok);border-radius:50%"></i>صُرف</span><span><i class="fx-sw" style="background:var(--c-warn);border-radius:50%"></i>لم يُؤكَّد صرفه</span><span><i class="fx-sw" style="border:2px dashed var(--faint);border-radius:50%"></i>متوقع</span></div>';
   /* تطور الراتب الأساسي */
   var steps = [], rs = p.raises || []; if (rs.length) { steps.push([rs[0].old || p.salary, 'قبل ' + fd(pdate(rs[0].effective), { month: 'short', year: 'numeric' })]); rs.forEach(function (r) { steps.push([r.new, 'من ' + fd(pdate(r.effective), { month: 'short', year: 'numeric' })]); }); } else steps.push([p.salary, 'راتبك الحالي']);
   steps = steps.slice(-4); var smax = Math.max.apply(null, steps.map(function (s) { return s[0]; }));
@@ -4544,7 +4546,7 @@ function finCusH() {
   var c = cusData(), d = c.data || {}, C = d.rows || [], open = C.filter(function (x) { return x.open; }), back = C.filter(function (x) { return !x.open; }), na = open.filter(function (x) { return !x.ackAt; }).length;
   var li = function (x) { return '<li class="' + (x.open ? '' : 'back') + '">' + tile(x.open ? 'teal' : 'slate', 'box') + '<div><b>' + esc(x.item) + '</b><small>' + esc(cusCatTxt(d, x.category)) + (x.serial ? ' · <span class="ltr">' + esc(x.serial) + '</span>' : '') + ' · استلمتها ' + fdx(pdate(x.issuedOn), { day: 'numeric', month: 'short', year: 'numeric' }) + (x.value ? ' · ' + fm(x.value) + ' ر.س' : '') + (x.open ? '' : ' · أعدتها ' + fdx(pdate(x.returnedOn), { day: 'numeric', month: 'short' })) + '</small></div>' +
     (x.open ? (x.ackAt ? '<span class="pill ok"><i></i>أقررت بالاستلام</span>' : '<button class="btn sm goldb" data-cus-ack="' + x.id + '">' + ic('check') + 'أقرّ باستلامها</button>') : '<span class="pill mute"><i></i>أُعيدت</span>') + '</li>'; };
-  var head = ptitle('عهدي', 'الأجهزة والمفاتيح وغيرها مما استلمته من جهتك. أقرّ باستلام كل عهدة، وتُطابَق هذه القائمة مع إخلاء الطرف عند انتهاء الخدمة.');
+  var head = ptitle('عهدي', 'الأجهزة والمفاتيح وغيرها مما استلمته من جهتك. أقرّ باستلام كل عهدة، وتُطابَق هذه القائمة مع إخلاء الطرف عند انتهاء الخدمة.', d.self ? '<button class="btn goldb" id="cusSelfNew">' + ic('plus') + 'تسجيل عهدة استلمتها</button>' : '');
   if (!c.data) return head + '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ التحميل…') + '</div></div></section>';
   return head + '<div class="grid g3">' + kpi('teal', 'box', open.length, '', 'العهد لديك', open.some(function (x) { return x.value; }) ? 'قيمتها المسجّلة ' + fm(open.reduce(function (a, x) { return a + (x.value || 0); }, 0)) + ' ر.س' : '') +
     kpi('gold', 'userok', na, '', 'بانتظار إقرارك', na ? 'أقرّ باستلامها من القائمة' : 'أقررت بكل عهدك') + kpi('emerald', 'check', back.length, '', 'أعدتها', '') + '</div>' +
@@ -4560,10 +4562,10 @@ function finActH() {
     pn('garnet', 'stamp', 'الإجراءات والخطابات', A.length ? nq(A.length, 'إجراء واحد', 'إجراءان', 'إجراءات', 'إجراءً') + (noack ? ' · ' + noack + ' بانتظار اطلاعك' : '') : '', '', '<div class="pb">' + (A.length ? '<ul class="rqlist">' + A.map(function (x) { return actRowH(x, true); }).join('') + '</ul>' : '<div class="note">' + ic('check') + '<span>لا إجراءات صادرة لك.</span></div>') + '</div>');
 }
 
+VIEWS.myact = function () { return finActH(); };
 VIEWS.myhr = function () {
   var t = TAB.myhr || 'pay';
   if (t === 'cus') return finCusH();
-  if (t === 'act') return finActH();
   var f = finData(), d = f.data;
   if (!d) return ptitle(TABL.myhr[t], '') + '<section class="pn"><div class="pb"><div class="empty">' + (f.err ? esc(f.err) : 'جارٍ التحميل…') + '</div></div></section>';
   if (d.off) return ptitle(TABL.myhr[t], '') + '<div class="note">' + ic('info') + '<span>هذا القسم غير مفعّل في بوابة المنسوب.</span></div>';
@@ -4622,24 +4624,27 @@ function expDel(x) {
 }
 
 /* ---------------- نموذج تسليم العهدة: التصنيف قائمة منسدلة بمجموعات + الأكثر استخدامًا في جهة المنسوب ---------------- */
-function cusSuggest(d, ref) {
-  var S = (d && d.suggest) || {}, s = byRef(ref), e = s ? ((s.ent.full || '') + ' ' + (s.ent.n || '') + ' ' + (s.entity || '')) : '';
-  for (var k in S) if (k !== '*' && e.indexOf(k) >= 0) return { ent: s.ent.n || '', list: S[k] };
-  return S['*'] ? { ent: s ? s.ent.n : '', list: S['*'] } : null;
+function cusSuggestEnt(d, e) { var S = (d && d.suggest) || {}; e = String(e || ''); for (var k in S) if (k !== '*' && e.indexOf(k) >= 0) return S[k]; return S['*'] || []; }
+function cusSuggest(d, ref) { var s = byRef(ref); return s ? cusSuggestEnt(d, (s.ent.full || '') + ' ' + (s.ent.n || '') + ' ' + (s.entity || '')) : []; }
+/* خيارات التصنيف: مقترحات حسب الجهة أولًا، ثم كل المجموعات، ثم «أخرى» */
+function cusOpts(d, sug, oldCat) {
+  var G = (d && d.groups) || {}, o = [];
+  (sug || []).forEach(function (it) { o.push({ v: it, n: it, g: 'مقترحات حسب الجهة', ic: 'star' }); });
+  Object.keys(G).forEach(function (g) { G[g].forEach(function (it) { o.push({ v: it, n: it, g: g }); }); });
+  if (oldCat) o.push({ v: oldCat, n: oldCat, g: 'تصنيف سابق' });
+  o.push({ v: 'أخرى', n: 'أخرى', d: 'اكتب نوع العهدة بنفسك', g: 'أخرى', ic: 'edit' });
+  return o;
 }
+function cusTotal(d) { var G = (d && d.groups) || {}, t = 0; Object.keys(G).forEach(function (g) { t += G[g].length; }); return t; }
 function cusForm(x, ref) {
   var d = cusData().data || {}, G = d.groups || {};
   var isOther = x && /^أخرى/.test(x.category || ''), oldCat = x && !isOther && !cusGroupOf(d, x.category) ? x.category : '';
   var C = x ? { id: x.id, ref: x.ref, item: x.item, category: isOther ? 'أخرى' : x.category, catOther: isOther ? String(x.category).replace(/^أخرى:? ?/, '') : '', serial: x.serial, value: x.value == null ? '' : x.value, issuedOn: x.issuedOn, condOut: x.condOut, note: x.note }
     : { ref: ref || '', item: '', category: '', catOther: '', serial: '', value: '', issuedOn: ymd(new Date()), condOut: 'جديدة', note: '' };
-  var opts = []; Object.keys(G).forEach(function (g) { G[g].forEach(function (it) { opts.push({ v: it, n: it, g: g }); }); });
-  if (oldCat) opts.push({ v: oldCat, n: oldCat, g: 'تصنيف سابق' });
-  opts.push({ v: 'أخرى', n: 'أخرى', d: 'اكتب نوع العهدة بنفسك', g: 'أخرى' });
-  var total = opts.length - 1 - (oldCat ? 1 : 0);
+  var total = cusTotal(d);
   var draw = function (err) {
     var inp = function (k, type, ph, extra) { return '<input id="cu_' + k + '" data-cu="' + k + '" type="' + (type || 'text') + '" value="' + esc(C[k] == null ? '' : C[k]) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + (extra || '') + '>'; };
-    var sg = C.ref ? cusSuggest(d, C.ref) : null;
-    var sugH = sg ? '<div class="fx-sug"><span>الأكثر استخدامًا' + (sg.ent ? ' في ' + esc(sg.ent) : '') + '</span><div class="chipsel">' + sg.list.map(function (it) { return '<button type="button" data-cusug="' + esc(it) + '" aria-pressed="' + (C.category === it) + '">' + esc(it) + '</button>'; }).join('') + '</div></div>' : '';
+    var opts = cusOpts(d, C.ref ? cusSuggest(d, C.ref) : [], oldCat), sugH = '';
     var el = layer('cuLayer', { tile: tile('teal', 'box'), t: x ? 'تعديل بيانات عهدة' : 'تسليم عهدة لمنسوب', p: 'يصل المنسوب بريد ليقرّ باستلامها' },
       '<div class="form">' + fldH('cuRef', 'المنسوب', ssel('cuRef', staffOpts(), C.ref, 'اختر المنسوب', function (v) { sync(); C.ref = v; draw(); }, 'المنسوب'), true, true) +
       fldH('cu_item', 'وصف العهدة', inp('item', 'text', C.category === 'سرير' ? 'مثال: سرير مفرد خشبي، غرفة 204، مبنى (ب)' : 'مثال: حاسب محمول Dell Latitude 5440'), true, true) +
@@ -4651,7 +4656,6 @@ function cusForm(x, ref) {
       '<div class="lerr" role="alert">' + esc(err || '') + '</div><button class="btn" data-lyclose="1">إلغاء</button><button class="btn goldb" id="cuSave">' + ic('check') + (x ? 'حفظ التعديل' : 'تسجيل التسليم') + '</button>', 'anm');
     var sync = function () { el.querySelectorAll('[data-cu]').forEach(function (i) { C[i.dataset.cu] = i.value; }); };
     bindSeg(el, C, function () { sync(); draw(); });
-    el.querySelectorAll('[data-cusug]').forEach(function (b) { b.onclick = function () { sync(); C.category = b.dataset.cusug; draw(); var f = document.getElementById('cu_item'); if (f) f.focus(); }; });
     if (window.FancySelect && FancySelect.scan) try { FancySelect.scan(el); } catch (e) { }
     el.querySelector('#cuSave').onclick = function () { sync(); if (!C.ref) return draw('اختر المنسوب'); if (String(C.item).trim().length < 2) return draw('اكتب وصف العهدة'); if (!C.category) return draw('اختر تصنيف العهدة'); if (C.category === 'أخرى' && String(C.catOther).trim().length < 2) return draw('اكتب نوع العهدة');
       this.disabled = true; api(Object.assign({ action: 'cusSave' }, C)).then(function (j) { var c2 = cusData().data; if (c2) { c2.rows = c2.rows.filter(function (r) { return r.id !== j.row.id; }); c2.rows.unshift(j.row); } delete CACHE.audit; el.close(); softRender(); toast(x ? 'حُفظ التعديل' : 'سُجّلت العهدة ووصل المنسوب بريد'); }).catch(function (e) { draw(errText(e)); }); };
@@ -4678,6 +4682,119 @@ document.addEventListener('click', function (e) {
   var ch = document.getElementById('finChart'), sl = document.getElementById('finSlip');
   if (ch) ch.innerHTML = finChartH(p, M, FIN.sel); if (sl) sl.innerHTML = finSlipH(p, M[FIN.sel]);
 });
+
+/* ---------------- تأكيد صرف الرواتب (الإدارة العليا والموارد البشرية ومدير النظام) ---------------- */
+function ymNow2() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2); }
+var PCF = { month: ymNow2(), q: '', ent: '', st: '', sel: {} };
+function pcData() { var m = PCF.month; return need('pc:' + m, function () { return api({ action: 'payConfList', month: m }); }, 60000); }
+function finDrop() { Object.keys(CACHE).forEach(function (k) { if (/^(pc|fin|exps):/.test(k)) delete CACHE[k]; }); }
+function pcRows(d) { var q = PCF.q.trim(); return d.rows.filter(function (r) { return (!PCF.ent || r.entity === PCF.ent) && (!PCF.st || (PCF.st === 'ok' ? !!r.conf : !r.conf)) && (!q || (r.name + ' ' + r.ref + ' ' + r.entity).indexOf(q) >= 0); }); }
+function pcSums(rows) { var o = {}; rows.forEach(function (r) { o[r.cur] = (o[r.cur] || 0) + r.net; }); return Object.keys(o).map(function (c) { return fm(Math.round(o[c])) + ' ' + curL(c); }).join(' · '); }
+VIEWS.payconf = function () {
+  var c = pcData(), d = c.data, mlab = mName(PCF.month) + ' ' + PCF.month.slice(0, 4);
+  var msel = ssel('pcM', ((d && d.months) || [PCF.month]).map(function (m) { return { v: m, n: mName(m) + ' ' + m.slice(0, 4), ic: 'calendar', d: m === ymNow2() ? 'الشهر الحالي' : '' }; }), PCF.month, mlab, function (v) { PCF.month = v; PCF.sel = {}; render(); }, 'الشهر', 'الشهر');
+  var head = ptitle('تأكيد صرف الرواتب', 'أكّد صرف راتب الشهر لمنسوب، أو لجهة كاملة، أو للجميع مرة واحدة. يظهر التأكيد للمنسوب في «سجلي المالي» ← رواتبي ويصله تنبيه.', msel);
+  if (!d) return head + '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ التحميل…') + '</div></div></section>';
+  var all = d.rows, ok = all.filter(function (r) { return r.conf; }), pend = all.filter(function (r) { return !r.conf; }), rows = pcRows(d), ents = {};
+  all.forEach(function (r) { ents[r.entity] = (ents[r.entity] || 0) + 1; });
+  var future = PCF.month > ymNow2(), selN = Object.keys(PCF.sel).filter(function (k) { return PCF.sel[k]; }).length;
+  var scopePend = (PCF.ent ? all.filter(function (r) { return r.entity === PCF.ent; }) : all).filter(function (r) { return !r.conf; }).length;
+  var kp = '<div class="grid g4 fx-k">' + kpi('sapphire', 'users', all.length, '', 'برواتب في ' + mName(PCF.month), Object.keys(ents).length + ' جهة') +
+    kpi('emerald', 'check', ok.length, '', 'أُكّد صرف رواتبهم', ok.length ? pcSums(ok) : 'لم يُؤكَّد أحد بعد') +
+    kpi('gold', 'timer', pend.length, '', 'بانتظار التأكيد', pend.length ? pcSums(pend) : 'اكتمل تأكيد الشهر') +
+    kpi('teal', 'chart', all.length ? Math.round(ok.length / all.length * 100) + '%' : '—', '', 'نسبة الإنجاز', mlab) + '</div>';
+  var bar = '<section class="pn tbar"><div class="fbar">' + fsearch('pcq', PCF.q, 'ابحث بالاسم أو الرقم المرجعي أو الجهة', 'بحث في الرواتب') +
+    ssel('pcEnt', [{ v: '', n: 'كل الجهات', k: all.length, ic: 'building' }].concat(Object.keys(ents).sort().map(function (e) { return { v: e, n: e || 'بدون جهة', k: ents[e] }; })), PCF.ent, 'كل الجهات', function (v) { PCF.ent = v; PCF.sel = {}; render(); }, 'الجهة', 'الجهة') +
+    ssel('pcSt', [{ v: '', n: 'الكل', k: all.length, ic: 'doc' }, { v: 'wait', n: 'بانتظار التأكيد', k: pend.length, ic: 'timer' }, { v: 'ok', n: 'أُكّد صرفه', k: ok.length, ic: 'check' }], PCF.st, 'الكل', function (v) { PCF.st = v; render(); }, 'الحالة', 'الحالة') + '</div></section>';
+  var acts = future ? '<span class="pill mute"><i></i>شهر لم يأتِ بعد</span>' :
+    (selN ? '<button class="btn" id="pcSel">' + ic('check') + 'تأكيد المحدد (' + selN + ')</button>' : '') +
+    (scopePend ? '<button class="btn goldb" id="pcAll">' + ic('check') + (PCF.ent ? 'تأكيد صرف ' + esc(PCF.ent || 'بدون جهة') + ' (' + scopePend + ')' : 'تأكيد صرف الجميع (' + scopePend + ')') + '</button>' : '');
+  var tb = rows.length ? '<div class="tw"><table class="cutab pctab"><thead><tr><th class="ck">' + (future ? '' : '<input type="checkbox" id="pcAllCk" aria-label="تحديد الكل">') + '</th><th>المنسوب</th><th class="num">الأساسي</th><th class="num">الإضافات</th><th class="num">الخصومات</th><th class="num">الصافي</th><th>الحالة</th><th></th></tr></thead><tbody>' +
+    rows.map(function (r) { var s = byRef(r.ref);
+      return '<tr><td class="ck">' + (!r.conf && !future ? '<input type="checkbox" data-pck="' + esc(r.ref) + '"' + (PCF.sel[r.ref] ? ' checked' : '') + ' aria-label="تحديد ' + esc(r.name) + '">' : '') + '</td>' +
+        '<td><div class="person">' + (s ? av(s) : tile('slate', 'user')) + '<div><b>' + esc(r.name) + '</b><span>' + esc(r.entity) + '</span></div></div></td>' +
+        '<td class="num">' + fm(r.base) + '</td><td class="num" style="color:var(--ok)">' + (r.add ? '+' + fm(r.add) : '—') + '</td><td class="num" style="color:var(--bad)">' + (r.ded ? '−' + fm(r.ded) : '—') + '</td>' +
+        '<td class="num"><b>' + fm(r.net) + '</b> <small class="dn2" style="display:inline">' + curL(r.cur) + '</small></td>' +
+        '<td>' + (r.conf ? '<span class="pill ok"><i></i>أُكّد الصرف</span><small class="dn2">' + esc(r.conf.by) + ' · ' + fdx(pdate(r.conf.at), { day: 'numeric', month: 'short' }) + '</small>' : '<span class="pill warn"><i></i>بانتظار التأكيد</span>') + '</td>' +
+        '<td class="acts2"><div class="pcacts">' + (r.conf ? '<button class="ib" data-pcundo="' + esc(r.ref) + '" aria-label="التراجع عن التأكيد" title="التراجع عن التأكيد">' + ic('refresh') + '</button>' : (future ? '' : '<button class="btn sm goldb" data-pcone="' + esc(r.ref) + '">' + ic('check') + 'تأكيد</button>')) +
+        (can('edit') ? '<button class="ib" data-salh="' + esc(r.ref) + '" aria-label="سجل الراتب" title="سجل الراتب">' + ic('history') + '</button>' : '') + '</div></td></tr>'; }).join('') + '</tbody></table></div>'
+    : '<div class="emptyx">' + tile('emerald', 'wallet') + '<b>' + (all.length ? 'لا أحد في هذه التصفية' : 'لا رواتب مسجّلة لهذا الشهر') + '</b><p>تظهر هنا رواتب المنسوبين الذين سُجّل راتبهم في ملفاتهم.</p></div>';
+  return head + kp + bar + pn('emerald', 'check', 'رواتب ' + mlab, nq(rows.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا'), acts, '<div class="pb">' + tb + '</div>');
+};
+function pcSend(scope, extra, undo, done) {
+  return api(Object.assign({ action: 'payConfirm', month: PCF.month, scope: scope, undo: undo ? 1 : 0 }, extra || {})).then(function (j) {
+    finDrop(); seed('pc:' + PCF.month, Object.assign({}, (CACHE['pc:' + PCF.month] || {}).data || {}, { month: PCF.month, months: ((pcData().data || {}).months), rows: j.rows }));
+    PCF.sel = {}; if (done) done(); render(); toast(undo ? 'أُلغي تأكيد الصرف' : (j.count ? 'أُكّد صرف ' + nq(j.count, 'راتب واحد', 'راتبين', 'رواتب', 'راتبًا') + ' ووصل أصحابها تنبيه' : 'لا رواتب جديدة للتأكيد'));
+  });
+}
+function pcAsk(scope, extra, n, what) {
+  var d = pcData().data, mlab = mName(PCF.month) + ' ' + PCF.month.slice(0, 4);
+  var el = layer('pcLayer', { tile: tile('emerald', 'check'), t: 'تأكيد صرف رواتب ' + mlab, p: what },
+    '<p style="margin:0 0 12px">سيُسجَّل أن رواتب <b>' + nq(n, 'منسوب واحد', 'منسوبَين', 'منسوبين', 'منسوبًا') + '</b> لشهر ' + mlab + ' صُرفت، ويظهر ذلك لكل منهم في «سجلي المالي» مع تنبيه. يمكن التراجع لاحقًا لكل منسوب.</p>' +
+    '<div class="form">' + fldH('pcNote', 'ملاحظة', '<textarea id="pcNote" maxlength="300" placeholder="اختياري: مثل رقم الحوالة أو البنك"></textarea>', false, true) + '</div>',
+    '<div class="lerr" role="alert"></div><button class="btn" data-lyclose="1">إلغاء</button><button class="btn goldb" id="pcGo">' + ic('check') + 'تأكيد الصرف</button>', 'anm');
+  el.querySelector('#pcGo').onclick = function () { var b = this; b.disabled = true; pcSend(scope, Object.assign({ note: el.querySelector('#pcNote').value }, extra), false, function () { el.close(); }).catch(function (e) { b.disabled = false; el.querySelector('.lerr').textContent = errText(e); }); };
+}
+function salHist(ref) {
+  api({ action: 'salHistGet', ref: ref }).then(function (h) {
+    var R = h.rows.length ? h.rows.map(function (r) { return { from: r.from, amount: r.amount }; }) : [{ from: (h.start || '').slice(0, 7) || (new Date().getFullYear() + '-01'), amount: h.salary || '' }];
+    var draw = function (err) {
+      var el = layer('shLayer', { tile: tile('gold', 'history'), t: 'سجل الراتب', p: esc(h.name) + ' · العملة ' + esc(h.cur) },
+        '<p style="margin:0 0 12px;color:var(--mute)">اكتب الراتب الأساسي ومن أي شهر يبدأ. كل سطر يسري حتى السطر الذي بعده، فتُحسب الرواتب السابقة والقادمة منه في «سجلي المالي» وتأكيد الصرف.</p>' +
+        '<div class="shrows">' + R.map(function (r, i) { return '<div class="shrow"><label><span>من شهر</span><input type="month" data-sh="' + i + '.from" value="' + esc(r.from) + '"></label><label><span>الراتب (' + esc(h.cur) + ')</span><input type="number" min="0" step="0.01" dir="ltr" data-sh="' + i + '.amount" value="' + esc(r.amount) + '"></label><button type="button" class="ib" data-shdel="' + i + '" aria-label="حذف السطر">' + ic('x') + '</button></div>'; }).join('') + '</div>' +
+        '<button type="button" class="btn sm" id="shAdd">' + ic('plus') + 'إضافة تغيير في الراتب</button>' +
+        (h.raises.length ? '<div class="note" style="margin-top:14px">' + ic('info') + '<span>علاوات معتمدة من «الإجراءات الإدارية»: ' + h.raises.map(function (r) { return fm(r.new) + ' من ' + fd(pdate(r.effective), { month: 'short', year: 'numeric' }); }).join('، ') + '. تُحسب مع هذا السجل حسب تاريخها.</span></div>' : ''),
+        '<div class="lerr" role="alert">' + esc(err || '') + '</div><button class="btn" data-lyclose="1">إلغاء</button><button class="btn goldb" id="shSave">' + ic('check') + 'حفظ سجل الراتب</button>', 'anm');
+      var sync = function () { el.querySelectorAll('[data-sh]').forEach(function (i) { var p = i.dataset.sh.split('.'); R[+p[0]][p[1]] = i.value; }); };
+      el.querySelector('#shAdd').onclick = function () { sync(); R.push({ from: ymNow2(), amount: '' }); draw(); };
+      el.querySelectorAll('[data-shdel]').forEach(function (b) { b.onclick = function () { sync(); R.splice(+b.dataset.shdel, 1); if (!R.length) R.push({ from: ymNow2(), amount: '' }); draw(); }; });
+      el.querySelector('#shSave').onclick = function () { sync(); var b = this; b.disabled = true;
+        api({ action: 'salHistSave', ref: ref, rows: R }).then(function () { finDrop(); el.close(); render(); toast('حُفظ سجل الراتب وأُعيد حساب الرواتب'); }).catch(function (e) { draw(errText(e)); }); };
+    };
+    draw();
+  }).catch(function (e) { toast(errText(e)); });
+}
+var _bindHrxF1 = bindHrx;
+bindHrx = function () {
+  _bindHrxF1();
+  if (view !== 'payconf') return;
+  var d = pcData().data; if (!d) return;
+  var q = document.getElementById('pcq'); if (q) q.onchange = function () { PCF.q = q.value; softRender(); };
+  if (q) q.oninput = function () { clearTimeout(q._t); q._t = setTimeout(function () { PCF.q = q.value; softRender(); }, 250); };
+  document.querySelectorAll('[data-pck]').forEach(function (x) { x.onchange = function () { PCF.sel[x.dataset.pck] = x.checked; softRender(); }; });
+  var ak = document.getElementById('pcAllCk'); if (ak) { var vis = pcRows(d).filter(function (r) { return !r.conf; }); ak.checked = vis.length && vis.every(function (r) { return PCF.sel[r.ref]; }); ak.onchange = function () { vis.forEach(function (r) { PCF.sel[r.ref] = ak.checked; }); softRender(); }; }
+  document.querySelectorAll('[data-pcone]').forEach(function (b) { b.onclick = function () { b.disabled = true; pcSend('refs', { refs: [b.dataset.pcone] }).catch(function (e) { b.disabled = false; toast(errText(e)); }); }; });
+  document.querySelectorAll('[data-pcundo]').forEach(function (b) { b.onclick = function () { b.disabled = true; pcSend('refs', { refs: [b.dataset.pcundo] }, true).catch(function (e) { b.disabled = false; toast(errText(e)); }); }; });
+  document.querySelectorAll('[data-salh]').forEach(function (b) { b.onclick = function () { salHist(b.dataset.salh); }; });
+  var sb = document.getElementById('pcSel'); if (sb) sb.onclick = function () { var refs = Object.keys(PCF.sel).filter(function (k) { return PCF.sel[k]; }); pcAsk('refs', { refs: refs }, refs.length, 'المنسوبون المحددون'); };
+  var ab = document.getElementById('pcAll'); if (ab) ab.onclick = function () { var n = (PCF.ent ? d.rows.filter(function (r) { return r.entity === PCF.ent; }) : d.rows).filter(function (r) { return !r.conf; }).length; if (PCF.ent) pcAsk('entity', { entity: PCF.ent }, n, 'كل منسوبي ' + PCF.ent); else pcAsk('all', {}, n, 'كل المنسوبين'); };
+};
+
+/* ---------------- المنسوب يسجّل عهدة استلمها (إن فتحها النظام) ---------------- */
+function cusSelfForm() {
+  var d = cusData().data || {}, opts = cusOpts(d, d.mine || [], ''), total = cusTotal(d);
+  var C = { item: '', category: '', catOther: '', serial: '', value: '', issuedOn: ymd(new Date()), condOut: 'جديدة', note: '' };
+  var draw = function (err) {
+    var inp = function (k, type, ph, extra) { return '<input id="cs_' + k + '" data-cs="' + k + '" type="' + (type || 'text') + '" value="' + esc(C[k] == null ? '' : C[k]) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + (extra || '') + '>'; };
+    var el = layer('csLayer', { tile: tile('teal', 'box'), t: 'تسجيل عهدة استلمتها', p: 'تُضاف إلى عهدك وتراها الموارد البشرية' + (d.ent ? ' · ' + esc(d.ent) : '') },
+      '<div class="form">' + fldH('csCat', 'نوع العهدة', ssel('csCat', opts, C.category, 'اختر من مقترحات جهتك أو من ' + total + ' تصنيفًا', function (v) { sync(); C.category = v; if (v !== 'أخرى' && !String(C.item).trim()) C.item = v; draw(); setTimeout(function () { var f = document.getElementById(v === 'أخرى' ? 'cs_catOther' : 'cs_item'); if (f) f.focus(); }, 30); }, 'نوع العهدة') +
+        (C.category === 'أخرى' ? '<div class="oth">' + inp('catOther', 'text', 'اكتب نوع العهدة', ' maxlength="100"') + '</div>' : ''), true, true) +
+      fldH('cs_item', 'وصف العهدة', inp('item', 'text', 'مثال: حاسب محمول Dell Latitude 5440 مع الشاحن'), true, true) +
+      fldH('cs_issuedOn', 'متى استلمتها', inp('issuedOn', 'date', '', ' max="' + ymd(new Date()) + '"'), true) +
+      fldH('cs_serial', 'الرقم التسلسلي أو رقم الأصل', inp('serial', 'text', 'اختياري', ' dir="ltr"')) +
+      fldH('o', 'حالتها عند الاستلام', segH('condOut', ['جديدة', 'مستعملة بحالة جيدة', 'تحتاج صيانة'], C.condOut), true, true) +
+      fldH('cs_value', 'القيمة التقديرية (ر.س)', inp('value', 'number', 'اختياري', ' min="0" dir="ltr"')) +
+      fldH('cs_note', 'ملاحظات', '<textarea id="cs_note" data-cs="note" maxlength="600" placeholder="اختياري: الملحقات، أو من سلّمك إياها">' + esc(C.note || '') + '</textarea>', false, true) + '</div>',
+      '<div class="lerr" role="alert">' + esc(err || '') + '</div><button class="btn" data-lyclose="1">إلغاء</button><button class="btn goldb" id="csSave">' + ic('check') + 'تسجيل العهدة</button>', 'anm');
+    var sync = function () { el.querySelectorAll('[data-cs]').forEach(function (i) { C[i.dataset.cs] = i.value; }); };
+    bindSeg(el, C, function () { sync(); draw(); });
+    el.querySelector('#csSave').onclick = function () { sync(); if (!C.category) return draw('اختر نوع العهدة'); if (C.category === 'أخرى' && String(C.catOther).trim().length < 2) return draw('اكتب نوع العهدة'); if (String(C.item).trim().length < 2) return draw('اكتب وصف العهدة'); if (!C.issuedOn) return draw('اختر متى استلمتها');
+      var b = this; b.disabled = true; api(Object.assign({ action: 'cusSelf' }, C)).then(function (j) { var c2 = cusData().data; if (c2) c2.rows.unshift(j.row); el.close(); softRender(); toast('سُجّلت العهدة في عهدك'); }).catch(function (e) { draw(errText(e)); }); };
+  };
+  draw();
+}
+var _bindHrxF2 = bindHrx;
+bindHrx = function () { _bindHrxF2(); var b = document.getElementById('cusSelfNew'); if (b) b.onclick = cusSelfForm; };
 
 window.addEventListener('hashchange', route);
 boot();
