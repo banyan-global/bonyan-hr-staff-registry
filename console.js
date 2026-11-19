@@ -2466,7 +2466,9 @@ function hrBadge(k) {
   var a = CACHE.acts && CACHE.acts.data, j = CACHE.jobs && CACHE.jobs.data, c = CACHE.cus && CACHE.cus.data, e = CACHE.evals && CACHE.evals.data;
   if (k === 'act') return a && a.canDecide ? a.rows.filter(function (x) { return x.status === 'pending'; }).length : 0;
   if (k === 'apps') return j && j.apps ? j.apps.filter(function (x) { return x.status === 'new'; }).length : 0;
-  if (k === 'mine') return (a ? a.rows.filter(function (x) { return !x.ackAt; }).length : 0) + (c ? c.rows.filter(function (x) { return x.open && !x.ackAt; }).length : 0) + (e && e.rows ? e.rows.filter(function (x) { return x.status === 'sent'; }).length : 0);
+  if (k === 'acts') return a ? a.rows.filter(function (x) { return !x.ackAt; }).length : 0;
+  if (k === 'cus') return c ? c.rows.filter(function (x) { return x.open && !x.ackAt; }).length : 0;
+  if (k === 'mine') return hrBadge('acts') + hrBadge('cus');
   return 0;
 }
 
@@ -2489,7 +2491,7 @@ function sideHTML() {
       staffOn('myreq') ? { v: 'myreq', n: 'طلباتي', d: isAppr ? 'طلباتك وما ينتظر اعتمادك' : 'إجازة واستئذان ومباشرة وسلفة', j: 'sapphire', i: 'doc', b: open + pendS, s: [['myreq-new', 'طلب جديد', view === 'myreq' && TAB.myreq === 'new'], ['myreq-list', 'متابعة طلباتي', view === 'myreq' && TAB.myreq === 'list', open]].concat(isAppr ? [['myreq-pend', 'بانتظار اعتمادي', view === 'myreq' && TAB.myreq === 'pend', pendS, 1]] : []) } : null,
       staffOn('myatt') ? { v: 'myatt', n: 'حضوري', d: 'الحضور والتأخير هذا الشهر', j: 'teal', i: 'finger' } : null,
       staffOn('mynews') ? { v: 'mynews', n: 'التعاميم', d: 'إعلانات الموارد البشرية', j: 'gold', i: 'bell', b: newsUnread() } : null,
-      staffOn('myhr') ? { v: 'myhr', n: 'سجلي الوظيفي', d: 'الإجراءات والعهد والتقييمات', j: 'gold', i: 'medal', b: hrBadge('mine') } : null,
+      staffOn('myhr') ? { v: 'myhr', n: 'سجلي المالي', d: 'رواتبي ومصاريفي وعهدي', j: 'emerald', i: 'coins', b: hrBadge('mine'), s: [['mypay', 'رواتبي', view === 'myhr' && TAB.myhr === 'pay'], ['myexp', 'مصاريفي', view === 'myhr' && TAB.myhr === 'exp'], ['mycus', 'عهدي', view === 'myhr' && TAB.myhr === 'cus', hrBadge('cus'), 1], ['myact', 'الإجراءات والخطابات', view === 'myhr' && TAB.myhr === 'act', hrBadge('acts'), 1]] } : null,
       { v: 'myfile', n: 'ملفي وبطاقتي', d: 'بياناتك والبطاقة الرسمية', j: 'garnet', i: 'card', s: S('staff', 'update') ? [['update.html?me=1', 'تحديث بياناتي', false]] : [] }].filter(Boolean)]];
   } else {
     var pend = reqPendingForMe().length;
@@ -2502,6 +2504,7 @@ function sideHTML() {
       ['شؤون الموظفين', [
         allowed('hract') ? { v: 'hract', n: 'الإجراءات الإدارية', d: 'إنذارات وترقيات ونقل وشكر', j: 'garnet', i: 'stamp', b: hrBadge('act') } : null,
         allowed('custody') ? { v: 'custody', n: 'العهد', d: 'ما لدى المنسوبين من أجهزة وغيرها', j: 'teal', i: 'box' } : null,
+        allowed('exps') ? { v: 'exps', n: 'المصروفات', d: 'ما صُرف للمنسوبين أو عليهم', j: 'gold', i: 'coins' } : null,
         allowed('evals') ? { v: 'evals', n: 'تقييم الأداء', d: 'بالمعايير مع اطلاع المنسوب', j: 'gold', i: 'medal' } : null,
         allowed('jobs') ? { v: 'jobs', n: 'التوظيف', d: 'الوظائف والمتقدمون والمقابلات', j: 'amethyst', i: 'userok', b: hrBadge('apps') } : null].filter(Boolean)],
       ['الإدارة', [
@@ -2541,7 +2544,7 @@ var SET_GROUPS = [
   ['staff', 'بوابة المنسوب', 'ما يراه المنسوب حين يدخل ببريده. الإخفاء هنا يُطبَّق في الخادم أيضًا.', 'user', [
     ['card', 'البطاقة الرسمية', 'عرض بطاقته وتنزيلها', 'card'], ['docs', 'الوثائق', 'وثائقه وتواريخ انتهائها', 'pass'], ['pay', 'الراتب والحساب البنكي', 'يظهر له راتبه وبنكه؛ عند الإخفاء تظهر مقنّعة', 'wallet'],
     ['reqs', 'تقديم الطلبات', 'الإجازة والاستئذان والمباشرة والسلفة وغيرها من صفحته', 'stamp'], ['balance', 'رصيد الإجازات', 'المستحق والمستهلك والمتبقي', 'umbrella'], ['att', 'حضوري', 'سجل حضوره وتأخيره', 'finger'],
-    ['news', 'التعاميم', 'التعاميم الموجهة إليه', 'bell'], ['update', 'تحديث بياناتي', 'تعديل بياناته ورفع وثائقه بنفسه', 'edit'], ['myhr', 'سجلي الوظيفي', 'الإجراءات والخطابات والعهد وتقييمات الأداء', 'medal']]],
+    ['news', 'التعاميم', 'التعاميم الموجهة إليه', 'bell'], ['update', 'تحديث بياناتي', 'تعديل بياناته ورفع وثائقه بنفسه', 'edit'], ['myhr', 'سجلي المالي', 'رواتبه ومصاريفه وعهده والإجراءات الصادرة له', 'coins']]],
   ['home', 'لوحة القيادة', 'اللوحات التي تظهر في الصفحة الرئيسية للإدارة.', 'gauge', [
     ['hero', 'الترحيب والخريطة والساعات', '', 'globe'], ['kpis', 'المؤشرات الأربعة', '', 'chart'], ['qa', 'إجراءات سريعة', '', 'plus'], ['events', 'مناسبات قادمة', 'لا تظهر للإدارة والموارد البشرية والرئيس التنفيذي', 'calendar'],
     ['charts', 'حالة الملفات', '', 'pie'], ['quality', 'جودة البيانات والتوزيع والوثائق', '', 'gauge'], ['cal', 'تقويم انتهاء الوثائق', 'لا يظهر للرئيس التنفيذي', 'calendar'], ['ents', 'الجهات', '', 'building'], ['recent', 'أحدث المنسوبين وآخر العمليات', '«آخر العمليات» لمسؤول النظام وحده', 'history']]]
@@ -3461,7 +3464,7 @@ VIEWS.custody = function () {
   var head = ptitle('العهد', 'الأجهزة والمفاتيح والسيارات وغيرها مما يُسلَّم للمنسوب. يقرّ المنسوب بالاستلام من صفحته، ولا يكتمل إخلاء الطرف حتى تُسترد كل عهده.', d && d.canEdit ? '<button class="btn goldb" id="cusNew">' + ic('plus') + 'تسليم عهدة</button>' : '');
   if (!d) return head + '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ التحميل…') + '</div></div></section>';
   var all = d.rows, q = CF.q.trim().toLowerCase(), open = all.filter(function (x) { return x.open; });
-  var list = all.filter(function (x) { return (CF.st === 'all' || (CF.st === 'open' ? x.open : !x.open)) && (!CF.cat || x.category === CF.cat) && (!q || (x.name + ' ' + x.ref + ' ' + x.item + ' ' + x.serial).toLowerCase().indexOf(q) >= 0); });
+  var list = all.filter(function (x) { return (CF.st === 'all' || (CF.st === 'open' ? x.open : !x.open)) && (!CF.cat || cusGroupOf(d, x.category) === CF.cat) && (!q || (x.name + ' ' + x.ref + ' ' + x.item + ' ' + x.serial).toLowerCase().indexOf(q) >= 0); });
   var holders = {}; open.forEach(function (x) { holders[x.ref] = 1; });
   var kp = '<div class="grid g4">' + kpi('teal', 'box', open.length, 'عهدة', 'لدى المنسوبين الآن', nq(Object.keys(holders).length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا'), '') +
     kpi('gold', 'wallet', n(open.reduce(function (a, x) { return a + (x.value || 0); }, 0)), 'ر.س', 'قيمتها المسجّلة', 'لما سُجّلت قيمته', '') +
@@ -3469,9 +3472,9 @@ VIEWS.custody = function () {
     kpi('emerald', 'check', all.length - open.length, '', 'سُلّمت وأُعيدت', '', '') + '</div>';
   var bar = '<section class="pn tbar"><div class="fbar">' + fsearch('cfq', CF.q, 'ابحث بالمنسوب أو العهدة أو الرقم التسلسلي', 'بحث في العهد') +
     ssel('cfs', [{ v: 'open', n: 'لدى المنسوبين', k: open.length, ic: 'box' }, { v: 'back', n: 'أُعيدت', k: all.length - open.length, ic: 'check' }, { v: 'all', n: 'الكل', k: all.length, ic: 'doc' }], CF.st, 'لدى المنسوبين', function (v) { CF.st = v; render(); }, 'الحالة', 'الحالة') +
-    ssel('cfc', [{ v: '', n: 'كل الأنواع', ic: 'box' }].concat(d.cats.map(function (x) { return { v: x, n: x }; })), CF.cat, 'كل الأنواع', function (v) { CF.cat = v; render(); }, 'النوع', 'النوع') + '</div></section>';
+    ssel('cfc', [{ v: '', n: 'كل التصنيفات', ic: 'box' }].concat(Object.keys(d.groups || {}).concat(['أخرى']).map(function (x) { return { v: x, n: x, k: all.filter(function (r) { return cusGroupOf(d, r.category) === x; }).length }; })), CF.cat, 'كل التصنيفات', function (v) { CF.cat = v; render(); }, 'التصنيف', 'التصنيف') + '</div></section>';
   var tb = list.length ? '<div class="tw"><table class="cutab"><thead><tr><th>المنسوب</th><th>العهدة</th><th>الرقم التسلسلي</th><th>الاستلام</th><th>الحالة</th>' + (d.canEdit ? '<th></th>' : '') + '</tr></thead><tbody>' + list.map(function (x) { var s = byRef(x.ref);
-    return '<tr><td><div class="person">' + (s ? av(s) : tile('slate', 'user')) + '<div><b>' + esc(x.name) + '</b><span>' + esc(x.entity) + '</span></div></div></td><td><b>' + esc(x.item) + '</b><small class="dn2">' + esc(x.category) + (x.value ? ' · ' + n(x.value) + ' ر.س' : '') + '</small></td><td><span class="ltr">' + esc(x.serial || '—') + '</span></td>' +
+    return '<tr><td><div class="person">' + (s ? av(s) : tile('slate', 'user')) + '<div><b>' + esc(x.name) + '</b><span>' + esc(x.entity) + '</span></div></div></td><td><b>' + esc(x.item) + '</b><small class="dn2">' + esc(cusCatTxt(d, x.category)) + (x.value ? ' · ' + n(x.value) + ' ر.س' : '') + '</small></td><td><span class="ltr">' + esc(x.serial || '—') + '</span></td>' +
       '<td>' + fdx(pdate(x.issuedOn), { day: 'numeric', month: 'short', year: 'numeric' }) + '<small class="dn2">' + esc(x.condOut) + (x.ackAt ? ' · أقرّ باستلامها' : ' · لم يقرّ بعد') + '</small></td>' +
       '<td>' + (x.open ? '<span class="pill warn"><i></i>لدى المنسوب</span>' : '<span class="pill ok"><i></i>أُعيدت ' + fdx(pdate(x.returnedOn), { day: 'numeric', month: 'short' }) + '</span><small class="dn2">' + esc(x.condIn) + '</small>') + '</td>' +
       (d.canEdit ? '<td class="acts2">' + (x.open ? '<button class="btn sm" data-cus-ret="' + x.id + '">' + ic('check') + 'استلامها</button><button class="ib" data-cus-ed="' + x.id + '" aria-label="تعديل">' + ic('edit') + '</button>' : '') + '</td>' : '') + '</tr>'; }).join('') + '</tbody></table></div>'
@@ -4381,6 +4384,299 @@ document.addEventListener('change', function (ev) {
   RW.d[k + '_up'] = 1; render();
   cmpShrink(file).then(function (data) { return api({ action: 'reqFile', ref: RW.ref || '', name: (RT2[RW.type] || [, , 'طلب'])[2] + ' - ' + file.name, data: data }); })
     .then(function (j) { RW.d[k] = j.file.id; RW.d[k + 'Name'] = file.name; delete RW.d[k + '_up']; RW.err = ''; render(); }, function (e) { delete RW.d[k + '_up']; toast(errText(e)); render(); });
+});
+
+/* ======================================================================
+   سجلي المالي (يحل محل «سجلي الوظيفي»): رواتبي · مصاريفي · عهدي · الإجراءات والخطابات
+   + صفحة «المصروفات» للموارد البشرية + تصنيفات العهد في قائمة منسدلة
+   ====================================================================== */
+P.coins = P.coins || P.wallet;
+TITLES.myhr = ['سجلي المالي'];
+TAB.myhr = 'pay'; TABL.myhr = { pay: 'رواتبي', exp: 'مصاريفي', cus: 'عهدي', act: 'الإجراءات والخطابات' };
+ALIAS.mypay = ['myhr', 'pay']; ALIAS.myexp = ['myhr', 'exp']; ALIAS.mycus = ['myhr', 'cus']; ALIAS.myact = ['myhr', 'act'];
+TITLES.exps = ['المصروفات'];
+var _allowedF0 = allowed;
+allowed = function (v) { if (v === 'exps') return role !== 'staff' && can('pay'); return _allowedF0(v); };
+
+function fm(x) { return Number(x || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+function curL(c) { return !c || c === 'SAR' ? 'ر.س' : c; }
+var MNAR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+function mName(ym) { return MNAR[+String(ym).slice(5, 7) - 1] || ym; }
+var FIN = { year: new Date().getFullYear(), sel: null, q: '', dir: '', cat: '' };
+function finData() { var y = FIN.year; return need('fin:' + y, function () { return api({ action: 'myFin', year: y }); }, 60000); }
+var EXPC = { ticket: ['sapphire', 'plane', 'var(--c-info)'], med: ['garnet', 'plus', 'var(--c-bad)'], dues: ['emerald', 'wallet', 'var(--c-ok)'], loan: ['gold', 'coins', 'var(--gold-d)'], train: ['amethyst', 'cert', 'var(--c-vio)'],
+  house: ['teal', 'door', 'var(--c-teal)'], gov: ['slate', 'stamp', '#6f7f9c'], tools: ['teal', 'bolt', '#2b9fb3'], reward: ['gold', 'gift', '#c9932f'], other: ['slate', 'dots', '#8a96ab'] };
+
+/* ---------------- رواتبي ---------------- */
+function finMonths(p) { return (p && p.months || []).map(function (m, i) { m.i = i; return m; }); }
+function finSel(M) {
+  if (FIN.sel != null && M[FIN.sel] && M[FIN.sel].st !== 'none') return FIN.sel;
+  var d = M.filter(function (m) { return m.st === 'due'; })[0] || M.filter(function (m) { return m.st === 'paid'; }).pop() || M.filter(function (m) { return m.st !== 'none'; })[0];
+  return d ? d.i : 0;
+}
+function finTag(m, first) {
+  var L = m.lines || [], o = L.filter(function (x) { return x.k === 'ot'; })[0], ln = L.filter(function (x) { return x.k === 'loan' && x.i === 1; })[0];
+  if (L.some(function (x) { return x.k === 'unpaid'; })) return ['إجازة بدون راتب', 'down'];
+  if (L.some(function (x) { return x.k === 'pen'; })) return ['جزاء', 'down'];
+  if (ln) return ['سلفة ' + fm(ln.total), 'down'];
+  if (o) return ['إضافي ' + fm(o.hours) + ' س', 'up'];
+  if (m.st === 'proj' && first) return ['متوقع', 'mute'];
+  return null;
+}
+function finChartH(p, M, sel) {
+  var live = M.filter(function (m) { return m.st !== 'none'; }); if (!live.length) return '';
+  var vals = live.map(function (m) { return m.net; }), mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+  var span = mx - mn, step = Math.pow(10, Math.floor(Math.log10(Math.max(span, mx * 0.1, 1)))); if ((mx - mn) / step < 2) step = step / 2;
+  var lo = Math.floor((mn - step * 0.5) / step) * step, hi = Math.ceil((mx + step * 0.5) / step) * step; if (lo < 0) lo = 0; if (hi === lo) hi = lo + step;
+  var H = 250, T = 24, S = 200, y = function (v) { return T + (1 - (v - lo) / (hi - lo)) * S; }, X = function (i) { return 1200 - (i + .5) * 100; };
+  var grid = []; for (var g = hi; g >= lo - 1e-6; g -= (hi - lo) / 3) grid.push(g);
+  var pts = function (arr) { return arr.map(function (m) { return X(m.i) + ',' + y(m.net).toFixed(1); }).join(' '); };
+  var solid = live.filter(function (m) { return m.st !== 'proj'; }), proj = live.filter(function (m) { return m.st === 'proj'; });
+  if (solid.length && proj.length) proj = [solid[solid.length - 1]].concat(proj);
+  var area = solid.length > 1 ? pts(solid) + ' ' + X(solid[solid.length - 1].i) + ',' + H + ' ' + X(solid[0].i) + ',' + H : '';
+  var firstProj = true, plot = grid.map(function (v) { return '<div class="fx-gl" style="top:' + y(v) + 'px"></div>'; }).join('');
+  M.forEach(function (m) { (m.raise || []).forEach(function (r) { plot += '<div class="fx-raise" style="right:' + (m.i / 12 * 100) + '%"></div><div class="fx-raise-l" style="right:' + (m.i / 12 * 100) + '%">علاوة · ' + fm(r.old) + ' ← ' + fm(r.new) + '</div>'; }); });
+  plot += '<svg viewBox="0 0 1200 ' + H + '" preserveAspectRatio="none" aria-hidden="true">' + (area ? '<polygon points="' + area + '" fill="var(--gold-wash)" opacity=".8"/>' : '') +
+    (solid.length > 1 ? '<polyline points="' + pts(solid) + '" fill="none" stroke="var(--navy)" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' : '') +
+    (proj.length > 1 ? '<polyline points="' + pts(proj) + '" fill="none" stroke="var(--faint)" stroke-width="3" stroke-dasharray="6 6" vector-effect="non-scaling-stroke"/>' : '') + '</svg>';
+  plot += live.map(function (m) { var s = m.i === sel, t = finTag(m, m.st === 'proj' && firstProj); if (m.st === 'proj') firstProj = false;
+    return '<div class="fx-pt" style="right:' + ((m.i + .5) / 12 * 100).toFixed(3) + '%;top:' + y(m.net).toFixed(1) + 'px">' + (t && !s ? '<span class="fx-tag ' + t[1] + '">' + t[0] + '</span>' : '') + (s ? '<span class="fx-bub">' + fm(m.net) + '</span>' : '') +
+      '<button type="button" class="fx-dot' + (s ? ' sel' : '') + (m.st === 'proj' ? ' proj' : '') + '" data-fm="' + m.i + '" aria-label="' + mName(m.m) + ': الصافي ' + fm(m.net) + ' ' + curL(p.cur) + '"></button></div>'; }).join('');
+  var SC = { paid: 'var(--c-ok)', due: 'var(--c-warn)', proj: 'var(--line)' };
+  var tiles = M.map(function (m) { return '<div>' + (m.st === 'none' ? '<div class="fx-mt none"><span>' + mName(m.m) + '</span><b>—</b></div>' : '<button type="button" class="fx-mt' + (m.st === 'proj' ? ' proj' : '') + '" data-fm="' + m.i + '" aria-pressed="' + (m.i === sel) + '"><span>' + mName(m.m) + '</span><b>' + fm(Math.round(m.net)) + '</b><i style="background:' + SC[m.st] + '"></i></button>') + '</div>'; }).join('');
+  return '<div class="fx-pb"><div class="fx-scroll"><div class="fx-in"><div class="fx-row"><div class="fx-plot">' + plot + '</div><div class="fx-axis">' + grid.map(function (v) { return '<span style="top:' + y(v) + 'px">' + fm(Math.round(v)) + '</span>'; }).join('') + '</div></div>' +
+    '<div class="fx-row"><div class="fx-tiles">' + tiles + '</div><div class="fx-axis"></div></div></div></div></div>';
+}
+function finSlipH(p, m) {
+  var c = curL(p.cur), L = [['base', '٭', 'الراتب الأساسي', (m.raise || []).length ? 'بعد العلاوة النافذة هذا الشهر' : 'حسب ملفك الوظيفي', '', fm(m.base), '']];
+  (m.lines || []).forEach(function (x) {
+    if (x.k === 'ot') L.push(['plus', '+', 'عمل إضافي', fm(x.hours) + ' ساعة × ' + fm(x.rate) + ' ' + c + ' للساعة', (x.nos || [])[0] || '', '+' + fm(x.amount), 'plus']);
+    if (x.k === 'loan') L.push(['minus', '−', 'قسط سلفة', 'القسط ' + x.i + ' من ' + x.n + ' · سلفة ' + fm(x.total) + ' ' + c, x.no, '−' + fm(x.amount), 'minus']);
+    if (x.k === 'pen') L.push(['minus', '−', 'جزاء مخالفة', 'حسم ' + nq(x.days, 'يوم', 'يومين', 'أيام', 'يومًا'), x.no, '−' + fm(x.amount), 'minus']);
+    if (x.k === 'unpaid') L.push(['minus', '−', 'إجازة بدون راتب', nq(x.days, 'يوم', 'يومان', 'أيام', 'يومًا') + ' × ' + fm(x.daily) + ' ' + c + ' لليوم', x.no, '−' + fm(x.amount), 'minus']);
+  });
+  if (L.length === 1) L.push(['plus', '✓', 'لا إضافات ولا خصومات', 'راتب كامل لهذا الشهر', '', '0', '']);
+  var ST = { paid: ['ok', 'صُرف', 'حُوّل إلى حسابك البنكي مع رواتب ' + mName(m.m) + '.'], due: ['warn', 'مستحق هذا الشهر', 'يُصرف مع رواتب هذا الشهر، والقيمة نهائية بعد اعتماد مسيّر الرواتب.'], proj: ['mute', 'متوقع', 'تقدير مبني على راتبك الحالي، ويتغير بأي إضافي أو خصم يُعتمد لاحقًا.'] }[m.st];
+  return pn('gold', 'doc', 'قسيمة ' + mName(m.m) + ' ' + m.m.slice(0, 4), 'تفاصيل الراتب ومصدر كل بند', '<span class="pill ' + ST[0] + '"><i></i>' + ST[1] + '</span>',
+    '<div class="fx-eq"><div><small>الأساسي</small><b>' + fm(m.base) + '</b></div><span class="op">+</span><div><small>إضافات</small><b style="color:var(--ok)">' + fm(m.add) + '</b></div><span class="op">−</span><div><small>خصومات</small><b style="color:var(--bad)">' + fm(m.ded) + '</b></div><span class="op">=</span><div class="net"><small>الصافي (' + c + ')</small><b>' + fm(m.net) + '</b></div></div>' +
+    '<ul class="fx-lines">' + L.map(function (l) { return '<li class="fx-ln"><span class="fx-sg ' + l[0] + '">' + l[1] + '</span><div><b>' + l[2] + '</b><small>' + l[3] + '</small></div>' + (l[4] ? '<span class="ref">' + esc(l[4]) + '</span>' : '<span></span>') + '<span class="a ' + l[6] + '">' + l[5] + '</span></li>'; }).join('') + '</ul>' +
+    '<div class="fx-foot">' + ic('clock') + '<span>' + ST[2] + '</span></div>');
+}
+function finYearSel(p) {
+  var ys = (p && p.years) || [FIN.year]; if (ys.indexOf(FIN.year) < 0) ys = [FIN.year].concat(ys);
+  return ssel('finYr', ys.map(function (y) { return { v: String(y), n: String(y), ic: 'calendar' }; }), String(FIN.year), String(FIN.year), function (v) { FIN.year = +v; FIN.sel = null; render(); }, 'السنة', 'السنة');
+}
+function finPayH(d) {
+  var p = d.pay, head = function (acts) { return ptitle('رواتبي', 'رواتبك شهرًا بشهر بأثر رجعي، محسوبة من راتبك وقرارات العلاوة والعمل الإضافي والسلف والجزاءات والإجازات بدون راتب المعتمدة.', acts); };
+  if (!p) return head('') + '<div class="note">' + ic('info') + '<span>عرض الرواتب غير مفعّل في بوابة المنسوب. تواصل مع الموارد البشرية.</span></div>';
+  var M = finMonths(p), live = M.filter(function (m) { return m.st !== 'none'; });
+  if (!p.salary || !live.length) return head(finYearSel(p)) + '<section class="pn"><div class="emptyx">' + tile('emerald', 'wallet') + '<b>لا رواتب لهذه السنة</b><p>' + (!p.salary ? 'لم يُسجَّل راتبك في ملفك بعد. تواصل مع الموارد البشرية.' : 'لم تبدأ خدمتك في هذه السنة.') + '</p></div></section>';
+  var sel = FIN.sel = finSel(M), c = curL(p.cur), sum = function (a, k) { return a.reduce(function (s, m) { return s + (m[k] || 0); }, 0); };
+  var paid = M.filter(function (m) { return m.st === 'paid'; }), due = M.filter(function (m) { return m.st === 'due'; })[0], done = M.filter(function (m) { return m.st === 'paid' || m.st === 'due'; });
+  var otH = 0; done.forEach(function (m) { (m.lines || []).forEach(function (x) { if (x.k === 'ot') otH += x.hours; }); });
+  var R0 = function (v) { return fm(Math.round(v)); };
+  var kp = '<div class="grid g4 fx-k">' +
+    kpi('emerald', 'wallet', R0(sum(paid, 'net')), c, 'صافي ما استلمته', paid.length ? nq(paid.length, 'شهر واحد', 'شهران', 'أشهر', 'شهرًا') + ' · متوسط ' + fm(Math.round(sum(paid, 'net') / paid.length)) : 'لا أشهر مصروفة بعد') +
+    (due ? kpi('gold', 'timer', R0(due.net), c, 'مستحق ' + mName(due.m), 'المتوقع للسنة ' + R0(sum(live, 'net'))) : kpi('gold', 'chart', R0(sum(live, 'net')), c, 'إجمالي السنة', live.length + ' أشهر')) +
+    kpi('sapphire', 'clock', R0(sum(done, 'add')), c, 'العمل الإضافي', otH ? fm(otH) + ' ساعة معتمدة' : 'لا عمل إضافي') +
+    kpi('garnet', 'stamp', R0(sum(done, 'ded')), c, 'الخصومات', 'سلف · جزاءات · إجازات بدون راتب') + '</div>';
+  var legend = '<div class="fx-legend"><span><i class="fx-sw" style="background:var(--c-ok);border-radius:50%"></i>صُرف</span><span><i class="fx-sw" style="background:var(--c-warn);border-radius:50%"></i>مستحق</span><span><i class="fx-sw" style="border:2px dashed var(--faint);border-radius:50%"></i>متوقع</span></div>';
+  /* تطور الراتب الأساسي */
+  var steps = [], rs = p.raises || []; if (rs.length) { steps.push([rs[0].old || p.salary, 'قبل ' + fd(pdate(rs[0].effective), { month: 'short', year: 'numeric' })]); rs.forEach(function (r) { steps.push([r.new, 'من ' + fd(pdate(r.effective), { month: 'short', year: 'numeric' })]); }); } else steps.push([p.salary, 'راتبك الحالي']);
+  steps = steps.slice(-4); var smax = Math.max.apply(null, steps.map(function (s) { return s[0]; }));
+  var gr = rs.length ? Math.round((rs[rs.length - 1].new / (rs[0].old || rs[rs.length - 1].new) - 1) * 1000) / 10 : 0;
+  var stH = pn('sapphire', 'up', 'تطوّر راتبك الأساسي', rs.length ? nq(rs.length, 'علاوة واحدة', 'علاوتان', 'علاوات', 'علاوة') : 'لا علاوات مسجلة', gr ? '<span class="pill ok"><i></i>+' + gr + '%</span>' : '',
+    '<div class="fx-steps">' + steps.map(function (s, i) { var last = i === steps.length - 1; return '<div><b' + (last ? ' style="color:var(--gold-ink)"' : '') + '>' + fm(s[0]) + '</b><i style="height:' + Math.round(30 + s[0] / smax * 40) + 'px;background:' + (last ? 'var(--navy)' : 'var(--well)') + '"></i><small>' + s[1] + '</small></div>'; }).join('') + '</div>');
+  /* السلف */
+  var LN = {}; M.forEach(function (m) { (m.lines || []).forEach(function (x) { if (x.k !== 'loan') return; var o = LN[x.no] = LN[x.no] || { no: x.no, n: x.n, total: x.total, paid: 0, months: [] }; o.months.push(m.m); if (m.st === 'paid') o.paid++; }); });
+  var lnH = Object.keys(LN).map(function (k) { var o = LN[k], segs = ''; for (var i = 0; i < o.n; i++) segs += '<i' + (i < o.paid ? '' : ' class="off"') + '></i>';
+    return pn('garnet', 'coins', 'سلفة ' + fm(o.total) + ' ' + c, '<span class="ltr">' + esc(o.no) + '</span> · ' + o.n + ' أقساط', o.paid >= o.n ? '<span class="pill ok"><i></i>سُددت</span>' : '<span class="pill warn"><i></i>' + o.paid + ' من ' + o.n + '</span>',
+      '<div class="fx-pb"><div class="fx-segs" style="grid-template-columns:repeat(' + Math.min(o.n, 24) + ',minmax(0,1fr))">' + segs + '</div><div class="fx-lr"><span>' + mName(o.months[0]) + '</span><span>' + mName(o.months[o.months.length - 1]) + '</span></div></div>'); }).join('');
+  return head(finYearSel(p)) + kp +
+    pn('emerald', 'chart', 'مسار راتبك في ' + FIN.year, 'الصافي بعد الإضافات والخصومات. اختر شهرًا لتظهر قسيمته', legend, '<div id="finChart">' + finChartH(p, M, sel) + '</div>') +
+    '<div class="grid g21 fx-top"><div id="finSlip">' + finSlipH(p, M[sel]) + '</div><div class="fx-side">' + stH + lnH +
+    '<div class="note">' + ic('info') + '<span><b>كيف يُحسب راتبك؟</b> ' + esc(p.rule) + '. الخصومات من أقساط السلف والجزاءات المعتمدة والإجازات بدون راتب.</span></div></div></div>';
+}
+
+/* ---------------- مصاريفي ---------------- */
+function expRowsH(rows, cats, staffSide) {
+  if (!rows.length) return '<div class="emptyx">' + tile('gold', 'coins') + '<b>لا مصروفات في هذه التصفية</b><p>' + (staffSide ? 'تظهر هنا مستحقاتك وتعويضاتك وسلفك وما تصرفه الجهة عليك من تذاكر ودورات وغيرها.' : 'غيّر البحث أو المرشحات.') + '</p></div>';
+  var last = '';
+  return '<ul class="rqlist">' + rows.map(function (r) { var k = EXPC[r.cat] || EXPC.other, mh = r.day.slice(0, 7), h = mh !== last; last = mh;
+    return (h ? '<li class="fx-mh">' + mName(mh) + ' ' + mh.slice(0, 4) + '</li>' : '') + '<li><div class="rqrow fx-xr">' + tile(k[0], k[1]) + '<div class="rqm"><b>' + esc(r.title) + '</b><span class="s">' + (r.no ? '<span class="ltr">' + esc(r.no) + '</span> · ' : '') + esc(cats[r.cat] || 'أخرى') + ' · ' + fd(pdate(r.day), { day: 'numeric', month: 'short', year: 'numeric' }) + (staffSide ? '' : ' · ' + esc(r.name)) + (r.note ? ' · ' + esc(r.note) : '') + ' · ' + (r.src === 'req' ? 'من طلب' : 'سجّلته الموارد البشرية') + '</span></div>' +
+      '<div class="fx-end"><b>' + fm(r.amount) + ' <small>' + curL(r.cur) + '</small></b><span class="fx-dir ' + r.dir + '">' + (r.dir === 'in' ? (staffSide ? 'صُرف لك' : 'صُرف له') : (staffSide ? 'صُرف عليك' : 'صُرف عليه')) + '</span>' + (r.pend ? '<span class="pill warn"><i></i>قيد الاعتماد</span>' : '') +
+      (!staffSide && r.src === 'hr' && EXPD.data && EXPD.data.canEdit ? '<span class="fx-ed"><button class="ib" data-exp-ed="' + r.id + '" aria-label="تعديل">' + ic('edit') + '</button><button class="ib" data-exp-del="' + r.id + '" aria-label="حذف">' + ic('x') + '</button></span>' : '') + '</div></div></li>'; }).join('') + '</ul>';
+}
+function expFilter(rows) {
+  var q = FIN.q.trim();
+  return rows.filter(function (r) { return (!FIN.dir || r.dir === FIN.dir) && (!FIN.cat || r.cat === FIN.cat) && (!FIN.ref || r.ref === FIN.ref) && (!q || (r.title + ' ' + (r.no || '') + ' ' + (r.note || '') + ' ' + (r.name || '')).indexOf(q) >= 0); });
+}
+function expSums(rows, mainCur) {
+  var o = { tot: 0, inn: 0, out: 0, pend: 0, other: 0, cats: {} };
+  rows.forEach(function (r) { if (r.pend) { o.pend += r.cur === mainCur ? r.amount : 0; return; } if (r.cur !== mainCur) { o.other++; return; }
+    o.tot += r.amount; if (r.dir === 'in') o.inn += r.amount; else o.out += r.amount; o.cats[r.cat] = (o.cats[r.cat] || 0) + r.amount; });
+  return o;
+}
+function expDistH(s, cats, c) {
+  if (!s.tot) return '';
+  var keys = Object.keys(s.cats).sort(function (a, b) { return s.cats[b] - s.cats[a]; }), mx = s.cats[keys[0]], pi = Math.round(s.inn / s.tot * 100);
+  return pn('amethyst', 'pie', 'توزيع المصروفات', 'أكبر بند: ' + esc(cats[keys[0]]) + ' بنسبة ' + Math.round(s.cats[keys[0]] / s.tot * 100) + '%', '',
+    '<div class="fx-split">' + (s.inn ? '<div style="flex:' + s.inn + ' 1 0;background:var(--c-ok)">' + ic('coins') + 'لك ' + pi + '%</div>' : '') + (s.out ? '<div style="flex:' + s.out + ' 1 0;background:var(--navy)">' + ic('building') + 'عليك ' + (100 - pi) + '%</div>' : '') + '</div>' +
+    '<div class="fx-cats">' + keys.map(function (k) { var x = EXPC[k] || EXPC.other; return '<div class="fx-cat"><div class="t"><span><i class="fx-sw" style="background:' + x[2] + '"></i>' + esc(cats[k]) + '</span><em><b>' + fm(s.cats[k]) + '</b> · ' + Math.round(s.cats[k] / s.tot * 100) + '%</em></div><div class="fx-track"><i style="width:' + (s.cats[k] / mx * 100).toFixed(1) + '%;background:' + x[2] + '"></i></div></div>'; }).join('') + '</div>');
+}
+function expBarH(cats, extra) {
+  return '<section class="pn tbar"><div class="fbar">' + fsearch('fxq', FIN.q, 'ابحث بالوصف أو الرقم المرجعي', 'بحث في المصروفات') + (extra || '') +
+    ssel('fxDir', [{ v: '', n: 'الكل', ic: 'doc' }, { v: 'in', n: role === 'staff' ? 'صُرف لك' : 'صُرف للمنسوب', d: 'مبالغ وصلته نقدًا', ic: 'coins' }, { v: 'out', n: role === 'staff' ? 'صُرف عليك' : 'صُرف على المنسوب', d: 'دفعته الجهة نيابةً عنه', ic: 'building' }], FIN.dir, 'الكل', function (v) { FIN.dir = v; render(); }, 'النوع', 'النوع') +
+    ssel('fxCat', [{ v: '', n: 'كل البنود', ic: 'coins' }].concat(Object.keys(cats).map(function (k) { return { v: k, n: cats[k], ic: (EXPC[k] || EXPC.other)[1] }; })), FIN.cat, 'كل البنود', function (v) { FIN.cat = v; render(); }, 'البند', 'البند') + '</div></section>';
+}
+function finExpH(d) {
+  var cur = (d.pay && d.pay.cur) || 'SAR', c = curL(cur), all = d.exp || [], s = expSums(all, cur), rows = expFilter(all);
+  return ptitle('مصاريفي', 'كل ما صُرف لك أو عليك خلال العام: مستحقات وتعويضات علاج وسلف، وتذاكر ودورات واشتراكات دفعتها الجهة. تُضاف من طلباتك المعتمدة وما يسجّله قسم الموارد البشرية.', finYearSel(d.pay)) +
+    '<div class="grid g3 fx-k">' + kpi('gold', 'coins', fm(Math.round(s.tot)), c, 'إجمالي ' + FIN.year, (s.pend ? '+' + fm(s.pend) + ' ' + c + ' قيد الاعتماد' : 'ما صُرف لك وعليك') + (s.other ? ' · ' + nq(s.other, 'بند', 'بندان', 'بنود', 'بندًا') + ' بعملة أخرى' : '')) +
+    kpi('emerald', 'wallet', fm(Math.round(s.inn)), c, 'صُرف لك', 'مستحقات وتعويضات وسلف وصلتك') + kpi('sapphire', 'building', fm(Math.round(s.out)), c, 'صُرف عليك', 'تذاكر ودورات وغيرها دفعتها الجهة') + '</div>' +
+    expDistH(s, d.cats, c) + expBarH(d.cats) + pn('gold', 'coins', 'سجل المصروفات', nq(rows.length, 'بند واحد', 'بندان', 'بنود', 'بندًا'), '', '<div class="pb" id="fxList">' + expRowsH(rows, d.cats, true) + '</div>');
+}
+
+/* ---------------- عهدي ---------------- */
+function cusGroupOf(d, cat) { var G = (d && d.groups) || {}; for (var g in G) if (G[g].indexOf(cat) >= 0) return g; return /^أخرى/.test(cat) ? 'أخرى' : ''; }
+function cusCatTxt(d, cat) { var g = cusGroupOf(d, cat); return g && g !== 'أخرى' ? g + ' · ' + cat : String(cat).replace(/^أخرى: /, ''); }
+function finCusH() {
+  var c = cusData(), d = c.data || {}, C = d.rows || [], open = C.filter(function (x) { return x.open; }), back = C.filter(function (x) { return !x.open; }), na = open.filter(function (x) { return !x.ackAt; }).length;
+  var li = function (x) { return '<li class="' + (x.open ? '' : 'back') + '">' + tile(x.open ? 'teal' : 'slate', 'box') + '<div><b>' + esc(x.item) + '</b><small>' + esc(cusCatTxt(d, x.category)) + (x.serial ? ' · <span class="ltr">' + esc(x.serial) + '</span>' : '') + ' · استلمتها ' + fdx(pdate(x.issuedOn), { day: 'numeric', month: 'short', year: 'numeric' }) + (x.value ? ' · ' + fm(x.value) + ' ر.س' : '') + (x.open ? '' : ' · أعدتها ' + fdx(pdate(x.returnedOn), { day: 'numeric', month: 'short' })) + '</small></div>' +
+    (x.open ? (x.ackAt ? '<span class="pill ok"><i></i>أقررت بالاستلام</span>' : '<button class="btn sm goldb" data-cus-ack="' + x.id + '">' + ic('check') + 'أقرّ باستلامها</button>') : '<span class="pill mute"><i></i>أُعيدت</span>') + '</li>'; };
+  var head = ptitle('عهدي', 'الأجهزة والمفاتيح وغيرها مما استلمته من جهتك. أقرّ باستلام كل عهدة، وتُطابَق هذه القائمة مع إخلاء الطرف عند انتهاء الخدمة.');
+  if (!c.data) return head + '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ التحميل…') + '</div></div></section>';
+  return head + '<div class="grid g3">' + kpi('teal', 'box', open.length, '', 'العهد لديك', open.some(function (x) { return x.value; }) ? 'قيمتها المسجّلة ' + fm(open.reduce(function (a, x) { return a + (x.value || 0); }, 0)) + ' ر.س' : '') +
+    kpi('gold', 'userok', na, '', 'بانتظار إقرارك', na ? 'أقرّ باستلامها من القائمة' : 'أقررت بكل عهدك') + kpi('emerald', 'check', back.length, '', 'أعدتها', '') + '</div>' +
+    pn('teal', 'box', 'العهد لديك', nq(open.length, 'عهدة واحدة', 'عهدتان', 'عهد', 'عهدة'), '', '<div class="pb">' + (open.length ? '<ul class="culist">' + open.map(li).join('') + '</ul>' : '<div class="note">' + ic('box') + '<span>لا عهد مسجّلة باسمك.</span></div>') + '</div>') +
+    (back.length ? pn('slate', 'archive', 'العهد المعادة', nq(back.length, 'عهدة واحدة', 'عهدتان', 'عهد', 'عهدة'), '', '<div class="pb"><ul class="culist">' + back.map(li).join('') + '</ul></div>') : '') +
+    '<div class="note">' + ic('shield') + '<span>عند الاستقالة أو انتهاء العقد لا يكتمل إخلاء الطرف حتى تُعاد كل العهد المسجّلة هنا.</span></div>';
+}
+
+/* ---------------- الإجراءات والخطابات ---------------- */
+function finActH() {
+  var a = actData(), A = (a.data && a.data.rows) || [], noack = A.filter(function (x) { return !x.ackAt; }).length;
+  return ptitle('الإجراءات والخطابات', 'ما صدر لك من الموارد البشرية: علاوات وترقيات ونقل وشكر وإنذارات. اطّلع عليها وأكّد اطلاعك.') +
+    pn('garnet', 'stamp', 'الإجراءات والخطابات', A.length ? nq(A.length, 'إجراء واحد', 'إجراءان', 'إجراءات', 'إجراءً') + (noack ? ' · ' + noack + ' بانتظار اطلاعك' : '') : '', '', '<div class="pb">' + (A.length ? '<ul class="rqlist">' + A.map(function (x) { return actRowH(x, true); }).join('') + '</ul>' : '<div class="note">' + ic('check') + '<span>لا إجراءات صادرة لك.</span></div>') + '</div>');
+}
+
+VIEWS.myhr = function () {
+  var t = TAB.myhr || 'pay';
+  if (t === 'cus') return finCusH();
+  if (t === 'act') return finActH();
+  var f = finData(), d = f.data;
+  if (!d) return ptitle(TABL.myhr[t], '') + '<section class="pn"><div class="pb"><div class="empty">' + (f.err ? esc(f.err) : 'جارٍ التحميل…') + '</div></div></section>';
+  if (d.off) return ptitle(TABL.myhr[t], '') + '<div class="note">' + ic('info') + '<span>هذا القسم غير مفعّل في بوابة المنسوب.</span></div>';
+  return t === 'exp' ? finExpH(d) : finPayH(d);
+};
+
+/* ---------------- صفحة «المصروفات» للموارد البشرية ---------------- */
+var EXPD = {};
+function expData() { var y = FIN.year; EXPD = need('exps:' + y, function () { return api({ action: 'expList', year: y }); }, 60000); return EXPD; }
+VIEWS.exps = function () {
+  var e = expData(), d = e.data;
+  var head = ptitle('المصروفات', 'ما صُرف للمنسوبين أو عليهم: تذاكر وعلاج ومستحقات وسلف ودورات ورسوم. ما يُستخرج من الطلبات يظهر تلقائيًا، وتسجّل هنا ما سواه. يرى كل منسوب ما يخصه في «سجلي المالي».',
+    (d && d.canEdit ? '<button class="btn goldb" id="expNew">' + ic('plus') + 'تسجيل مصروف</button>' : ''));
+  if (!d) return head + '<section class="pn"><div class="pb"><div class="empty">' + (e.err ? esc(e.err) : 'جارٍ التحميل…') + '</div></div></section>';
+  var all = d.rows, s = expSums(all, 'SAR'), rows = expFilter(all), refs = {};
+  all.forEach(function (r) { refs[r.ref] = r.name; });
+  var staffSel = ssel('fxRef', [{ v: '', n: 'كل المنسوبين', ic: 'users' }].concat(Object.keys(refs).map(function (r) { var st = byRef(r); return { v: r, n: refs[r], d: r, c: st ? st.ent.c : '' }; })), FIN.ref || '', 'كل المنسوبين', function (v) { FIN.ref = v; render(); }, 'المنسوب', 'المنسوب');
+  var yrs = []; for (var y = new Date().getFullYear(); y >= new Date().getFullYear() - 4; y--) yrs.push({ v: String(y), n: String(y), ic: 'calendar' });
+  return head + '<div class="grid g3 fx-k">' + kpi('gold', 'coins', fm(Math.round(s.tot)), 'ر.س', 'إجمالي ' + FIN.year, (s.pend ? '+' + fm(s.pend) + ' ر.س قيد الاعتماد' : 'بالريال السعودي') + (s.other ? ' · ' + s.other + ' بعملات أخرى' : '')) +
+    kpi('emerald', 'wallet', fm(s.inn), 'ر.س', 'صُرف للمنسوبين', 'مستحقات وتعويضات وسلف') + kpi('sapphire', 'building', fm(s.out), 'ر.س', 'صُرف عليهم', 'تذاكر ودورات ورسوم دفعتها الجهة') + '</div>' +
+    expDistH(s, d.cats, 'ر.س').replace('لك ', 'لهم ').replace('عليك ', 'عليهم ') +
+    expBarH(d.cats, staffSel + ssel('fxYr', yrs, String(FIN.year), String(FIN.year), function (v) { FIN.year = +v; render(); }, 'السنة', 'السنة')) +
+    pn('gold', 'coins', 'سجل المصروفات', nq(rows.length, 'بند واحد', 'بندان', 'بنود', 'بندًا'), '', '<div class="pb" id="fxList">' + expRowsH(rows, d.cats, false) + '</div>');
+};
+var EXP_CURS = [{ v: 'SAR', n: 'ريال سعودي', d: 'SAR' }, { v: 'KES', n: 'شلن كيني', d: 'KES' }, { v: 'IDR', n: 'روبية إندونيسية', d: 'IDR' }, { v: 'USD', n: 'دولار أمريكي', d: 'USD' }, { v: 'EGP', n: 'جنيه مصري', d: 'EGP' }, { v: 'ETB', n: 'بر إثيوبي', d: 'ETB' }];
+function expForm(x) {
+  var cats = (EXPD.data || {}).cats || {};
+  var E = x ? { id: x.id, ref: x.ref, title: x.title, cat: x.cat, dir: x.dir, amount: x.amount, cur: x.cur, day: x.day, no: x.no, note: x.note } : { ref: FIN.ref || '', title: '', cat: '', dir: 'out', amount: '', cur: 'SAR', day: ymd(new Date()), no: '', note: '' };
+  var draw = function (err) {
+    var inp = function (k, type, ph, extra) { return '<input id="ex_' + k + '" data-ex="' + k + '" type="' + (type || 'text') + '" value="' + esc(E[k] == null ? '' : E[k]) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + (extra || '') + '>'; };
+    var el = layer('exLayer', { tile: tile('gold', 'coins'), t: x ? 'تعديل مصروف' : 'تسجيل مصروف', p: 'يظهر للمنسوب في «سجلي المالي» ← مصاريفي' },
+      '<div class="form">' + fldH('exRef', 'المنسوب', ssel('exRef', staffOpts(), E.ref, 'اختر المنسوب', function (v) { sync(); E.ref = v; draw(); }, 'المنسوب'), true, true) +
+      fldH('ex_title', 'وصف المصروف', inp('title', 'text', 'مثال: تذكرة طيران الرياض ← جاكرتا'), true, true) +
+      fldH('exCat', 'البند', ssel('exCat', Object.keys(cats).map(function (k) { return { v: k, n: cats[k], ic: (EXPC[k] || EXPC.other)[1] }; }), E.cat, 'اختر البند', function (v) { sync(); E.cat = v; draw(); }, 'البند'), true) +
+      fldH('d', 'لمن صُرف', segH('dir', ['صُرف للمنسوب', 'صُرف عليه'], E.dir === 'in' ? 'صُرف للمنسوب' : 'صُرف عليه'), true) +
+      fldH('ex_amount', 'المبلغ', inp('amount', 'number', '0', ' min="0" step="0.01" dir="ltr"'), true) +
+      fldH('exCur', 'العملة', ssel('exCur', EXP_CURS, E.cur, 'العملة', function (v) { sync(); E.cur = v; draw(); }, 'العملة')) +
+      fldH('ex_day', 'تاريخ الصرف', inp('day', 'date'), true) + fldH('ex_no', 'رقم الطلب المرتبط', inp('no', 'text', 'اختياري: TR-2026-0015', ' dir="ltr"')) +
+      fldH('ex_note', 'ملاحظات', '<textarea id="ex_note" data-ex="note" maxlength="600" placeholder="اختياري">' + esc(E.note || '') + '</textarea>', false, true) + '</div>',
+      '<div class="lerr" role="alert">' + esc(err || '') + '</div><button class="btn" data-lyclose="1">إلغاء</button><button class="btn goldb" id="exSave">' + ic('check') + (x ? 'حفظ التعديل' : 'تسجيل المصروف') + '</button>', 'anm');
+    var sync = function () { el.querySelectorAll('[data-ex]').forEach(function (i) { E[i.dataset.ex] = i.value; }); };
+    el.querySelectorAll('[data-seg="dir"]').forEach(function (b) { b.onclick = function () { sync(); E.dir = b.dataset.v === 'صُرف للمنسوب' ? 'in' : 'out'; draw(); }; });
+    if (window.FancySelect && FancySelect.scan) try { FancySelect.scan(el); } catch (e) { }
+    el.querySelector('#exSave').onclick = function () { sync(); if (!E.ref) return draw('اختر المنسوب'); if (String(E.title).trim().length < 2) return draw('اكتب وصف المصروف'); if (!E.cat) return draw('اختر البند'); if (!(+E.amount > 0)) return draw('اكتب المبلغ');
+      var b = this; b.disabled = true;
+      api(Object.assign({ action: 'expSave' }, E)).then(function () { Object.keys(CACHE).forEach(function (k) { if (/^(exps|fin):/.test(k)) delete CACHE[k]; }); el.close(); render(); toast(x ? 'حُفظ التعديل' : 'سُجّل المصروف ويظهر للمنسوب في سجله المالي'); })
+        .catch(function (e) { draw(errText(e)); }); };
+  };
+  draw();
+}
+function expDel(x) {
+  var el = layer('exLayer', { tile: tile('garnet', 'x'), t: 'حذف مصروف', p: esc(x.title) + ' · ' + esc(x.name) },
+    '<p style="margin:0">سيُحذف هذا البند من سجل المصروفات ومن «سجلي المالي» للمنسوب، ويُسجَّل الحذف في سجل العمليات.</p>',
+    '<div class="lerr" role="alert"></div><button class="btn" data-lyclose="1">إلغاء</button><button class="btn danger" id="exDelGo">' + ic('x') + 'حذف</button>', 'anm');
+  el.querySelector('#exDelGo').onclick = function () { var b = this; b.disabled = true; api({ action: 'expDelete', id: x.id }).then(function () { Object.keys(CACHE).forEach(function (k) { if (/^(exps|fin):/.test(k)) delete CACHE[k]; }); el.close(); render(); toast('حُذف المصروف'); }).catch(function (e) { b.disabled = false; el.querySelector('.lerr').textContent = errText(e); }); };
+}
+
+/* ---------------- نموذج تسليم العهدة: التصنيف قائمة منسدلة بمجموعات + الأكثر استخدامًا في جهة المنسوب ---------------- */
+function cusSuggest(d, ref) {
+  var S = (d && d.suggest) || {}, s = byRef(ref), e = s ? ((s.ent.full || '') + ' ' + (s.ent.n || '') + ' ' + (s.entity || '')) : '';
+  for (var k in S) if (k !== '*' && e.indexOf(k) >= 0) return { ent: s.ent.n || '', list: S[k] };
+  return S['*'] ? { ent: s ? s.ent.n : '', list: S['*'] } : null;
+}
+function cusForm(x, ref) {
+  var d = cusData().data || {}, G = d.groups || {};
+  var isOther = x && /^أخرى/.test(x.category || ''), oldCat = x && !isOther && !cusGroupOf(d, x.category) ? x.category : '';
+  var C = x ? { id: x.id, ref: x.ref, item: x.item, category: isOther ? 'أخرى' : x.category, catOther: isOther ? String(x.category).replace(/^أخرى:? ?/, '') : '', serial: x.serial, value: x.value == null ? '' : x.value, issuedOn: x.issuedOn, condOut: x.condOut, note: x.note }
+    : { ref: ref || '', item: '', category: '', catOther: '', serial: '', value: '', issuedOn: ymd(new Date()), condOut: 'جديدة', note: '' };
+  var opts = []; Object.keys(G).forEach(function (g) { G[g].forEach(function (it) { opts.push({ v: it, n: it, g: g }); }); });
+  if (oldCat) opts.push({ v: oldCat, n: oldCat, g: 'تصنيف سابق' });
+  opts.push({ v: 'أخرى', n: 'أخرى', d: 'اكتب نوع العهدة بنفسك', g: 'أخرى' });
+  var total = opts.length - 1 - (oldCat ? 1 : 0);
+  var draw = function (err) {
+    var inp = function (k, type, ph, extra) { return '<input id="cu_' + k + '" data-cu="' + k + '" type="' + (type || 'text') + '" value="' + esc(C[k] == null ? '' : C[k]) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + (extra || '') + '>'; };
+    var sg = C.ref ? cusSuggest(d, C.ref) : null;
+    var sugH = sg ? '<div class="fx-sug"><span>الأكثر استخدامًا' + (sg.ent ? ' في ' + esc(sg.ent) : '') + '</span><div class="chipsel">' + sg.list.map(function (it) { return '<button type="button" data-cusug="' + esc(it) + '" aria-pressed="' + (C.category === it) + '">' + esc(it) + '</button>'; }).join('') + '</div></div>' : '';
+    var el = layer('cuLayer', { tile: tile('teal', 'box'), t: x ? 'تعديل بيانات عهدة' : 'تسليم عهدة لمنسوب', p: 'يصل المنسوب بريد ليقرّ باستلامها' },
+      '<div class="form">' + fldH('cuRef', 'المنسوب', ssel('cuRef', staffOpts(), C.ref, 'اختر المنسوب', function (v) { sync(); C.ref = v; draw(); }, 'المنسوب'), true, true) +
+      fldH('cu_item', 'وصف العهدة', inp('item', 'text', C.category === 'سرير' ? 'مثال: سرير مفرد خشبي، غرفة 204، مبنى (ب)' : 'مثال: حاسب محمول Dell Latitude 5440'), true, true) +
+      fldH('cuCat', 'التصنيف', ssel('cuCat', opts, C.category, 'اختر من ' + total + ' تصنيفًا في ' + Object.keys(G).length + ' مجموعة', function (v) { sync(); C.category = v; draw(); setTimeout(function () { var f = document.getElementById(v === 'أخرى' ? 'cu_catOther' : 'cu_item'); if (f) f.focus(); }, 30); }, 'تصنيف العهدة') +
+        (C.category === 'أخرى' ? '<div class="oth">' + inp('catOther', 'text', 'اكتب نوع العهدة', ' maxlength="100"') + '</div>' : '') + sugH, true, true) +
+      fldH('cu_serial', 'الرقم التسلسلي', inp('serial', 'text', 'اختياري', ' dir="ltr"')) + fldH('cu_value', 'القيمة التقديرية (ر.س)', inp('value', 'number', 'اختياري', ' min="0" dir="ltr"')) +
+      fldH('cu_issuedOn', 'تاريخ التسليم', inp('issuedOn', 'date'), true) + fldH('o', 'حالتها عند التسليم', segH('condOut', ['جديدة', 'مستعملة بحالة جيدة', 'تحتاج صيانة'], C.condOut), true, true) +
+      fldH('cu_note', 'ملاحظات', '<textarea id="cu_note" data-cu="note" maxlength="600" placeholder="اختياري">' + esc(C.note || '') + '</textarea>', false, true) + '</div>',
+      '<div class="lerr" role="alert">' + esc(err || '') + '</div><button class="btn" data-lyclose="1">إلغاء</button><button class="btn goldb" id="cuSave">' + ic('check') + (x ? 'حفظ التعديل' : 'تسجيل التسليم') + '</button>', 'anm');
+    var sync = function () { el.querySelectorAll('[data-cu]').forEach(function (i) { C[i.dataset.cu] = i.value; }); };
+    bindSeg(el, C, function () { sync(); draw(); });
+    el.querySelectorAll('[data-cusug]').forEach(function (b) { b.onclick = function () { sync(); C.category = b.dataset.cusug; draw(); var f = document.getElementById('cu_item'); if (f) f.focus(); }; });
+    if (window.FancySelect && FancySelect.scan) try { FancySelect.scan(el); } catch (e) { }
+    el.querySelector('#cuSave').onclick = function () { sync(); if (!C.ref) return draw('اختر المنسوب'); if (String(C.item).trim().length < 2) return draw('اكتب وصف العهدة'); if (!C.category) return draw('اختر تصنيف العهدة'); if (C.category === 'أخرى' && String(C.catOther).trim().length < 2) return draw('اكتب نوع العهدة');
+      this.disabled = true; api(Object.assign({ action: 'cusSave' }, C)).then(function (j) { var c2 = cusData().data; if (c2) { c2.rows = c2.rows.filter(function (r) { return r.id !== j.row.id; }); c2.rows.unshift(j.row); } delete CACHE.audit; el.close(); softRender(); toast(x ? 'حُفظ التعديل' : 'سُجّلت العهدة ووصل المنسوب بريد'); }).catch(function (e) { draw(errText(e)); }); };
+  };
+  draw();
+}
+
+/* ---------------- الربط ---------------- */
+var _bindHrxF0 = bindHrx;
+bindHrx = function () {
+  _bindHrxF0();
+  var q = document.getElementById('fxq');
+  if (q) q.oninput = function () { FIN.q = q.value; var L = document.getElementById('fxList'); if (!L) return;
+    if (view === 'exps') L.innerHTML = expRowsH(expFilter(EXPD.data.rows), EXPD.data.cats, false); else { var d = finData().data; L.innerHTML = expRowsH(expFilter(d.exp || []), d.cats, true); } };
+  var nb = document.getElementById('expNew'); if (nb) nb.onclick = function () { expForm(null); };
+  var find = function (id) { return ((EXPD.data || {}).rows || []).filter(function (r) { return r.id === id; })[0]; };
+  document.querySelectorAll('[data-exp-ed]').forEach(function (b) { b.onclick = function () { var r = find(b.dataset.expEd); if (r) expForm(r); }; });
+  document.querySelectorAll('[data-exp-del]').forEach(function (b) { b.onclick = function () { var r = find(b.dataset.expDel); if (r) expDel(r); }; });
+};
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('[data-fm]'); if (!b || view !== 'myhr') return;
+  var d = finData().data, p = d && d.pay; if (!p) return;
+  FIN.sel = +b.dataset.fm; var M = finMonths(p);
+  var ch = document.getElementById('finChart'), sl = document.getElementById('finSlip');
+  if (ch) ch.innerHTML = finChartH(p, M, FIN.sel); if (sl) sl.innerHTML = finSlipH(p, M[FIN.sel]);
 });
 
 window.addEventListener('hashchange', route);

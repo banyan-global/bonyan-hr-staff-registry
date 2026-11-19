@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 13;
+const BHR_SCHEMA_VERSION = 14;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -201,6 +201,12 @@ function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS notes (
         id INT AUTO_INCREMENT PRIMARY KEY, email VARCHAR(190) NOT NULL, title VARCHAR(160) NOT NULL, body VARCHAR(400) NOT NULL DEFAULT '', req_no VARCHAR(24) NOT NULL DEFAULT '',
         kind VARCHAR(12) NOT NULL DEFAULT 'info', created_at DATETIME NOT NULL, read_at DATETIME NULL, KEY k_mail (email, read_at))" . $T11);
+    /* ١٤) سجلي المالي: ما يسجّله قسم الموارد البشرية من مصروفات للمنسوب أو عليه، وتصنيفات العهد الأطول */
+    $pdo->exec("CREATE TABLE IF NOT EXISTS expenses (
+        id INT AUTO_INCREMENT PRIMARY KEY, ref VARCHAR(40) NOT NULL, day DATE NOT NULL, cat VARCHAR(12) NOT NULL, dir CHAR(3) NOT NULL DEFAULT 'out',
+        amount DECIMAL(14,2) NOT NULL, cur CHAR(3) NOT NULL DEFAULT 'SAR', title VARCHAR(160) NOT NULL, note VARCHAR(600) NOT NULL DEFAULT '', req_no VARCHAR(24) NOT NULL DEFAULT '',
+        created_by VARCHAR(190) NOT NULL DEFAULT '', created_at DATETIME NOT NULL, KEY k_ref (ref), KEY k_day (day))" . $T11);
+    $pdo->exec("ALTER TABLE custody MODIFY category VARCHAR(120) NOT NULL DEFAULT ''");
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {

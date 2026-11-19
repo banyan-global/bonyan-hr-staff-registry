@@ -17,6 +17,7 @@ require __DIR__ . '/../server/reqtalk.php';
 require __DIR__ . '/../server/passkey.php';
 require __DIR__ . '/../server/hrx.php';
 require __DIR__ . '/../server/hrplus.php';
+require __DIR__ . '/../server/myfin.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -76,7 +77,7 @@ try {
         'pushSub' => fn() => push_sub($b), 'pushUnsub' => fn() => push_unsub($b), 'attToday' => fn() => att_today($b), 'attCheck' => fn() => att_check($b), 'attFix' => fn() => att_fix($b),
         'evList' => fn() => ev_list($b), 'evSave' => fn() => ev_save($b), 'evAck' => fn() => ev_ack($b), 'evDelete' => fn() => ev_delete($b),
         'jobList' => fn() => job_list($b), 'jobSave' => fn() => job_save($b), 'jobsPublic' => fn() => jobs_public($b), 'jobApply' => fn() => job_apply($b), 'appSet' => fn() => app_set($b),
-        'cusList' => fn() => cus_list($b), 'cusSave' => fn() => cus_save($b), 'cusReturn' => fn() => cus_return($b), 'cusAck' => fn() => cus_ack($b), 'reqTrack' => fn() => req_track($b), 'reqForms' => fn() => req_forms(), 'reqColleagues' => fn() => req_colleagues($b), 'reqFile' => fn() => req_file_up($b), 'reqMsg' => fn() => req_msg($b), 'reqResubmit' => fn() => req_resubmit($b), 'noteList' => fn() => note_list(), 'noteRead' => fn() => note_read($b), 'reqSupsSave' => fn() => req_sups_save($b), 'reqAct' => fn() => req_act($b), 'reqActDo' => fn() => req_act_do($b),
+        'myFin' => fn() => my_fin($b), 'expList' => fn() => exp_list($b), 'expSave' => fn() => exp_save($b), 'expDelete' => fn() => exp_delete($b), 'cusList' => fn() => cus_list($b), 'cusSave' => fn() => cus_save($b), 'cusReturn' => fn() => cus_return($b), 'cusAck' => fn() => cus_ack($b), 'reqTrack' => fn() => req_track($b), 'reqForms' => fn() => req_forms(), 'reqColleagues' => fn() => req_colleagues($b), 'reqFile' => fn() => req_file_up($b), 'reqMsg' => fn() => req_msg($b), 'reqResubmit' => fn() => req_resubmit($b), 'noteList' => fn() => note_list(), 'noteRead' => fn() => note_read($b), 'reqSupsSave' => fn() => req_sups_save($b), 'reqAct' => fn() => req_act($b), 'reqActDo' => fn() => req_act_do($b),
         /* الوحدات المتكاملة */
         'siteGet' => fn() => site_get(), 'uiSave' => fn() => ui_save($b), 'siteSave' => fn() => site_save($b), 'geoResolve' => fn() => geo_resolve($b), 'myExtra' => fn() => my_extra(), 'leaveBalances' => fn() => leave_balances(),
         'attUpload' => fn() => att_upload($b), 'attImport' => fn() => att_import($b), 'attMonth' => fn() => att_month($b), 'attMy' => fn() => att_my($b), 'attUndo' => fn() => att_batch_undo($b),

@@ -159,7 +159,7 @@ function act_mail_top(array $a): void {
 }
 function act_mail_staff(array $a): void {
     $r = act_row($a); $to = hrp_staff_mail($a['ref']); if (!$to) return;
-    hrp_mail($to, $r['kindName'] . ' · ' . $r['no'], 'صدر بحقك إجراء إداري من الموارد البشرية. اطّلع عليه في صفحتك وأكّد اطلاعك.', [['رقم الإجراء', $r['no']], ['الإجراء', $r['sum']], ['تاريخ النفاذ', $r['data']['effective'] ?? '']], 'myhr', 'الاطلاع على الإجراء');
+    hrp_mail($to, $r['kindName'] . ' · ' . $r['no'], 'صدر بحقك إجراء إداري من الموارد البشرية. اطّلع عليه في صفحتك وأكّد اطلاعك.', [['رقم الإجراء', $r['no']], ['الإجراء', $r['sum']], ['تاريخ النفاذ', $r['data']['effective'] ?? '']], 'myact', 'الاطلاع على الإجراء');
 }
 function act_decide(array $b): array {
     $u = hrp_me(); if (!hrp_is_top($u) && !has_perm($u, 'requests.override')) throw new HttpError('الاعتماد للإدارة العليا', 403);
@@ -226,16 +226,16 @@ function cus_list(array $b): array {
     if (has_perm($u, 'staff.view')) {
         $ref = (string)($b['ref'] ?? '');
         $rows = $ref !== '' ? q('SELECT * FROM custody WHERE ref=? ORDER BY returned_on IS NULL DESC, id DESC', [$ref])->fetchAll() : q('SELECT * FROM custody ORDER BY returned_on IS NULL DESC, id DESC LIMIT 1000')->fetchAll();
-        return ['ok' => true, 'rows' => array_map('cus_row', private_filter($u, $rows)), 'cats' => CUS_CATS, 'canEdit' => has_perm($u, 'staff.edit')];
+        return ['ok' => true, 'rows' => array_map('cus_row', private_filter($u, $rows)), 'cats' => CUS_CATS, 'canEdit' => has_perm($u, 'staff.edit')] + cus_meta();
     }
     $ref = my_staff_ref($u); if (!$ref || !site_on('staff', 'myhr')) return ['ok' => true, 'rows' => []];
-    return ['ok' => true, 'rows' => array_map('cus_row', q('SELECT * FROM custody WHERE ref=? ORDER BY returned_on IS NULL DESC, id DESC', [$ref])->fetchAll())];
+    return ['ok' => true, 'rows' => array_map('cus_row', q('SELECT * FROM custody WHERE ref=? ORDER BY returned_on IS NULL DESC, id DESC', [$ref])->fetchAll())] + cus_meta();
 }
 function cus_save(array $b): array {
     $u = require_perm('staff.edit');
     $ref = (string)($b['ref'] ?? ''); if (!staff_get($ref)) throw new HttpError('اختر المنسوب');
     $item = hrp_str($b['item'] ?? '', 160); if (mb_strlen($item) < 2) throw new HttpError('اكتب وصف العهدة');
-    $cat = in_array($b['category'] ?? '', CUS_CATS, true) ? $b['category'] : 'أخرى';
+    $cat = cus_cat_clean($b);
     $on = hrp_date($b['issuedOn'] ?? '') ?: date('Y-m-d'); $val = trim(to_ascii_digits((string)($b['value'] ?? ''))); $val = $val === '' ? null : round((float)$val, 2);
     $cond = in_array($b['condOut'] ?? '', ['جديدة', 'مستعملة بحالة جيدة', 'تحتاج صيانة'], true) ? $b['condOut'] : 'جديدة';
     $args = [$ref, $item, $cat, hrp_str($b['serial'] ?? '', 80), $val, $on, $cond, hrp_str($b['note'] ?? '', 600)];
@@ -247,7 +247,7 @@ function cus_save(array $b): array {
         q('INSERT INTO custody (ref, item, category, serial, value, issued_on, cond_out, note, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)', array_merge($args, [hrp_label($u), now()]));
         $id = (int)db()->lastInsertId();
         audit_log($ref, 'تسليم عهدة للمنسوب', $item . ($args[3] ? ' · ' . $args[3] : '') . ' · ' . $on, hrp_label($u));
-        $to = hrp_staff_mail($ref); if ($to) hrp_mail($to, 'سُجّلت عهدة باسمك', 'سجّلت الموارد البشرية عهدة باسمك. راجعها في صفحتك وأقرّ باستلامها.', [['العهدة', $item], ['النوع', $cat], ['الرقم التسلسلي', $args[3]], ['تاريخ الاستلام', $on], ['الحالة', $cond]], 'myhr', 'الإقرار بالاستلام');
+        $to = hrp_staff_mail($ref); if ($to) hrp_mail($to, 'سُجّلت عهدة باسمك', 'سجّلت الموارد البشرية عهدة باسمك. راجعها في صفحتك وأقرّ باستلامها.', [['العهدة', $item], ['التصنيف', $cat], ['الرقم التسلسلي', $args[3]], ['تاريخ الاستلام', $on], ['الحالة', $cond]], 'mycus', 'الإقرار بالاستلام');
     }
     return ['ok' => true, 'row' => cus_row(q1('SELECT * FROM custody WHERE id=?', [$id]))];
 }
