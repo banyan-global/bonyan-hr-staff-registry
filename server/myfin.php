@@ -403,6 +403,22 @@ function pay_signreq_tick(): void {
         catch (Throwable $e) { error_log('[bonyan-hr] signreq remind ' . $e->getMessage()); }
     }
 }
+/* إيقاف طارئ مرة واحدة: يُلغي كل طلبات التوقيع المعلّقة (دفعة أُرسلت بالخطأ) فلا تصل تذكيراتها */
+function pay_signreq_cancel_once(): void {
+    if (kv_get('psr_cancel_once_v1') !== null) return; kv_put('psr_cancel_once_v1', now(), 0);
+    try { $n = q("UPDATE pay_signreq SET status='cancel', done_at=? WHERE status='pending'", [now()])->rowCount();
+        if ($n) audit_log('', 'إيقاف طلبات توقيع الاستلام (دفعة طارئة)', 'أُلغي ' . $n . ' طلب توقيع معلّق — لن تصل تذكيراته', 'النظام'); }
+    catch (Throwable $e) { error_log('[bonyan-hr] psr cancel once ' . $e->getMessage()); }
+}
+/* إيقاف طلبات التوقيع يدويًا من الزر: الكل أو شهر محدّد (يمنع التذكيرات اللاحقة) */
+function pay_signreq_stop(array $b): array {
+    $u = require_perm('finance.view');
+    $ym = !empty($b['month']) && $b['month'] !== 'all' ? fin_ym($b['month']) : '';
+    if ($ym) $n = q("UPDATE pay_signreq SET status='cancel', done_at=? WHERE status='pending' AND ym=?", [now(), $ym])->rowCount();
+    else $n = q("UPDATE pay_signreq SET status='cancel', done_at=? WHERE status='pending'", [now()])->rowCount();
+    if ($n) audit_log('', 'إيقاف طلبات توقيع الاستلام', $n . ' طلب' . ($ym ? ' · ' . fin_mn($ym) : ' · كل الأشهر'), hrp_label($u));
+    return ['ok' => true, 'count' => $n, 'rows' => pay_conf_rows($u, fin_ym($b['cur'] ?? ''))];
+}
 /* سجل الراتب: «من شهر كذا الراتب كذا» — يصحح الرواتب السابقة ويحدد القادمة */
 function sal_hist_get(array $b): array {
     $u = require_perm('finance.view'); $ref = (string)($b['ref'] ?? ''); $s = staff_get($ref);

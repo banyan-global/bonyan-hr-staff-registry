@@ -4553,7 +4553,7 @@ function expDistH(s, cats, c) {
 }
 function expBarH(cats, extra) {
   return '<section class="pn tbar"><div class="fbar">' + fsearch('fxq', FIN.q, 'ابحث بالوصف أو الرقم المرجعي', 'بحث في المصروفات') + (extra || '') +
-    ssel('fxDir', [{ v: '', n: 'الكل', ic: 'doc' }, { v: 'in', n: 'دائن', d: role === 'staff' ? 'ما صُرف لك نقدًا' : 'ما صُرف للمنسوب نقدًا', ic: 'coins' }, { v: 'out', n: 'مدين', d: role === 'staff' ? 'ما صُرف عليك' : 'ما صُرف على المنسوب', ic: 'building' }], FIN.dir, 'الكل', function (v) { FIN.dir = v; render(); }, 'النوع', 'النوع') +
+    ssel('fxDir', [{ v: '', n: 'الكل', ic: 'doc' }, { v: 'in', n: 'دائن', ic: 'coins' }, { v: 'out', n: 'مدين', ic: 'building' }], FIN.dir, 'الكل', function (v) { FIN.dir = v; render(); }, 'النوع', 'النوع') +
     ssel('fxCat', [{ v: '', n: 'كل البنود', ic: 'coins' }].concat(Object.keys(cats).map(function (k) { return { v: k, n: cats[k], ic: (EXPC[k] || EXPC.other)[1] }; })), FIN.cat, 'كل البنود', function (v) { FIN.cat = v; render(); }, 'البند', 'البند') + '</div></section>';
 }
 /* كشف الحساب: الرواتب المستلمة + كل المصروفات، برصيد تراكمي بالريال */
@@ -4569,25 +4569,25 @@ function finLedger(d) {
 function ledCats(cats) { return Object.assign({ salary: 'الرواتب' }, cats); }
 function finLedgerH(d) {
   var L = finLedger(d), q = FIN.q.trim();
-  if (!L.ents.length) return '<div class="emptyx">' + tile('gold', 'wallet') + '<b>لا حركات في حسابك بعد</b><p>يظهر هنا راتبك المستلَم وكل ما صُرف لك أو عليك خلال العام.</p></div>';
+  if (!L.ents.length) return '<div class="emptyx">' + tile('gold', 'wallet') + '<b>لا حركات في حسابك بعد</b><p>يظهر هنا راتبك المستلَم وكل حركات حسابك من دائن ومدين خلال العام.</p></div>';
   var ents = L.ents.filter(function (e) { return (!FIN.dir || e.dir === FIN.dir) && (!FIN.cat || e.cat === FIN.cat) && (!q || (e.title + ' ' + (e.no || '')).indexOf(q) >= 0); });
   if (!ents.length) return '<div class="emptyx">' + tile('gold', 'coins') + '<b>لا حركات في هذه التصفية</b><p>غيّر البحث أو المرشحات.</p></div>';
   var body = ents.slice().reverse().map(function (e) { var k = e.cat === 'salary' ? ['gold', 'wallet', 'var(--gold-d)'] : (EXPC[e.cat] || EXPC.other);
     return '<tr' + (e.cat === 'salary' ? ' class="sal"' : '') + '><td data-l="التاريخ">' + fdx(pdate(e.day), { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
       '<td data-l="البند"><span class="led-cat">' + tile(k[0], k[1]) + '<span>' + esc(e.cat === 'salary' ? 'الراتب' : (d.cats[e.cat] || 'أخرى')) + '</span></span></td>' +
       '<td data-l="الوصف"><b>' + esc(e.title) + '</b>' + (e.no ? ' <small class="ltr">' + esc(e.no) + '</small>' : '') + '</td>' +
-      '<td data-l="النوع"><span class="fx-dir ' + e.dir + '" title="' + (e.dir === 'in' ? 'صُرف لك' : 'صُرف عليك') + '">' + (e.dir === 'in' ? 'دائن' : 'مدين') + '</span></td>' +
+      '<td data-l="النوع"><span class="fx-dir ' + e.dir + '">' + (e.dir === 'in' ? 'دائن' : 'مدين') + '</span></td>' +
       '<td class="num" data-l="المبلغ"><b>' + fm(e.amount) + '</b> <small>' + curL(e.cur) + '</small></td>' +
       '<td class="num" data-l="الرصيد"><b>' + fm(Math.round(e.bal)) + '</b> <small>ر.س</small></td></tr>'; }).join('');
   return '<div class="tw"><table class="ledtab"><thead><tr><th>التاريخ</th><th>البند</th><th>الوصف</th><th>النوع</th><th class="num">المبلغ</th><th class="num">الرصيد (ر.س)</th></tr></thead><tbody>' + body +
-    '</tbody><tfoot><tr><td colspan="5"><b>إجمالي ما صُرف لك وعليك هذا العام</b></td><td class="num"><b>' + fm(Math.round(L.tot)) + '</b> <small>ر.س</small></td></tr></tfoot></table></div>';
+    '</tbody><tfoot><tr><td colspan="5"><b>الإجمالي هذا العام (دائن ومدين)</b></td><td class="num"><b>' + fm(Math.round(L.tot)) + '</b> <small>ر.س</small></td></tr></tfoot></table></div>';
 }
 function finExpH(d) {
   var L = finLedger(d), R0 = function (v) { return fm(Math.round(v)); }, pend = (d.exp || []).filter(function (r) { return r.pend; }).length;
-  return ptitle('المصاريف وكشف الحساب', 'كشف حسابك الكامل خلال العام: راتبك المستلَم وكل ما صُرف لك أو عليك — مستحقات وتعويضات وسلف وتذاكر ودورات وعلاج. يُحتسب كله في رصيدك، بمكافئ تقريبي بالريال.', finYearSel(d.pay)) +
-    '<div class="grid g3 fx-k">' + kpi('gold', 'wallet', R0(L.tot), 'ر.س', 'رصيدك للعام', 'إجمالي ما صُرف لك وعليك، شاملًا الرواتب' + (pend ? ' · ' + nq(pend, 'بند قيد الاعتماد', 'بندان قيد الاعتماد', 'بنود قيد الاعتماد', 'بندًا قيد الاعتماد') : '')) +
-    kpi('emerald', 'coins', R0(L.inn), 'ر.س', 'دائن (لك)', 'رواتب ومستحقات وتعويضات وسلف وصلتك') +
-    kpi('sapphire', 'building', R0(L.out), 'ر.س', 'مدين (عليك)', 'تذاكر ودورات وعلاج وغيرها دفعتها الجهة') + '</div>' +
+  return ptitle('المصاريف وكشف الحساب', 'كشف حسابك الكامل خلال العام: راتبك المستلَم وكل حركات حسابك من دائن ومدين — مستحقات وتعويضات وسلف وتذاكر ودورات وعلاج. يُحتسب كله في رصيدك، بمكافئ تقريبي بالريال.', finYearSel(d.pay)) +
+    '<div class="grid g3 fx-k">' + kpi('gold', 'wallet', R0(L.tot), 'ر.س', 'رصيدك للعام', 'إجمالي الدائن والمدين، شاملًا الرواتب' + (pend ? ' · ' + nq(pend, 'بند قيد الاعتماد', 'بندان قيد الاعتماد', 'بنود قيد الاعتماد', 'بندًا قيد الاعتماد') : '')) +
+    kpi('emerald', 'coins', R0(L.inn), 'ر.س', 'دائن', 'رواتب ومستحقات وتعويضات وسلف وصلتك') +
+    kpi('sapphire', 'building', R0(L.out), 'ر.س', 'مدين', 'تذاكر ودورات وعلاج وغيرها دفعتها الجهة') + '</div>' +
     expBarH(ledCats(d.cats)) +
     pn('gold', 'coins', 'كشف الحساب', nq(L.ents.length, 'حركة واحدة', 'حركتان', 'حركات', 'حركة'), '', '<div class="pb" id="fxList">' + finLedgerH(d) + '</div>');
 }
@@ -4760,7 +4760,8 @@ function pcSums(rows) { var o = {}; rows.forEach(function (r) { o[r.cur] = (o[r.
 function paySignSection() {
   var c = pcData(), d = c.data, mlab = mName(PCF.month) + ' ' + PCF.month.slice(0, 4);
   var msel = ssel('pcM', ((d && d.months) || [PCF.month]).map(function (m) { return { v: m, n: mName(m) + ' ' + m.slice(0, 4), ic: 'calendar', d: m === ymNow2() ? 'الشهر الحالي' : '' }; }), PCF.month, mlab, function (v) { PCF.month = v; PCF.sel = {}; render(); }, 'الشهر', 'الشهر');
-  var head = '<div class="sighead" id="paysign"><div class="sighead-t">' + tile('emerald', 'check') + '<div><b>توقيع استلام الرواتب</b><small>وقّع الاستلام لمنسوب أو جهة أو الجميع، أو أرسل للمنسوب طلب توقيع يصله بالبريد ويُذكَّر بعد يوم، أو وقّع بأثر رجعي من بداية الدوام.</small></div></div><div class="sighead-a">' + msel + (can('pay') ? '<button class="btn" id="pcRetro">' + ic('history') + 'توقيع بأثر رجعي</button>' : '') + '</div></div>';
+  var allReq = d ? d.rows.filter(function (r) { return !r.conf && r.req; }).length : 0;
+  var head = '<div class="sighead" id="paysign"><div class="sighead-t">' + tile('emerald', 'check') + '<div><b>توقيع استلام الرواتب</b><small>وقّع الاستلام لمنسوب أو جهة أو الجميع، أو أرسل للمنسوب طلب توقيع يصله بالبريد ويُذكَّر بعد يوم، أو وقّع بأثر رجعي من بداية الدوام.</small></div></div><div class="sighead-a">' + msel + (allReq ? '<button class="btn danger" id="pcStop">' + ic('x') + 'إيقاف طلبات التوقيع (' + allReq + ')</button>' : '') + (can('pay') ? '<button class="btn" id="pcRetro">' + ic('history') + 'توقيع بأثر رجعي</button>' : '') + '</div></div>';
   if (!d) return head + '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ التحميل…') + '</div></div></section>';
   var all = d.rows, ok = all.filter(function (r) { return r.conf; }), pend = all.filter(function (r) { return !r.conf; }), reqd = pend.filter(function (r) { return r.req; }), rows = pcRows(d), ents = {};
   all.forEach(function (r) { ents[r.entity] = (ents[r.entity] || 0) + 1; });
@@ -4864,6 +4865,7 @@ bindHrx = function () {
   if (view !== 'payroll') return;
   var d = pcData().data; if (!d) return;
   var rb = document.getElementById('pcRetro'); if (rb) rb.onclick = pcRetroAsk;
+  var stp = document.getElementById('pcStop'); if (stp) stp.onclick = function () { if (!confirm('إيقاف كل طلبات توقيع الاستلام المعلّقة؟ لن تصل أي تذكيرات.')) return; stp.disabled = true; api({ action: 'paySignReqStop', month: 'all', cur: PCF.month }).then(function (j) { finDrop(); seed('pc:' + PCF.month, Object.assign({}, (CACHE['pc:' + PCF.month] || {}).data || {}, { month: PCF.month, months: ((pcData().data || {}).months), rows: j.rows })); render(); toast(j.count ? 'أُوقِف ' + j.count + ' طلب توقيع' : 'لا طلبات معلّقة'); }).catch(function (e) { stp.disabled = false; toast(errText(e)); }); };
   var q = document.getElementById('pcq'); if (q) q.onchange = function () { PCF.q = q.value; softRender(); };
   if (q) q.oninput = function () { clearTimeout(q._t); q._t = setTimeout(function () { PCF.q = q.value; softRender(); }, 250); };
   document.querySelectorAll('[data-pck]').forEach(function (x) { x.onchange = function () { PCF.sel[x.dataset.pck] = x.checked; softRender(); }; });
