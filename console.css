@@ -2432,3 +2432,43 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .opers b{font-size:14px;font-weight:700;display:block}.opers small{font-size:12px;color:var(--faint)}
 @media (max-width:560px){.otop::before,.otop .operson::before{display:none}.operson{min-width:0;width:100%}}
 .sareq{display:block;font-size:11px;font-weight:700;color:var(--gold);margin-top:2px}
+/* كشف توقيع استلام الرواتب */
+.sigtab{width:100%;border-collapse:collapse}
+.sigtab th,.sigtab td{padding:12px 14px;text-align:right;border-bottom:1px solid var(--line-2);vertical-align:middle}
+.sigtab thead th{font-size:12.5px;color:var(--mute);font-weight:800;background:var(--soft);white-space:nowrap;position:sticky;top:0;z-index:1}
+.sigtab td.ck,.sigtab th.ck{width:38px;text-align:center}
+.sigtab td.rn,.sigtab th.rn{width:34px;color:var(--faint);text-align:center;font-variant-numeric:tabular-nums}
+.sigtab td.num,.sigtab th.num{text-align:start;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sigtab tr.done{background:color-mix(in srgb,var(--c-ok) 5%,transparent)}
+.sigtab tbody tr:hover{background:var(--soft)}
+.sigtab input[type=checkbox]{width:18px;height:18px;accent-color:var(--navy);cursor:pointer}
+.sigtab .person{align-items:center}
+.pmeta{min-width:0}.pmeta b{display:block;font-size:14px;font-weight:700}.pmeta span{display:block;font-size:12px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.entpill{display:inline-block;font-size:12px;font-weight:700;color:var(--ink);background:var(--well);border-radius:999px;padding:3px 11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+.sigtab .sareq{display:block;font-size:11px;color:var(--gold-ink);font-weight:700;margin-top:1px}
+.sigcell{min-width:160px}
+.sig.ok{display:flex;flex-direction:column;gap:3px}
+.sig .sigmark{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:var(--ok);background:var(--ok-w);border:1px solid color-mix(in srgb,var(--c-ok) 32%,transparent);border-radius:999px;padding:3px 11px;width:fit-content}
+.sig .sigmark .i{width:14px;height:14px}
+.sig.ok small{font-size:11px;color:var(--faint)}
+.sig.wait{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--warn)}
+.sig.wait i{width:9px;height:9px;border-radius:50%;background:var(--c-warn);display:inline-block}
+.sigtab .pcacts{display:flex;gap:6px;align-items:center;justify-content:flex-end;white-space:nowrap}
+@media(max-width:720px){.sigtab .dn2{display:none}}
+.salbox{display:inline-flex;flex-direction:column;align-items:flex-start}
+@media(max-width:640px){
+  .sigtab, .sigtab tbody, .sigtab tr, .sigtab td{display:block;width:auto}
+  .sigtab thead{display:none}
+  .sigtab tr{position:relative;border:1px solid var(--line);border-radius:16px;margin-bottom:10px;padding:12px 14px 10px;background:var(--panel)}
+  .sigtab tr.done{background:color-mix(in srgb,var(--c-ok) 6%,var(--panel))}
+  .sigtab td{border:0;padding:6px 0;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .sigtab td.ck{position:absolute;top:12px;left:12px;width:auto;padding:0}
+  .sigtab td.rn{display:none}
+  .sigtab td.cperson{padding-top:0;padding-inline-end:34px}
+  .sigtab td[data-l]::before{content:attr(data-l);font-size:12px;color:var(--mute);font-weight:700;flex:none}
+  .sigtab td.num{text-align:start}
+  .sigtab td.sigcell{align-items:flex-start}
+  .sigtab td.acts2{justify-content:flex-start;border-top:1px dashed var(--line-2);margin-top:4px;padding-top:10px}
+  .sigtab .pcacts{justify-content:flex-start;width:100%}
+  .sigtab .pcacts .btn.sm{flex:1}
+}

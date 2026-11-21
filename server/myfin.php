@@ -231,7 +231,7 @@ function pay_conf_rows(array $u, string $ym): array {
         $s = staff_get($r['ref']); if (!$s) continue;
         if (fin_num($s['data']['salary'] ?? '') <= 0 && !q1('SELECT id FROM salary_hist WHERE ref=? LIMIT 1', [$r['ref']])) continue;
         $f = fin_salary($r['ref'], $year); $m = $f['months'][$i] ?? null; if (!$m || $m['st'] === 'none') continue;
-        $rows[] = ['ref' => $r['ref'], 'name' => staff_name($s), 'entity' => (string)($s['data']['entity'] ?? ''), 'cur' => $f['cur'], 'base' => $m['base'], 'add' => $m['add'], 'ded' => $m['ded'], 'net' => $m['net'], 'conf' => $m['conf'], 'hist' => count(fin_hist($r['ref']))];
+        $rows[] = ['ref' => $r['ref'], 'name' => staff_name($s), 'job' => (string)($s['data']['job'] ?? ''), 'entity' => (string)($s['data']['entity'] ?? ''), 'start' => (string)($s['data']['startDate'] ?? ''), 'cur' => $f['cur'], 'base' => $m['base'], 'add' => $m['add'], 'ded' => $m['ded'], 'net' => $m['net'], 'conf' => $m['conf'], 'hist' => count(fin_hist($r['ref']))];
     }
     usort($rows, fn($a, $b) => strcmp($a['entity'], $b['entity']) ?: strcmp($a['name'], $b['name']));
     return $rows;
@@ -260,6 +260,37 @@ function pay_confirm(array $b): array {
     }
     if ($n) audit_log($scope === 'refs' && count($rows) === 1 ? $rows[0]['ref'] : '', $undo ? 'التراجع عن تأكيد صرف رواتب' : 'تأكيد صرف رواتب', $mn . ' · ' . $n . ' منسوب' . ($scope === 'entity' ? ' · ' . ($b['entity'] ?? '') : ($scope === 'all' ? ' · الكل' : '')), hrp_label($u));
     return ['ok' => true, 'count' => $n, 'rows' => pay_conf_rows($u, $ym)];
+}
+/* توقيع استلام الرواتب بأثر رجعي: من بداية دوام كل منسوب حتى شهر الحدّ (افتراضيًا قبل 3 أشهر، فتبقى آخر 3 أشهر بانتظار التوقيع) */
+function pay_sign_retro(array $b): array {
+    $u = require_perm('finance.view'); $hide = private_hidden_for($u);
+    $through = fin_ym($b['through'] ?? date('Y-m', strtotime(date('Y-m-01') . ' -3 month')));
+    if ($through > date('Y-m')) $through = date('Y-m');
+    $scope = (string)($b['scope'] ?? 'all'); $refs = array_map('strval', (array)($b['refs'] ?? [])); $ent = (string)($b['entity'] ?? '');
+    $n = 0; $people = 0;
+    $MN = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $row) {
+        $ref = $row['ref']; if (in_array($ref, $hide, true)) continue;
+        if ($scope === 'refs' && !in_array($ref, $refs, true)) continue;
+        $s = staff_get($ref); if (!$s) continue;
+        if ($scope === 'entity' && (string)($s['data']['entity'] ?? '') !== $ent) continue;
+        if (fin_num($s['data']['salary'] ?? '') <= 0 && !q1('SELECT id FROM salary_hist WHERE ref=? LIMIT 1', [$ref])) continue;
+        $start = substr((string)($s['data']['startDate'] ?? ''), 0, 7); if ($start === '' || $start > $through) $start = $through;
+        $y0 = (int)substr($start, 0, 4); $y1 = (int)substr($through, 0, 4); $done = q('SELECT ym FROM pay_confirm WHERE ref=?', [$ref])->fetchAll(PDO::FETCH_COLUMN);
+        $have = array_flip($done); $first = null; $last = null; $cur = 'SAR'; $added = 0;
+        for ($y = $y0; $y <= $y1; $y++) {
+            $f = fin_salary($ref, $y); $cur = $f['cur'];
+            foreach ($f['months'] as $m) {
+                if ($m['st'] === 'none' || $m['m'] < $start || $m['m'] > $through || isset($have[$m['m']])) continue;
+                q('INSERT INTO pay_confirm (ym, ref, amount, cur, by_email, by_name, at, note) VALUES (?,?,?,?,?,?,?,?)', [$m['m'], $ref, $m['net'], $f['cur'], (string)$u['email'], hrp_label($u), now(), 'توقيع بأثر رجعي']);
+                $n++; $added++; if ($first === null) $first = $m['m']; $last = $m['m'];
+            }
+        }
+        if ($added) { $people++; $to = hrp_staff_mail($ref);
+            if ($to && $first) note_add($to, 'توقيع استلام رواتبك', 'سُجّل استلامك رواتب ' . $MN[(int)substr($first, 5, 2) - 1] . ' ' . substr($first, 0, 4) . ' حتى ' . $MN[(int)substr($last, 5, 2) - 1] . ' ' . substr($last, 0, 4) . '. تجدها في «سجلي المالي».', '', 'ok'); }
+    }
+    if ($n) audit_log($scope === 'refs' && count($refs) === 1 ? $refs[0] : '', 'توقيع استلام رواتب بأثر رجعي', 'حتى ' . $through . ' · ' . $people . ' منسوب · ' . $n . ' شهر' . ($scope === 'entity' ? ' · ' . $ent : ($scope === 'all' ? ' · الكل' : '')), hrp_label($u));
+    return ['ok' => true, 'count' => $n, 'people' => $people, 'through' => $through, 'rows' => pay_conf_rows($u, fin_ym($b['month'] ?? ''))];
 }
 /* سجل الراتب: «من شهر كذا الراتب كذا» — يصحح الرواتب السابقة ويحدد القادمة */
 function sal_hist_get(array $b): array {
