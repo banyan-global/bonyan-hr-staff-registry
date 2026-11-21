@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 16;
+const BHR_SCHEMA_VERSION = 17;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -224,6 +224,12 @@ function migrate(PDO $pdo): void {
         $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='pay_confirm' AND COLUMN_NAME='$cn'")->fetchColumn();
         if (!(int)$has) { try { $pdo->exec("ALTER TABLE pay_confirm ADD COLUMN $col"); } catch (PDOException $e) { if (stripos($e->getMessage(), 'Duplicate column') === false) throw $e; } }
     }
+    /* ١٧) سجل الإصدارات: تحديثات المنصة يومًا بيوم */
+    $pdo->exec("CREATE TABLE IF NOT EXISTS releases (
+        id INT AUTO_INCREMENT PRIMARY KEY, rdate DATE NOT NULL, ver VARCHAR(40) NOT NULL DEFAULT '', title VARCHAR(200) NOT NULL,
+        tag VARCHAR(20) NOT NULL DEFAULT 'feature', area VARCHAR(60) NOT NULL DEFAULT '', items TEXT NOT NULL,
+        by_name VARCHAR(160) NOT NULL DEFAULT '', at DATETIME NOT NULL, pinned TINYINT NOT NULL DEFAULT 0,
+        KEY k_date (rdate), KEY k_pin (pinned))" . $T11);
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {

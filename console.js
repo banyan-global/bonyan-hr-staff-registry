@@ -2453,6 +2453,7 @@ function allowed(v) {
   if (STAFF_VIEWS.indexOf(v) >= 0) return false;
   if (v === 'payroll') return can('pay') && mod('payroll');
   if (v === 'system') return can('sys');
+  if (v === 'releases') return can('settings');
   if (v === 'reqs') return mod('reqs') || can('settings');
   if (v === 'att') return can('attv') && mod('att');
   if (v === 'news') return mod('news') || can('news');
@@ -2510,6 +2511,7 @@ function sideHTML() {
       ['الإدارة', [
         allowed('payroll') ? { v: 'payroll', n: 'الرواتب', d: 'الجهات وتوقيع الاستلام', j: 'gold', i: 'wallet', b: 0, s: [['payroll', 'كشف الرواتب والتوقيع', view === 'payroll' && PAYF === 'all'], ['paymonth', 'مستحقات واستقطاعات الشهر', view === 'payroll' && PAYF === 'month']] } : null,
         allowed('reports') ? { v: 'reports', n: 'التقارير', d: 'تصفية وتصدير وطباعة', j: 'sapphire', i: 'chart' } : null,
+        allowed('releases') ? { v: 'releases', n: 'سجل الإصدارات', d: 'تحديثات المنصة يومًا بيوم', j: 'emerald', i: 'history' } : null,
         can('sys') ? { v: 'system', n: 'النظام', d: 'الحسابات والإعدادات والسجل', j: 'slate', i: 'shield', s: [can('users') ? ['accounts', 'الموظفون والصلاحيات', view === 'system' && TAB.system === 'acc'] : null, can('settings') ? ['settings', 'إعدادات المنصة', view === 'system' && TAB.system === 'set'] : null, can('audit') ? ['log', 'سجل العمليات', view === 'system' && TAB.system === 'log'] : null, can('drive') || can('users') ? ['data', 'البيانات والنسخ', view === 'system' && TAB.system === 'data'] : null].filter(Boolean) } : null].filter(Boolean)]];
   }
   /* القائمة المتحركة: المجموعة النشطة مفتوحة، والضغط على عنوان مجموعة لها فروع يفتحها أو يغلقها */
@@ -5021,6 +5023,140 @@ document.addEventListener('click', function (e) {
 
 /* أي منسوب يُصرف له نقدًا لا يُعدّ «بلا حساب بنكي» */
 try { Object.defineProperty(CNT, 'nobank', { configurable: true, get: function () { return STAFF.filter(needsBank).length; } }); } catch (e) { }
+
+/* ============================================================================
+ * سجل الإصدارات — تحديثات المنصة يومًا بيوم (النظام)
+ * ========================================================================== */
+TITLES.releases = ['سجل الإصدارات'];
+var RELC = { tag: '', q: '', sel: {} };
+var RELTAG = { feature: ['ميزة جديدة', 'emerald'], improve: ['تحسين', 'sapphire'], fix: ['إصلاح', 'gold'], security: ['أمان', 'garnet'], data: ['بيانات', 'teal'] };
+function relData() { return need('rel', function () { return api({ action: 'relList' }); }, 60000); }
+function relTagN(t) { return (RELTAG[t] || RELTAG.feature)[0]; }
+function relDateL(d) { try { return fdx(pdate(d + 'T00:00:00'), { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { return d; } }
+function relToGet() { try { return localStorage.getItem('rel_to') || ''; } catch (e) { return ''; } }
+
+function relCard(r, admin) {
+  var lis = (r.items || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+  var acts = admin ? '<div class="rel-acts">' +
+    '<label class="rel-ck"><input type="checkbox" data-relck="' + r.id + '"' + (RELC.sel[r.id] ? ' checked' : '') + ' aria-label="تحديد للإرسال"></label>' +
+    '<button class="ib" data-relsend="' + r.id + '" title="إرسال هذا التحديث للمدير" aria-label="إرسال">' + ic('mail') + '</button>' +
+    '<button class="ib" data-relcopy="' + r.id + '" title="نسخ النص" aria-label="نسخ">' + ic('copy') + '</button>' +
+    '<button class="ib" data-reledit="' + r.id + '" title="تعديل" aria-label="تعديل">' + ic('edit') + '</button>' +
+    '<button class="ib" data-relpin="' + r.id + '" title="' + (r.pinned ? 'إلغاء التثبيت' : 'تثبيت') + '" aria-label="تثبيت">' + ic('pin') + '</button>' +
+    '<button class="ib bad" data-reldel="' + r.id + '" title="حذف" aria-label="حذف">' + ic('trash') + '</button></div>' : '';
+  return '<article class="rel-card ' + r.tag + (r.pinned ? ' pinned' : '') + '" data-rid="' + r.id + '">' +
+    '<div class="rel-top"><div class="rel-ttl"><span class="rtag ' + r.tag + '">' + relTagN(r.tag) + '</span>' +
+    (r.pinned ? '<span class="rtag pin">' + ic('pin') + 'مثبّت</span>' : '') +
+    (r.area ? '<span class="rel-area">' + esc(r.area) + '</span>' : '') + '</div>' +
+    '<div class="rel-meta">' + (r.ver ? '<code>' + esc(r.ver) + '</code>' : '') + '</div></div>' +
+    '<h3 class="rel-h">' + esc(r.title) + '</h3>' +
+    '<ul class="rel-items">' + lis + '</ul>' +
+    '<div class="rel-foot"><span>' + esc(r.by || '—') + '</span>' + acts + '</div></article>';
+}
+
+VIEWS.releases = function () {
+  var admin = can('settings'), c = relData(), d = c.data;
+  var head = ptitle('سجل الإصدارات', 'تحديثات المنصة يومًا بيوم، بنقاط واضحة مختصرة. راجع ما أُنجز وأرسل ملخّصًا للمدير بضغطة.',
+    (admin ? '<button class="btn goldb" id="relAdd">' + ic('plus') + 'إضافة تحديث</button><button class="btn" id="relSendAll">' + ic('mail') + 'إرسال للمدير</button>' : ''));
+  if (!d) return head + '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ التحميل…') + '</div></div></section>';
+  var rows = d.rows || [], q = RELC.q.trim();
+  var shown = rows.filter(function (r) { return (!RELC.tag || r.tag === RELC.tag) && (!q || (r.title + ' ' + (r.items || []).join(' ') + ' ' + (r.area || '')).indexOf(q) >= 0); });
+  var tagCount = {}; rows.forEach(function (r) { tagCount[r.tag] = (tagCount[r.tag] || 0) + 1; });
+  var thisMonth = rows.filter(function (r) { return r.date.slice(0, 7) === (new Date().toISOString().slice(0, 7)); }).length;
+  var last = rows.length ? rows.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; })[0].date : '';
+  var kp = '<div class="grid g3">' +
+    kpi('emerald', 'history', rows.length, '', 'إجمالي التحديثات', 'منذ انطلاق المنصة') +
+    kpi('gold', 'calendar', thisMonth, '', 'هذا الشهر', 'تحديثات نزلت هذا الشهر') +
+    kpi('sapphire', 'check', last ? relDateL(last) : '—', '', 'آخر تحديث', last ? '' : 'لا تحديثات بعد') + '</div>';
+  var tagseg = '<div class="seg rel-seg"><button data-reltag=""' + (RELC.tag ? '' : ' aria-pressed="true"') + '>الكل<b>' + rows.length + '</b></button>' +
+    Object.keys(RELTAG).map(function (t) { return tagCount[t] ? '<button data-reltag="' + t + '"' + (RELC.tag === t ? ' aria-pressed="true"' : '') + '>' + relTagN(t) + '<b>' + tagCount[t] + '</b></button>' : ''; }).join('') + '</div>';
+  var bar = '<section class="pn tbar"><div class="fbar">' + fsearch('relq', RELC.q, 'ابحث في التحديثات', 'بحث') + tagseg + '</div></section>';
+  var body;
+  if (!shown.length) body = '<div class="emptyx">' + tile('emerald', 'history') + '<b>' + (rows.length ? 'لا تحديثات في هذه التصفية' : 'لا تحديثات بعد') + '</b><p>' + (admin ? 'أضف أول تحديث بزر «إضافة تحديث».' : 'ستظهر هنا تحديثات المنصة أولًا بأول.') + '</p></div>';
+  else {
+    var groups = [], gmap = {};
+    shown.forEach(function (r) { var k = r.pinned ? 'pin' : r.date; if (!gmap[k]) { gmap[k] = []; groups.push([k, gmap[k]]); } gmap[k].push(r); });
+    body = groups.map(function (g) {
+      var label = g[0] === 'pin' ? '<span class="rel-pinlbl">' + ic('pin') + 'مثبّت</span>' : relDateL(g[0]);
+      return '<div class="rel-group"><div class="rel-date">' + label + '</div><div class="rel-list">' + g[1].map(function (r) { return relCard(r, admin); }).join('') + '</div></div>';
+    }).join('');
+  }
+  return head + kp + bar + '<div class="rel-wrap">' + body + '</div>';
+};
+
+/* نموذج إضافة/تعديل تحديث */
+function relForm(r) {
+  r = r || {}; var ed = !!r.id;
+  var tagOpts = Object.keys(RELTAG).map(function (t) { return '<option value="' + t + '"' + ((r.tag || 'feature') === t ? ' selected' : '') + '>' + relTagN(t) + '</option>'; }).join('');
+  var el = layer('relLayer', { tile: tile('emerald', ed ? 'edit' : 'plus'), t: ed ? 'تعديل تحديث' : 'إضافة تحديث', p: 'يظهر في سجل الإصدارات' },
+    '<div class="form">' +
+    '<div class="f2"><div class="fld"><label for="rfDate">التاريخ</label><input id="rfDate" type="date" value="' + (r.date || new Date().toISOString().slice(0, 10)) + '" max="' + new Date().toISOString().slice(0, 10) + '"></div>' +
+    '<div class="fld"><label for="rfTag">التصنيف</label><select id="rfTag">' + tagOpts + '</select></div></div>' +
+    '<div class="fld"><label for="rfTitle">العنوان</label><input id="rfTitle" type="text" maxlength="200" value="' + esc(r.title || '') + '" placeholder="عنوان مختصر للتحديث"></div>' +
+    '<div class="f2"><div class="fld"><label for="rfArea">القسم (اختياري)</label><input id="rfArea" type="text" maxlength="60" value="' + esc(r.area || '') + '" placeholder="مثل: الرواتب، الطلبات…"></div>' +
+    '<div class="fld"><label for="rfVer">رقم الإصدار (اختياري)</label><input id="rfVer" type="text" maxlength="40" value="' + esc(r.ver || '') + '" placeholder="مثل: ن-20261121"></div></div>' +
+    '<div class="fld"><label for="rfItems">النقاط <small class="fhint">سطر لكل نقطة</small></label><textarea id="rfItems" rows="6" placeholder="نقطة في كل سطر…">' + esc((r.items || []).join('\n')) + '</textarea></div>' +
+    '<label class="chk"><input type="checkbox" id="rfPin"' + (r.pinned ? ' checked' : '') + '> تثبيت في الأعلى</label>' +
+    '</div>',
+    '<div class="lerr" role="alert"></div><button class="btn" data-lyclose="1">إلغاء</button><button class="btn goldb" id="rfGo">' + ic('check') + (ed ? 'حفظ' : 'إضافة') + '</button>', 'anm');
+  el.querySelector('#rfGo').onclick = function () {
+    var b = this; b.disabled = true;
+    var p = { action: 'relSave', id: r.id || 0, date: el.querySelector('#rfDate').value, tag: el.querySelector('#rfTag').value, title: el.querySelector('#rfTitle').value, area: el.querySelector('#rfArea').value, ver: el.querySelector('#rfVer').value, items: el.querySelector('#rfItems').value, pinned: el.querySelector('#rfPin').checked ? 1 : 0 };
+    api(p).then(function (j) { seed('rel', { rows: j.rows, tags: (relData().data || {}).tags }); el.close(); render(); toast(ed ? 'حُفظ التحديث' : 'أُضيف التحديث'); })
+      .catch(function (e) { b.disabled = false; el.querySelector('.lerr').textContent = errText(e); });
+  };
+}
+
+/* نافذة إرسال ملخّص للمدير */
+function relSendDialog(ids) {
+  var d = relData().data || {}, rows = d.rows || [];
+  var sel = ids && ids.length ? ids : Object.keys(RELC.sel).filter(function (k) { return RELC.sel[k]; }).map(Number);
+  var scopeN = sel.length ? nq(sel.length, 'تحديث واحد محدد', 'تحديثان محدّدان', 'تحديثات محدّدة', 'تحديثًا محدّدًا') : 'أحدث ' + Math.min(rows.length, 10) + ' تحديثات';
+  var mailStaff = (typeof STAFF !== 'undefined' ? STAFF : []).map(function (s) { return { name: s.name, mail: (s.r && (s.r.email || s.r.mail)) || '' }; }).filter(function (s) { return s.mail; });
+  var pick = mailStaff.length ? '<div class="fld"><label for="rsPick">اختر من المنسوبين (اختياري)</label><select id="rsPick"><option value="">—</option>' + mailStaff.map(function (s) { return '<option value="' + esc(s.mail) + '">' + esc(s.name) + ' · ' + esc(s.mail) + '</option>'; }).join('') + '</select></div>' : '';
+  var el = layer('rsLayer', { tile: tile('navy', 'mail'), t: 'إرسال سجل الإصدارات للمدير', p: scopeN },
+    '<div class="form">' +
+    '<div class="fld"><label for="rsTo">بريد المستلم</label><input id="rsTo" type="email" value="' + esc(relToGet()) + '" placeholder="manager@example.com"></div>' + pick +
+    '<div class="fld"><label for="rsNote">مقدّمة (اختياري)</label><textarea id="rsNote" rows="2" maxlength="500" placeholder="سطر تعريفي يظهر أعلى البريد…"></textarea></div>' +
+    '<p class="rs-hint">' + (sel.length ? 'سيُرسل الملخّص بالتحديثات المحدّدة.' : 'لم تحدّد تحديثات؛ سيُرسل أحدث ' + Math.min(rows.length, 10) + '. حدّد تحديثات معيّنة من القائمة لإرسالها وحدها.') + '</p></div>',
+    '<div class="lerr" role="alert"></div><button class="btn" data-lyclose="1">إلغاء</button><button class="btn goldb" id="rsGo">' + ic('mail') + 'إرسال</button>', 'anm');
+  var pk = el.querySelector('#rsPick'); if (pk) pk.onchange = function () { if (pk.value) el.querySelector('#rsTo').value = pk.value; };
+  el.querySelector('#rsGo').onclick = function () {
+    var b = this, to = el.querySelector('#rsTo').value.trim(); b.disabled = true;
+    try { localStorage.setItem('rel_to', to); } catch (e) {}
+    api({ action: 'relSend', to: to, ids: sel, note: el.querySelector('#rsNote').value, limit: 10 }).then(function (j) { el.close(); RELC.sel = {}; render(); toast('أُرسل الملخّص (' + j.count + ') إلى ' + j.to); })
+      .catch(function (e) { b.disabled = false; el.querySelector('.lerr').textContent = errText(e); });
+  };
+}
+
+function relDel(r) {
+  var el = layer('relLayer', { tile: tile('garnet', 'trash'), t: 'حذف تحديث', p: r.title },
+    '<p style="margin:0;line-height:1.9">سيُحذف هذا التحديث من سجل الإصدارات نهائيًا، ولا يمكن التراجع.</p>',
+    '<div class="lerr" role="alert"></div><button class="btn" data-lyclose="1">إلغاء</button><button class="btn danger" id="rdGo">' + ic('trash') + 'حذف</button>', 'anm');
+  el.querySelector('#rdGo').onclick = function () { var b = this; b.disabled = true; api({ action: 'relDelete', id: r.id }).then(function (j) { seed('rel', { rows: j.rows, tags: (relData().data || {}).tags }); el.close(); render(); toast('حُذف التحديث'); }).catch(function (e) { b.disabled = false; el.querySelector('.lerr').textContent = errText(e); }); };
+}
+function relCopy(r) {
+  var txt = r.title + (r.ver ? ' (' + r.ver + ')' : '') + ' — ' + relDateL(r.date) + '\n' + (r.items || []).map(function (x) { return '• ' + x; }).join('\n');
+  try { navigator.clipboard.writeText(txt); toast('نُسخ النص'); } catch (e) { toast('تعذّر النسخ'); }
+}
+
+var _bindRel = bindHrx;
+bindHrx = function () {
+  _bindRel();
+  if (view !== 'releases') return;
+  var d = relData().data; if (!d) return; var rows = d.rows || [];
+  var get = function (id) { return rows.filter(function (r) { return r.id === id; })[0]; };
+  var a = document.getElementById('relAdd'); if (a) a.onclick = function () { relForm(null); };
+  var sa = document.getElementById('relSendAll'); if (sa) sa.onclick = function () { relSendDialog(null); };
+  var q = document.getElementById('relq'); if (q) { q.oninput = function () { clearTimeout(q._t); q._t = setTimeout(function () { RELC.q = q.value; softRender(); }, 220); }; }
+  document.querySelectorAll('[data-reltag]').forEach(function (b) { b.onclick = function () { RELC.tag = b.dataset.reltag; render(); }; });
+  document.querySelectorAll('[data-relck]').forEach(function (x) { x.onchange = function () { RELC.sel[+x.dataset.relck] = x.checked; }; });
+  document.querySelectorAll('[data-reledit]').forEach(function (b) { b.onclick = function () { relForm(get(+b.dataset.reledit)); }; });
+  document.querySelectorAll('[data-relsend]').forEach(function (b) { b.onclick = function () { relSendDialog([+b.dataset.relsend]); }; });
+  document.querySelectorAll('[data-relcopy]').forEach(function (b) { b.onclick = function () { relCopy(get(+b.dataset.relcopy)); }; });
+  document.querySelectorAll('[data-relpin]').forEach(function (b) { b.onclick = function () { var r = get(+b.dataset.relpin); b.disabled = true; api({ action: 'relSave', id: r.id, date: r.date, tag: r.tag, title: r.title, area: r.area, ver: r.ver, items: r.items, pinned: r.pinned ? 0 : 1 }).then(function (j) { seed('rel', { rows: j.rows, tags: d.tags }); render(); }).catch(function (e) { b.disabled = false; toast(errText(e)); }); }; });
+  document.querySelectorAll('[data-reldel]').forEach(function (b) { b.onclick = function () { relDel(get(+b.dataset.reldel)); }; });
+};
 
 window.addEventListener('hashchange', route);
 boot();
