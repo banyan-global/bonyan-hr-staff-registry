@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 15;
+const BHR_SCHEMA_VERSION = 16;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -214,6 +214,16 @@ function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS salary_hist (
         id INT AUTO_INCREMENT PRIMARY KEY, ref VARCHAR(40) NOT NULL, from_ym CHAR(7) NOT NULL, amount DECIMAL(14,2) NOT NULL, by_name VARCHAR(160) NOT NULL DEFAULT '', at DATETIME NOT NULL,
         UNIQUE KEY u_ref_from (ref, from_ym))" . $T11);
+    /* ١٦) طلبات توقيع استلام الراتب (تذكير تلقائي بعد ٢٤ ساعة)، وشهر الصرف الفعلي ومصدر التوقيع (الإدارة/المنسوب/النظام) */
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pay_signreq (
+        id INT AUTO_INCREMENT PRIMARY KEY, ym CHAR(7) NOT NULL, ref VARCHAR(40) NOT NULL, status VARCHAR(10) NOT NULL DEFAULT 'pending',
+        sent_at DATETIME NOT NULL, sent_by VARCHAR(160) NOT NULL DEFAULT '', reminded TINYINT NOT NULL DEFAULT 0, remind_at DATETIME NULL, done_at DATETIME NULL,
+        UNIQUE KEY u_ym_ref (ym, ref), KEY k_ref (ref), KEY k_status (status))" . $T11);
+    foreach (["paid_on DATE NULL", "by_kind VARCHAR(10) NOT NULL DEFAULT 'admin'"] as $col) {
+        $cn = explode(' ', $col)[0];
+        $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='pay_confirm' AND COLUMN_NAME='$cn'")->fetchColumn();
+        if (!(int)$has) { try { $pdo->exec("ALTER TABLE pay_confirm ADD COLUMN $col"); } catch (PDOException $e) { if (stripos($e->getMessage(), 'Duplicate column') === false) throw $e; } }
+    }
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {

@@ -128,7 +128,7 @@ function fin_salary(string $ref, int $year): array {
         }
         $months[] = ['m' => $ym, 'st' => $st, 'base' => $base, 'add' => $otAmt, 'ded' => round($ded, 2), 'net' => round($base + $otAmt - $ded, 2), 'lines' => $lines,
             'raise' => array_values(array_filter($raises, fn($r) => substr($r['effective'], 0, 7) === $ym)),
-            'conf' => $cf ? ['at' => substr($cf['at'], 0, 16), 'by' => $cf['by_name'], 'amount' => (float)$cf['amount']] : null];
+            'conf' => $cf ? ['at' => substr($cf['at'], 0, 16), 'by' => $cf['by_name'], 'amount' => (float)$cf['amount'], 'kind' => (string)($cf['by_kind'] ?? 'admin'), 'paid' => $cf['paid_on'] ? substr($cf['paid_on'], 0, 7) : $ym] : null];
     }
     $yrs = []; $y0 = $start !== '' ? (int)substr($start, 0, 4) : (int)date('Y'); for ($y = max($y0, (int)date('Y') - 5); $y <= (int)date('Y'); $y++) $yrs[] = $y;
     return ['cur' => $cur, 'salary' => $now, 'start' => (string)($sd['startDate'] ?? ''), 'raises' => $raises, 'months' => $months, 'years' => array_reverse($yrs),
@@ -182,7 +182,8 @@ function my_fin(array $b): array {
     if ($ref !== '' && has_perm($u, 'finance.view')) { if (in_array($ref, private_hidden_for($u), true)) throw new HttpError('not_found', 404); }
     else { $ref = (string)my_staff_ref($u); if ($ref === '' || !site_on('staff', 'myhr')) return ['ok' => true, 'off' => true]; }
     $pay = fin_salary($ref, $year); /* راتب كل منسوب يظهر له دائمًا، محسوبًا من تسجيله */
-    return ['ok' => true, 'year' => $year, 'pay' => $pay, 'exp' => exp_rows($ref, $year), 'cats' => EXP_CATS];
+    $me = $ref === (string)my_staff_ref($u);
+    return ['ok' => true, 'year' => $year, 'pay' => $pay, 'exp' => exp_rows($ref, $year), 'cats' => EXP_CATS, 'signreq' => $me ? array_keys(pay_signreq_pending($ref)) : [], 'me' => $me];
 }
 /* سجل المصروفات لكل المنسوبين (الموارد البشرية) */
 function exp_list(array $b): array {
@@ -224,19 +225,34 @@ function exp_delete(array $b): array {
 }
 
 /* ============================================================ تأكيد صرف الرواتب (الإدارة العليا والموارد البشرية ومدير النظام) */
+/* كتابة توقيع استلام راتب شهر، مع شهر الصرف الفعلي ومصدر التوقيع (admin/self/system)، وإغلاق أي طلب توقيع معلّق */
+function pay_sign_put(string $ym, string $ref, float $net, string $cur, string $byEmail, string $byName, string $kind, ?string $paidYm, string $note): void {
+    $paid = ($paidYm && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string)$paidYm)) ? $paidYm . '-01' : $ym . '-01';
+    q('INSERT INTO pay_confirm (ym, ref, amount, cur, by_email, by_name, at, note, paid_on, by_kind) VALUES (?,?,?,?,?,?,?,?,?,?)
+       ON DUPLICATE KEY UPDATE amount=VALUES(amount), cur=VALUES(cur), by_email=VALUES(by_email), by_name=VALUES(by_name), at=VALUES(at), note=VALUES(note), paid_on=VALUES(paid_on), by_kind=VALUES(by_kind)',
+        [$ym, $ref, $net, $cur, $byEmail, $byName, now(), $note, $paid, $kind]);
+    q("UPDATE pay_signreq SET status='done', done_at=? WHERE ym=? AND ref=? AND status='pending'", [now(), $ym, $ref]);
+}
+/* الأشهر التي طُلب من المنسوب توقيعها ولم يوقّع بعد (مفتاح ym => سطر الطلب) */
+function pay_signreq_pending(string $ref): array { $o = []; foreach (q("SELECT ym, sent_at, reminded FROM pay_signreq WHERE ref=? AND status='pending'", [$ref])->fetchAll() as $r) $o[$r['ym']] = $r; return $o; }
 function pay_conf_rows(array $u, string $ym): array {
     $hide = private_hidden_for($u); $year = (int)substr($ym, 0, 4); $i = (int)substr($ym, 5, 2) - 1; $rows = [];
+    $req = []; foreach (q("SELECT ref, sent_at, reminded FROM pay_signreq WHERE ym=? AND status='pending'", [$ym])->fetchAll() as $rq) $req[$rq['ref']] = ['at' => substr($rq['sent_at'], 0, 16), 'reminded' => (int)$rq['reminded']];
     foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $r) {
         if (in_array($r['ref'], $hide, true)) continue;
         $s = staff_get($r['ref']); if (!$s) continue;
         if (fin_num($s['data']['salary'] ?? '') <= 0 && !q1('SELECT id FROM salary_hist WHERE ref=? LIMIT 1', [$r['ref']])) continue;
         $f = fin_salary($r['ref'], $year); $m = $f['months'][$i] ?? null; if (!$m || $m['st'] === 'none') continue;
-        $rows[] = ['ref' => $r['ref'], 'name' => staff_name($s), 'job' => (string)($s['data']['job'] ?? ''), 'entity' => (string)($s['data']['entity'] ?? ''), 'start' => (string)($s['data']['startDate'] ?? ''), 'cur' => $f['cur'], 'base' => $m['base'], 'add' => $m['add'], 'ded' => $m['ded'], 'net' => $m['net'], 'conf' => $m['conf'], 'hist' => count(fin_hist($r['ref']))];
+        $rows[] = ['ref' => $r['ref'], 'name' => staff_name($s), 'job' => (string)($s['data']['job'] ?? ''), 'entity' => (string)($s['data']['entity'] ?? ''), 'start' => (string)($s['data']['startDate'] ?? ''), 'cur' => $f['cur'], 'base' => $m['base'], 'add' => $m['add'], 'ded' => $m['ded'], 'net' => $m['net'], 'conf' => $m['conf'], 'req' => $req[$r['ref']] ?? null, 'mail' => hrp_staff_mail($r['ref']) !== '', 'hist' => count(fin_hist($r['ref']))];
     }
     usort($rows, fn($a, $b) => strcmp($a['entity'], $b['entity']) ?: strcmp($a['name'], $b['name']));
     return $rows;
 }
 function fin_ym($v): string { return preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string)$v) ? (string)$v : date('Y-m'); }
+const FIN_MN = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+function fin_mn(string $ym): string { return (FIN_MN[(int)substr($ym, 5, 2) - 1] ?? '') . ' ' . substr($ym, 0, 4); }
+const FIN_CUR_N = ['SAR' => 'ريال', 'USD' => 'دولار', 'EGP' => 'جنيه', 'IDR' => 'روبية', 'KES' => 'شلن كيني', 'PKR' => 'روبية'];
+function fin_money(float $v, string $cur): string { return number_format($v, $v == floor($v) ? 0 : 2) . ' ' . (FIN_CUR_N[$cur] ?? $cur); }
 function pay_conf_list(array $b): array {
     $u = require_perm('finance.view'); $ym = fin_ym($b['month'] ?? '');
     $months = []; for ($k = 0; $k < 14; $k++) $months[] = date('Y-m', strtotime(date('Y-m-01') . " -$k month"));
@@ -251,24 +267,20 @@ function pay_confirm(array $b): array {
     elseif ($scope === 'refs') { $refs = array_map('strval', (array)($b['refs'] ?? [])); $rows = array_values(array_filter($rows, fn($r) => in_array($r['ref'], $refs, true))); }
     elseif ($scope !== 'all') throw new HttpError('حدّد من تؤكد صرف رواتبهم');
     $mn = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'][(int)substr($ym, 5, 2) - 1] . ' ' . substr($ym, 0, 4);
-    $n = 0; $note = hrp_str($b['note'] ?? '', 300);
+    $n = 0; $note = hrp_str($b['note'] ?? '', 300); $paidYm = isset($b['paidYm']) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string)$b['paidYm']) ? (string)$b['paidYm'] : null;
     foreach ($rows as $r) {
         if ($undo) { if (!$r['conf']) continue; q('DELETE FROM pay_confirm WHERE ym=? AND ref=?', [$ym, $r['ref']]); $n++; continue; }
         if ($r['conf']) continue;
-        q('INSERT INTO pay_confirm (ym, ref, amount, cur, by_email, by_name, at, note) VALUES (?,?,?,?,?,?,?,?)', [$ym, $r['ref'], $r['net'], $r['cur'], (string)$u['email'], hrp_label($u), now(), $note]); $n++;
+        pay_sign_put($ym, $r['ref'], $r['net'], $r['cur'], (string)$u['email'], hrp_label($u), 'admin', $paidYm, $note); $n++;
         $to = hrp_staff_mail($r['ref']); if ($to) note_add($to, 'صُرف راتب ' . $mn, 'أكّدت الإدارة صرف راتبك لشهر ' . $mn . '. التفاصيل في «سجلي المالي».', '', 'ok');
     }
     if ($n) audit_log($scope === 'refs' && count($rows) === 1 ? $rows[0]['ref'] : '', $undo ? 'التراجع عن تأكيد صرف رواتب' : 'تأكيد صرف رواتب', $mn . ' · ' . $n . ' منسوب' . ($scope === 'entity' ? ' · ' . ($b['entity'] ?? '') : ($scope === 'all' ? ' · الكل' : '')), hrp_label($u));
     return ['ok' => true, 'count' => $n, 'rows' => pay_conf_rows($u, $ym)];
 }
-/* توقيع استلام الرواتب بأثر رجعي: من بداية دوام كل منسوب حتى شهر الحدّ (افتراضيًا قبل 3 أشهر، فتبقى آخر 3 أشهر بانتظار التوقيع) */
-function pay_sign_retro(array $b): array {
-    $u = require_perm('finance.view'); $hide = private_hidden_for($u);
-    $through = fin_ym($b['through'] ?? date('Y-m', strtotime(date('Y-m-01') . ' -3 month')));
+/* جوهر توقيع الرواتب بأثر رجعي — من بداية دوام كل منسوب حتى شهر الحدّ. يستدعيه زر الإدارة والتسجيل التلقائي معًا */
+function pay_sign_core(string $through, string $byEmail, string $byName, string $kind, string $note, array $hide = [], string $scope = 'all', array $refs = [], string $ent = '', bool $notify = true): array {
     if ($through > date('Y-m')) $through = date('Y-m');
-    $scope = (string)($b['scope'] ?? 'all'); $refs = array_map('strval', (array)($b['refs'] ?? [])); $ent = (string)($b['entity'] ?? '');
-    $n = 0; $people = 0;
-    $MN = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    $n = 0; $people = 0; $MN = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
     foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $row) {
         $ref = $row['ref']; if (in_array($ref, $hide, true)) continue;
         if ($scope === 'refs' && !in_array($ref, $refs, true)) continue;
@@ -276,21 +288,120 @@ function pay_sign_retro(array $b): array {
         if ($scope === 'entity' && (string)($s['data']['entity'] ?? '') !== $ent) continue;
         if (fin_num($s['data']['salary'] ?? '') <= 0 && !q1('SELECT id FROM salary_hist WHERE ref=? LIMIT 1', [$ref])) continue;
         $start = substr((string)($s['data']['startDate'] ?? ''), 0, 7); if ($start === '' || $start > $through) $start = $through;
-        $y0 = (int)substr($start, 0, 4); $y1 = (int)substr($through, 0, 4); $done = q('SELECT ym FROM pay_confirm WHERE ref=?', [$ref])->fetchAll(PDO::FETCH_COLUMN);
-        $have = array_flip($done); $first = null; $last = null; $cur = 'SAR'; $added = 0;
+        $y0 = (int)substr($start, 0, 4); $y1 = (int)substr($through, 0, 4);
+        $have = array_flip(q('SELECT ym FROM pay_confirm WHERE ref=?', [$ref])->fetchAll(PDO::FETCH_COLUMN)); $first = null; $last = null; $added = 0;
         for ($y = $y0; $y <= $y1; $y++) {
-            $f = fin_salary($ref, $y); $cur = $f['cur'];
+            $f = fin_salary($ref, $y);
             foreach ($f['months'] as $m) {
                 if ($m['st'] === 'none' || $m['m'] < $start || $m['m'] > $through || isset($have[$m['m']])) continue;
-                q('INSERT INTO pay_confirm (ym, ref, amount, cur, by_email, by_name, at, note) VALUES (?,?,?,?,?,?,?,?)', [$m['m'], $ref, $m['net'], $f['cur'], (string)$u['email'], hrp_label($u), now(), 'توقيع بأثر رجعي']);
+                pay_sign_put($m['m'], $ref, $m['net'], $f['cur'], $byEmail, $byName, $kind, null, $note);
                 $n++; $added++; if ($first === null) $first = $m['m']; $last = $m['m'];
             }
         }
-        if ($added) { $people++; $to = hrp_staff_mail($ref);
-            if ($to && $first) note_add($to, 'توقيع استلام رواتبك', 'سُجّل استلامك رواتب ' . $MN[(int)substr($first, 5, 2) - 1] . ' ' . substr($first, 0, 4) . ' حتى ' . $MN[(int)substr($last, 5, 2) - 1] . ' ' . substr($last, 0, 4) . '. تجدها في «سجلي المالي».', '', 'ok'); }
+        if ($added) { $people++;
+            if ($notify && ($to = hrp_staff_mail($ref)) && $first) note_add($to, 'توقيع استلام رواتبك', 'سُجّل استلامك رواتب ' . $MN[(int)substr($first, 5, 2) - 1] . ' ' . substr($first, 0, 4) . ' حتى ' . $MN[(int)substr($last, 5, 2) - 1] . ' ' . substr($last, 0, 4) . '. تجدها في «سجلي المالي».', '', 'ok'); }
     }
-    if ($n) audit_log($scope === 'refs' && count($refs) === 1 ? $refs[0] : '', 'توقيع استلام رواتب بأثر رجعي', 'حتى ' . $through . ' · ' . $people . ' منسوب · ' . $n . ' شهر' . ($scope === 'entity' ? ' · ' . $ent : ($scope === 'all' ? ' · الكل' : '')), hrp_label($u));
-    return ['ok' => true, 'count' => $n, 'people' => $people, 'through' => $through, 'rows' => pay_conf_rows($u, fin_ym($b['month'] ?? ''))];
+    return ['count' => $n, 'people' => $people, 'through' => $through];
+}
+/* زر الإدارة: توقيع استلام الرواتب بأثر رجعي (افتراضيًا حتى قبل 3 أشهر، فتبقى آخر ثلاثة بانتظار التوقيع) */
+function pay_sign_retro(array $b): array {
+    $u = require_perm('finance.view');
+    $through = fin_ym($b['through'] ?? date('Y-m', strtotime(date('Y-m-01') . ' -3 month')));
+    $scope = (string)($b['scope'] ?? 'all'); $refs = array_map('strval', (array)($b['refs'] ?? [])); $ent = (string)($b['entity'] ?? '');
+    $r = pay_sign_core($through, (string)$u['email'], hrp_label($u), 'admin', 'توقيع بأثر رجعي', private_hidden_for($u), $scope, $refs, $ent, true);
+    if ($r['count']) audit_log($scope === 'refs' && count($refs) === 1 ? $refs[0] : '', 'توقيع استلام رواتب بأثر رجعي', 'حتى ' . $r['through'] . ' · ' . $r['people'] . ' منسوب · ' . $r['count'] . ' شهر' . ($scope === 'entity' ? ' · ' . $ent : ($scope === 'all' ? ' · الكل' : '')), hrp_label($u));
+    return ['ok' => true, 'count' => $r['count'], 'people' => $r['people'], 'through' => $r['through'], 'rows' => pay_conf_rows($u, fin_ym($b['month'] ?? ''))];
+}
+/* التسجيل التلقائي مرة واحدة: يوقّع للكل من تاريخ الانضمام حتى قبل ثلاثة أشهر، باسم النظام وبلا إشعارات (لا يُرسل للسابقين) */
+function pay_backfill_once(): void {
+    if (kv_get('pay_backfill_v1') !== null) return;
+    kv_put('pay_backfill_v1', now(), 0);
+    try {
+        $r = pay_sign_core(date('Y-m', strtotime(date('Y-m-01') . ' -3 month')), '', 'النظام (تسجيل تلقائي بأثر رجعي)', 'system', 'توقيع تلقائي بأثر رجعي عند تحديث المنصة', [], 'all', [], '', false);
+        if ($r['count']) audit_log('', 'توقيع استلام رواتب بأثر رجعي (تلقائي)', 'حتى ' . $r['through'] . ' · ' . $r['people'] . ' منسوب · ' . $r['count'] . ' شهر · النظام', 'النظام');
+    } catch (Throwable $e) { error_log('[bonyan-hr] backfill ' . $e->getMessage()); }
+}
+
+/* ======================================= طلب توقيع استلام الراتب من المنسوب + بريد أنيق + تذكير بعد ٢٤ ساعة */
+/* بريد احترافي بشعار بنيان: صافي راتب الشهر، وإجمالي ما استلمه هذا العام، وزر يفتح «سجلي المالي» للتوقيع */
+function pay_signreq_mail(string $ref, string $ym, bool $reminder): bool {
+    $to = hrp_staff_mail($ref); if ($to === '') return false;
+    $s = staff_get($ref); if (!$s) return false;
+    $year = (int)substr($ym, 0, 4); $f = fin_salary($ref, $year); $i = (int)substr($ym, 5, 2) - 1;
+    $m = $f['months'][$i] ?? null; if (!$m || $m['st'] === 'none') return false;
+    $cur = $f['cur']; $ml = fin_mn($ym);
+    $recv = 0; foreach ($f['months'] as $mm) if (!empty($mm['conf'])) $recv += $mm['net'];
+    $title = ($reminder ? 'تذكير · ' : '') . 'توقيع استلام راتب ' . $ml;
+    $body = mx_rows([
+        ['المنسوب', staff_name($s)],
+        ['الجهة', (string)($s['data']['entity'] ?? '')],
+        ['الشهر', $ml],
+        ['صافي راتب الشهر', fin_money($m['net'], $cur), true],
+        ['إجمالي ما استلمته في ' . $year, fin_money($recv, $cur), true],
+        ['حالة التوقيع', 'بانتظار تأكيدك'],
+    ], 'راتب ' . $ml)
+        . mx_note('افتح «سجلي المالي ← الرواتب» وستجد زر «أؤكد استلام الراتب» أمام الشهر. ضغطة واحدة تُسجّل توقيعك إلكترونيًا بالتاريخ والوقت، وتصل الموارد البشرية مباشرة.', 'gold', 'كيف أوقّع؟')
+        . ($reminder ? mx_note('هذا تذكير تلقائي؛ مضى أكثر من يوم على طلب التوقيع ولم يُسجَّل بعد.', 'amber', 'تذكير') : '');
+    $html = mx_page(['eyebrow' => 'منصة الموارد البشرية · الرواتب', 'title' => $title, 'tone' => 'gold', 'icon' => '✍', 'badge' => $reminder ? 'تذكير' : 'بانتظار توقيعك',
+        'lead' => 'يرجى تأكيد استلامك راتب شهر ' . $ml . '؛ التوقيع يتم من المنصة بضغطة واحدة.', 'pre' => 'تأكيد استلام راتب ' . $ml,
+        'body' => $body, 'buttons' => [[mx_url('myhr'), 'تأكيد استلام الراتب', 'gold'], [mx_url('myhr'), 'فتح «سجلي المالي»', 'ghost']]]);
+    try { send_mail($to, $title, $html, 'يرجى تأكيد استلامك راتب ' . $ml . ' من «سجلي المالي»: ' . mx_url('myhr'), 'Bonyan HR', logo_inline()); return true; }
+    catch (Throwable $e) { error_log('[bonyan-hr] signreq mail ' . $e->getMessage()); return false; }
+}
+/* الإدارة ترسل طلب توقيع لمنسوب أو جهة أو الكل */
+function pay_signreq_send(array $b): array {
+    $u = require_perm('finance.view'); $ym = fin_ym($b['month'] ?? '');
+    if ($ym > date('Y-m')) throw new HttpError('لا يمكن طلب توقيع شهر لم يأتِ بعد');
+    $scope = (string)($b['scope'] ?? ''); $rows = pay_conf_rows($u, $ym);
+    if ($scope === 'entity') { $e = (string)($b['entity'] ?? ''); $rows = array_values(array_filter($rows, fn($r) => $r['entity'] === $e)); }
+    elseif ($scope === 'refs') { $refs = array_map('strval', (array)($b['refs'] ?? [])); $rows = array_values(array_filter($rows, fn($r) => in_array($r['ref'], $refs, true))); }
+    elseif ($scope !== 'all') throw new HttpError('حدّد لمن تُرسل طلب التوقيع');
+    $n = 0; $noMail = 0; $signed = 0; $remindAt = date('Y-m-d H:i:s', strtotime('+1 day')); $send = [];
+    foreach ($rows as $r) {
+        if ($r['conf']) { $signed++; continue; }
+        if (empty($r['mail'])) { $noMail++; continue; }
+        $ex = q1("SELECT id FROM pay_signreq WHERE ym=? AND ref=?", [$ym, $r['ref']]);
+        if ($ex) q("UPDATE pay_signreq SET status='pending', sent_at=?, sent_by=?, reminded=0, remind_at=?, done_at=NULL WHERE id=?", [now(), hrp_label($u), $remindAt, $ex['id']]);
+        else q("INSERT INTO pay_signreq (ym, ref, status, sent_at, sent_by, reminded, remind_at) VALUES (?,?, 'pending', ?,?,0,?)", [$ym, $r['ref'], now(), hrp_label($u), $remindAt]);
+        $to = hrp_staff_mail($r['ref']); if ($to) note_add($to, 'طلب توقيع استلام راتب ' . fin_mn($ym), 'يرجى تأكيد استلامك راتب ' . fin_mn($ym) . ' من «سجلي المالي ← الرواتب».', '', 'warn');
+        $send[] = $r['ref']; $n++;
+    }
+    if ($n) { $refsCopy = $send; defer_after(function () use ($refsCopy, $ym) { foreach ($refsCopy as $rf) pay_signreq_mail($rf, $ym, false); });
+        audit_log($scope === 'refs' && $n === 1 ? $send[0] : '', 'إرسال طلب توقيع استلام الراتب', fin_mn($ym) . ' · ' . $n . ' منسوب' . ($scope === 'entity' ? ' · ' . ($b['entity'] ?? '') : ($scope === 'all' ? ' · الكل' : '')), hrp_label($u)); }
+    return ['ok' => true, 'count' => $n, 'noMail' => $noMail, 'signed' => $signed, 'rows' => pay_conf_rows($u, $ym)];
+}
+/* المنسوب يؤكد استلام راتب شهر بنفسه (توقيع إلكتروني)، أو يتراجع عن توقيعٍ سجّله هو */
+function pay_self_sign(array $b): array {
+    $u = hrp_me(); $ref = (string)my_staff_ref($u);
+    if ($ref === '' || !site_on('staff', 'myhr')) throw new HttpError('غير متاح', 403);
+    $ym = fin_ym($b['month'] ?? ''); if ($ym > date('Y-m')) throw new HttpError('لا يمكن تأكيد استلام راتب شهر لم يأتِ بعد');
+    $year = (int)substr($ym, 0, 4); $f = fin_salary($ref, $year); $i = (int)substr($ym, 5, 2) - 1;
+    $m = $f['months'][$i] ?? null; if (!$m || $m['st'] === 'none') throw new HttpError('لا يوجد راتب لهذا الشهر');
+    $nm = staff_name(staff_get($ref));
+    if (!empty($b['undo'])) {
+        $cf = q1('SELECT by_kind FROM pay_confirm WHERE ym=? AND ref=?', [$ym, $ref]);
+        if (!$cf) return ['ok' => true, 'year' => $year, 'pay' => fin_salary($ref, $year)];
+        if ((string)($cf['by_kind'] ?? '') !== 'self') throw new HttpError('لا يمكنك التراجع عن توقيعٍ سجّلته الإدارة');
+        q('DELETE FROM pay_confirm WHERE ym=? AND ref=?', [$ym, $ref]);
+        audit_log($ref, 'تراجع المنسوب عن توقيع استلام راتب', fin_mn($ym), $nm);
+        return ['ok' => true, 'year' => $year, 'pay' => fin_salary($ref, $year)];
+    }
+    if (!$m['conf']) {
+        pay_sign_put($ym, $ref, $m['net'], $f['cur'], (string)$u['email'], $nm, 'self', null, 'وقّع المنسوب الاستلام بنفسه');
+        audit_log($ref, 'توقيع المنسوب استلام راتبه', fin_mn($ym) . ' · ' . fin_money($m['net'], $f['cur']), $nm);
+    }
+    return ['ok' => true, 'year' => $year, 'pay' => fin_salary($ref, $year)];
+}
+/* تذكير تلقائي بعد ٢٤ ساعة لمن لم يوقّع (يعمل من المهمة اليومية أو مع زيارات المنصة، بحدّ مرة كل ٥ دقائق) */
+function pay_signreq_tick(): void {
+    if (kv_get('psr_tick') !== null) return; kv_put('psr_tick', now(), 300);
+    $due = q("SELECT ym, ref FROM pay_signreq WHERE status='pending' AND reminded=0 AND remind_at IS NOT NULL AND remind_at <= ? ORDER BY remind_at LIMIT 40", [now()])->fetchAll();
+    foreach ($due as $d) {
+        if (q1('SELECT id FROM pay_confirm WHERE ym=? AND ref=?', [$d['ym'], $d['ref']])) { q("UPDATE pay_signreq SET status='done', done_at=? WHERE ym=? AND ref=?", [now(), $d['ym'], $d['ref']]); continue; }
+        q("UPDATE pay_signreq SET reminded=1 WHERE ym=? AND ref=?", [$d['ym'], $d['ref']]);
+        try { pay_signreq_mail($d['ref'], $d['ym'], true); $to = hrp_staff_mail($d['ref']); if ($to) note_add($to, 'تذكير: توقيع استلام راتب ' . fin_mn($d['ym']), 'ما زال بانتظار تأكيد استلامك راتب ' . fin_mn($d['ym']) . '.', '', 'warn'); }
+        catch (Throwable $e) { error_log('[bonyan-hr] signreq remind ' . $e->getMessage()); }
+    }
 }
 /* سجل الراتب: «من شهر كذا الراتب كذا» — يصحح الرواتب السابقة ويحدد القادمة */
 function sal_hist_get(array $b): array {
