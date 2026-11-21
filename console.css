@@ -2435,7 +2435,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* كشف توقيع استلام الرواتب */
 .sigwrap{width:100%;overflow:visible}
 .sigtab{width:100%;border-collapse:collapse;table-layout:auto}
-.sigtab th,.sigtab td{padding:10px 9px;text-align:right;border-bottom:1px solid var(--line-2);vertical-align:middle}
+.sigtab th,.sigtab td{padding:9px 7px;text-align:right;border-bottom:1px solid var(--line-2);vertical-align:middle}
 .sigtab th.acth{width:1%}
 .sigtab thead th{font-size:12.5px;color:var(--mute);font-weight:800;background:var(--soft);white-space:nowrap;position:sticky;top:0;z-index:1}
 .sigtab td.ck,.sigtab th.ck{width:38px;text-align:center}
@@ -2444,22 +2444,36 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .sigtab tr.done{background:color-mix(in srgb,var(--c-ok) 5%,transparent)}
 .sigtab tbody tr:hover{background:var(--soft)}
 .sigtab input[type=checkbox]{width:18px;height:18px;accent-color:var(--navy);cursor:pointer}
-.sigtab .cperson{max-width:210px}
+.sigtab .cperson{max-width:150px}
 .sigtab .person{align-items:center;background:none;border:0;cursor:pointer;font:inherit;color:inherit;padding:4px 6px;margin:-4px -6px;border-radius:12px;display:flex;gap:9px;text-align:start;width:100%;transition:background .12s}
 .sigtab .person.click:hover{background:var(--soft)}
 .sigtab .person.click:hover .pmeta b{text-decoration:underline;text-underline-offset:2px}
 .pmeta{min-width:0}.pmeta b{display:block;font-size:13.5px;font-weight:700;line-height:1.4}
-.entpill{display:inline-block;font-size:11.5px;font-weight:700;color:var(--ink);background:var(--well);border-radius:999px;padding:3px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+/* ===== وسوم موحّدة الشكل (مستطيل دائري الأطراف): الجهة بشعارها، الصفة، التوقيع ===== */
+.rchip{display:inline-flex;align-items:center;gap:5px;max-width:100%;font-size:11.5px;font-weight:700;line-height:1.3;color:var(--ink);background:var(--well);border:1.5px solid var(--line);border-radius:10px;padding:4px 8px;vertical-align:middle}
+.rchip .rc-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rchip .i{width:14px;height:14px;flex:none}
+.rchip .elg{width:18px;height:18px;flex:none;border-radius:6px;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line-2)}
+.rchip .elg img{width:100%;height:100%;object-fit:contain}
+.rchip .elg>span{display:inline-flex;width:100%;height:100%}
+.rchip .elg .i{width:12px;height:12px;color:var(--mute)}
+.rchip.ghost{background:transparent;border-color:var(--line-2);color:var(--mute);font-weight:600}
+.rchip.ent{background:var(--panel);box-shadow:inset 3px 0 0 color-mix(in srgb,var(--ec,var(--line-2)) 85%,transparent);padding-inline-start:7px}
+.sigtab td .rchip.ent{max-width:140px}
+.rc-dash{color:var(--faint)}
+.sigtab .rn,.sigtab th.rn{width:28px}
+.sigtab td.ck,.sigtab th.ck{width:30px}
+.entpill{display:inline-block;font-size:11.5px;font-weight:700;color:var(--ink);background:var(--well);border-radius:11px;padding:4px 11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
 .sigtab .sareq{display:block;font-size:11px;color:var(--gold-ink);font-weight:700;margin-top:1px}
 .sigcell{min-width:126px}
-.sig.ok{display:flex;flex-direction:column;gap:3px}
-/* ختم التوقيع الإلكتروني */
-.sig .sigmark{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:900;letter-spacing:.2px;color:var(--ok);background:var(--ok-w);border:1.5px solid color-mix(in srgb,var(--c-ok) 55%,transparent);border-radius:8px;padding:4px 10px;width:fit-content;box-shadow:0 1px 0 color-mix(in srgb,var(--c-ok) 22%,transparent) inset;text-transform:none}
-.sig.ok .sigmark{transform:rotate(-1.5deg)}
-.sig .sigmark .i{width:15px;height:15px}
-.sig.ok small{font-size:11px;color:var(--faint)}
-.sig.wait{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--warn)}
-.sig.wait i{width:9px;height:9px;border-radius:50%;background:var(--c-warn);display:inline-block}
+.sig.ok,.sig.req{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.sig.ok small,.sig.req small{font-size:11px;color:var(--faint)}
+/* ختم التوقيع الإلكتروني — بنفس نمط الوسوم مع صبغة الختم */
+.rchip.stamp.ok{font-weight:900;color:var(--ok);border-color:color-mix(in srgb,var(--c-ok) 48%,transparent);background:linear-gradient(180deg,color-mix(in srgb,var(--c-ok) 15%,var(--panel)),color-mix(in srgb,var(--c-ok) 7%,var(--panel)));box-shadow:0 1px 3px color-mix(in srgb,var(--c-ok) 18%,transparent)}
+.rchip.stamp.ok .i{width:17px;height:17px;padding:2.5px;border-radius:50%;background:var(--c-ok);color:#fff}
+.rchip.req{color:var(--gold-ink);font-weight:800;border-color:color-mix(in srgb,var(--gold) 45%,transparent);background:var(--gold-wash)}
+.rchip.req .i{color:var(--gold-ink)}
+.rchip.wait{color:var(--warn);font-weight:700;border-color:color-mix(in srgb,var(--c-warn) 40%,transparent);background:color-mix(in srgb,var(--c-warn) 12%,transparent)}
 .sigtab .pcacts{display:flex;gap:6px;align-items:center;justify-content:flex-end;white-space:nowrap}
 @media(max-width:720px){.sigtab .dn2{display:none}}
 .salbox{display:inline-flex;flex-direction:column;align-items:flex-start}

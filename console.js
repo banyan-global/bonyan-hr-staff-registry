@@ -4784,8 +4784,8 @@ function paySignSection() {
       return '<tr' + (r.conf ? ' class="done"' : (r.req ? ' class="reqd"' : '')) + '>' + (showCk ? '<td class="ck">' + (!r.conf ? '<input type="checkbox" data-pck="' + esc(r.ref) + '"' + (PCF.sel[r.ref] ? ' checked' : '') + ' aria-label="تحديد ' + esc(r.name) + '">' : '') + '</td>' : '') +
         '<td class="rn">' + (ix + 1) + '</td>' +
         '<td class="cperson"><button type="button" class="person click" data-pstat="' + esc(r.ref) + '" title="عرض بياناته وإحصاءاته">' + (s ? av(s) : tile('slate', 'user')) + '<span class="pmeta"><b>' + esc(r.name) + '</b></span></button></td>' +
-        '<td data-l="الصفة"><span class="jobcell">' + esc(r.job || '—') + '</span></td>' +
-        '<td data-l="الجهة"><span class="entpill">' + esc(r.entity || '—') + '</span></td>' +
+        '<td data-l="الصفة">' + (r.job ? '<span class="rchip ghost"><span class="rc-t">' + esc(r.job) + '</span></span>' : '<span class="rc-dash">—</span>') + '</td>' +
+        '<td data-l="الجهة"><span class="rchip ent"' + (s && s.ent && s.ent.c ? ' style="--ec:' + s.ent.c + '"' : '') + '><span class="elg">' + ((s && s.ent && elogo(s.ent)) || ic('building')) + '</span><span class="rc-t">' + esc((s && s.ent && s.ent.n) || r.entity || '—') + '</span></span></td>' +
         '<td class="num" data-l="صافي الراتب"><div class="salbox"><b>' + fm(r.net) + '</b> <small>' + curL(r.cur) + '</small>' + eq + '</div></td>' +
         '<td class="sigcell" data-l="التوقيع">' + pcSig(r) + '</td>' +
         '<td class="acts2"><div class="pcacts">' + (r.conf ? (sys ? '<button class="ib" data-pcundo="' + esc(r.ref) + '" aria-label="إلغاء التوقيع" title="إلغاء التوقيع">' + ic('refresh') + '</button>' : '') : (future ? '' : (sys ? '<button class="btn sm goldb" data-pcone="' + esc(r.ref) + '">' + ic('check') + 'توقيع</button>' : '') + (can('pay') ? (r.mail ? '<button class="ib ibsend" data-pcsend="' + esc(r.ref) + '" aria-label="إرسال طلب توقيع" title="' + (r.req ? 'إعادة إرسال طلب التوقيع بالبريد' : 'إرسال طلب توقيع للمنسوب بالبريد') + '">' + ic('bell') + '</button>' : '<span class="ib off" title="لا بريد مسجّل للمنسوب">' + ic('bell') + '</span>') : ''))) +
@@ -4794,10 +4794,10 @@ function paySignSection() {
   return head + kp + bar + pn('emerald', 'check', 'كشف توقيع الاستلام · ' + mlab, nq(rows.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا'), acts, '<div class="pb">' + tb + '</div>');
 }
 function pcSig(r) {
-  if (r.conf) { var who = r.conf.kind === 'self' ? 'وقّعه المنسوب' : r.conf.kind === 'system' ? 'تلقائي (النظام)' : 'أكّده ' + esc(r.conf.by); var paid = r.conf.paid && r.conf.paid !== PCF.month ? ' · صُرف في ' + mName(r.conf.paid) : '';
-    return '<div class="sig ok"><span class="sigmark">' + ic('check') + 'مُوقَّع إلكترونيًا</span><small>' + who + ' · ' + fdx(pdate(r.conf.at), { day: 'numeric', month: 'short', year: 'numeric' }) + paid + '</small></div>'; }
-  if (r.req) return '<div class="sig req"><span class="sigmark">' + ic('bell') + 'بانتظار توقيع المنسوب</span><small>أُرسل الطلب ' + fdx(pdate(r.req.at), { day: 'numeric', month: 'short' }) + (r.req.reminded ? ' · ذُكِّر' : '') + '</small></div>';
-  return '<span class="sig wait"><i></i>بانتظار التوقيع</span>';
+  if (r.conf) { var who = r.conf.kind === 'self' ? 'وقّعه المنسوب' : r.conf.kind === 'system' ? 'سُجّل تلقائيًا' : 'أكّده ' + esc(r.conf.by); var paid = r.conf.paid && r.conf.paid !== PCF.month ? ' · صُرف في ' + mName(r.conf.paid) : '';
+    return '<div class="sig ok"><span class="rchip stamp ok">' + ic('check') + 'مُوقَّع إلكترونيًا</span><small>' + who + ' · ' + fdx(pdate(r.conf.at), { day: 'numeric', month: 'short', year: 'numeric' }) + paid + '</small></div>'; }
+  if (r.req) return '<div class="sig req"><span class="rchip req">' + ic('bell') + 'بانتظار توقيع المنسوب</span><small>أُرسل الطلب ' + fdx(pdate(r.req.at), { day: 'numeric', month: 'short' }) + (r.req.reminded ? ' · ذُكِّر' : '') + '</small></div>';
+  return '<span class="rchip wait">' + ic('clock') + 'بانتظار التوقيع</span>';
 }
 /* بيانات المنسوب وإحصاءاته المالية عند الضغط على اسمه */
 function payPersonDrawer(ref) {
