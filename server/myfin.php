@@ -259,7 +259,7 @@ function pay_conf_list(array $b): array {
     return ['ok' => true, 'month' => $ym, 'months' => $months, 'rows' => pay_conf_rows($u, $ym)];
 }
 function pay_confirm(array $b): array {
-    $u = require_perm('finance.view'); $ym = fin_ym($b['month'] ?? '');
+    $u = require_perm('settings.manage'); $ym = fin_ym($b['month'] ?? ''); /* التوقيع نيابةً عن المنسوب لحساب النظام فقط */
     if ($ym > date('Y-m')) throw new HttpError('لا يمكن تأكيد صرف شهر لم يأتِ بعد');
     $scope = (string)($b['scope'] ?? ''); $undo = !empty($b['undo']);
     $rows = pay_conf_rows($u, $ym);
@@ -305,7 +305,7 @@ function pay_sign_core(string $through, string $byEmail, string $byName, string 
 }
 /* زر الإدارة: توقيع استلام الرواتب بأثر رجعي (افتراضيًا حتى قبل 3 أشهر، فتبقى آخر ثلاثة بانتظار التوقيع) */
 function pay_sign_retro(array $b): array {
-    $u = require_perm('finance.view');
+    $u = require_perm('settings.manage'); /* التوقيع بأثر رجعي لحساب النظام فقط */
     $through = fin_ym($b['through'] ?? date('Y-m', strtotime(date('Y-m-01') . ' -3 month')));
     $scope = (string)($b['scope'] ?? 'all'); $refs = array_map('strval', (array)($b['refs'] ?? [])); $ent = (string)($b['entity'] ?? '');
     $r = pay_sign_core($through, (string)$u['email'], hrp_label($u), 'admin', 'توقيع بأثر رجعي', private_hidden_for($u), $scope, $refs, $ent, true);
@@ -330,14 +330,12 @@ function pay_signreq_mail(string $ref, string $ym, bool $reminder): bool {
     $year = (int)substr($ym, 0, 4); $f = fin_salary($ref, $year); $i = (int)substr($ym, 5, 2) - 1;
     $m = $f['months'][$i] ?? null; if (!$m || $m['st'] === 'none') return false;
     $cur = $f['cur']; $ml = fin_mn($ym);
-    $recv = 0; foreach ($f['months'] as $mm) if (!empty($mm['conf'])) $recv += $mm['net'];
     $title = ($reminder ? 'تذكير · ' : '') . 'توقيع استلام راتب ' . $ml;
     $body = mx_rows([
         ['المنسوب', staff_name($s)],
         ['الجهة', (string)($s['data']['entity'] ?? '')],
         ['الشهر', $ml],
         ['صافي راتب الشهر', fin_money($m['net'], $cur), true],
-        ['إجمالي ما استلمته في ' . $year, fin_money($recv, $cur), true],
         ['حالة التوقيع', 'بانتظار تأكيدك'],
     ], 'راتب ' . $ml)
         . mx_note('افتح «سجلي المالي ← الرواتب» وستجد زر «أؤكد استلام الراتب» أمام الشهر. ضغطة واحدة تُسجّل توقيعك إلكترونيًا بالتاريخ والوقت، وتصل الموارد البشرية مباشرة.', 'gold', 'كيف أوقّع؟')

@@ -2379,7 +2379,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .paycur.insheet{grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr))}
 .elg.lg{width:46px;height:46px}
 .elg.lg img{width:100%;height:100%;object-fit:contain}
-#pcLayer, #shLayer, #csLayer, #peLayer, #oeLayer, #exLayer { position: fixed; inset: 0; z-index: 92; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); }
+#pcLayer, #shLayer, #csLayer, #peLayer, #oeLayer, #exLayer, #psLayer { position: fixed; inset: 0; z-index: 92; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); }
 /* الهيكل التنظيمي */
 .orgx{display:flex;flex-direction:column;align-items:center;gap:0;padding:8px 0 4px}
 .orgx .otier{display:flex;justify-content:center;flex-wrap:wrap;gap:16px;width:100%}
@@ -2433,8 +2433,10 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 @media (max-width:560px){.otop::before,.otop .operson::before{display:none}.operson{min-width:0;width:100%}}
 .sareq{display:block;font-size:11px;font-weight:700;color:var(--gold);margin-top:2px}
 /* كشف توقيع استلام الرواتب */
-.sigtab{width:100%;border-collapse:collapse}
-.sigtab th,.sigtab td{padding:12px 14px;text-align:right;border-bottom:1px solid var(--line-2);vertical-align:middle}
+.sigwrap{width:100%;overflow:visible}
+.sigtab{width:100%;border-collapse:collapse;table-layout:auto}
+.sigtab th,.sigtab td{padding:10px 9px;text-align:right;border-bottom:1px solid var(--line-2);vertical-align:middle}
+.sigtab th.acth{width:1%}
 .sigtab thead th{font-size:12.5px;color:var(--mute);font-weight:800;background:var(--soft);white-space:nowrap;position:sticky;top:0;z-index:1}
 .sigtab td.ck,.sigtab th.ck{width:38px;text-align:center}
 .sigtab td.rn,.sigtab th.rn{width:34px;color:var(--faint);text-align:center;font-variant-numeric:tabular-nums}
@@ -2442,21 +2444,27 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .sigtab tr.done{background:color-mix(in srgb,var(--c-ok) 5%,transparent)}
 .sigtab tbody tr:hover{background:var(--soft)}
 .sigtab input[type=checkbox]{width:18px;height:18px;accent-color:var(--navy);cursor:pointer}
-.sigtab .person{align-items:center}
-.pmeta{min-width:0}.pmeta b{display:block;font-size:14px;font-weight:700}.pmeta span{display:block;font-size:12px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
-.entpill{display:inline-block;font-size:12px;font-weight:700;color:var(--ink);background:var(--well);border-radius:999px;padding:3px 11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+.sigtab .cperson{max-width:210px}
+.sigtab .person{align-items:center;background:none;border:0;cursor:pointer;font:inherit;color:inherit;padding:4px 6px;margin:-4px -6px;border-radius:12px;display:flex;gap:9px;text-align:start;width:100%;transition:background .12s}
+.sigtab .person.click:hover{background:var(--soft)}
+.sigtab .person.click:hover .pmeta b{text-decoration:underline;text-underline-offset:2px}
+.pmeta{min-width:0}.pmeta b{display:block;font-size:13.5px;font-weight:700;line-height:1.4}
+.entpill{display:inline-block;font-size:11.5px;font-weight:700;color:var(--ink);background:var(--well);border-radius:999px;padding:3px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
 .sigtab .sareq{display:block;font-size:11px;color:var(--gold-ink);font-weight:700;margin-top:1px}
-.sigcell{min-width:160px}
+.sigcell{min-width:126px}
 .sig.ok{display:flex;flex-direction:column;gap:3px}
-.sig .sigmark{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:800;color:var(--ok);background:var(--ok-w);border:1px solid color-mix(in srgb,var(--c-ok) 32%,transparent);border-radius:999px;padding:3px 11px;width:fit-content}
-.sig .sigmark .i{width:14px;height:14px}
+/* ختم التوقيع الإلكتروني */
+.sig .sigmark{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:900;letter-spacing:.2px;color:var(--ok);background:var(--ok-w);border:1.5px solid color-mix(in srgb,var(--c-ok) 55%,transparent);border-radius:8px;padding:4px 10px;width:fit-content;box-shadow:0 1px 0 color-mix(in srgb,var(--c-ok) 22%,transparent) inset;text-transform:none}
+.sig.ok .sigmark{transform:rotate(-1.5deg)}
+.sig .sigmark .i{width:15px;height:15px}
 .sig.ok small{font-size:11px;color:var(--faint)}
 .sig.wait{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--warn)}
 .sig.wait i{width:9px;height:9px;border-radius:50%;background:var(--c-warn);display:inline-block}
 .sigtab .pcacts{display:flex;gap:6px;align-items:center;justify-content:flex-end;white-space:nowrap}
 @media(max-width:720px){.sigtab .dn2{display:none}}
 .salbox{display:inline-flex;flex-direction:column;align-items:flex-start}
-@media(max-width:640px){
+.sigtab .btn.sm{padding:5px 10px;font-size:12.5px;white-space:nowrap}
+@media(max-width:860px){
   .sigtab, .sigtab tbody, .sigtab tr, .sigtab td{display:block;width:auto}
   .sigtab thead{display:none}
   .sigtab tr{position:relative;border:1px solid var(--line);border-radius:16px;margin-bottom:10px;padding:12px 14px 10px;background:var(--panel)}
@@ -2541,6 +2549,16 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .ledtab tfoot td{border-radius:14px}
 }
 .fhint{display:block;font-size:11.5px;color:var(--mute);margin-top:4px;line-height:1.6}
+
+/* ===== بطاقة بيانات المنسوب وإحصاءاته (من كشف التوقيع) ===== */
+.ps-info{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px;margin-bottom:16px}
+.ps-r{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-2);font-size:13px}
+.ps-r span{color:var(--mute)}.ps-r b{color:var(--ink);font-weight:800;text-align:left}
+.ps-k{margin-bottom:16px}
+.ps-sec{font-size:13.5px;font-weight:800;color:var(--ink);margin:8px 0 10px;padding-top:6px;border-top:1px dashed var(--line-2)}
+.ps-rc{max-height:46vh;overflow:auto;margin:-2px}
+.ps-rc .rcpt-act{display:none}
+@media(max-width:560px){.ps-info{grid-template-columns:1fr}}
 /* ===== سجل الإصدارات ===== */
 #relLayer,#rsLayer{position:fixed;inset:0;z-index:92;display:grid;place-items:center;padding:24px 16px}
 .rel-wrap{display:flex;flex-direction:column;gap:22px;margin-top:14px}
