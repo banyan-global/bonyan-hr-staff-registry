@@ -4444,7 +4444,7 @@ function finReceiptsH(p, M, sel, sreq, me) {
     return '<li class="rcpt ' + st[0] + (seln ? ' sel' : '') + '"><button type="button" class="rcpt-main" data-fm="' + m.i + '" aria-pressed="' + seln + '">' +
       '<span class="rcpt-mo"><b>' + mName(m.m) + '</b><small>' + m.m.slice(0, 4) + '</small></span>' +
       '<span class="rcpt-amt"><b>' + fm(m.net) + '</b> <small>' + c + '</small>' + eq + '</span>' +
-      '<span class="rcpt-st ' + st[0] + '"><span class="rcpt-sm">' + st[1] + st[2] + '</span><small>' + st[3] + '</small></span></button>' +
+      '<span class="rcpt-st ' + st[0] + '">' + (m.conf ? '<span class="rcstamp">' + ic('check') + '<span class="rcstamp-t"><b>' + st[2] + '</b><small>' + st[3] + '</small></span></span>' : '<span class="rcpt-sm">' + st[1] + st[2] + '</span><small>' + st[3] + '</small>') + '</span></button>' +
       '<span class="rcpt-act">' + act + '</span></li>';
   }).join('') + '</ul>';
 }
