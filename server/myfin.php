@@ -136,11 +136,12 @@ function fin_salary(string $ref, int $year): array {
 }
 
 /* ============================================================ المصروفات */
-const EXP_CATS = ['ticket' => 'التذاكر والسفر', 'med' => 'العلاج', 'dues' => 'المستحقات والبدلات', 'loan' => 'السلف', 'train' => 'التدريب والتطوير',
-    'house' => 'السكن', 'gov' => 'رسوم حكومية وتأشيرات', 'tools' => 'أجهزة واشتراكات عمل', 'reward' => 'مكافآت وحوافز', 'other' => 'أخرى'];
+const EXP_CATS = ['ticket' => 'تذاكر سفر', 'med' => 'العلاج', 'visa' => 'تأشيرة وإقامة', 'other' => 'مصاريف أخرى'];
+/* توحيد التصنيفات القديمة إلى الأربعة المعتمدة */
+function exp_cat_map(string $c): string { return in_array($c, ['ticket', 'med', 'visa'], true) ? $c : ($c === 'gov' ? 'visa' : 'other'); }
 function exp_row(array $e): array {
     $s = staff_get($e['ref']);
-    return ['id' => 'M' . $e['id'], 'src' => 'hr', 'ref' => $e['ref'], 'name' => $s ? staff_name($s) : $e['ref'], 'day' => $e['day'], 'cat' => $e['cat'], 'dir' => $e['dir'],
+    return ['id' => 'M' . $e['id'], 'src' => 'hr', 'ref' => $e['ref'], 'name' => $s ? staff_name($s) : $e['ref'], 'day' => $e['day'], 'cat' => exp_cat_map($e['cat']), 'dir' => $e['dir'],
         'amount' => (float)$e['amount'], 'cur' => $e['cur'], 'title' => $e['title'], 'note' => $e['note'], 'no' => $e['req_no'], 'pend' => false, 'by' => $e['created_by']];
 }
 /* ما يُستخرج من الطلبات: المعتمدة تُحتسب، والتي قيد الاعتماد تظهر دون أن تُجمع */
@@ -162,6 +163,7 @@ function exp_from_requests(?string $ref, int $year): array {
         elseif ($r['type'] === 'train' && ($a = (float)($d['cost'] ?? 0)) > 0)
             $x = ['cat' => 'train', 'dir' => 'out', 'amount' => $a, 'cur' => $sc, 'title' => 'برنامج تدريبي: ' . ($d['program'] ?? ''), 'note' => (string)($d['provider'] ?? '')];
         if (!$x) continue;
+        $x['cat'] = exp_cat_map($x['cat']);
         $o[] = $x + ['id' => 'R' . $r['no'], 'src' => 'req', 'ref' => $r['ref'], 'name' => $s ? staff_name($s) : $r['ref'], 'day' => $day, 'no' => $r['no'], 'pend' => $pend, 'by' => ''];
     }
     return $o;

@@ -2585,6 +2585,16 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .rcstamp-t b{font-size:13px;font-weight:900;color:var(--ok);letter-spacing:.5px}
 .rcstamp-t small{font-size:10.5px;font-weight:700;color:color-mix(in srgb,var(--ok) 58%,var(--mute));letter-spacing:.2px}
 @media(max-width:620px){.rcpt-st .rcstamp{align-self:flex-end}}
+
+/* ===== ختم حالة الطلب (معتمد/مرفوض/ملغى/قيد الإجراء) — ختم حبري ملوّن ===== */
+.dstamp{display:inline-flex;align-items:center;gap:6px;padding:4px 11px 5px;border:2px solid var(--ds-c);border-radius:9px;background:color-mix(in srgb,var(--ds-c) 14%,transparent);color:var(--ds-ink);transform:rotate(-4deg);position:relative;font-weight:900;font-size:11.5px;letter-spacing:.3px;opacity:.96;line-height:1.2;white-space:nowrap}
+.dstamp::before{content:"";position:absolute;inset:2.5px;border:1px solid color-mix(in srgb,var(--ds-c) 55%,transparent);border-radius:5px;pointer-events:none}
+.dstamp .ds-g{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1.7px solid var(--ds-ink);color:var(--ds-ink);font-size:10px;font-weight:900;line-height:1;flex:none}
+.dstamp>i{width:7px;height:7px;border-radius:50%;background:var(--ds-ink);flex:none}
+.d-ok{--ds-c:color-mix(in srgb,var(--c-ok) 55%,var(--line));--ds-ink:var(--ok)}
+.d-bad{--ds-c:color-mix(in srgb,var(--c-bad) 55%,var(--line));--ds-ink:var(--bad)}
+.d-mute{--ds-c:color-mix(in srgb,var(--mute) 45%,var(--line));--ds-ink:var(--mute)}
+.d-warn{--ds-c:color-mix(in srgb,var(--c-warn) 55%,var(--line));--ds-ink:var(--warn)}
 /* ===== سجل الإصدارات ===== */
 #relLayer,#rsLayer{position:fixed;inset:0;z-index:92;display:grid;place-items:center;padding:24px 16px}
 .rel-wrap{display:flex;flex-direction:column;gap:22px;margin-top:14px}

@@ -1530,7 +1530,12 @@ function reqSum(r) {
 }
 function hm(m) { m = +m || 0; var h = Math.floor(m / 60), r = m % 60; return (h ? h + ' س' : '') + (h && r ? ' و' : '') + (r ? r + ' د' : (h ? '' : '0 د')); }
 function reqDates(r) { var d = r.data || {}; if (d.day) return fdx(pdate(d.day), { day: 'numeric', month: 'short', year: 'numeric' }); if (d.start && r.type === 'loan') return 'من ' + d.start; return d.from ? fdx(pdate(d.from), { day: 'numeric', month: 'short' }) + (d.to && d.to !== d.from ? ' – ' + fdx(pdate(d.to), { day: 'numeric', month: 'short', year: 'numeric' }) : '') : ''; }
-function reqPill(r) { var s = RST[r.status] || ['mute', r.statusName]; var at = r.status === 'pending' && r.chain[r.stage] ? 'عند ' + (r.chain[r.stage].who || r.chain[r.stage].label) : s[1]; return '<span class="pill ' + s[0] + '"><i></i>' + esc(at) + '</span>'; }
+function reqPill(r) {
+  var s = RST[r.status] || ['mute', r.statusName];
+  var at = r.status === 'pending' && r.chain[r.stage] ? 'عند ' + (r.chain[r.stage].who || r.chain[r.stage].label) : s[1];
+  var gl = r.status === 'approved' ? '✓' : r.status === 'rejected' ? '✕' : r.status === 'cancelled' ? '—' : '';
+  return '<span class="dstamp d-' + s[0] + '">' + (gl ? '<b class="ds-g">' + gl + '</b>' : '<i></i>') + esc(at) + '</span>';
+}
 function reqTrail(r) {
   var steps = [{ l: 'تقديم الطلب', st: 'done' }].concat(r.chain.filter(function (c) { return c.decision !== 'skip'; }).map(function (c) { var i = r.chain.indexOf(c); return { l: c.label, st: c.decision === 'approve' || c.decision === 'edit' ? 'done' : c.decision === 'reject' ? 'x' : r.status === 'pending' && i === r.stage ? 'now' : '' }; }));
   steps.push({ l: r.status === 'approved' ? 'معتمد' : r.status === 'rejected' ? 'مرفوض' : r.status === 'cancelled' ? 'ملغى' : 'القرار', st: r.status === 'approved' ? 'done' : r.status === 'rejected' || r.status === 'cancelled' ? 'x' : '' });
@@ -4407,8 +4412,8 @@ var MNAR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 
 function mName(ym) { return MNAR[+String(ym).slice(5, 7) - 1] || ym; }
 var FIN = { year: new Date().getFullYear(), sel: null, q: '', dir: '', cat: '' };
 function finData() { var y = FIN.year; return need('fin:' + y, function () { return api({ action: 'myFin', year: y }); }, 60000); }
-var EXPC = { ticket: ['sapphire', 'plane', 'var(--c-info)'], med: ['garnet', 'plus', 'var(--c-bad)'], dues: ['emerald', 'wallet', 'var(--c-ok)'], loan: ['gold', 'coins', 'var(--gold-d)'], train: ['amethyst', 'cert', 'var(--c-vio)'],
-  house: ['teal', 'door', 'var(--c-teal)'], gov: ['slate', 'stamp', '#6f7f9c'], tools: ['teal', 'bolt', '#2b9fb3'], reward: ['gold', 'gift', '#c9932f'], other: ['slate', 'dots', '#8a96ab'] };
+var EXPC = { ticket: ['sapphire', 'plane', 'var(--c-info)'], med: ['garnet', 'plus', 'var(--c-bad)'], visa: ['amethyst', 'stamp', 'var(--c-vio)'], other: ['slate', 'dots', '#8a96ab'],
+  dues: ['slate', 'dots', '#8a96ab'], loan: ['slate', 'dots', '#8a96ab'], train: ['slate', 'dots', '#8a96ab'], house: ['slate', 'dots', '#8a96ab'], gov: ['amethyst', 'stamp', 'var(--c-vio)'], tools: ['slate', 'dots', '#8a96ab'], reward: ['slate', 'dots', '#8a96ab'] };
 
 /* ---------------- رواتبي ---------------- */
 function finMonths(p) { return (p && p.months || []).map(function (m, i) { m.i = i; return m; }); }
@@ -4556,40 +4561,46 @@ function expBarH(cats, extra) {
     ssel('fxDir', [{ v: '', n: 'الكل', ic: 'doc' }, { v: 'in', n: 'دائن', ic: 'coins' }, { v: 'out', n: 'مدين', ic: 'building' }], FIN.dir, 'الكل', function (v) { FIN.dir = v; render(); }, 'النوع', 'النوع') +
     ssel('fxCat', [{ v: '', n: 'كل البنود', ic: 'coins' }].concat(Object.keys(cats).map(function (k) { return { v: k, n: cats[k], ic: (EXPC[k] || EXPC.other)[1] }; })), FIN.cat, 'كل البنود', function (v) { FIN.cat = v; render(); }, 'البند', 'البند') + '</div></section>';
 }
-/* كشف الحساب: الرواتب المستلمة + كل المصروفات، برصيد تراكمي بالريال */
+/* سجل المصاريف فقط (دون الرواتب)، برصيد تراكمي بالريال، وتجميع حسب التصنيف */
+var EXP_ORDER = ['ticket', 'med', 'visa', 'other'];
 function finLedger(d) {
-  var p = d.pay || {}, cur = p.cur || 'SAR', ents = [];
-  (p.months || []).forEach(function (m) { if (m.conf) { var pm = m.conf.paid || m.m; ents.push({ day: pm + '-15', mo: m.m, cat: 'salary', dir: 'in', amount: m.net, cur: cur, title: 'راتب ' + mName(m.m) + ' ' + m.m.slice(0, 4), src: 'pay' }); } });
+  var ents = [];
   (d.exp || []).forEach(function (r) { if (r.pend) return; ents.push({ day: r.day, cat: r.cat, dir: r.dir, amount: r.amount, cur: r.cur, title: r.title, no: r.no, src: r.src }); });
-  ents.sort(function (a, b) { return a.day < b.day ? -1 : a.day > b.day ? 1 : (a.src === 'pay' ? -1 : 1); });
-  var run = 0, inn = 0, out = 0, sal = 0;
-  ents.forEach(function (e) { var s = e.amount * (FX[e.cur] || 0); e.sar = s; run += s; e.bal = run; if (e.cat === 'salary') sal += s; if (e.dir === 'in') inn += s; else out += s; });
-  return { ents: ents, inn: inn, out: out, sal: sal, tot: run };
+  ents.sort(function (a, b) { return a.day < b.day ? -1 : a.day > b.day ? 1 : 0; });
+  var run = 0, inn = 0, out = 0, byCat = {};
+  ents.forEach(function (e) { var s = e.amount * (FX[e.cur] || 0); e.sar = s; run += s; e.bal = run; if (e.dir === 'in') inn += s; else out += s; byCat[e.cat] = (byCat[e.cat] || 0) + s; });
+  return { ents: ents, inn: inn, out: out, tot: run, byCat: byCat };
 }
-function ledCats(cats) { return Object.assign({ salary: 'الرواتب' }, cats); }
+function finExpDist(L, cats) {
+  var keys = EXP_ORDER.filter(function (k) { return L.byCat[k]; }); if (!keys.length || !L.tot) return '';
+  var mx = Math.max.apply(null, keys.map(function (k) { return L.byCat[k]; }));
+  return pn('amethyst', 'pie', 'المصاريف حسب التصنيف', 'أربعة أقسام: تذاكر سفر، العلاج، تأشيرة وإقامة، ومصاريف أخرى', '',
+    '<div class="pb"><div class="fx-cats">' + keys.map(function (k) { var x = EXPC[k] || EXPC.other; return '<div class="fx-cat"><div class="t"><span><i class="fx-sw" style="background:' + x[2] + '"></i>' + esc(cats[k] || 'مصاريف أخرى') + '</span><em><b>' + fm(Math.round(L.byCat[k])) + '</b> ر.س · ' + Math.round(L.byCat[k] / L.tot * 100) + '%</em></div><div class="fx-track"><i style="width:' + (L.byCat[k] / mx * 100).toFixed(1) + '%;background:' + x[2] + '"></i></div></div>'; }).join('') + '</div></div>');
+}
 function finLedgerH(d) {
   var L = finLedger(d), q = FIN.q.trim();
-  if (!L.ents.length) return '<div class="emptyx">' + tile('gold', 'wallet') + '<b>لا حركات في حسابك بعد</b><p>يظهر هنا راتبك المستلَم وكل حركات حسابك من دائن ومدين خلال العام.</p></div>';
+  if (!L.ents.length) return '<div class="emptyx">' + tile('gold', 'coins') + '<b>لا مصاريف مسجّلة هذا العام</b><p>يظهر هنا كل ما صُرف لك أو عليك: تذاكر السفر والعلاج والتأشيرة والإقامة وغيرها.</p></div>';
   var ents = L.ents.filter(function (e) { return (!FIN.dir || e.dir === FIN.dir) && (!FIN.cat || e.cat === FIN.cat) && (!q || (e.title + ' ' + (e.no || '')).indexOf(q) >= 0); });
-  if (!ents.length) return '<div class="emptyx">' + tile('gold', 'coins') + '<b>لا حركات في هذه التصفية</b><p>غيّر البحث أو المرشحات.</p></div>';
-  var body = ents.slice().reverse().map(function (e) { var k = e.cat === 'salary' ? ['gold', 'wallet', 'var(--gold-d)'] : (EXPC[e.cat] || EXPC.other);
-    return '<tr' + (e.cat === 'salary' ? ' class="sal"' : '') + '><td data-l="التاريخ">' + fdx(pdate(e.day), { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
-      '<td data-l="البند"><span class="led-cat">' + tile(k[0], k[1]) + '<span>' + esc(e.cat === 'salary' ? 'الراتب' : (d.cats[e.cat] || 'أخرى')) + '</span></span></td>' +
+  if (!ents.length) return '<div class="emptyx">' + tile('gold', 'coins') + '<b>لا مصاريف في هذه التصفية</b><p>غيّر البحث أو المرشحات.</p></div>';
+  var body = ents.slice().reverse().map(function (e) { var k = EXPC[e.cat] || EXPC.other;
+    return '<tr><td data-l="التاريخ">' + fdx(pdate(e.day), { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
+      '<td data-l="التصنيف"><span class="led-cat">' + tile(k[0], k[1]) + '<span>' + esc(d.cats[e.cat] || 'مصاريف أخرى') + '</span></span></td>' +
       '<td data-l="الوصف"><b>' + esc(e.title) + '</b>' + (e.no ? ' <small class="ltr">' + esc(e.no) + '</small>' : '') + '</td>' +
       '<td data-l="النوع"><span class="fx-dir ' + e.dir + '">' + (e.dir === 'in' ? 'دائن' : 'مدين') + '</span></td>' +
       '<td class="num" data-l="المبلغ"><b>' + fm(e.amount) + '</b> <small>' + curL(e.cur) + '</small></td>' +
-      '<td class="num" data-l="الرصيد"><b>' + fm(Math.round(e.bal)) + '</b> <small>ر.س</small></td></tr>'; }).join('');
-  return '<div class="tw"><table class="ledtab"><thead><tr><th>التاريخ</th><th>البند</th><th>الوصف</th><th>النوع</th><th class="num">المبلغ</th><th class="num">الرصيد (ر.س)</th></tr></thead><tbody>' + body +
-    '</tbody><tfoot><tr><td colspan="5"><b>الإجمالي هذا العام (دائن ومدين)</b></td><td class="num"><b>' + fm(Math.round(L.tot)) + '</b> <small>ر.س</small></td></tr></tfoot></table></div>';
+      '<td class="num" data-l="التراكمي"><b>' + fm(Math.round(e.bal)) + '</b> <small>ر.س</small></td></tr>'; }).join('');
+  return '<div class="tw"><table class="ledtab"><thead><tr><th>التاريخ</th><th>التصنيف</th><th>الوصف</th><th>النوع</th><th class="num">المبلغ</th><th class="num">التراكمي (ر.س)</th></tr></thead><tbody>' + body +
+    '</tbody><tfoot><tr><td colspan="5"><b>إجمالي المصاريف هذا العام</b></td><td class="num"><b>' + fm(Math.round(L.tot)) + '</b> <small>ر.س</small></td></tr></tfoot></table></div>';
 }
 function finExpH(d) {
   var L = finLedger(d), R0 = function (v) { return fm(Math.round(v)); }, pend = (d.exp || []).filter(function (r) { return r.pend; }).length;
-  return ptitle('المصاريف وكشف الحساب', 'كشف حسابك الكامل خلال العام: راتبك المستلَم وكل حركات حسابك من دائن ومدين — مستحقات وتعويضات وسلف وتذاكر ودورات وعلاج. يُحتسب كله في رصيدك، بمكافئ تقريبي بالريال.', finYearSel(d.pay)) +
-    '<div class="grid g3 fx-k">' + kpi('gold', 'wallet', R0(L.tot), 'ر.س', 'رصيدك للعام', 'إجمالي الدائن والمدين، شاملًا الرواتب' + (pend ? ' · ' + nq(pend, 'بند قيد الاعتماد', 'بندان قيد الاعتماد', 'بنود قيد الاعتماد', 'بندًا قيد الاعتماد') : '')) +
-    kpi('emerald', 'coins', R0(L.inn), 'ر.س', 'دائن', 'رواتب ومستحقات وتعويضات وسلف وصلتك') +
-    kpi('sapphire', 'building', R0(L.out), 'ر.س', 'مدين', 'تذاكر ودورات وعلاج وغيرها دفعتها الجهة') + '</div>' +
-    expBarH(ledCats(d.cats)) +
-    pn('gold', 'coins', 'كشف الحساب', nq(L.ents.length, 'حركة واحدة', 'حركتان', 'حركات', 'حركة'), '', '<div class="pb" id="fxList">' + finLedgerH(d) + '</div>');
+  return ptitle('المصاريف', 'كل ما صُرف لك أو عليك خلال العام ضمن أربعة أقسام: تذاكر سفر، العلاج، تأشيرة وإقامة، ومصاريف أخرى — بلا احتساب الرواتب. ما يُستخرج من طلباتك المعتمدة يظهر تلقائيًا، بمكافئ تقريبي بالريال.', finYearSel(d.pay)) +
+    '<div class="grid g3 fx-k">' + kpi('gold', 'coins', R0(L.tot), 'ر.س', 'إجمالي المصاريف', 'دون الرواتب' + (pend ? ' · ' + nq(pend, 'بند قيد الاعتماد', 'بندان قيد الاعتماد', 'بنود قيد الاعتماد', 'بندًا قيد الاعتماد') : '')) +
+    kpi('emerald', 'coins', R0(L.inn), 'ر.س', 'دائن', 'مستحقات وتعويضات وسلف وصلتك') +
+    kpi('sapphire', 'building', R0(L.out), 'ر.س', 'مدين', 'تذاكر وعلاج وتأشيرات دفعتها الجهة') + '</div>' +
+    finExpDist(L, d.cats) +
+    expBarH(d.cats) +
+    pn('gold', 'coins', 'سجل المصاريف', nq(L.ents.length, 'بند واحد', 'بندان', 'بنود', 'بندًا'), '', '<div class="pb" id="fxList">' + finLedgerH(d) + '</div>');
 }
 
 /* ---------------- عهدي ---------------- */
@@ -4821,7 +4832,7 @@ function payPersonDrawer(ref) {
       '<div class="ps-r"><span>المستلم في ' + yr + '</span><b>' + fm(recv) + ' ' + c + '</b></div>' +
       '<div class="ps-r"><span>التوقيعات</span><b>' + signed + ' موقّع · ' + pendc + ' بانتظار</b></div></div>';
     var kp = '<div class="grid g3 fx-k ps-k">' +
-      kpi('gold', 'wallet', R0(L.tot), 'ر.س', 'الرصيد', 'إجمالي ' + yr) +
+      kpi('gold', 'coins', R0(L.tot), 'ر.س', 'المصاريف', 'دون الرواتب · ' + yr) +
       kpi('emerald', 'coins', R0(L.inn), 'ر.س', 'دائن', '') +
       kpi('sapphire', 'building', R0(L.out), 'ر.س', 'مدين', '') + '</div>';
     var list = '<div class="ps-sec">كشف استلام الرواتب</div><div class="ps-rc">' + finReceiptsH(p, finMonths(p), -1, [], false) + '</div>';
