@@ -2597,14 +2597,17 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .d-warn{--ds-c:color-mix(in srgb,var(--c-warn) 55%,var(--line));--ds-ink:var(--warn)}
 /* ===== سجل الإصدارات ===== */
 #relLayer,#rsLayer{position:fixed;inset:0;z-index:92;display:grid;place-items:center;padding:24px 16px}
-.rel-wrap{display:flex;flex-direction:column;gap:22px;margin-top:14px}
-.rel-group{display:flex;flex-direction:column;gap:12px}
-.rel-date{position:relative;display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:5px 14px;width:fit-content}
+.rel-wrap{position:relative;display:flex;flex-direction:column;gap:28px;margin-top:16px;padding-inline-start:30px}
+.rel-wrap::before{content:"";position:absolute;inset-inline-start:8px;top:12px;bottom:12px;width:2px;background:linear-gradient(180deg,transparent,var(--line-2) 7%,var(--line-2) 93%,transparent);border-radius:2px}
+.rel-group{position:relative;display:flex;flex-direction:column;gap:14px}
+.rel-date{position:relative;display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:5px 15px;width:fit-content}
+.rel-date::before{content:"";position:absolute;inset-inline-start:-28px;top:50%;transform:translateY(-50%);width:13px;height:13px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px var(--bg),0 0 0 5px color-mix(in srgb,var(--gold) 50%,transparent)}
+.rel-group.pin-g .rel-date::before{background:var(--gold-d)}
 .rel-pinlbl{display:inline-flex;align-items:center;gap:6px;color:var(--gold-ink)}
 .rel-pinlbl .i,.rel-date .i{width:15px;height:15px}
-.rel-list{display:flex;flex-direction:column;gap:12px}
-.rel-card{position:relative;border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:16px 18px 14px;border-inline-start:4px solid var(--line-2);transition:border-color .15s,box-shadow .15s}
-.rel-card:hover{border-color:var(--line-2);box-shadow:0 6px 22px -14px rgba(13,30,55,.28)}
+.rel-list{display:flex;flex-direction:column;gap:13px}
+.rel-card{position:relative;border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:17px 19px 15px;border-inline-start:4px solid var(--line-2);transition:border-color .15s,box-shadow .15s,transform .15s}
+.rel-card:hover{border-color:var(--line-2);box-shadow:0 12px 32px -20px rgba(13,30,55,.45);transform:translateY(-1px)}
 .rel-card.feature{border-inline-start-color:var(--c-ok)}
 .rel-card.improve{border-inline-start-color:var(--c-info)}
 .rel-card.fix{border-inline-start-color:var(--gold)}

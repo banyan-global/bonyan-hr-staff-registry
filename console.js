@@ -5123,7 +5123,7 @@ VIEWS.releases = function () {
     shown.forEach(function (r) { var k = r.pinned ? 'pin' : r.date; if (!gmap[k]) { gmap[k] = []; groups.push([k, gmap[k]]); } gmap[k].push(r); });
     body = groups.map(function (g) {
       var label = g[0] === 'pin' ? '<span class="rel-pinlbl">' + ic('pin') + 'مثبّت</span>' : relDateL(g[0]);
-      return '<div class="rel-group"><div class="rel-date">' + label + '</div><div class="rel-list">' + g[1].map(function (r) { return relCard(r, admin); }).join('') + '</div></div>';
+      return '<div class="rel-group' + (g[0] === 'pin' ? ' pin-g' : '') + '"><div class="rel-date">' + label + '</div><div class="rel-list">' + g[1].map(function (r) { return relCard(r, admin); }).join('') + '</div></div>';
     }).join('');
   }
   return head + kp + bar + '<div class="rel-wrap">' + body + '</div>';

@@ -99,6 +99,7 @@ try {
     try { att_push_tick(); } catch (Throwable $e) { }
     try { req_watch_digest_tick(); } catch (Throwable $e) { error_log('[bonyan-hr] digest ' . $e->getMessage()); }
     try { pay_backfill_once(); } catch (Throwable $e) { error_log('[bonyan-hr] backfill ' . $e->getMessage()); }
+    try { rel_sync(); } catch (Throwable $e) { error_log('[bonyan-hr] rel sync ' . $e->getMessage()); }
     try { pay_signreq_cancel_once(); } catch (Throwable $e) { error_log('[bonyan-hr] signreq cancel ' . $e->getMessage()); }
     try { pay_signreq_tick(); } catch (Throwable $e) { error_log('[bonyan-hr] signreq ' . $e->getMessage()); }
 } catch (HttpError $e) {
