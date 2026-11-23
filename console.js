@@ -5049,8 +5049,8 @@ function ORGTREE() {
     ents: [
       { id: 'e_sh', t: 'شركة بنيان', n: 'عبدالله الغامدي', c: '#2B3155', kind: 'entity', code: 'bonyan', kw: ['للتدريب'], secs: [
         { id: 's_tam', t: 'دار التمكين', n: 'يحيى خلف الله عمار القرشي', kind: 'entity', code: 'tamkeen', kw: ['التمكين'], pick: function (s) { return orgInE(s, ['tamkeen'], ['التمكين']); } },
-        { id: 's_taq', t: 'طاقات', n: 'د. عبدالله الغامدي', kind: 'entity', code: 'taqat', kw: ['طاقات'], pick: function (s) { return orgInE(s, ['taqat'], ['طاقات']); } },
-        { id: 's_nam', t: 'نمذجة المدارس', n: 'علي الغامدي', kind: 'entity', code: 'tedu', kw: ['نمذجة', 'تمكين التعليم'], pick: function (s) { return orgNorm2(s.r && s.r.department).indexOf('نمذج') > -1 || orgInE(s, ['tedu'], ['نمذجة']); } },
+        { id: 's_taq', t: 'طاقات', n: 'د. عبدالله الغامدي', kind: 'entity', mono: 'ط', pick: function (s) { return orgInE(s, ['taqat'], ['طاقات']); } },
+        { id: 's_nam', t: 'نمذجة المدارس', n: 'علي الغامدي', kind: 'entity', mono: 'ن', pick: function (s) { return orgNorm2(s.r && s.r.department).indexOf('نمذج') > -1 || orgInE(s, ['tedu'], ['نمذجة']); } },
         { id: 's_rem', t: 'شركة بنيان عن بعد', n: 'د. عبدالله الغامدي', kind: 'entity', code: 'remote', kw: ['عن بعد'], pick: function (s) { return orgInE(s, ['remote'], ['عن بعد']); } },
         { id: 's_maq', t: 'شركة بنيان (المقر)', n: 'د. مبارك آل زنان', kind: 'entity', code: 'bonyan', kw: ['للتدريب'], pick: function (s) { return orgInE(s, ['bonyan'], ['للتدريب']); } }
       ] },
@@ -5085,7 +5085,7 @@ function orgEmpGroups(split, bucket) {
 function structNode(node, color) {
   var hasStruct = node.secs && node.secs.length, bucket = node._bucket || [], expanded = !!ORG_EXP[node.id];
   var hasKids = hasStruct || bucket.length > 0;
-  var ava = node.kind === 'entity' ? (node._logo || ic('building')) : orgPersonAva(node.n);
+  var ava = node.kind === 'entity' ? (node.mono ? '<span class="cmono">' + esc(node.mono) + '</span>' : (node._logo || ic('building'))) : orgPersonAva(node.n);
   var cnt = hasStruct ? (node._union ? node._union.length : '') : bucket.length;
   var box = cBoxNode(node.kind, node.id, ava, node.t, node.n, color, '', cnt, hasKids, expanded);
   var kids = '';

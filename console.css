@@ -1865,6 +1865,9 @@ details[open] > .ocard > .ochev, details.osub[open] > summary > .ochev { transfo
 .cgempty { display: flex; align-items: center; gap: 7px; justify-content: center; color: var(--faint); font-size: 12px; padding: 16px 12px; }
 .cgempty svg.i { width: 15px; height: 15px; }
 
+/* شعار حرفي للكيانات بلا شعار لائق */
+.cplate .cmono { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; font-size: 25px; font-weight: 900; color: #fff; background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 66%, #000)); box-shadow: 0 5px 12px -5px color-mix(in srgb, var(--c) 65%, transparent); }
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--cu: 16px; --bg-0: #162942;
