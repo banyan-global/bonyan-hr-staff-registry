@@ -5054,7 +5054,7 @@ function ORGTREE() {
         { id: 's_rem', t: 'شركة بنيان عن بعد', n: 'د. عبدالله الغامدي', kind: 'entity', code: 'remote', kw: ['عن بعد'], pick: function (s) { return orgInE(s, ['remote'], ['عن بعد']); } },
         { id: 's_maq', t: 'شركة بنيان (المقر)', n: 'د. مبارك آل زنان', kind: 'entity', code: 'bonyan', kw: ['للتدريب'], pick: function (s) { return orgInE(s, ['bonyan'], ['للتدريب']); } }
       ] },
-      { id: 'e_ke', t: 'شركة بنيان كينيا', n: 'د. مبارك آل زنان', c: '#2f6d5a', kind: 'entity', code: 'kenya', kw: ['كيني'], pick: function (s) { return orgInE(s, ['kenya'], ['كيني']); } },
+      { id: 'e_ke', t: 'شركة بنيان كينيا', n: 'د. مبارك آل زنان', c: '#2B3155', kind: 'entity', code: 'kenya', kw: ['كيني'], pick: function (s) { return orgInE(s, ['kenya'], ['كيني']); } },
       { id: 'e_in', t: 'بنيان الإنسانية', n: 'د. عبدالله الغامدي', c: '#7d2a2f', kind: 'entity', code: 'hum', kw: ['الانساني'], pick: function (s) { return orgInE(s, ['hum'], ['الانساني']); } },
       { id: 'e_ja', t: 'جامعة بنيان', n: 'د. علاء لبدة', c: '#6b3624', kind: 'entity', code: 'uni', kw: ['جامعة'], secs: [
         { id: 'p_ac', t: 'الإدارة الأكاديمية', n: 'سيف الله', kind: 'position', pick: function (s) { return orgInE(s, ['uni', 'uniw'], ['جامعة']) && !orgFem(s) && orgIndo(s); } },
