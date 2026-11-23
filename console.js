@@ -5033,7 +5033,7 @@ function orgEnts() {
     return { e: e, ss: ss, depN: d.names.length, sup: supOfEnt({ ent: e }, sups), rt: rtOf({ ent: e }) };
   }).filter(Boolean);
 }
-/* ===== الهيكل التنظيمي — مخطط بياني هرمي يتوسّع داخليًا (صور وشعارات) 2026-11 ===== */
+/* ===== الهيكل التنظيمي — مخطط بياني راقٍ يتوسّع بسلاسة مع تكبير/تصغير 2026-11 ===== */
 function orgNorm2(x) { return String(x == null ? '' : x).replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, ' ').toLowerCase().trim(); }
 function orgFem(s) { return orgNorm2(s.r && s.r.gender).indexOf('انث') > -1; }
 function orgIndo(s) { var c = orgNorm2((s.r && s.r.nationality) + ' ' + (s.r && s.r.workCountry) + ' ' + (s.c && s.c.n)); return c.indexOf('اندونيس') > -1 || c.indexOf('indones') > -1; }
@@ -5064,24 +5064,28 @@ function ORGTREE() {
       ] }
     ] };
 }
-var ORG_EXP = {};
+var ORG_EXP = {}, ORG_ZOOM = 1;
 function empCard(s) { return '<button type="button" class="cemp click" data-operson="' + esc(s.ref) + '"><span class="cemp-a">' + avP(s) + '</span><span class="cemp-t"><b>' + esc(s.name) + '</b><small>' + esc(s.job || '—') + (s.c ? ' · ' + esc(s.c.n) : '') + '</small></span></button>'; }
 function orgChevSvg() { return '<svg class="ctogv" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>'; }
 function cBoxNode(kind, id, ava, title, sub, color, num, count, hasKids, expanded) {
   var click = hasKids, tag = click ? 'button' : 'div', ta = click ? ' type="button"' : '';
+  var frame = kind === 'entity' ? 'cplate' : 'cav';
   return '<' + tag + ta + ' class="cnode c-' + kind + (click ? ' click' : '') + (expanded ? ' open' : '') + '" style="--c:' + color + '"' + (click ? ' data-otoggle="' + esc(id) + '"' : '') + '>' +
-    '<span class="cav">' + ava + (num ? '<span class="cnum">' + num + '</span>' : '') + '</span><span class="cstem"></span>' +
-    '<span class="cbox"><span class="cbar"><span class="cbt">' + esc(title) + '</span>' + (count != null && count !== '' ? '<span class="ccnt">' + count + '</span>' : '') + '</span><span class="cpos">' + esc(sub || '') + (hasKids ? '<span class="ctog">' + orgChevSvg() + '</span>' : '') + '</span></span></' + tag + '>';
+    '<span class="' + frame + '">' + ava + (num ? '<span class="cnum">' + num + '</span>' : '') + '</span><span class="cstem"></span>' +
+    '<span class="cbox"><span class="cbar"><span class="cbt">' + esc(title) + '</span>' + (count != null && count !== '' ? '<span class="ccnt">' + count + '</span>' : '') + '</span><span class="cpos"><span class="cpt">' + esc(sub || '') + '</span>' + (hasKids ? '<span class="ctog">' + orgChevSvg() + '</span>' : '') + '</span></span></' + tag + '>';
 }
 function orgEmpGroups(split, bucket) {
   var teach = bucket.filter(orgTeach), oth = bucket.filter(function (s) { return !orgTeach(s); });
-  var g = split === 'f' ? [['الأستاذات', teach, 0], ['الطالبات', [], 1], ['الموظفات', oth, 0]] : [['الأساتذة', teach, 0], ['الطلاب', [], 1], ['الموظفون', oth, 0]];
-  return '<div class="cgrps">' + g.map(function (x) { return '<div class="cgrp"><div class="cgrp-h">' + x[0] + '<em>' + (x[2] ? '—' : x[1].length) + '</em></div>' + (x[2] ? '<p class="onote2">' + ic('info') + 'الطلاب من سجل الطلاب.</p>' : (x[1].length ? '<div class="cemps">' + x[1].map(empCard).join('') + '</div>' : '<p class="cnone">لا منسوبين</p>')) + '</div>'; }).join('') + '</div>';
+  var defs = split === 'f' ? [['الأستاذات', teach, 'user', 0], ['الطالبات', [], 'users', 1], ['الموظفات', oth, 'users', 0]] : [['الأساتذة', teach, 'user', 0], ['الطلاب', [], 'users', 1], ['الموظفون', oth, 'users', 0]];
+  return '<div class="cgrps">' + defs.map(function (x) {
+    var body = x[3] ? '<div class="cgempty">' + ic('info') + 'يُدار من سجل الطلاب' + '</div>' : (x[1].length ? '<div class="cemps">' + x[1].map(empCard).join('') + '</div>' : '<div class="cgempty">لا منسوبين بعد</div>');
+    return '<div class="cgrp"><div class="cgrp-h"><span class="cgi">' + ic(x[2]) + '</span><b>' + x[0] + '</b><em>' + (x[3] ? '—' : x[1].length) + '</em></div>' + body + '</div>';
+  }).join('') + '</div>';
 }
 function structNode(node, color) {
   var hasStruct = node.secs && node.secs.length, bucket = node._bucket || [], expanded = !!ORG_EXP[node.id];
-  var hasKids = hasStruct || (node.split ? bucket.length > 0 : bucket.length > 0);
-  var ava = node.kind === 'entity' ? '<span class="clogo">' + (node._logo || ic('building')) + '</span>' : orgPersonAva(node.n);
+  var hasKids = hasStruct || bucket.length > 0;
+  var ava = node.kind === 'entity' ? (node._logo || ic('building')) : orgPersonAva(node.n);
   var cnt = hasStruct ? (node._union ? node._union.length : '') : bucket.length;
   var box = cBoxNode(node.kind, node.id, ava, node.t, node.n, color, '', cnt, hasKids, expanded);
   var kids = '';
@@ -5090,12 +5094,12 @@ function structNode(node, color) {
     else if (node.split) kids = '<div class="cdown"></div>' + orgEmpGroups(node.split, bucket);
     else kids = '<div class="cdown"></div><div class="cemps clead">' + bucket.map(empCard).join('') + '</div>';
   }
-  return '<div class="ccol">' + box + kids + '</div>';
+  return '<div class="ccol" style="--c:' + color + '">' + box + kids + '</div>';
 }
 orgHTML = function () {
   var q = orgNorm2(ORG.q), T = ORGTREE();
   var used = {}, PATH = {};
-  function take(sec, path) { var r = STAFF.filter(function (s) { if (used[s.ref]) return false; if (sec.pick && sec.pick(s)) { used[s.ref] = 1; PATH[s.ref] = path; return true; } return false; }); return r; }
+  function take(sec, path) { return STAFF.filter(function (s) { if (used[s.ref]) return false; if (sec.pick && sec.pick(s)) { used[s.ref] = 1; PATH[s.ref] = path; return true; } return false; }); }
   T.ents.forEach(function (e) {
     e._logo = orgLogo(e.code, e.kw);
     if (e.secs) { var u = []; e.secs.forEach(function (sc) { if (sc.kind === 'entity') sc._logo = orgLogo(sc.code, sc.kw); sc._bucket = take(sc, e.t + ' › ' + sc.t); u = u.concat(sc._bucket); }); e._union = u; }
@@ -5111,12 +5115,14 @@ orgHTML = function () {
   var ceo = cBoxNode('ceo', '', orgPersonAva(T.name), T.name, T.head, '#2f80c8', '', '', false, false);
   var vps = T.deps.map(function (d, i) { return cBoxNode('vp', '', orgPersonAva(d.n), d.n, d.t, d.c, '0' + (i + 1), '', false, false); }).join('');
   var cols = T.ents.map(function (e) { return structNode(e, e.c); }).join('');
-  var rrow = rest.length ? '<div class="cdown"></div><div class="crow"><div class="ccol">' + cBoxNode('entity', 'rest', '<span class="clogo">' + ic('users') + '</span>', 'غير مصنّفين', rest.length + ' منسوبًا بلا جهة', '#5d6a80', '', '', !!ORG_EXP['rest'], !!ORG_EXP['rest']) + (ORG_EXP['rest'] ? '<div class="cdown"></div><div class="cemps">' + rest.map(empCard).join('') + '</div>' : '') + '</div></div>' : '';
-  return bar + '<div class="note">' + ic('info') + '<span>اضغط أي جهة ليتوسّع الهيكل ويظهر ما تحتها من كيانات أو مناصب ثم الموظفين بصورهم، واضغط على المنسوب لفتح ملفه كاملًا.</span></div>' +
-    '<div class="cwrap"><div class="cchart"><div class="crow crow1">' + ceo + '</div><div class="cdown"></div><div class="crow cvps">' + vps + '</div><div class="cdown"></div><div class="crow cents">' + cols + '</div>' + rrow + '</div></div>';
+  var rrow = rest.length ? '<div class="cdown"></div><div class="crow"><div class="ccol" style="--c:#5d6a80">' + cBoxNode('entity', 'rest', ic('users'), 'غير مصنّفين', rest.length + ' منسوبًا بلا جهة', '#5d6a80', '', '', !!ORG_EXP['rest'], !!ORG_EXP['rest']) + (ORG_EXP['rest'] ? '<div class="cdown"></div><div class="cemps clead">' + rest.map(empCard).join('') + '</div>' : '') + '</div></div>' : '';
+  var tool = '<div class="cztool"><button type="button" class="czbtn" data-ozoom="out" aria-label="تصغير">−</button><span class="czlbl" id="czlbl">' + Math.round(ORG_ZOOM * 100) + '%</span><button type="button" class="czbtn" data-ozoom="in" aria-label="تكبير">+</button><button type="button" class="czbtn czfit" data-ozoom="reset">' + ic('refresh') + 'ملاءمة</button></div>';
+  return bar + '<div class="note">' + ic('info') + '<span>اضغط أي جهة ليتوسّع الهيكل بسلاسة ويظهر ما تحتها، ثم اضغط على المنسوب لفتح ملفه. استخدم أزرار التكبير لتصغير المخطط أو ملئه.</span></div>' + tool +
+    '<div class="cwrap"><div class="czoom" id="czoom" style="transform:scale(' + ORG_ZOOM + ')"><div class="cchart"><div class="crow crow1">' + ceo + '</div><div class="cdown"></div><div class="crow cvps">' + vps + '</div><div class="cdown"></div><div class="crow cents">' + cols + '</div>' + rrow + '</div></div></div>';
 };
 document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-otoggle]'); if (!b || view !== 'people' || TAB.people !== 'org') return; var id = b.getAttribute('data-otoggle'); ORG_EXP[id] = !ORG_EXP[id]; softRender(); });
 document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-operson]'); if (!b || view !== 'people' || TAB.people !== 'org') return; openRec(b.getAttribute('data-operson')); });
+document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-ozoom]'); if (!b || view !== 'people' || TAB.people !== 'org') return; var m = b.getAttribute('data-ozoom'); if (m === 'reset') ORG_ZOOM = 1; else ORG_ZOOM = Math.max(0.5, Math.min(1.4, Math.round((ORG_ZOOM + (m === 'in' ? 0.1 : -0.1)) * 10) / 10)); var z = document.getElementById('czoom'); if (z) z.style.transform = 'scale(' + ORG_ZOOM + ')'; var l = document.getElementById('czlbl'); if (l) l.textContent = Math.round(ORG_ZOOM * 100) + '%'; });
 function orgEntDrawer(ev) {
   var e = (ENT_MAP || {})[ev] || ENT.filter(function (x) { return x.v === ev; })[0]; if (!e) return;
   var ss = STAFF.filter(function (s) { return s.ent.v === ev; }), d = orgDeps(ss), sup = supOfEnt({ ent: e }, (formsData() || {}).sups || []), rt = rtOf({ ent: e });

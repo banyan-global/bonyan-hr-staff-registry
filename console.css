@@ -1806,6 +1806,65 @@ details[open] > .ocard > .ochev, details.osub[open] > summary > .ochev { transfo
 .cgrp .onote2 { margin: 0; }
 .ohsrh { margin: 0 0 12px; font-size: 15px; font-weight: 900; color: var(--ink); }
 
+/* ===== الهيكل: تصميم راقٍ + حركة + تكبير (2026-11) ===== */
+@keyframes orgPop { from { opacity: 0; transform: translateY(-8px) scale(.95); } to { opacity: 1; transform: none; } }
+.ccol .crow, .ccol .cemps, .ccol .cgrps { animation: orgPop .3s cubic-bezier(.2,.75,.25,1) both; }
+.czoom { transition: transform .34s cubic-bezier(.2,.75,.25,1); transform-origin: top center; will-change: transform; }
+.cnode { transition: transform .15s ease; }
+@media (prefers-reduced-motion: reduce) { .czoom, .cnode, .cemp, .ccol .crow, .ccol .cemps, .ccol .cgrps { animation: none !important; transition: none !important; } }
+/* شريط التكبير */
+.cztool { display: inline-flex; align-items: center; gap: 4px; margin: 2px 0 6px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 999px; padding: 4px; box-shadow: 0 8px 20px -12px rgba(16,24,40,.45); }
+.czbtn { border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 800; font-size: 17px; width: 34px; height: 34px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: background .15s; }
+.czbtn:hover { background: var(--soft); }
+.czbtn.czfit { width: auto; padding: 0 14px; font-size: 13px; font-weight: 800; color: var(--gold-ink); }
+.czbtn.czfit svg.i { width: 15px; height: 15px; }
+.czlbl { font-size: 13px; font-weight: 800; color: var(--mute); min-width: 48px; text-align: center; }
+/* الموصلات */
+.cdown { width: 2px; height: 26px; background: linear-gradient(var(--line-2), color-mix(in srgb, var(--gold) 32%, var(--line-2))); margin: 0 auto; }
+.crow > *::before { background: color-mix(in srgb, var(--gold) 26%, var(--line-2)); }
+.crow > *::after { background: color-mix(in srgb, var(--gold) 26%, var(--line-2)); }
+/* لوح الشعار (الكيانات) */
+.cplate { position: relative; width: 86px; height: 68px; border-radius: 18px; background: #fff; display: grid; place-items: center; padding: 11px 13px 9px; overflow: hidden; z-index: 2; box-shadow: 0 12px 28px -14px rgba(16,24,40,.5), 0 0 0 1px color-mix(in srgb, var(--c) 34%, var(--line-2)); }
+.cplate::after { content: ""; position: absolute; inset-inline: 0; top: 0; height: 4px; background: var(--c); }
+.cplate img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.cplate svg.i { width: 32px; height: 32px; color: var(--c); }
+/* صورة الشخص */
+.cav { width: 64px; height: 64px; border-radius: 50%; background: #fff; display: grid; place-items: center; position: relative; z-index: 2; box-shadow: 0 10px 24px -12px rgba(16,24,40,.45), 0 0 0 3px var(--c), 0 0 0 7px color-mix(in srgb, var(--c) 15%, transparent); }
+.cav .av { width: 56px; height: 56px; border-radius: 50%; font-size: 18px; }
+.cusr { width: 32px; height: 32px; color: var(--c); display: grid; place-items: center; }
+.cusr svg.i { width: 32px; height: 32px; }
+.c-ceo .cav { width: 74px; height: 74px; } .c-ceo .cav .av { width: 66px; height: 66px; }
+.cnum { position: absolute; inset-inline-end: -6px; top: -6px; background: var(--c); color: #fff; font-size: 11px; font-weight: 800; border-radius: 50%; width: 23px; height: 23px; display: grid; place-items: center; border: 3px solid var(--panel); direction: ltr; box-shadow: 0 3px 8px -3px rgba(16,24,40,.5); }
+.cstem { width: 2px; height: 10px; background: var(--c); opacity: .5; }
+/* الصندوق */
+.cbox { margin-top: 0; border: 0; border-radius: 16px; overflow: hidden; background: var(--panel); min-width: 186px; max-width: 232px; box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 16px 36px -18px rgba(16,24,40,.55), 0 3px 9px -5px rgba(16,24,40,.2); }
+.cbar { background: linear-gradient(135deg, color-mix(in srgb, var(--c) 100%, #fff 8%), color-mix(in srgb, var(--c) 80%, #000 10%)); color: #fff; padding: 10px 13px; }
+.cbt { font-size: 14px; font-weight: 800; }
+.c-ceo .cbt { font-size: 15.5px; }
+.ccnt { background: rgba(255,255,255,.26); }
+.cpos { padding: 7px 12px; background: var(--panel); }
+.cpt { font-size: 11.5px; color: var(--mute); font-weight: 700; }
+.ctogv { stroke: var(--c); }
+.cnode.click:hover .cbox { transform: translateY(-3px); box-shadow: 0 22px 44px -18px rgba(16,24,40,.6), 0 5px 12px -5px rgba(16,24,40,.22); }
+.cnode.click:hover .cplate, .cnode.click:hover .cav { transform: translateY(-2px); }
+/* بطاقات الموظفين */
+.cemps { gap: 10px; }
+.cemp { border-radius: 14px; border: 1px solid var(--line-2); background: var(--panel); padding: 8px 14px 8px 10px; box-shadow: 0 10px 22px -16px rgba(16,24,40,.55); }
+.cemp:hover { border-color: color-mix(in srgb, var(--gold) 55%, var(--line-2)); }
+.cemp-a .av { width: 46px; height: 46px; border-radius: 50%; box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--line-2); }
+.cemp-t b { font-size: 13.5px; } .cemp-t small { font-size: 11px; }
+/* مجموعات الجامعة */
+.cgrps { gap: 16px; }
+.cgrp { background: var(--panel); border: 1px solid var(--line-2); border-radius: 18px; padding: 0; overflow: hidden; min-width: 252px; box-shadow: 0 14px 32px -20px rgba(16,24,40,.55); }
+.cgrp-h { display: flex; align-items: center; gap: 9px; margin: 0; padding: 11px 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--c) 15%, var(--panel)), var(--panel)); border-bottom: 1px solid var(--line-2); }
+.cgrp-h .cgi { width: 31px; height: 31px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 20%, var(--panel)); color: var(--c); flex: none; }
+.cgrp-h .cgi svg.i { width: 17px; height: 17px; }
+.cgrp-h b { flex: 1; font-size: 13.5px; font-weight: 900; color: var(--ink); }
+.cgrp-h em { font-style: normal; background: var(--c); color: #fff; border-radius: 999px; padding: 2px 10px; font-size: 11.5px; font-weight: 800; }
+.cgrp .cemps { padding: 12px; max-width: none; margin: 0; justify-content: flex-start; gap: 8px; }
+.cgempty { display: flex; align-items: center; gap: 7px; justify-content: center; color: var(--faint); font-size: 12px; padding: 16px 12px; }
+.cgempty svg.i { width: 15px; height: 15px; }
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--cu: 16px; --bg-0: #162942;
