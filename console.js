@@ -5033,27 +5033,28 @@ function orgEnts() {
     return { e: e, ss: ss, depN: d.names.length, sup: supOfEnt({ ent: e }, sups), rt: rtOf({ ent: e }) };
   }).filter(Boolean);
 }
-/* ===== شجرة الهيكل التفاعلية — إعادة الهيكلة المعتمدة 2026-11 ===== */
+/* ===== الهيكل التنظيمي — مخطط بياني تفاعلي (صور وشعارات) 2026-11 ===== */
 function orgNorm2(x) { return String(x == null ? '' : x).replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, ' ').toLowerCase().trim(); }
 function orgFem(s) { return orgNorm2(s.r && s.r.gender).indexOf('انث') > -1; }
 function orgIndo(s) { var c = orgNorm2((s.r && s.r.nationality) + ' ' + (s.r && s.r.workCountry) + ' ' + (s.c && s.c.n)); return c.indexOf('اندونيس') > -1 || c.indexOf('indones') > -1; }
 function orgTeach(s) { var j = orgNorm2(s.job); return j.indexOf('استاذ') > -1 || j.indexOf('معلم') > -1 || j.indexOf('محاضر') > -1 || j.indexOf('اكاديم') > -1; }
 function orgInE(s, codes, kw) { if (s.ent && codes && codes.indexOf(s.ent.v) > -1) return true; if (kw) { var n = orgNorm2(s.ent && s.ent.n); for (var i = 0; i < kw.length; i++) if (n.indexOf(orgNorm2(kw[i])) > -1) return true; } return false; }
 function orgLeadS(name) { var k = orgNorm2(name).replace(/^(د|دكتور|أ|الأستاذ|الاستاذ|الشيخ|م|المهندس)\s+/, '').split(' ').filter(Boolean); if (k.length < 2) return null; var a = k[0], z = k[k.length - 1]; for (var i = 0; i < STAFF.length; i++) { var nm = orgNorm2(STAFF[i].name); if (nm.indexOf(a) > -1 && nm.indexOf(z) > -1) return STAFF[i]; } return null; }
-function orgLeadAva(name) { var s = orgLeadS(name); return s ? avP(s) : '<span class="oini">' + esc(orgInitial(name)) + '</span>'; }
+function orgPersonAva(name) { var s = orgLeadS(name); if (s) return { html: avP(s), ref: s.ref }; return { html: '<span class="cusr">' + ic('user') + '</span>', ref: '' }; }
+function orgEntObj(code, kw) { for (var i = 0; i < ENT.length; i++) if (ENT[i].v === code) return ENT[i]; if (kw) for (var j = 0; j < ENT.length; j++) { var n = orgNorm2(ENT[j].n); for (var k = 0; k < kw.length; k++) if (n.indexOf(orgNorm2(kw[k])) > -1) return ENT[j]; } return null; }
 function ORGTREE() {
   return { head: 'الرئيس التنفيذي', name: 'د. عبدالله بن محمد الغامدي',
-    deps: [{ t: 'نائب الرئيس للبرامج والتدريب', n: 'د. مبارك آل زنان' }, { t: 'نائب الرئيس للشؤون الفنية', n: 'مبارك عطية الزهراني' }, { t: 'نائب الرئيس للشؤون الإدارية والمالية', n: 'عبدالمحسن الغامدي' }],
+    deps: [{ t: 'نائب الرئيس للبرامج والتدريب', n: 'د. مبارك آل زنان', c: '#2f9fd0' }, { t: 'نائب الرئيس للشؤون الفنية', n: 'مبارك عطية الزهراني', c: '#8b5cf6' }, { t: 'نائب الرئيس للشؤون الإدارية والمالية', n: 'عبدالمحسن الغامدي', c: '#e4615f' }],
     ents: [
-      { t: 'جامعة بنيان', n: 'د. علاء لبدة', c: '#6b3624', secs: [
+      { t: 'جامعة بنيان', n: 'د. علاء لبدة', c: '#6b3624', code: 'uni', kw: ['جامعة'], secs: [
         { t: 'الإدارة الأكاديمية', n: 'سيف الله', pick: function (s) { return orgInE(s, ['uni', 'uniw'], ['جامعة']) && !orgFem(s) && orgIndo(s); } },
         { t: 'البنين', n: 'محمد جابر قاسم شحاتة', split: 'm', pick: function (s) { return orgInE(s, ['uni', 'uniw'], ['جامعة']) && !orgFem(s) && !orgIndo(s); } },
         { t: 'البنات', n: 'إيمان أحمد محمد الشميري', split: 'f', pick: function (s) { return orgInE(s, ['uni', 'uniw'], ['جامعة']) && orgFem(s); } },
         { t: 'الإسكان', n: 'محمد الشبراوي', pick: function (s) { return orgNorm2(s.r && s.r.department).indexOf('سكن') > -1; } }
       ] },
-      { t: 'بنيان الإنسانية', n: 'د. عبدالله الغامدي', c: '#7d2a2f', pick: function (s) { return orgInE(s, ['hum'], ['الانساني']); } },
-      { t: 'شركة بنيان كينيا', n: 'د. مبارك آل زنان', c: '#562670', pick: function (s) { return orgInE(s, ['kenya'], ['كيني']); } },
-      { t: 'شركة بنيان', n: 'عبدالله الغامدي', c: '#2B3155', secs: [
+      { t: 'بنيان الإنسانية', n: 'د. عبدالله الغامدي', c: '#7d2a2f', code: 'hum', kw: ['الانساني'], pick: function (s) { return orgInE(s, ['hum'], ['الانساني']); } },
+      { t: 'شركة بنيان كينيا', n: 'د. مبارك آل زنان', c: '#2f6d5a', code: 'kenya', kw: ['كيني'], pick: function (s) { return orgInE(s, ['kenya'], ['كيني']); } },
+      { t: 'شركة بنيان', n: 'عبدالله الغامدي', c: '#2B3155', code: 'bonyan', kw: ['للتدريب'], secs: [
         { t: 'دار التمكين', n: 'يحيى خلف الله عمار القرشي', pick: function (s) { return orgInE(s, ['tamkeen'], ['التمكين']); } },
         { t: 'طاقات', n: 'د. عبدالله الغامدي', pick: function (s) { return orgInE(s, ['taqat'], ['طاقات']); } },
         { t: 'نمذجة المدارس', n: 'علي الغامدي', pick: function (s) { return orgNorm2(s.r && s.r.department).indexOf('نمذج') > -1 || orgInE(s, ['tedu'], ['نمذجة']); } },
@@ -5062,37 +5063,58 @@ function ORGTREE() {
       ] }
     ] };
 }
-function orgChev() { return '<svg class="ochev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>'; }
-function orgCard(cls, ava, title, name, cnt) { return '<summary class="ocard ' + cls + '">' + (ava || '') + '<span class="otx"><b>' + esc(title) + '</b>' + (name ? '<small>' + esc(name) + '</small>' : '') + '</span>' + (cnt != null && cnt !== '' ? '<em class="ocnt">' + cnt + '</em>' : '') + orgChev() + '</summary>'; }
 function orgPpl(list) { if (!list.length) return '<li class="oempty">' + ic('info') + 'لا منسوبين مرتبطين بعد</li>'; return list.map(function (s) { return '<li class="opers click" data-operson="' + esc(s.ref) + '">' + avP(s) + '<span><b>' + esc(s.name) + '</b><small>' + esc(s.job || '—') + (s.c ? ' · ' + esc(s.c.n) : '') + '</small></span></li>'; }).join(''); }
-function orgSub2(title, list, students, q) { return '<details class="osub"' + ((q && (students || list.length)) ? ' open' : '') + '><summary><span class="ost">' + esc(title) + '</span><em>' + (students ? '—' : list.length) + '</em>' + orgChev() + '</summary>' + (students ? '<p class="onote2">' + ic('info') + 'الطلاب يُدارون من سجل الطلاب، لا من سجل الموظفين.</p>' : '<ul class="opeople">' + orgPpl(list) + '</ul>') + '</details>'; }
-function orgSecBody2(sec, list, q) {
-  if (sec.split === 'm') return orgSub2('الأساتذة', list.filter(orgTeach), 0, q) + orgSub2('الطلاب', [], 1, q) + orgSub2('الموظفون', list.filter(function (s) { return !orgTeach(s); }), 0, q);
-  if (sec.split === 'f') return orgSub2('الأستاذات', list.filter(orgTeach), 0, q) + orgSub2('الطالبات', [], 1, q) + orgSub2('الموظفات', list.filter(function (s) { return !orgTeach(s); }), 0, q);
-  return '<ul class="opeople">' + orgPpl(list) + '</ul>';
+var ORG_BK = {};
+function cNode(kind, id, avaInner, title, sub, color, num, count, click) {
+  var tag = click ? 'button' : 'div', ta = click ? ' type="button"' : '';
+  return '<' + tag + ta + ' class="cnode c-' + kind + (click ? ' click' : '') + '" style="--c:' + color + '"' + (click ? ' data-onode="' + esc(id) + '"' : '') + '>' +
+    '<span class="cav">' + avaInner + (num ? '<span class="cnum">' + num + '</span>' : '') + '</span><span class="cstem"></span>' +
+    '<span class="cbox"><span class="cbar">' + esc(title) + (count != null && count !== '' ? '<span class="ccnt">' + count + '</span>' : '') + '</span><span class="cpos">' + esc(sub || '') + '</span></span></' + tag + '>';
+}
+function cSub(id, head, title, count, color) {
+  var pa = orgPersonAva(head);
+  return '<button type="button" class="csub click" style="--c:' + color + '" data-onode="' + esc(id) + '"><span class="csav">' + pa.html + '</span><span class="cstx"><b>' + esc(title) + '</b><small>' + esc(head) + '</small></span><em class="cscnt">' + count + '</em></button>';
+}
+function orgGrp(title, list, students) { return '<div class="ohg"><div class="ohg-h">' + esc(title) + '<em>' + (students ? '—' : list.length) + '</em></div>' + (students ? '<p class="onote2">' + ic('info') + 'الطلاب يُدارون من سجل الطلاب، لا من سجل الموظفين.</p>' : '<ul class="opeople">' + orgPpl(list) + '</ul>') + '</div>'; }
+function orgNodeDrawer(id) {
+  var bk = ORG_BK[id]; if (!bk) return;
+  var body;
+  if (bk.split === 'm') body = orgGrp('الأساتذة', bk.list.filter(orgTeach)) + orgGrp('الطلاب', [], 1) + orgGrp('الموظفون', bk.list.filter(function (s) { return !orgTeach(s); }));
+  else if (bk.split === 'f') body = orgGrp('الأستاذات', bk.list.filter(orgTeach)) + orgGrp('الطالبات', [], 1) + orgGrp('الموظفات', bk.list.filter(function (s) { return !orgTeach(s); }));
+  else body = '<ul class="opeople">' + orgPpl(bk.list) + '</ul>';
+  var el = layer('oeLayer', { tile: '<span class="olg lg">' + (bk.logo || ic('building')) + '</span>', t: esc(bk.t), p: (bk.n ? esc(bk.n) + ' · ' : '') + nq(bk.list.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') }, '<div class="ohdr">' + body + '</div>', '<button class="btn" data-lyclose="1">إغلاق</button>', 'paysheet');
+  el.querySelectorAll('[data-operson]').forEach(function (b) { b.onclick = function () { el.close(); openRec(b.getAttribute('data-operson')); }; });
 }
 orgHTML = function () {
   var q = orgNorm2(ORG.q), T = ORGTREE();
-  var leaves = []; T.ents.forEach(function (e) { if (e.secs) e.secs.forEach(function (sc) { leaves.push(sc); }); else leaves.push(e); });
-  var used = {}; var bmap = leaves.map(function (sec) { return STAFF.filter(function (s) { if (used[s.ref]) return false; if (sec.pick && sec.pick(s)) { used[s.ref] = 1; return true; } return false; }); });
-  function qf(L) { if (!q) return L; return L.filter(function (s) { return (orgNorm2(s.name) + ' ' + orgNorm2(s.job) + ' ' + orgNorm2(s.r && s.r.department)).indexOf(q) > -1; }); }
-  var li = 0;
-  var entsHTML = T.ents.map(function (e) {
-    var inner, cnt;
+  ORG_BK = {}; var used = {}, PATH = {};
+  function take(sec, path) { return STAFF.filter(function (s) { if (used[s.ref]) return false; if (sec.pick && sec.pick(s)) { used[s.ref] = 1; PATH[s.ref] = path; return true; } return false; }); }
+  var cols = T.ents.map(function (e, ei) {
+    var entId = 'e' + ei, eo = orgEntObj(e.code, e.kw), logo = eo ? (elogo(eo) || ic('building')) : ic('building');
+    var avInner = '<span class="clogo">' + logo + '</span>';
     if (e.secs) {
-      var sh = e.secs.map(function (sc) { var L = qf(bmap[li] || []); li++; var c = L.length; return '<details class="otl otl-sec"' + ((q && c) ? ' open' : '') + '>' + orgCard('oc-sec', orgLeadAva(sc.n), sc.t, sc.n, c) + '<div class="osecbody">' + orgSecBody2(sc, L, q) + '</div></details>'; }).join('');
-      inner = '<div class="osecs">' + sh + '</div>'; cnt = '';
-    } else { var L = qf(bmap[li] || []); li++; cnt = L.length; inner = '<div class="osecbody"><ul class="opeople">' + orgPpl(L) + '</ul></div>'; }
-    return '<details class="otl otl-ent" style="--ec:' + e.c + '"' + (q ? ' open' : '') + '>' + orgCard('oc-ent', '<span class="olg2" style="--ec:' + e.c + '">' + ic('building') + '</span>', e.t, e.n, cnt) + '<div class="oentbody">' + inner + '</div></details>';
+      var union = [];
+      var subs = e.secs.map(function (sc, si) { var id = entId + 's' + si; var list = take(sc, e.t + ' › ' + sc.t); ORG_BK[id] = { t: sc.t, n: sc.n, list: list, split: sc.split }; union = union.concat(list); return cSub(id, sc.n, sc.t, list.length, e.c); }).join('');
+      ORG_BK[entId] = { t: e.t, n: e.n, list: union, logo: logo };
+      return '<div class="ccol">' + cNode('ent', entId, avInner, e.t, e.n, e.c, '', union.length, true) + '<div class="csubs">' + subs + '</div></div>';
+    }
+    var list = take(e, e.t); ORG_BK[entId] = { t: e.t, n: e.n, list: list, logo: logo };
+    return '<div class="ccol">' + cNode('ent', entId, avInner, e.t, e.n, e.c, '', list.length, true) + '</div>';
   }).join('');
-  var rest = qf(STAFF.filter(function (s) { return !used[s.ref]; }));
-  var restH = rest.length ? '<details class="otl otl-ent" style="--ec:#5d6a80"' + (q ? ' open' : '') + '>' + orgCard('oc-ent', '<span class="olg2" style="--ec:#5d6a80">' + ic('users') + '</span>', 'غير مصنّفين', 'منسوبون بلا جهة مطابقة', rest.length) + '<div class="oentbody"><div class="osecbody"><ul class="opeople">' + orgPpl(rest) + '</ul></div></div></details>' : '';
+  var rest = STAFF.filter(function (s) { return !used[s.ref]; }); if (rest.length) { ORG_BK['rest'] = { t: 'غير مصنّفين', n: 'منسوبون بلا جهة مطابقة', list: rest }; rest.forEach(function (s) { PATH[s.ref] = 'غير مصنّف'; }); }
   var bar = '<section class="pn tbar"><div class="fbar">' + fsearch('orgq', ORG.q, 'ابحث باسم أو مسمى أو إدارة', 'بحث في الهيكل') + '</div></section>';
-  var vps = '<div class="ovps">' + T.deps.map(function (d) { return '<div class="ovp"><b>' + esc(d.t) + '</b><small>' + esc(d.n) + '</small></div>'; }).join('') + '</div>';
-  var ceo = '<div class="oceo"><span class="oini lg">' + esc(orgInitial(T.name)) + '</span><div class="otx"><small>' + esc(T.head) + '</small><b>' + esc(T.name) + '</b></div></div>';
-  return bar + '<div class="note">' + ic('info') + '<span>الهيكل يظهر أولًا؛ اضغط أي جهة ليُفتح ما تحتها من الأقسام والموظفين بصورهم ومعلوماتهم، واضغط على اسم المنسوب لعرض ملفه كاملًا.</span></div>' +
-    '<div class="orgx"><div class="octop">' + ceo + '<div class="ostem1"></div>' + vps + '</div><div class="otree">' + entsHTML + restH + '</div></div>';
+  if (q) {
+    var hits = STAFF.filter(function (s) { return (orgNorm2(s.name) + ' ' + orgNorm2(s.job) + ' ' + orgNorm2(s.r && s.r.department) + ' ' + orgNorm2(PATH[s.ref])).indexOf(q) > -1; });
+    var hl = hits.length ? '<ul class="opeople">' + hits.map(function (s) { return '<li class="opers click" data-operson="' + esc(s.ref) + '">' + avP(s) + '<span><b>' + esc(s.name) + '</b><small>' + esc(s.job || '—') + ' · ' + esc(PATH[s.ref] || '') + '</small></span></li>'; }).join('') + '</ul>' : '<div class="empty">لا نتائج.</div>';
+    return bar + '<section class="pn"><div class="pb"><h3 class="ohsrh">نتائج البحث (' + hits.length + ')</h3>' + hl + '</div></section>';
+  }
+  var ceoAva = orgPersonAva(T.name); var ceo = cNode('ceo', '', ceoAva.html, T.name, T.head, '#2f80c8', '', '', false);
+  var vps = T.deps.map(function (d, i) { var pa = orgPersonAva(d.n); return cNode('vp', '', pa.html, d.n, d.t, d.c, '0' + (i + 1), '', false); }).join('');
+  var rrow = rest.length ? '<div class="cdown"></div><div class="crow"><div class="ccol">' + cNode('ent', 'rest', '<span class="clogo">' + ic('users') + '</span>', 'غير مصنّفين', 'منسوبون بلا جهة مطابقة', '#5d6a80', '', rest.length, true) + '</div></div>' : '';
+  return bar + '<div class="note">' + ic('info') + '<span>اضغط أي جهة أو قسم لعرض من فيه من الموظفين بصورهم ومعلوماتهم، ثم اضغط على المنسوب لفتح ملفه كاملًا.</span></div>' +
+    '<div class="cwrap"><div class="cchart"><div class="crow crow1">' + ceo + '</div><div class="cdown"></div><div class="crow cvps">' + vps + '</div><div class="cdown"></div><div class="crow cents">' + cols + '</div>' + rrow + '</div></div>';
 };
+document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-onode]'); if (!b || view !== 'people' || TAB.people !== 'org') return; orgNodeDrawer(b.getAttribute('data-onode')); });
 document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-operson]'); if (!b || view !== 'people' || TAB.people !== 'org') return; openRec(b.getAttribute('data-operson')); });
 function orgEntDrawer(ev) {
   var e = (ENT_MAP || {})[ev] || ENT.filter(function (x) { return x.v === ev; })[0]; if (!e) return;
