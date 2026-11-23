@@ -5054,7 +5054,10 @@ function ORGTREE() {
         { id: 's_rem', t: 'شركة بنيان عن بعد', n: 'د. عبدالله الغامدي', kind: 'entity', code: 'remote', kw: ['عن بعد'], pick: function (s) { return orgInE(s, ['remote'], ['عن بعد']); } },
         { id: 's_maq', t: 'شركة بنيان (المقر)', n: 'د. مبارك آل زنان', kind: 'entity', code: 'bonyan', kw: ['للتدريب'], pick: function (s) { return orgInE(s, ['bonyan'], ['للتدريب']); } }
       ] },
-      { id: 'e_ke', t: 'شركة بنيان كينيا', n: 'د. مبارك آل زنان', c: '#2B3155', kind: 'entity', code: 'kenya', kw: ['كيني'], pick: function (s) { return orgInE(s, ['kenya'], ['كيني']); } },
+      { id: 'e_ke', t: 'شركة بنيان كينيا', n: 'د. مبارك آل زنان', c: '#2B3155', kind: 'entity', secs: [
+        { id: 's_keu', t: 'جامعة كينيا', n: 'مصطفى أحمد علي أحمد', kind: 'entity', pick: function (s) { return orgInE(s, ['kenya'], ['كيني']) && orgNorm2(s.r && s.r.department).indexOf('عن بعد') < 0; } },
+        { id: 's_ker', t: 'منصة بنيان للتعليم عن بعد', n: '', kind: 'entity', pick: function (s) { return orgInE(s, ['kenya'], ['كيني']) && orgNorm2(s.r && s.r.department).indexOf('عن بعد') > -1; } }
+      ] },
       { id: 'e_in', t: 'بنيان الإنسانية', n: 'د. عبدالله الغامدي', c: '#7d2a2f', kind: 'entity', code: 'hum', kw: ['الانساني'], pick: function (s) { return orgInE(s, ['hum'], ['الانساني']); } },
       { id: 'e_ja', t: 'جامعة بنيان', n: 'د. علاء لبدة', c: '#6b3624', kind: 'entity', code: 'uni', kw: ['جامعة'], secs: [
         { id: 'p_ac', t: 'الإدارة الأكاديمية', n: 'سيف الله', kind: 'position', pick: function (s) { return orgInE(s, ['uni', 'uniw'], ['جامعة']) && !orgFem(s) && orgIndo(s); } },
@@ -5065,14 +5068,13 @@ function ORGTREE() {
     ] };
 }
 var ORG_EXP = {}, ORG_ZOOM = 1;
-function empCard(s) { return '<button type="button" class="cemp click" data-operson="' + esc(s.ref) + '"><span class="cemp-a">' + avP(s) + '</span><span class="cemp-t"><b>' + esc(s.name) + '</b><small>' + esc(s.job || '—') + (s.c ? ' · ' + esc(s.c.n) : '') + '</small></span></button>'; }
+function empCard(s) { return '<button type="button" class="cemp click" data-operson="' + esc(s.ref) + '"><span class="cemp-t"><b>' + esc(s.name) + '</b><small>' + esc(s.job || '—') + (s.c ? ' · ' + esc(s.c.n) : '') + '</small></span></button>'; }
 function orgChevSvg() { return '<svg class="ctogv" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>'; }
 function cBoxNode(kind, id, ava, title, sub, color, num, count, hasKids, expanded) {
   var click = hasKids, tag = click ? 'button' : 'div', ta = click ? ' type="button"' : '';
-  var frame = kind === 'entity' ? 'cplate' : 'cav';
+  var foot = (sub || hasKids) ? '<span class="cpos">' + (sub ? '<span class="cpt">' + esc(sub) + '</span>' : '') + (hasKids ? '<span class="ctog">' + orgChevSvg() + '</span>' : '') + '</span>' : '';
   return '<' + tag + ta + ' class="cnode c-' + kind + (click ? ' click' : '') + (expanded ? ' open' : '') + '" style="--c:' + color + '"' + (click ? ' data-otoggle="' + esc(id) + '"' : '') + '>' +
-    '<span class="' + frame + '">' + ava + (num ? '<span class="cnum">' + num + '</span>' : '') + '</span><span class="cstem"></span>' +
-    '<span class="cbox"><span class="cbar"><span class="cbt">' + esc(title) + '</span>' + (count != null && count !== '' ? '<span class="ccnt">' + count + '</span>' : '') + '</span><span class="cpos"><span class="cpt">' + esc(sub || '') + '</span>' + (hasKids ? '<span class="ctog">' + orgChevSvg() + '</span>' : '') + '</span></span></' + tag + '>';
+    '<span class="cbox"><span class="cbar">' + (num ? '<span class="cnix">' + num + '</span>' : '') + '<span class="cbt">' + esc(title) + '</span>' + (count != null && count !== '' ? '<span class="ccnt">' + count + '</span>' : '') + '</span>' + foot + '</span></' + tag + '>';
 }
 function orgEmpGroups(split, bucket) {
   var teach = bucket.filter(orgTeach), oth = bucket.filter(function (s) { return !orgTeach(s); });
