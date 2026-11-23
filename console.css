@@ -1661,6 +1661,62 @@ table.mini th.used { background: var(--gold-wash); }
 .mf .rqdel:hover { background: rgba(192, 57, 43, .08); border-color: rgba(192, 57, 43, .55); }
 .mf .rqdel.sure { background: #c0392b; color: #fff; border-color: #c0392b; }
 
+/* ===== شجرة الهيكل التفاعلية (إعادة الهيكلة 2026-11) ===== */
+.orgx { display: flex; flex-direction: column; gap: 16px; margin-top: 12px; }
+.octop { display: flex; flex-direction: column; align-items: center; padding: 20px 12px 22px; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); box-shadow: var(--sh); }
+.oceo { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, #1b2440, #2b3155); color: #fff; border-radius: 16px; padding: 12px 22px; min-width: min(360px, 94%); justify-content: center; box-shadow: 0 12px 28px -14px rgba(20, 30, 60, .7); }
+.oceo .otx { display: flex; flex-direction: column; }
+.oceo .otx small { color: #c9d2e6; font-size: 11.5px; font-weight: 700; }
+.oceo .otx b { font-size: 17px; font-weight: 900; }
+.oini { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--soft); border: 1px solid var(--line-2); font-weight: 900; color: var(--mute); font-size: 15px; flex: none; }
+.oini.lg { width: 48px; height: 48px; font-size: 19px; background: rgba(255, 255, 255, .15); color: #fff; border-color: rgba(255, 255, 255, .4); }
+.ostem1 { width: 2px; height: 22px; background: var(--line-2); }
+.ovps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; position: relative; }
+.ovps::before { content: ""; position: absolute; top: -11px; inset-inline: 16.6%; height: 2px; background: var(--line-2); }
+.ovp { position: relative; background: linear-gradient(135deg, #7d2230, #9c2b3b); color: #fff; border-radius: 14px; padding: 12px 14px; text-align: center; box-shadow: 0 8px 22px -14px rgba(120, 30, 45, .7); }
+.ovp::before { content: ""; position: absolute; top: -11px; inset-inline-start: 50%; width: 2px; height: 11px; background: var(--line-2); }
+.ovp b { display: block; font-size: 13.5px; font-weight: 900; line-height: 1.5; }
+.ovp small { display: block; font-size: 12px; color: #f3d9de; margin-top: 3px; font-weight: 700; }
+@media (max-width: 720px) { .ovps { grid-template-columns: 1fr; } .ovps::before { display: none; } .ovp::before { display: none; } }
+.otree { display: flex; flex-direction: column; gap: 10px; }
+.otl { border: 1px solid var(--line-2); border-radius: 16px; background: var(--panel); overflow: hidden; }
+.otl-ent { border-inline-start: 5px solid var(--ec, #2b3155); }
+.ocard { display: flex; align-items: center; gap: 12px; padding: 13px 15px; cursor: pointer; list-style: none; user-select: none; }
+.ocard::-webkit-details-marker { display: none; }
+.ocard:hover { background: var(--soft); }
+.ocard .otx { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.ocard .otx b { font-size: 15px; font-weight: 900; color: var(--ink); }
+.oc-ent .otx b { font-size: 16.5px; }
+.ocard .otx small { font-size: 12.5px; color: var(--mute); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.olg2 { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--ec) 16%, var(--panel)); color: var(--ec); }
+.olg2 svg.i { width: 22px; height: 22px; }
+.oc-sec .av, .oc-sec .oini { width: 34px; height: 34px; font-size: 13px; }
+.ocnt { font-style: normal; font-size: 12px; font-weight: 900; background: var(--soft); border: 1px solid var(--line-2); border-radius: 99px; padding: 2px 10px; color: var(--mute); flex: none; }
+.ochev { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--faint); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; }
+details[open] > .ocard > .ochev, details.osub[open] > summary > .ochev { transform: rotate(180deg); }
+.oentbody { padding: 2px 14px 14px; }
+.osecs { display: flex; flex-direction: column; gap: 8px; padding-inline-start: 12px; border-inline-start: 2px dashed var(--line-2); margin-inline-start: 10px; }
+.otl-sec { border: 1px solid var(--line-2); border-radius: 13px; background: var(--soft); }
+.oc-sec { padding: 10px 13px; }
+.oc-sec .otx b { font-size: 14px; }
+.osecbody { padding: 2px 12px 12px; }
+.osub { border-top: 1px dashed var(--line-2); }
+.osub > summary { display: flex; align-items: center; gap: 8px; padding: 9px 4px; cursor: pointer; list-style: none; font-weight: 800; font-size: 13px; color: var(--ink); }
+.osub > summary::-webkit-details-marker { display: none; }
+.osub .ost { flex: 1; }
+.osub em { font-style: normal; font-size: 11px; font-weight: 900; background: var(--panel); border: 1px solid var(--line-2); border-radius: 99px; padding: 1px 8px; color: var(--mute); }
+.opeople { list-style: none; margin: 0; padding: 4px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 4px; }
+.opers { display: flex; align-items: center; gap: 10px; padding: 7px; border-radius: 12px; cursor: pointer; }
+.opers:hover { background: var(--panel); }
+.otl-sec .opers:hover, .osub .opers:hover { background: var(--panel); }
+.opers .av { width: 38px; height: 38px; font-size: 14px; flex: none; }
+.opers b { display: block; font-size: 13.5px; font-weight: 800; color: var(--ink); }
+.opers small { display: block; font-size: 12px; color: var(--faint); }
+.oempty { display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 12.5px; padding: 8px; grid-column: 1 / -1; }
+.oempty svg.i { width: 15px; height: 15px; }
+.onote2 { display: flex; align-items: center; gap: 8px; color: var(--mute); font-size: 12px; background: var(--panel); border: 1px dashed var(--line-2); border-radius: 10px; padding: 8px 10px; margin: 4px 0; }
+.onote2 svg.i { width: 15px; height: 15px; flex: none; }
+
 /* ===== البطاقة الرسمية للمنسوب (منقولة من style.css كما هي) ===== */
 :root { --f-display: "Tajawal", "Geeza Pro", system-ui, sans-serif; --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; --spring: cubic-bezier(.34, 1.56, .64, 1); }
 .idcard-wrap {--cu: 16px; --bg-0: #162942;
