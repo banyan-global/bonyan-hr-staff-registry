@@ -144,6 +144,9 @@ function rng(a, b) { return fd(a, { day: 'numeric', month: 'short' }) + (b && +b
 /* ---------- navigation ---------- */
 var view = 'home', screen = 'loading', cur = '', ptab = 'over', filt = { q: '', ent: '', cc: '', st: 'all' }, bucket = 'warn', openG = null, lTab = 'in', lMode = 'login', lStep = 0, atab = 'self';
 var PFIN = { yr: 0 };
+/* مصدر الدخول: من زر البريد (?src=...) أو من المنصة مباشرة — يُحفظ ليبقى بعد تسجيل الدخول */
+var ENTRY_SRC = '';
+try { ENTRY_SRC = (new URLSearchParams(location.search).get('src') || sessionStorage.getItem('entrySrc') || '').slice(0, 24); if (ENTRY_SRC) sessionStorage.setItem('entrySrc', ENTRY_SRC); } catch (e) { }
 var NAV = [
   { v: 'home', n: 'لوحة القيادة', j: 'emerald', i: 'grid' }, { v: 'people', n: 'المنسوبون', j: 'sapphire', i: 'users', b: 'exp' },
   { v: 'payroll', n: 'الرواتب', j: 'gold', i: 'wallet', p: 'pay', b: 'nobank' },
@@ -4791,7 +4794,7 @@ document.addEventListener('click', function (e) {
 });
 /* المنسوب يؤكد استلام راتب شهر، أو يتراجع عن توقيعه */
 function finSelfSign(ym, undo) {
-  api({ action: 'paySelfSign', month: ym, undo: undo ? 1 : 0 }).then(function (j) {
+  api({ action: 'paySelfSign', month: ym, undo: undo ? 1 : 0, src: ENTRY_SRC }).then(function (j) {
     var cur = (CACHE['fin:' + FIN.year] || {}).data || {};
     if (j.pay) seed('fin:' + FIN.year, Object.assign({}, cur, { pay: j.pay, signreq: undo ? (cur.signreq || []) : (cur.signreq || []).filter(function (y) { return y !== ym; }) }));
     render(); toast(undo ? 'تراجعت عن توقيع الاستلام' : 'سُجّل توقيعك باستلام الراتب');

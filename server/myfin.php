@@ -410,8 +410,9 @@ function pay_self_sign(array $b): array {
         throw new HttpError('التوقيع نهائي ولا يمكن التراجع عنه بعد تسجيله؛ لأي تصحيح يرجى التواصل مع الموارد البشرية');
     }
     if (!$m['conf']) {
-        pay_sign_put($ym, $ref, $m['net'], $f['cur'], (string)$u['email'], $nm, 'self', null, 'وقّع المنسوب الاستلام بنفسه');
-        audit_log($ref, 'توقيع المنسوب استلام راتبه', fin_mn($ym) . ' · ' . fin_money($m['net'], $f['cur']), $nm);
+        $src = (string)($b['src'] ?? ''); $via = $src === 'paymail' ? 'عبر زر بريد اعتماد الرواتب' : 'من المنصة مباشرة';
+        pay_sign_put($ym, $ref, $m['net'], $f['cur'], (string)$u['email'], $nm, 'self', null, 'وقّع المنسوب الاستلام بنفسه · ' . $via);
+        audit_log($ref, 'توقيع المنسوب استلام راتبه', fin_mn($ym) . ' · ' . fin_money($m['net'], $f['cur']) . ' · ' . $via, $nm);
     }
     return ['ok' => true, 'year' => $year, 'pay' => fin_salary($ref, $year)];
 }
@@ -485,13 +486,16 @@ function cus_self_save(array $b): array {
     return ['ok' => true, 'row' => cus_row(q1('SELECT * FROM custody WHERE id=?', [$id]))];
 }
 /* === بريد مراجعة الرواتب (تصميم معتمد) — مُولّد من المعاينة === */
-function pay_review_mail_html(): string {
-    return <<<'HTML'
+function pay_review_mail_html(string $name = ''): string {
+    $nm = $name !== '' ? esc_html($name) : '';
+    $hi = $nm !== '' ? 'حيّاكم الله، <b style="color:#14284B;">' . $nm . '</b>،<br>' : 'حيّاكم الله،<br>';
+    $yr = date('Y'); $sig = mail_signature(true);
+    return <<<HTML
 <!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light"><title>تأكيد استلام الرواتب</title>
+<meta name="color-scheme" content="light"><title>اعتماد استلام رواتب {$yr}</title>
 </head><body style="margin:0;padding:0;background:#E8EAF0;-webkit-text-size-adjust:100%;font-family:Tajawal,'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">راجعوا صفحة الرواتب وأكّدوا استلامكم بتوقيع موثّق</div>
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">اعتمدوا استلامكم لكل ما صُرف إليكم من رواتب خلال العام بتوقيع موثّق</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#E8EAF0"><tr><td align="center" style="padding:30px 12px 36px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="max-width:600px;background:#FFFFFF;border-radius:28px;overflow:hidden;box-shadow:0 22px 50px rgba(16,28,56,.16);border:1px solid #E3E6EE;">
 
@@ -507,38 +511,33 @@ function pay_review_mail_html(): string {
 <!-- Hero -->
 <tr><td align="center" style="padding:36px 32px 8px;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td align="center" style="width:84px;height:84px;line-height:84px;border-radius:44px;background:#FBF7EE;border:2px solid #C9A24A;box-shadow:0 0 0 6px rgba(201,162,74,.12);font-size:34px;color:#14284B;font-family:'Segoe UI Symbol',Arial,sans-serif;">✍</td></tr></table>
-  <h1 style="margin:20px 0 0;font-size:25px;line-height:1.5;color:#14284B;font-weight:900;letter-spacing:-.3px;">تأكيد استلام الرواتب</h1>
-  <p style="margin:12px auto 0;max-width:468px;font-size:15px;line-height:2.05;color:#3B485D;">حِرصًا على دقّة سجلّكم المالي وشفافيته، ندعوكم للاطّلاع على صفحة رواتبكم في المنصّة، وتأكيد استلامكم لما صُرِف إليكم بتوقيعٍ إلكترونيّ موثّق بالتاريخ والوقت.</p>
+  <h1 style="margin:20px 0 0;font-size:25px;line-height:1.5;color:#14284B;font-weight:900;letter-spacing:-.3px;">اعتماد استلام رواتب {$yr}</h1>
+  <p style="margin:12px auto 0;max-width:470px;font-size:15px;line-height:2.05;color:#3B485D;">{$hi}نرجو اعتماد استلامكم لما صُرِف إليكم من رواتب خلال عام <b style="color:#14284B;">{$yr}</b> بتوقيعٍ إلكترونيّ موثّق بالتاريخ والوقت، حِرصًا على دقّة سجلّكم المالي.</p>
 </td></tr>
 
 <!-- Steps -->
 <tr><td style="padding:26px 34px 2px;">
-  <div style="font-size:12.5px;font-weight:900;color:#9C7A33;margin:0 2px 14px;text-align:right;"><span style="display:inline-block;width:6px;height:6px;border-radius:3px;background:#9C7A33;vertical-align:middle;margin-left:7px;"></span>خطوات التأكيد</div>
+  <div style="font-size:12.5px;font-weight:900;color:#9C7A33;margin:0 2px 14px;text-align:right;"><span style="display:inline-block;width:6px;height:6px;border-radius:3px;background:#9C7A33;vertical-align:middle;margin-left:7px;"></span>خطوات الاعتماد</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="40" valign="top" style="padding:0 0 0 0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">١</td></tr></table>
     </td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">افتح «سجلّي المالي ← الرواتب».</div></td></tr>
     <tr><td style="padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" width="40"><div style="width:2px;height:12px;background:#E7E3D6;margin:3px auto;"></div></td></tr></table></td><td></td></tr><tr><td width="40" valign="top" style="padding:0 0 0 0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">٢</td></tr></table>
-    </td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">راجع الأشهر والمبالغ الصافية.</div></td></tr>
-    <tr><td style="padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" width="40"><div style="width:2px;height:12px;background:#E7E3D6;margin:3px auto;"></div></td></tr></table></td><td></td></tr><tr><td width="40" valign="top"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">٣</td></tr></table></td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">اضغط «أؤكّد استلام الراتب» أمام الأشهر التي استلمتها.</div></td></tr></table>
+    </td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">راجع أشهر {$yr} ومبالغها الصافية.</div></td></tr>
+    <tr><td style="padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" width="40"><div style="width:2px;height:12px;background:#E7E3D6;margin:3px auto;"></div></td></tr></table></td><td></td></tr><tr><td width="40" valign="top"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">٣</td></tr></table></td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">اضغط «أؤكّد الاستلام» أمام كل شهر استلمته.</div></td></tr></table>
 </td></tr>
 
 <!-- CTA -->
 <tr><td style="padding:24px 34px 4px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" bgcolor="#C9A24A" style="border-radius:15px;background-color:#C9A24A;background-image:linear-gradient(135deg,#E7CE97 0%,#C9A24A 52%,#9C7A33 100%);box-shadow:0 10px 22px -10px rgba(156,122,51,.6);">
-  <a href="https://hr.bonyanglobal.com/#myhr" target="_blank" style="display:block;padding:15px 18px;font-family:Tajawal,Tahoma,sans-serif;font-size:15.5px;font-weight:900;color:#0B1A33;text-decoration:none;border-radius:15px;">فتح صفحة الرواتب والتوقيع ←</a>
+  <a href="https://hr.bonyanglobal.com/?src=paymail#mypay" target="_blank" style="display:block;padding:15px 18px;font-family:Tajawal,Tahoma,sans-serif;font-size:15.5px;font-weight:900;color:#0B1A33;text-decoration:none;border-radius:15px;">اعتماد استلام رواتب {$yr} ←</a>
   </td></tr></table>
-  <p style="margin:12px 0 0;text-align:center;font-size:12px;color:#6B7689;line-height:1.8;">أو افتح المنصّة ثم: سجلّي المالي ← الرواتب</p>
+  <p style="margin:12px 0 0;text-align:center;font-size:12px;color:#6B7689;line-height:1.8;">التوقيع نهائيّ بعد تسجيله؛ لأي تصحيح تواصلوا مع الموارد البشرية.</p>
 </td></tr>
 
-<tr><td style="height:22px;font-size:0;">&nbsp;</td></tr>
-<!-- Footer -->
-<tr><td style="background:#F7F6F2;border-top:1px solid #E7E3D6;padding:18px 30px 20px;text-align:center;">
-  <div style="font-size:13px;font-weight:900;color:#14284B;">م. أسامة جنيدي</div>
-  <div style="font-size:11.5px;color:#6B7689;margin-top:2px;">تطوير وتنفيذ · منصة بنيان للموارد البشرية</div>
-  <div style="height:1px;background:#E7E3D6;margin:12px auto;max-width:180px;"></div>
-  <div style="font-size:11px;color:#6B7689;line-height:1.8;">رسالة آليّة موجّهة إليكم؛ رجاءً عدم تمريرها.<br>© 2026 مجموعة بنيان العالمية</div>
-</td></tr>
+<tr><td style="height:18px;font-size:0;">&nbsp;</td></tr>
+<!-- Footer: التوقيع القياسي -->
+<tr><td style="background:#F7F6F2;border-top:1px solid #E7E3D6;padding:8px 18px 16px;">{$sig}</td></tr>
 
 </table></td></tr></table></body></html>
 HTML;
@@ -548,9 +547,10 @@ HTML;
 /* إرسال بريد المراجعة لمنسوب واحد */
 function pay_review_mail(string $ref): bool {
     $to = hrp_staff_mail($ref); if ($to === '') return false;
-    $html = pay_review_mail_html();
-    $text = "السلام عليكم،\nيرجى الاطلاع على صفحة رواتبكم في المنصة وتأكيد استلامكم لما صُرف إليكم:\n" . mx_url('myhr') . "\n\nم. أسامة جنيدي — منصة بنيان للموارد البشرية";
-    try { send_mail($to, 'تأكيد استلام الرواتب', $html, $text, 'Bonyan HR', logo_inline()); return true; }
+    $s = staff_get($ref); $name = $s ? staff_name($s) : ''; $yr = date('Y');
+    $html = pay_review_mail_html($name);
+    $text = "السلام عليكم،\nنرجو اعتماد استلامكم لما صُرف إليكم من رواتب خلال عام " . $yr . " في «سجلي المالي ← الرواتب»:\nhttps://hr.bonyanglobal.com/?src=paymail#mypay";
+    try { send_mail($to, 'اعتماد استلام رواتب ' . $yr, $html, $text, 'Bonyan HR', logo_inline()); return true; }
     catch (Throwable $e) { error_log('[bonyan-hr] review mail ' . $e->getMessage()); return false; }
 }
 /* هل لدى المنسوب شهرٌ مستحقٌّ لم يُوقّع استلامه بعد (هذا العام والذي قبله حتى الشهر الحالي)؟ */
@@ -575,6 +575,16 @@ function pay_review_broadcast_once(): void {
         try { if (!pay_has_unsigned($rf)) continue; if (pay_review_mail($rf)) $sent++; } catch (Throwable $e) { error_log('[bonyan-hr] review bcast ' . $e->getMessage()); }
     }
     try { audit_log('', 'إرسال بريد مراجعة الرواتب لمن لم يوقّع', $sent . ' منسوب', 'م. أسامة جنيدي'); } catch (Throwable $e) {}
+}
+/* إرسال بريد اعتماد رواتب السنة لكل المنسوبين مرّة واحدة (مرّة ثانية بصيغة الاعتماد الجديدة) */
+function pay_yearreview_sendall_once(): void {
+    if (kv_get('pay_yr_all_v1') !== null) return; kv_put('pay_yr_all_v1', now(), 0);
+    $sent = 0;
+    foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $r) {
+        $rf = $r['ref']; if (hrp_staff_mail($rf) === '') continue;
+        try { if (pay_review_mail($rf)) $sent++; } catch (Throwable $e) { error_log('[bonyan-hr] yr all ' . $e->getMessage()); }
+    }
+    try { audit_log('', 'إرسال بريد اعتماد رواتب السنة للجميع', $sent . ' منسوب', 'م. أسامة جنيدي'); } catch (Throwable $e) {}
 }
 /* زر الإدارة: إرسال بريد المراجعة (الكل/جهة/محدّدين) */
 function pay_review_send(array $b): array {
