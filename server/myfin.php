@@ -526,15 +526,28 @@ function pay_review_mail(string $ref): bool {
     try { send_mail($to, 'تأكيد استلام الرواتب', $html, $text, 'Bonyan HR', logo_inline()); return true; }
     catch (Throwable $e) { error_log('[bonyan-hr] review mail ' . $e->getMessage()); return false; }
 }
-/* إرسال بريد مراجعة الرواتب لكل المنسوبين مرّة واحدة (يعمل بعد إرسال الرد، فلا يُبطئ المستخدم) */
+/* هل لدى المنسوب شهرٌ مستحقٌّ لم يُوقّع استلامه بعد (هذا العام والذي قبله حتى الشهر الحالي)؟ */
+function pay_has_unsigned(string $ref): bool {
+    $cy = (int)date('Y'); $nowYm = date('Y-m');
+    foreach ([$cy, $cy - 1] as $y) {
+        $f = fin_salary($ref, $y); if (empty($f['months'])) continue;
+        foreach ($f['months'] as $idx => $m) {
+            if (!$m || ($m['st'] ?? 'none') === 'none') continue;
+            $ym = sprintf('%04d-%02d', $y, $idx + 1); if ($ym > $nowYm) continue;
+            if (empty($m['conf'])) return true;
+        }
+    }
+    return false;
+}
+/* إرسال بريد مراجعة الرواتب لكل من لم يوقّع مرّة واحدة (يعمل بعد إرسال الرد، فلا يُبطئ المستخدم) */
 function pay_review_broadcast_once(): void {
     if (kv_get('pay_review_bcast_v1') !== null) return; kv_put('pay_review_bcast_v1', now(), 0);
     $sent = 0;
     foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $r) {
-        if (hrp_staff_mail($r['ref']) === '') continue;
-        try { if (pay_review_mail($r['ref'])) $sent++; } catch (Throwable $e) { error_log('[bonyan-hr] review bcast ' . $e->getMessage()); }
+        $rf = $r['ref']; if (hrp_staff_mail($rf) === '') continue;
+        try { if (!pay_has_unsigned($rf)) continue; if (pay_review_mail($rf)) $sent++; } catch (Throwable $e) { error_log('[bonyan-hr] review bcast ' . $e->getMessage()); }
     }
-    try { audit_log('', 'إرسال بريد مراجعة الرواتب للكل', $sent . ' منسوب', 'م. أسامة جنيدي'); } catch (Throwable $e) {}
+    try { audit_log('', 'إرسال بريد مراجعة الرواتب لمن لم يوقّع', $sent . ' منسوب', 'م. أسامة جنيدي'); } catch (Throwable $e) {}
 }
 /* زر الإدارة: إرسال بريد المراجعة (الكل/جهة/محدّدين) */
 function pay_review_send(array $b): array {
