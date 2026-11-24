@@ -4839,31 +4839,37 @@ function payPersonDrawer(ref) {
     b.innerHTML = info + kp + list;
   }).catch(function (e) { var b = el.querySelector('#psBody'); if (b) b.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
 }
-/* تبويب «السجل المالي» في ملف المنسوب: ملخّص التوقيعات + كشف استلام الرواتب + بيانات الصرف البنكية */
+/* تبويب «السجل المالي» في ملف المنسوب: رأس أنيق بالراتب + ملخّص التوقيعات + كشف الاستلام + لوحة بنكية */
 function payRecordH(s) {
   var r = s.r || {}, ref = s.ref, nowY = new Date().getFullYear(), yr = PFIN.yr || nowY;
-  var bank = kvHTML([['الراتب الشهري', s.base ? '<span class="tn">' + n(s.base) + ' ' + esc(curS(s.cur)) + '</span>' : '—'], ['العملة', esc(curN(s.cur))], ['المكافئ التقريبي بالريال', s.base && FX[s.cur] ? '<span class="tn">' + n(sar(s)) + ' ر.س</span>' : '—'],
-    ['طريقة الاستلام', esc(r.payMethod || '—')], ['البنك', esc(r.bankName || '—')], ['دولة البنك', esc(r.bankCountry || '—')], ['الحساب', s.iban ? '<span class="ltr">' + esc(s.iban) + '</span>' : '<span class="pill bad"><i></i>غير مسجل</span>']]) +
-    '<div class="note">' + ic('lock') + '<span>رقم الحساب يظهر مقنّعًا في المنصة. بياناته كاملة في التعديل التفصيلي لمن يملك صلاحية المالية.</span></div>';
+  var acc = s.iban ? '<b class="ltr">' + esc(s.iban) + '</b>' : '<b class="miss">غير مسجّل</b>';
+  var bankItems = [['طريقة الاستلام', esc(r.payMethod || '—')], ['العملة', esc(curN(s.cur))], ['البنك', esc(r.bankName || '—')], ['دولة البنك', esc(r.bankCountry || '—')]]
+    .map(function (x) { return '<div class="finbank-i"><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('');
+  var bank = '<div class="finbank"><div class="finbank-h">' + ic('wallet') + 'الصرف والحساب البنكي</div>' +
+    '<div class="finbank-g">' + bankItems + '<div class="finbank-i wide"><span>رقم الحساب (IBAN)</span>' + acc + '</div></div>' +
+    '<div class="finbank-note">' + ic('lock') + 'رقم الحساب يظهر مقنّعًا؛ بياناته كاملة في التعديل التفصيلي لمن يملك صلاحية المالية.</div></div>';
   var c = need('psfin:' + ref + ':' + yr, function () { return api({ action: 'myFin', ref: ref, year: yr }); }, 60000);
-  var top;
-  if (!c.data && c.loading) top = '<div class="empty">جارٍ تحميل السجل المالي…</div>';
-  else if (!c.data) top = '<div class="empty">' + esc(c.err || 'تعذّر تحميل السجل المالي') + '</div>';
+  var body;
+  if (!c.data && c.loading) body = '<div class="empty">جارٍ تحميل السجل المالي…</div>';
+  else if (!c.data) body = '<div class="empty">' + esc(c.err || 'تعذّر تحميل السجل المالي') + '</div>';
   else {
-    var d = c.data, p = d.pay || {}, cur = p.cur || s.cur || 'SAR', cl = curL(cur);
+    var d = c.data, p = d.pay || {}, cur = p.cur || s.cur || 'SAR', cl = curL(cur), sal = p.salary || s.base || 0;
     var months = (p.months || []).filter(function (m) { return m.st !== 'none'; });
     var signed = months.filter(function (m) { return m.conf; }).length;
     var pend = months.filter(function (m) { return !m.conf && (m.st === 'wait' || m.st === 'due'); }).length;
-    var due = months.length, recv = 0; months.forEach(function (m) { if (m.conf) recv += m.net; });
+    var recv = 0; months.forEach(function (m) { if (m.conf) recv += m.net; });
+    var eq = (cur !== 'SAR' && FX[cur]) ? '<span class="finhead-eq">≈ ' + fm(Math.round(sal * FX[cur])) + ' ر.س</span>' : '';
     var ys = (p.years && p.years.length) ? p.years : [yr];
-    var yrbar = ys.length > 1 ? '<div class="pfy">' + ys.map(function (y) { return '<button type="button" class="pfy-b' + (y === yr ? ' on' : '') + '" data-pfy="' + y + '" aria-pressed="' + (y === yr) + '">' + y + '</button>'; }).join('') + '</div>' : '';
-    var kps = '<div class="grid g3 fx-k ps-k">' +
-      kpi('emerald', 'check', signed, 'شهر', 'موقّعة', 'من ' + due + ' شهر مستحق في ' + yr) +
-      kpi('gold', 'clock', pend, 'شهر', 'بانتظار التوقيع', pend ? 'لم يوقّع المنسوب استلامها بعد' : 'لا شيء معلّق') +
-      kpi('sapphire', 'coins', fm(Math.round(recv)), cl, 'المستلَم في ' + yr, 'مجموع صافي الأشهر الموقّعة') + '</div>';
-    top = yrbar + kps + '<div class="ps-sec">كشف استلام الرواتب · ' + yr + '</div><div class="ps-rc">' + finReceiptsH(p, finMonths(p), -1, [], false) + '</div>';
+    var yrbar = '<div class="finyr">' + ys.map(function (y) { return '<button type="button" class="finyr-b' + (y === yr ? ' on' : '') + '" data-pfy="' + y + '" aria-pressed="' + (y === yr) + '">' + y + '</button>'; }).join('') + '</div>';
+    var head = '<div class="finhead"><div class="finhead-main"><span class="finhead-lbl">الراتب الشهري</span>' +
+      '<span class="finhead-amt">' + (sal ? fm(sal) : '—') + ' <small>' + esc(cl) + '</small></span>' + eq + '</div>' + yrbar + '</div>';
+    var stats = '<div class="finstats">' +
+      '<div class="finstat ok"><span class="fs-ic">' + ic('check') + '</span><div><b>' + signed + '</b><span>' + (signed === 1 ? 'شهر موقّع' : 'أشهر موقّعة') + '</span></div></div>' +
+      '<div class="finstat warn"><span class="fs-ic">' + ic('clock') + '</span><div><b>' + pend + '</b><span>بانتظار التوقيع</span></div></div>' +
+      '<div class="finstat info"><span class="fs-ic">' + ic('coins') + '</span><div><b>' + fm(Math.round(recv)) + '</b><span>المستلَم في ' + yr + ' (' + esc(cl) + ')</span></div></div></div>';
+    body = head + stats + '<div class="finsec">كشف استلام الرواتب · ' + yr + '</div>' + finReceiptsH(p, finMonths(p), -1, [], false);
   }
-  return top + '<h3 class="h3s">بيانات الصرف والحساب البنكي</h3>' + bank;
+  return '<div class="finrec">' + body + bank + '</div>';
 }
 function pcRetroAsk() {
   var now = new Date(), thr = new Date(now.getFullYear(), now.getMonth() - 3, 1), through = thr.getFullYear() + '-' + ('0' + (thr.getMonth() + 1)).slice(-2);

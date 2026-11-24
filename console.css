@@ -2882,12 +2882,38 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .rcpt-act .btn .i{color:#fff}
 }
 
-/* مبدّل السنة في تبويب «السجل المالي» بملف المنسوب — نوفمبر 2026 */
-.pfy{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
-.pfy-b{font:inherit;font-weight:700;font-size:13px;color:var(--mute);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:7px 16px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
-.pfy-b:hover{border-color:var(--gold-d);color:var(--ink)}
-.pfy-b.on{background:var(--navy);border-color:var(--navy);color:var(--on-navy)}
-.pbody .ps-k{margin:0 0 16px}
-.pbody .ps-sec{font-weight:800;color:var(--ink);margin:4px 0 10px;font-size:15px}
-.pbody .ps-rc{margin:0 0 6px}
-.pbody .h3s{margin-top:22px}
+/* تبويب «السجل المالي» في ملف المنسوب — تصميم مختصر وأنيق · نوفمبر 2026 */
+.finrec{display:flex;flex-direction:column;gap:18px}
+.finhead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:linear-gradient(135deg,var(--navy),var(--navy-2));color:var(--on-navy);border-radius:18px;padding:17px 20px;box-shadow:0 14px 34px -20px rgba(12,26,54,.6)}
+.finhead-main{display:flex;flex-direction:column;gap:1px;min-width:0}
+.finhead-lbl{font-size:12px;color:var(--on-navy-2);font-weight:600}
+.finhead-amt{font-size:29px;font-weight:800;line-height:1.08;letter-spacing:-.5px}
+.finhead-amt small{font-size:13.5px;font-weight:600;color:var(--on-navy-2);margin-inline-start:5px}
+.finhead-eq{font-size:12px;color:var(--on-navy-3);margin-top:1px}
+.finyr{display:flex;gap:6px;flex-wrap:wrap}
+.finyr-b{font:inherit;font-weight:700;font-size:12.5px;color:var(--on-navy-2);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:6px 15px;cursor:pointer;transition:.15s}
+.finyr-b:hover{background:rgba(255,255,255,.17);color:#fff}
+.finyr-b.on{background:var(--gold);border-color:var(--gold);color:var(--navy-d)}
+.finstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.finstat{display:flex;align-items:center;gap:11px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px 13px}
+.finstat .fs-ic{width:37px;height:37px;border-radius:11px;display:grid;place-items:center;flex:none}
+.finstat .fs-ic .i,.finstat .fs-ic svg{width:19px;height:19px}
+.finstat b{display:block;font-size:19px;font-weight:800;color:var(--ink);line-height:1;margin-bottom:3px}
+.finstat span{font-size:11px;color:var(--mute);line-height:1.2;display:block}
+.finstat.ok .fs-ic{background:rgba(28,151,98,.12);color:#1c9762}
+.finstat.warn .fs-ic{background:var(--gold-wash);color:var(--gold-ink)}
+.finstat.info .fs-ic{background:rgba(19,38,74,.09);color:var(--navy-2)}
+.finrec .finsec{font-weight:800;color:var(--ink);font-size:14px;display:flex;align-items:center;gap:9px;margin:2px 0 -4px}
+.finrec .finsec:before{content:"";width:4px;height:15px;border-radius:3px;background:var(--gold)}
+.finbank{background:var(--soft);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.finbank-h{display:flex;align-items:center;gap:9px;padding:12px 16px;font-weight:800;color:var(--ink);font-size:13.5px;border-bottom:1px solid var(--line);background:var(--panel)}
+.finbank-h .i,.finbank-h svg{width:17px;height:17px;color:var(--gold-d)}
+.finbank-g{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+.finbank-i{background:var(--panel);padding:11px 16px;display:flex;flex-direction:column;gap:3px}
+.finbank-i.wide{grid-column:1/-1}
+.finbank-i>span{font-size:11px;color:var(--mute)}
+.finbank-i>b{font-size:14px;color:var(--ink);font-weight:700}
+.finbank-i>b.miss{color:var(--c-bad);font-size:12.5px}
+.finbank-note{display:flex;align-items:center;gap:7px;padding:10px 16px;font-size:11px;color:var(--mute);background:var(--panel);border-top:1px solid var(--line)}
+.finbank-note .i,.finbank-note svg{width:14px;height:14px;flex:none;color:var(--faint)}
+@media(max-width:560px){.finstats{grid-template-columns:1fr}.finbank-g{grid-template-columns:1fr}.finhead-amt{font-size:26px}}
