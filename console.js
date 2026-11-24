@@ -143,6 +143,7 @@ function rng(a, b) { return fd(a, { day: 'numeric', month: 'short' }) + (b && +b
 
 /* ---------- navigation ---------- */
 var view = 'home', screen = 'loading', cur = '', ptab = 'over', filt = { q: '', ent: '', cc: '', st: 'all' }, bucket = 'warn', openG = null, lTab = 'in', lMode = 'login', lStep = 0, atab = 'self';
+var PFIN = { yr: 0 };
 var NAV = [
   { v: 'home', n: 'لوحة القيادة', j: 'emerald', i: 'grid' }, { v: 'people', n: 'المنسوبون', j: 'sapphire', i: 'users', b: 'exp' },
   { v: 'payroll', n: 'الرواتب', j: 'gold', i: 'wallet', p: 'pay', b: 'nobank' },
@@ -409,6 +410,7 @@ function bind() {
   app.querySelectorAll('[data-gobk]').forEach(function (el) { el.onclick = function () { bucket = el.dataset.gobk; location.hash = 'documents'; }; });
   app.querySelectorAll('[data-pick]').forEach(function (el) { el.onclick = function () { cur = el.dataset.pick; ptab = 'over'; render(); if (innerWidth < 1280) { var p = $('.prof'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }; });
   app.querySelectorAll('[data-ptab]').forEach(function (el) { el.onclick = function () { ptab = el.dataset.ptab; render(); }; });
+  app.querySelectorAll('[data-pfy]').forEach(function (el) { el.onclick = function () { PFIN.yr = +el.dataset.pfy; softRender(); }; });
   app.querySelectorAll('[data-st]').forEach(function (el) { el.onclick = function () { filt.st = el.dataset.st; render(); }; });
   app.querySelectorAll('[data-bucket]').forEach(function (el) { el.onclick = function () { bucket = el.dataset.bucket; render(); }; });
   app.querySelectorAll('[data-atab]').forEach(function (el) { el.onclick = function () { atab = el.dataset.atab; render(); }; });
@@ -1031,7 +1033,7 @@ function completeness(s) { var tot = 4 + s.docs.filter(function (d) { return d.t
 function ksec(title, icn, list) { var b = kvHTML(list); return '<section class="ksec"><h3>' + ic(icn) + title + '</h3>' + b + '</section>'; }
 function profHTML(s) {
   var r = s.r, myReqs = reqRows().filter(function (x) { return x.ref === s.ref; }), openR = myReqs.filter(function (x) { return x.status === 'pending'; }).length;
-  var T = [['over', 'الملخص', 'card'], ['info', 'البيانات', 'user'], ['docs', 'الوثائق', 'pass', s.docs.filter(function (d) { return d.days <= 30 || (!d.file && !d.opt); }).length], ['pay', 'المالية', 'wallet'], ['reqs', 'الطلبات', 'stamp', openR], ['log', 'السجل', 'history']]
+  var T = [['over', 'الملخص', 'card'], ['info', 'البيانات', 'user'], ['docs', 'الوثائق', 'pass', s.docs.filter(function (d) { return d.days <= 30 || (!d.file && !d.opt); }).length], ['pay', 'السجل المالي', 'wallet'], ['reqs', 'الطلبات', 'stamp', openR], ['log', 'السجل', 'history']]
     .filter(function (t) { return (t[0] !== 'pay' || can('pay')) && (t[0] !== 'log' || can('audit') || can('mail')); });
   if (!T.some(function (t) { return t[0] === ptab; })) ptab = 'over';
   var body = '', pc = completeness(s);
@@ -1046,9 +1048,7 @@ function profHTML(s) {
     ksec('الوظيفة', 'building', [['الجهة', esc(s.ent.full || s.ent.n)], ['المسمى', esc(s.job)], ['الإدارة', esc(r.department || '—')], ['المدير المباشر', esc(r.manager || '—')], ['دولة العمل', esc(s.c.n)], ['تاريخ المباشرة', fdx(s.hire)]]) +
     ksec('السجل في المنصة', 'history', [['الرقم المرجعي', '<span class="ltr">' + esc(s.ref) + '</span>'], ['تاريخ التسجيل', fdx(s.reg) + ' <small class="mu">' + agoD(s.reg) + '</small>'], ['آخر تحديث', s.upd ? fd(s.upd) + ' <small class="mu">' + agoD(s.upd) + '</small>' : '—'], ['رسالة التأكيد', s.mailed ? 'أُرسلت إلى بريده' : '<span class="pill mute"><i></i>لم تُرسل</span>']]) + '</div>';
   if (ptab === 'docs') body = docRows(s.docs, true) + '<div class="note">' + ic('archive') + '<span>عند استبدال وثيقة تنتقل النسخة القديمة إلى الأرشيف ولا تُحذف، ويمكن استرجاعها من التعديل التفصيلي.</span></div>';
-  if (ptab === 'pay') body = kvHTML([['الراتب الشهري', s.base ? '<span class="tn">' + n(s.base) + ' ' + esc(curS(s.cur)) + '</span>' : '—'], ['العملة', esc(curN(s.cur))], ['المكافئ التقريبي بالريال', s.base && FX[s.cur] ? '<span class="tn">' + n(sar(s)) + ' ر.س</span>' : '—'],
-      ['طريقة الاستلام', esc(r.payMethod || '—')], ['البنك', esc(r.bankName || '—')], ['دولة البنك', esc(r.bankCountry || '—')], ['الحساب', s.iban ? '<span class="ltr">' + esc(s.iban) + '</span>' : '<span class="pill bad"><i></i>غير مسجل</span>']]) +
-    '<div class="note">' + ic('lock') + '<span>رقم الحساب يظهر مقنّعًا في المنصة. بياناته كاملة في التعديل التفصيلي لمن يملك صلاحية المالية.</span></div>';
+  if (ptab === 'pay') body = payRecordH(s);
   if (ptab === 'reqs') body = (can('edit') ? '<div class="rqhead"><span>' + (myReqs.length ? nq(myReqs.length, 'طلب واحد', 'طلبان', 'طلبات', 'طلبًا') + (openR ? '، ' + openR + ' قيد الإجراء' : '') : 'لا طلبات لهذا المنسوب بعد') + '</span><a class="btn sm goldb" href="#reqs-new" data-rwref="' + esc(s.ref) + '">' + ic('plus') + 'طلب نيابة عنه</a></div>' : '') +
     (myReqs.length ? reqListHTML(myReqs, false) : '');
   if (ptab === 'log') body = profLog(s);
@@ -4838,6 +4838,32 @@ function payPersonDrawer(ref) {
     var list = '<div class="ps-sec">كشف استلام الرواتب</div><div class="ps-rc">' + finReceiptsH(p, finMonths(p), -1, [], false) + '</div>';
     b.innerHTML = info + kp + list;
   }).catch(function (e) { var b = el.querySelector('#psBody'); if (b) b.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+}
+/* تبويب «السجل المالي» في ملف المنسوب: ملخّص التوقيعات + كشف استلام الرواتب + بيانات الصرف البنكية */
+function payRecordH(s) {
+  var r = s.r || {}, ref = s.ref, nowY = new Date().getFullYear(), yr = PFIN.yr || nowY;
+  var bank = kvHTML([['الراتب الشهري', s.base ? '<span class="tn">' + n(s.base) + ' ' + esc(curS(s.cur)) + '</span>' : '—'], ['العملة', esc(curN(s.cur))], ['المكافئ التقريبي بالريال', s.base && FX[s.cur] ? '<span class="tn">' + n(sar(s)) + ' ر.س</span>' : '—'],
+    ['طريقة الاستلام', esc(r.payMethod || '—')], ['البنك', esc(r.bankName || '—')], ['دولة البنك', esc(r.bankCountry || '—')], ['الحساب', s.iban ? '<span class="ltr">' + esc(s.iban) + '</span>' : '<span class="pill bad"><i></i>غير مسجل</span>']]) +
+    '<div class="note">' + ic('lock') + '<span>رقم الحساب يظهر مقنّعًا في المنصة. بياناته كاملة في التعديل التفصيلي لمن يملك صلاحية المالية.</span></div>';
+  var c = need('psfin:' + ref + ':' + yr, function () { return api({ action: 'myFin', ref: ref, year: yr }); }, 60000);
+  var top;
+  if (!c.data && c.loading) top = '<div class="empty">جارٍ تحميل السجل المالي…</div>';
+  else if (!c.data) top = '<div class="empty">' + esc(c.err || 'تعذّر تحميل السجل المالي') + '</div>';
+  else {
+    var d = c.data, p = d.pay || {}, cur = p.cur || s.cur || 'SAR', cl = curL(cur);
+    var months = (p.months || []).filter(function (m) { return m.st !== 'none'; });
+    var signed = months.filter(function (m) { return m.conf; }).length;
+    var pend = months.filter(function (m) { return !m.conf && (m.st === 'wait' || m.st === 'due'); }).length;
+    var due = months.length, recv = 0; months.forEach(function (m) { if (m.conf) recv += m.net; });
+    var ys = (p.years && p.years.length) ? p.years : [yr];
+    var yrbar = ys.length > 1 ? '<div class="pfy">' + ys.map(function (y) { return '<button type="button" class="pfy-b' + (y === yr ? ' on' : '') + '" data-pfy="' + y + '" aria-pressed="' + (y === yr) + '">' + y + '</button>'; }).join('') + '</div>' : '';
+    var kps = '<div class="grid g3 fx-k ps-k">' +
+      kpi('emerald', 'check', signed, 'شهر', 'موقّعة', 'من ' + due + ' شهر مستحق في ' + yr) +
+      kpi('gold', 'clock', pend, 'شهر', 'بانتظار التوقيع', pend ? 'لم يوقّع المنسوب استلامها بعد' : 'لا شيء معلّق') +
+      kpi('sapphire', 'coins', fm(Math.round(recv)), cl, 'المستلَم في ' + yr, 'مجموع صافي الأشهر الموقّعة') + '</div>';
+    top = yrbar + kps + '<div class="ps-sec">كشف استلام الرواتب · ' + yr + '</div><div class="ps-rc">' + finReceiptsH(p, finMonths(p), -1, [], false) + '</div>';
+  }
+  return top + '<h3 class="h3s">بيانات الصرف والحساب البنكي</h3>' + bank;
 }
 function pcRetroAsk() {
   var now = new Date(), thr = new Date(now.getFullYear(), now.getMonth() - 3, 1), through = thr.getFullYear() + '-' + ('0' + (thr.getMonth() + 1)).slice(-2);

@@ -2881,3 +2881,13 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .rcpt-act .btn{width:100%;padding:13px;font-size:14.5px;background-image:linear-gradient(135deg,#1c9762,#137a4e);color:#fff;border:0;box-shadow:0 10px 20px -10px rgba(19,122,78,.55);border-radius:13px}
   .rcpt-act .btn .i{color:#fff}
 }
+
+/* مبدّل السنة في تبويب «السجل المالي» بملف المنسوب — نوفمبر 2026 */
+.pfy{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.pfy-b{font:inherit;font-weight:700;font-size:13px;color:var(--mute);background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:7px 16px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.pfy-b:hover{border-color:var(--gold-d);color:var(--ink)}
+.pfy-b.on{background:var(--navy);border-color:var(--navy);color:var(--on-navy)}
+.pbody .ps-k{margin:0 0 16px}
+.pbody .ps-sec{font-weight:800;color:var(--ink);margin:4px 0 10px;font-size:15px}
+.pbody .ps-rc{margin:0 0 6px}
+.pbody .h3s{margin-top:22px}
