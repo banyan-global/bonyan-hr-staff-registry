@@ -2921,3 +2921,13 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* البريد المعتمد في «البيانات» — السطر السفلي للشارة ومصدر البريد */
 .emeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
 .emeta .mu{font-size:11px}
+
+/* نافذة اختيار البريد المعتمد + سطر آخر دخول */
+.maopts{display:flex;flex-direction:column;gap:10px}
+.maopt{display:flex;align-items:center;justify-content:space-between;gap:12px;font:inherit;text-align:right;background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:13px 16px;cursor:pointer;transition:border-color .15s,background .15s}
+.maopt:hover:not([disabled]){border-color:var(--gold-d);background:var(--panel)}
+.maopt .ltr{font-size:14px;font-weight:700;color:var(--ink)}
+.maopt em{font-size:11.5px;font-style:normal;color:var(--gold-ink);font-weight:700;white-space:nowrap}
+.maopt.on{border-color:var(--c-ok);background:rgba(28,151,98,.07);cursor:default}
+.maopt.on em{color:#1c9762}
+.emeta .ok-t{color:#1c9762;font-weight:700}

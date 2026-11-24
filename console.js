@@ -411,6 +411,7 @@ function bind() {
   app.querySelectorAll('[data-pick]').forEach(function (el) { el.onclick = function () { cur = el.dataset.pick; ptab = 'over'; render(); if (innerWidth < 1280) { var p = $('.prof'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }; });
   app.querySelectorAll('[data-ptab]').forEach(function (el) { el.onclick = function () { ptab = el.dataset.ptab; render(); }; });
   app.querySelectorAll('[data-pfy]').forEach(function (el) { el.onclick = function () { PFIN.yr = +el.dataset.pfy; softRender(); }; });
+  app.querySelectorAll('[data-mailapprove]').forEach(function (el) { el.onclick = function () { mailApproveAsk(el.dataset.mailapprove); }; });
   app.querySelectorAll('[data-st]').forEach(function (el) { el.onclick = function () { filt.st = el.dataset.st; render(); }; });
   app.querySelectorAll('[data-bucket]').forEach(function (el) { el.onclick = function () { bucket = el.dataset.bucket; render(); }; });
   app.querySelectorAll('[data-atab]').forEach(function (el) { el.onclick = function () { atab = el.dataset.atab; render(); }; });
@@ -1031,16 +1032,42 @@ function kvHTML(list) { return '<dl class="kv">' + list.filter(function (p) { re
 function ltr(v) { return v ? '<span class="ltr">' + esc(v) + '</span>' : '—'; }
 function completeness(s) { var tot = 4 + s.docs.filter(function (d) { return d.t !== 'العقد'; }).length; return Math.round(Math.max(0, tot - s.miss.length) / tot * 100); }
 function ksec(title, icn, list) { var b = kvHTML(list); return '<section class="ksec"><h3>' + ic(icn) + title + '</h3>' + b + '</section>'; }
-/* البريد المعتمد للمنسوب: الرسمي ثم الشخصي احتياطيًا (كما يعتمده الخادم) مع شارة حالة التوثيق/التفعيل */
+/* البريد المعتمد للمنسوب: الرسمي ثم الشخصي احتياطيًا (كما يعتمده الخادم) مع شارة حالة التوثيق/التفعيل + آخر دخول فعلي */
+function mailChangeBtn(s) {
+  var r = s.r || {};
+  if (!isOwner() || !r.officialEmail || !r.personalEmail || String(r.officialEmail).toLowerCase() === String(r.personalEmail).toLowerCase()) return '';
+  return '<div class="emeta"><button type="button" class="btn sm" data-mailapprove="' + esc(s.ref) + '">' + ic('mail') + 'تغيير البريد المعتمد</button></div>';
+}
 function approvedMailH(s) {
   var r = s.r || {}, em = s.mail || r.officialEmail || r.personalEmail || '';
-  if (!em) return '<span class="pill bad"><i></i>لا يوجد بريد معتمد</span>';
+  if (!em) return '<span class="pill bad"><i></i>لا يوجد بريد معتمد</span>' + mailChangeBtn(s);
   var src = r.officialEmail ? 'بريد رسمي · يُعتمد للدخول وكل المراسلات' : 'بريد شخصي · يُعتمد مؤقتًا (لا يوجد بريد رسمي)';
   var badge = (r._verified === 0)
     ? (s.mailed ? '<span class="pill warn"><i></i>أُرسلت رسالة التأكيد — بانتظار تفعيل الدخول</span>'
                 : '<span class="pill mute"><i></i>غير مؤكّد — لم يُفعّل الدخول بعد</span>')
     : '<span class="pill ok"><i></i>موثّق ومفعّل الدخول</span>';
-  return '<span class="ltr" style="font-size:13.5px">' + esc(em) + '</span><div class="emeta">' + badge + '<small class="mu">' + src + '</small></div>';
+  var login = r.lastLogin ? '<small class="mu ok-t">✓ آخر دخول فعلي: ' + fdx(pdate(r.lastLogin), { day: 'numeric', month: 'short', year: 'numeric' }) + '</small>'
+    : (r.acct ? '<small class="mu">للحساب دخول مفعّل · لم يُسجّل الدخول بعد</small>' : '');
+  return '<span class="ltr" style="font-size:13.5px">' + esc(em) + '</span><div class="emeta">' + badge + '<small class="mu">' + src + '</small></div>' +
+    (login ? '<div class="emeta">' + login + '</div>' : '') + mailChangeBtn(s);
+}
+/* المالك (الدكتور عبدالله) يختار أيّ بريد يكون المعتمد من بين بريدَي المنسوب */
+function mailApproveAsk(ref) {
+  var s = byRef(ref); if (!s) return; var r = s.r || {};
+  var cur = String(r.officialEmail || r.personalEmail || '').toLowerCase();
+  var opts = []; if (r.officialEmail) opts.push(r.officialEmail);
+  if (r.personalEmail && String(r.personalEmail).toLowerCase() !== String(r.officialEmail || '').toLowerCase()) opts.push(r.personalEmail);
+  var el = layer('maLayer', { tile: tile('sapphire', 'mail'), t: 'اختيار البريد المعتمد', p: s.name },
+    '<p style="margin:0 0 14px;color:var(--mute)">البريد المعتمد يُستخدم لدخول المنسوب ولكل مراسلات المنصة (الإشعارات وطلبات توقيع الرواتب). اختر أيّ بريد يكون المعتمد؛ ويُحفظ الآخر احتياطيًا.</p>' +
+    '<div class="maopts">' + opts.map(function (e) { var on = e.toLowerCase() === cur; return '<button type="button" class="maopt' + (on ? ' on' : '') + '" data-mapick="' + esc(e) + '"' + (on ? ' disabled' : '') + '><span class="ltr">' + esc(e) + '</span><em>' + (on ? 'المعتمد حاليًا' : 'اجعله المعتمد') + '</em></button>'; }).join('') + '</div>',
+    '<div class="lerr" role="alert"></div><button class="btn" data-lyclose="1">إغلاق</button>', 'anm');
+  el.querySelectorAll('[data-mapick]').forEach(function (b) { b.onclick = function () {
+    var email = b.getAttribute('data-mapick'); b.disabled = true;
+    api({ action: 'staffMailApprove', ref: ref, email: email }).then(function (j) {
+      el.close(); if (j.unchanged) { toast('هذا هو البريد المعتمد أصلًا'); return; }
+      reloadList().then(function () { render(); toast('صار البريد المعتمد: ' + j.approved); });
+    }).catch(function (e) { b.disabled = false; el.querySelector('.lerr').textContent = errText(e); });
+  }; });
 }
 function profHTML(s) {
   var r = s.r, myReqs = reqRows().filter(function (x) { return x.ref === s.ref; }), openR = myReqs.filter(function (x) { return x.status === 'pending'; }).length;

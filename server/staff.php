@@ -87,6 +87,23 @@ function staff_verify(array $b): array {
     audit_log($ref, $on ? 'توثيق السجل وتفعيل دخول المنسوب' : 'إلغاء توثيق السجل وإيقاف دخول المنسوب', staff_name($r), $u['_label']);
     return ['ok' => true, 'verified' => $on];
 }
+/* اختيار البريد المعتمد لمنسوب (الرسمي) من بين بريدَيه — لمالك المنصة (الدكتور عبدالله) وحده */
+function staff_mail_approve(array $b): array {
+    $me = current_user(); if (!$me || !is_owner($me)) throw new HttpError('لمالك المنصة وحده', 403);
+    $ref = strtoupper(trim((string)($b['ref'] ?? ''))); if ($ref === '') throw new HttpError('ref');
+    $email = strtolower(trim((string)($b['email'] ?? '')));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new HttpError('بريد غير صحيح');
+    $s = staff_get($ref); if (!$s) throw new HttpError('not_found', 404);
+    $d = $s['data'];
+    $off = strtolower(trim((string)($d['officialEmail'] ?? ''))); $per = strtolower(trim((string)($d['personalEmail'] ?? '')));
+    if ($email !== $off && $email !== $per) throw new HttpError('اختر أحد بريدَي المنسوب');
+    if ($email === $off) return ['ok' => true, 'ref' => $ref, 'approved' => $email, 'unchanged' => true];
+    /* تحويل المختار إلى المعتمد (الرسمي)، مع حفظ السابق احتياطيًا في الشخصي كيلا يُفقد */
+    $d['officialEmail'] = $email; $d['personalEmail'] = $off !== '' ? $off : $per;
+    $s['data'] = $d; $s['updated_at'] = now(); staff_put($s);
+    audit_log($ref, 'تغيير البريد المعتمد للمنسوب', 'صار المعتمد: ' . mask_email($email), $me['_label'] ?? hrp_label($me));
+    return ['ok' => true, 'ref' => $ref, 'approved' => $email];
+}
 function assert_ref_visible(?array $u, string $ref): void { if (in_array(strtoupper($ref), private_hidden_for($u), true)) throw new HttpError('not_found', 404); }
 function private_filter(?array $u, array $rows, string $key = 'ref'): array { $h = private_hidden_for($u); return $h ? array_values(array_filter($rows, fn($r) => !in_array((string)($r[$key] ?? ''), $h, true))) : $rows; }
 function owner_user(): ?array { foreach (q("SELECT * FROM users WHERE active=1 AND role='admin' ORDER BY id")->fetchAll() as $u) if (is_owner($u)) return $u; return null; }
@@ -309,10 +326,16 @@ function admin_list(): array {
     $fin = has_perm($u, 'finance.view');
     $files = files_by_ref(); $rows = []; $kids = ['quals' => [KIDS['quals'][1]], 'exp' => [KIDS['exp'][1]], 'langs' => [KIDS['langs'][1]]];
     $hide = private_hidden_for($u);
+    $ulog = []; foreach (q('SELECT email, last_login_at FROM users WHERE active=1')->fetchAll() as $uu) { $em = strtolower(trim((string)$uu['email'])); if ($em !== '') $ulog[$em] = (string)($uu['last_login_at'] ?? ''); }
     foreach (q('SELECT ref FROM staff ORDER BY id')->fetchAll() as $x) {
         if (in_array($x['ref'], $hide, true)) continue;
         $r = staff_get($x['ref']);
-        $rows[] = display_row($r, $files[$r['ref']] ?? [], $fin) + ['_verified' => staff_verified($r['ref']) ? 1 : 0];
+        $row = display_row($r, $files[$r['ref']] ?? [], $fin) + ['_verified' => staff_verified($r['ref']) ? 1 : 0];
+        $em1 = strtolower(trim((string)($r['data']['officialEmail'] ?? ''))); $em2 = strtolower(trim((string)($r['data']['personalEmail'] ?? '')));
+        $ll = ''; foreach ([$em1, $em2] as $e) { if ($e !== '' && isset($ulog[$e]) && $ulog[$e] > $ll) $ll = $ulog[$e]; }
+        $row['acct'] = (($em1 !== '' && isset($ulog[$em1])) || ($em2 !== '' && isset($ulog[$em2]))) ? 1 : 0;
+        $row['lastLogin'] = $ll ? substr($ll, 0, 16) : '';
+        $rows[] = $row;
         foreach (array_keys(KIDS) as $k) foreach (kid_rows($r, $k) as $kr) $kids[$k][] = $kr;
     }
     audit_log('', 'عرض بيانات المنسوبين', $u['_label'], $u['_label']);
