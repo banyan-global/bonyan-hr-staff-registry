@@ -314,14 +314,17 @@ function pay_sign_retro(array $b): array {
     if ($r['count']) audit_log($scope === 'refs' && count($refs) === 1 ? $refs[0] : '', 'توقيع استلام رواتب بأثر رجعي', 'حتى ' . $r['through'] . ' · ' . $r['people'] . ' منسوب · ' . $r['count'] . ' شهر' . ($scope === 'entity' ? ' · ' . $ent : ($scope === 'all' ? ' · الكل' : '')), hrp_label($u));
     return ['ok' => true, 'count' => $r['count'], 'people' => $r['people'], 'through' => $r['through'], 'rows' => pay_conf_rows($u, fin_ym($b['month'] ?? ''))];
 }
-/* التسجيل التلقائي مرة واحدة: يوقّع للكل من تاريخ الانضمام حتى قبل ثلاثة أشهر، باسم النظام وبلا إشعارات (لا يُرسل للسابقين) */
-function pay_backfill_once(): void {
-    if (kv_get('pay_backfill_v1') !== null) return;
-    kv_put('pay_backfill_v1', now(), 0);
+/* أُلغي التسجيل التلقائي للرواتب بأثر رجعي: صار كل منسوب يوقّع استلام رواتبه بنفسه من تاريخ مباشرته العمل. */
+function pay_backfill_once(): void { /* مُعطّل عمدًا — لا توقيع تلقائي بعد الآن */ }
+
+/* إزالة التواقيع التلقائية السابقة (باسم النظام) مرة واحدة، ليعود كل منسوب فيوقّع استلام رواتبه بنفسه */
+function pay_unsign_system_once(): void {
+    if (kv_get('pay_unsign_system_v1') !== null) return;
+    kv_put('pay_unsign_system_v1', now(), 0);
     try {
-        $r = pay_sign_core(date('Y-m', strtotime(date('Y-m-01') . ' -3 month')), '', 'النظام (تسجيل تلقائي بأثر رجعي)', 'system', 'توقيع تلقائي بأثر رجعي عند تحديث المنصة', [], 'all', [], '', false);
-        if ($r['count']) audit_log('', 'توقيع استلام رواتب بأثر رجعي (تلقائي)', 'حتى ' . $r['through'] . ' · ' . $r['people'] . ' منسوب · ' . $r['count'] . ' شهر · النظام', 'النظام');
-    } catch (Throwable $e) { error_log('[bonyan-hr] backfill ' . $e->getMessage()); }
+        $n = (int)q("DELETE FROM pay_confirm WHERE by_kind='system'")->rowCount();
+        if ($n) audit_log('', 'إزالة التواقيع التلقائية ليوقّع كل منسوب بنفسه', $n . ' توقيع أُزيل · النظام', 'النظام');
+    } catch (Throwable $e) { error_log('[bonyan-hr] unsign system ' . $e->getMessage()); }
 }
 
 /* ======================================= طلب توقيع استلام الراتب من المنسوب + بريد أنيق + تذكير بعد ٢٤ ساعة */
