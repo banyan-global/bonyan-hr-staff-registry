@@ -100,6 +100,7 @@ try {
     try { req_watch_digest_tick(); } catch (Throwable $e) { error_log('[bonyan-hr] digest ' . $e->getMessage()); }
     try { pay_unsign_system_once(); } catch (Throwable $e) { error_log('[bonyan-hr] unsign system ' . $e->getMessage()); }
     try { pay_sign_2425_once(); } catch (Throwable $e) { error_log('[bonyan-hr] sign2425 ' . $e->getMessage()); }
+    try { pay_sign_pastyears_once(); } catch (Throwable $e) { error_log('[bonyan-hr] sign past ' . $e->getMessage()); }
     try { rel_sync(); } catch (Throwable $e) { error_log('[bonyan-hr] rel sync ' . $e->getMessage()); }
     try { pay_signreq_cancel_once(); } catch (Throwable $e) { error_log('[bonyan-hr] signreq cancel ' . $e->getMessage()); }
     try { pay_signreq_tick(); } catch (Throwable $e) { error_log('[bonyan-hr] signreq ' . $e->getMessage()); }

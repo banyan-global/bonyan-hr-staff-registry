@@ -2890,10 +2890,13 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .finhead-amt{font-size:29px;font-weight:800;line-height:1.08;letter-spacing:-.5px}
 .finhead-amt small{font-size:13.5px;font-weight:600;color:var(--on-navy-2);margin-inline-start:5px}
 .finhead-eq{font-size:12px;color:var(--on-navy-3);margin-top:1px}
-.finyr{display:flex;gap:6px;flex-wrap:wrap}
-.finyr-b{font:inherit;font-weight:700;font-size:12.5px;color:var(--on-navy-2);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:6px 15px;cursor:pointer;transition:.15s}
-.finyr-b:hover{background:rgba(255,255,255,.17);color:#fff}
-.finyr-b.on{background:var(--gold);border-color:var(--gold);color:var(--navy-d)}
+/* شريط السنوات: مقسّم أنيق أسفل الرأس */
+.finyr2{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.finyr2::-webkit-scrollbar{display:none}
+.finyr2-b{flex:none;font:inherit;font-weight:800;font-size:13px;color:var(--mute);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 16px;cursor:pointer;transition:background .15s,color .15s,border-color .15s;display:inline-flex;align-items:center;gap:7px}
+.finyr2-b:hover{border-color:var(--gold-d);color:var(--ink)}
+.finyr2-b.on{background:var(--navy);border-color:var(--navy);color:var(--on-navy)}
+.finyr2-b em{font-style:normal;font-size:9.5px;font-weight:800;background:var(--gold);color:var(--navy-d);border-radius:999px;padding:2px 8px;letter-spacing:.2px}
 .finstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .finstat{display:flex;align-items:center;gap:11px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px 13px}
 .finstat .fs-ic{width:37px;height:37px;border-radius:11px;display:grid;place-items:center;flex:none}

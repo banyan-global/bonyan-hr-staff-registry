@@ -350,6 +350,15 @@ function pay_sign_2425_once(): void {
         if ($n) audit_log('', 'توقيع رواتب ٢٠٢٤ و٢٠٢٥ تلقائيًا', $people . ' منسوب · ' . $n . ' شهر · النظام', 'النظام');
     } catch (Throwable $e) { error_log('[bonyan-hr] sign2425 ' . $e->getMessage()); }
 }
+/* اعتماد كل رواتب السنوات الماضية تلقائيًا (من المباشرة حتى ديسمبر السنة الماضية) — وتبقى السنة الحالية ليوقّعها كلٌّ بنفسه */
+function pay_sign_pastyears_once(): void {
+    if (kv_get('pay_sign_past_v2') !== null) return; kv_put('pay_sign_past_v2', now(), 0);
+    try {
+        $through = ((int)date('Y') - 1) . '-12';
+        $r = pay_sign_core($through, '', 'النظام (اعتماد السنوات الماضية)', 'system', 'اعتماد تلقائي لرواتب السنوات الماضية', [], 'all', [], '', false);
+        if ($r['count']) audit_log('', 'اعتماد رواتب السنوات الماضية تلقائيًا', $r['people'] . ' منسوب · ' . $r['count'] . ' شهر · حتى ' . $through . ' · النظام', 'النظام');
+    } catch (Throwable $e) { error_log('[bonyan-hr] sign past ' . $e->getMessage()); }
+}
 
 /* ======================================= طلب توقيع استلام الراتب من المنسوب + بريد أنيق + تذكير بعد ٢٤ ساعة */
 /* بريد احترافي بشعار بنيان: صافي راتب الشهر، وإجمالي ما استلمه هذا العام، وزر يفتح «سجلي المالي» للتوقيع */
@@ -520,16 +529,16 @@ function pay_review_mail_html(string $name = ''): string {
   <div style="font-size:12.5px;font-weight:900;color:#9C7A33;margin:0 2px 14px;text-align:right;"><span style="display:inline-block;width:6px;height:6px;border-radius:3px;background:#9C7A33;vertical-align:middle;margin-left:7px;"></span>خطوات الاعتماد</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="40" valign="top" style="padding:0 0 0 0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">١</td></tr></table>
-    </td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">اضغط الزرّ أدناه — يفتح صفحة رواتبك مباشرةً، فراجع أشهر {$yr} ومبالغها الصافية.</div></td></tr>
+    </td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">رواتب أعوامك الماضية مُعتمدة تلقائيًا، ولم يبقَ إلا اعتماد ما استلمته خلال عام {$yr}.</div></td></tr>
     <tr><td style="padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" width="40"><div style="width:2px;height:12px;background:#E7E3D6;margin:3px auto;"></div></td></tr></table></td><td></td></tr><tr><td width="40" valign="top"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">٢</td></tr></table></td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">اضغط «أؤكّد الاستلام» أمام كل شهر استلمته.</div></td></tr></table>
 </td></tr>
 
 <!-- CTA -->
-<tr><td style="padding:24px 34px 4px;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" bgcolor="#C9A24A" style="border-radius:15px;background-color:#C9A24A;background-image:linear-gradient(135deg,#E7CE97 0%,#C9A24A 52%,#9C7A33 100%);box-shadow:0 10px 22px -10px rgba(156,122,51,.6);">
-  <a href="https://hr.bonyanglobal.com/?src=paymail#mypay" target="_blank" style="display:block;padding:15px 18px;font-family:Tajawal,Tahoma,sans-serif;font-size:15.5px;font-weight:900;color:#0B1A33;text-decoration:none;border-radius:15px;">اعتماد استلام رواتب {$yr} ←</a>
+<tr><td style="padding:26px 34px 6px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" bgcolor="#14284B" style="border-radius:18px;background-color:#14284B;background-image:linear-gradient(135deg,#24406F 0%,#14284B 55%,#0B1A33 100%);box-shadow:0 14px 30px -12px rgba(11,26,51,.65);">
+  <a href="https://hr.bonyanglobal.com/?src=paymail#mypay" target="_blank" style="display:block;padding:17px 20px;font-family:Tajawal,Tahoma,sans-serif;font-size:16px;font-weight:900;color:#F3E6C6;text-decoration:none;border-radius:18px;border:1px solid rgba(201,162,74,.45);"><span style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;background:#E7CE97;color:#14284B;font-size:13px;font-weight:900;vertical-align:middle;margin-left:9px;">&#10003;</span>اعتمِد استلام رواتبي &nbsp;<span style="color:#E7CE97;">←</span></a>
   </td></tr></table>
-  <p style="margin:12px 0 0;text-align:center;font-size:12px;color:#6B7689;line-height:1.8;">التوقيع نهائيّ بعد تسجيله؛ لأي تصحيح تواصلوا مع الموارد البشرية.</p>
+  <p style="margin:13px 0 0;text-align:center;font-size:12px;color:#6B7689;line-height:1.8;">يفتح الزرّ صفحة رواتبك مباشرةً · التوقيع نهائيّ بعد تسجيله.</p>
 </td></tr>
 
 <tr><td style="height:18px;font-size:0;">&nbsp;</td></tr>

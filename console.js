@@ -4899,10 +4899,11 @@ function payRecordH(s) {
   var c = need('psfin:' + ref + ':' + yr, function () { return api({ action: 'myFin', ref: ref, year: yr }); }, 60000);
   var p = (c.data && c.data.pay) || {}, cur = p.cur || s.cur || 'SAR', cl = curL(cur), sal = p.salary || s.base || 0;
   var eq = (cur !== 'SAR' && FX[cur] && sal) ? '<span class="finhead-eq">≈ ' + fm(Math.round(sal * FX[cur])) + ' ر.س</span>' : '';
-  var ys = (p.years && p.years.length) ? p.years : [yr];
-  var yrbar = '<div class="finyr">' + ys.map(function (y) { return '<button type="button" class="finyr-b' + (y === yr ? ' on' : '') + '" data-pfy="' + y + '" aria-pressed="' + (y === yr) + '">' + y + '</button>'; }).join('') + '</div>';
+  var ys = (p.years && p.years.length) ? p.years.slice().sort(function (a, b) { return b - a; }) : [yr];
+  var yrbar = ys.length > 1 ? '<div class="finyr2" role="tablist">' + ys.map(function (y) { var on = y === yr, curY = y === nowY;
+      return '<button type="button" role="tab" class="finyr2-b' + (on ? ' on' : '') + '" data-pfy="' + y + '" aria-selected="' + on + '">' + y + (curY ? '<em>الحالية</em>' : '') + '</button>'; }).join('') + '</div>' : '';
   var head = '<div class="finhead"><div class="finhead-main"><span class="finhead-lbl">الراتب الشهري</span>' +
-    '<span class="finhead-amt">' + (sal ? fm(sal) : '—') + ' <small>' + esc(cl) + '</small></span>' + eq + '</div>' + yrbar + '</div>';
+    '<span class="finhead-amt">' + (sal ? fm(sal) : '—') + ' <small>' + esc(cl) + '</small></span>' + eq + '</div></div>';
   var sig;
   if (!c.data && c.loading) sig = '<div class="empty">جارٍ تحميل التوقيعات…</div>';
   else if (!c.data) sig = '<div class="empty">' + esc(c.err || 'تعذّر تحميل السجل المالي') + '</div>';
@@ -4917,7 +4918,7 @@ function payRecordH(s) {
       '<div class="finstat info"><span class="fs-ic">' + ic('coins') + '</span><div><b>' + fm(Math.round(recv)) + '</b><span>المستلَم في ' + yr + ' (' + esc(cl) + ')</span></div></div></div>';
     sig = stats + '<div class="finsec">كشف استلام الرواتب · ' + yr + '</div>' + finReceiptsH(p, finMonths(p), -1, [], false);
   }
-  return '<div class="finrec">' + head + bank + sig + '</div>';
+  return '<div class="finrec">' + head + yrbar + bank + sig + '</div>';
 }
 function pcRetroAsk() {
   var now = new Date(), thr = new Date(now.getFullYear(), now.getMonth() - 3, 1), through = thr.getFullYear() + '-' + ('0' + (thr.getMonth() + 1)).slice(-2);
