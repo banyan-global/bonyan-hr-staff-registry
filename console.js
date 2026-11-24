@@ -1031,6 +1031,17 @@ function kvHTML(list) { return '<dl class="kv">' + list.filter(function (p) { re
 function ltr(v) { return v ? '<span class="ltr">' + esc(v) + '</span>' : '—'; }
 function completeness(s) { var tot = 4 + s.docs.filter(function (d) { return d.t !== 'العقد'; }).length; return Math.round(Math.max(0, tot - s.miss.length) / tot * 100); }
 function ksec(title, icn, list) { var b = kvHTML(list); return '<section class="ksec"><h3>' + ic(icn) + title + '</h3>' + b + '</section>'; }
+/* البريد المعتمد للمنسوب: الرسمي ثم الشخصي احتياطيًا (كما يعتمده الخادم) مع شارة حالة التوثيق/التفعيل */
+function approvedMailH(s) {
+  var r = s.r || {}, em = s.mail || r.officialEmail || r.personalEmail || '';
+  if (!em) return '<span class="pill bad"><i></i>لا يوجد بريد معتمد</span>';
+  var src = r.officialEmail ? 'بريد رسمي · يُعتمد للدخول وكل المراسلات' : 'بريد شخصي · يُعتمد مؤقتًا (لا يوجد بريد رسمي)';
+  var badge = (r._verified === 0)
+    ? (s.mailed ? '<span class="pill warn"><i></i>أُرسلت رسالة التأكيد — بانتظار تفعيل الدخول</span>'
+                : '<span class="pill mute"><i></i>غير مؤكّد — لم يُفعّل الدخول بعد</span>')
+    : '<span class="pill ok"><i></i>موثّق ومفعّل الدخول</span>';
+  return '<span class="ltr" style="font-size:13.5px">' + esc(em) + '</span><div class="emeta">' + badge + '<small class="mu">' + src + '</small></div>';
+}
 function profHTML(s) {
   var r = s.r, myReqs = reqRows().filter(function (x) { return x.ref === s.ref; }), openR = myReqs.filter(function (x) { return x.status === 'pending'; }).length;
   var T = [['over', 'الملخص', 'card'], ['info', 'البيانات', 'user'], ['docs', 'الوثائق', 'pass', s.docs.filter(function (d) { return d.days <= 30 || (!d.file && !d.opt); }).length], ['pay', 'السجل المالي', 'wallet'], ['reqs', 'الطلبات', 'stamp', openR], ['log', 'السجل', 'history']]
@@ -1044,7 +1055,8 @@ function profHTML(s) {
     (s.miss.length ? '<div><h3 class="h3s">نواقص الملف</h3><div class="miss">' + s.miss.map(function (m) { return '<div><span>' + m + '</span>' + (can('mail') ? '<button class="btn sm" data-msggap="' + esc(s.ref) + '">اطلبه من المنسوب</button>' : '') + '</div>'; }).join('') + '</div></div>' : '<div class="note">' + ic('check') + '<span>الملف مكتمل، وكل الوثائق المطلوبة مرفوعة.</span></div>');
   if (ptab === 'info') body = '<div class="ksecs">' +
     ksec('الهوية', 'user', [['الاسم بالعربية', esc(s.name)], ['الاسم كما في الجواز', s.latin ? '<span class="ltr">' + esc(s.latin) + '</span>' : '—'], ['الجنسية', esc(s.nat || '—')], ['أعلى مؤهل', esc(r.topDegree || '—')]]) +
-    ksec('التواصل', 'chat', [['الجوال', ltr(r.mobile)], ['الواتساب', ltr(r.whatsapp)], ['البريد الرسمي', r.officialEmail ? '<span class="ltr" style="font-size:13.5px">' + esc(r.officialEmail) + '</span>' : '—'], ['البريد الشخصي', r.personalEmail ? '<span class="ltr" style="font-size:13.5px">' + esc(r.personalEmail) + '</span>' : '—']]) +
+    ksec('التواصل', 'chat', [['الجوال', ltr(r.mobile)], ['الواتساب', ltr(r.whatsapp)], ['البريد المعتمد', approvedMailH(s)]].concat(
+      (r.officialEmail && r.personalEmail && String(r.officialEmail).toLowerCase() !== String(r.personalEmail).toLowerCase()) ? [['بريد احتياطي', '<span class="ltr" style="font-size:13.5px">' + esc(r.personalEmail) + '</span>']] : [])) +
     ksec('الوظيفة', 'building', [['الجهة', esc(s.ent.full || s.ent.n)], ['المسمى', esc(s.job)], ['الإدارة', esc(r.department || '—')], ['المدير المباشر', esc(r.manager || '—')], ['دولة العمل', esc(s.c.n)], ['تاريخ المباشرة', fdx(s.hire)]]) +
     ksec('السجل في المنصة', 'history', [['الرقم المرجعي', '<span class="ltr">' + esc(s.ref) + '</span>'], ['تاريخ التسجيل', fdx(s.reg) + ' <small class="mu">' + agoD(s.reg) + '</small>'], ['آخر تحديث', s.upd ? fd(s.upd) + ' <small class="mu">' + agoD(s.upd) + '</small>' : '—'], ['رسالة التأكيد', s.mailed ? 'أُرسلت إلى بريده' : '<span class="pill mute"><i></i>لم تُرسل</span>']]) + '</div>';
   if (ptab === 'docs') body = docRows(s.docs, true) + '<div class="note">' + ic('archive') + '<span>عند استبدال وثيقة تنتقل النسخة القديمة إلى الأرشيف ولا تُحذف، ويمكن استرجاعها من التعديل التفصيلي.</span></div>';
