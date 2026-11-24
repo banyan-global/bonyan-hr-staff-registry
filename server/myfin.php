@@ -529,7 +529,7 @@ function pay_review_mail_html(string $name = ''): string {
   <div style="font-size:12.5px;font-weight:900;color:#9C7A33;margin:0 2px 14px;text-align:right;"><span style="display:inline-block;width:6px;height:6px;border-radius:3px;background:#9C7A33;vertical-align:middle;margin-left:7px;"></span>خطوات الاعتماد</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="40" valign="top" style="padding:0 0 0 0;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">١</td></tr></table>
-    </td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">رواتب أعوامك الماضية مُعتمدة تلقائيًا، ولم يبقَ إلا اعتماد ما استلمته خلال عام {$yr}.</div></td></tr>
+    </td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">يبقى اعتماد رواتب عام {$yr} فقط.</div></td></tr>
     <tr><td style="padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" width="40"><div style="width:2px;height:12px;background:#E7E3D6;margin:3px auto;"></div></td></tr></table></td><td></td></tr><tr><td width="40" valign="top"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">٢</td></tr></table></td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">اضغط «أؤكّد الاستلام» أمام كل شهر استلمته.</div></td></tr></table>
 </td></tr>
 
@@ -553,7 +553,8 @@ HTML;
 /* إرسال بريد المراجعة لمنسوب واحد */
 function pay_review_mail(string $ref): bool {
     $to = hrp_staff_mail($ref); if ($to === '') return false;
-    $s = staff_get($ref); $name = $s ? staff_name($s) : ''; $yr = date('Y');
+    $s = staff_get($ref); $yr = date('Y'); $name = '';
+    if ($s) { $female = (bool)preg_match('/^(female|f|أنثى|انثى|perempuan|wanita)$/iu', trim((string)($s['data']['gender'] ?? ''))); $name = ($female ? 'أستاذة ' : 'أستاذ ') . staff_name($s); }
     $html = pay_review_mail_html($name);
     $text = "السلام عليكم،\nنرجو اعتماد استلامكم لما صُرف إليكم من رواتب خلال عام " . $yr . " في «سجلي المالي ← الرواتب»:\nhttps://hr.bonyanglobal.com/?src=paymail#mypay";
     try { send_mail($to, 'اعتماد استلام رواتب ' . $yr, $html, $text, 'Bonyan HR', logo_inline()); return true; }
