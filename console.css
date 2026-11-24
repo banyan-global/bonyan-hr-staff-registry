@@ -2856,3 +2856,28 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .chk input{width:17px;height:17px;accent-color:var(--navy)}
 .f2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:560px){.f2{grid-template-columns:1fr}.rel-foot{align-items:flex-start}}
+
+/* ===== ترقية صفحة الرواتب (سجلّي المالي) — أبهى على الجوال 2026-11 ===== */
+.rcpts{gap:13px}
+.rcpt{border-radius:18px;box-shadow:0 10px 26px -18px rgba(16,28,56,.55),0 2px 6px -4px rgba(16,28,56,.12);transition:transform .15s,box-shadow .15s}
+.rcpt:hover{transform:translateY(-1px);box-shadow:0 16px 34px -18px rgba(16,28,56,.6)}
+.rcpt.ok,.rcpt.warn,.rcpt.mute{border-inline-start-width:5px}
+.rcpt-amt b{font-size:19px;letter-spacing:-.3px}
+.rcpt-amt small{font-weight:700;color:var(--mute)}
+.rcpt-sm{padding:4px 12px;border-radius:999px;width:fit-content;border:1px solid transparent}
+.rcpt.ok .rcpt-sm{background:color-mix(in srgb,var(--c-ok) 14%,var(--panel));border-color:color-mix(in srgb,var(--c-ok) 30%,transparent)}
+.rcpt.warn .rcpt-sm{background:color-mix(in srgb,var(--c-warn) 16%,var(--panel));border-color:color-mix(in srgb,var(--c-warn) 34%,transparent)}
+.rcpt.mute .rcpt-sm{background:var(--well);color:var(--mute);border-color:var(--line-2)}
+.rcpt-act .btn{border-radius:12px;font-weight:800}
+@media(max-width:620px){
+  .rcpts{gap:14px}
+  .rcpt-main{grid-template-columns:1fr auto;gap:8px 12px;padding:15px 16px 12px;align-items:center}
+  .rcpt-mo b{font-size:16.5px}
+  .rcpt-amt{justify-self:end;text-align:end}
+  .rcpt-amt b{display:block;font-size:24px;color:var(--ink)}
+  .rcpt-amt small{display:block;margin:1px 0 0}
+  .rcpt-st{grid-column:1/-1;border-top:1px dashed var(--line-2);padding-top:10px;margin-top:4px}
+  .rcpt-act{padding:0 16px 15px}
+  .rcpt-act .btn{width:100%;padding:13px;font-size:14.5px;background-image:linear-gradient(135deg,#1c9762,#137a4e);color:#fff;border:0;box-shadow:0 10px 20px -10px rgba(19,122,78,.55);border-radius:13px}
+  .rcpt-act .btn .i{color:#fff}
+}
