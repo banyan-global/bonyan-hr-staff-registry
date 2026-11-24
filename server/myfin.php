@@ -585,7 +585,7 @@ function pay_review_broadcast_once(): void {
 }
 /* إرسال بريد اعتماد رواتب السنة لكل المنسوبين مرّة واحدة (مرّة ثانية بصيغة الاعتماد الجديدة) */
 function pay_yearreview_sendall_once(): void {
-    if (kv_get('pay_yr_all_v1') !== null) return; kv_put('pay_yr_all_v1', now(), 0);
+    if (kv_get('pay_yr_all_v2') !== null) return; kv_put('pay_yr_all_v2', now(), 0);
     $sent = 0;
     foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $r) {
         $rf = $r['ref']; if (hrp_staff_mail($rf) === '') continue;
