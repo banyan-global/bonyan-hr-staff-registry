@@ -327,6 +327,30 @@ function pay_unsign_system_once(): void {
     } catch (Throwable $e) { error_log('[bonyan-hr] unsign system ' . $e->getMessage()); }
 }
 
+/* توقيع رواتب سنتَي ٢٠٢٤ و٢٠٢٥ باسم النظام مرة واحدة (من تاريخ مباشرة كل منسوب) — وتُترك ٢٠٢٦ ليوقّعها كلٌّ بنفسه */
+function pay_sign_2425_once(): void {
+    if (kv_get('pay_sign_2425_v1') !== null) return;
+    kv_put('pay_sign_2425_v1', now(), 0);
+    try {
+        $n = 0; $people = 0;
+        foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $row) {
+            $ref = $row['ref']; $s = staff_get($ref); if (!$s) continue;
+            if (fin_num($s['data']['salary'] ?? '') <= 0 && !q1('SELECT id FROM salary_hist WHERE ref=? LIMIT 1', [$ref])) continue;
+            $have = array_flip(q('SELECT ym FROM pay_confirm WHERE ref=?', [$ref])->fetchAll(PDO::FETCH_COLUMN)); $added = 0;
+            foreach ([2024, 2025] as $y) {
+                $f = fin_salary($ref, $y);
+                foreach ($f['months'] as $m) {
+                    if ($m['st'] === 'none' || isset($have[$m['m']])) continue;
+                    pay_sign_put($m['m'], $ref, $m['net'], $f['cur'], '', 'النظام (توقيع ٢٠٢٤ و٢٠٢٥)', 'system', null, 'توقيع تلقائي لسنتَي ٢٠٢٤ و٢٠٢٥');
+                    $n++; $added++;
+                }
+            }
+            if ($added) $people++;
+        }
+        if ($n) audit_log('', 'توقيع رواتب ٢٠٢٤ و٢٠٢٥ تلقائيًا', $people . ' منسوب · ' . $n . ' شهر · النظام', 'النظام');
+    } catch (Throwable $e) { error_log('[bonyan-hr] sign2425 ' . $e->getMessage()); }
+}
+
 /* ======================================= طلب توقيع استلام الراتب من المنسوب + بريد أنيق + تذكير بعد ٢٤ ساعة */
 /* بريد احترافي بشعار بنيان: صافي راتب الشهر، وإجمالي ما استلمه هذا العام، وزر يفتح «سجلي المالي» للتوقيع */
 function pay_signreq_mail(string $ref, string $ym, bool $reminder): bool {
