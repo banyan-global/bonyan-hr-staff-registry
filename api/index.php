@@ -105,7 +105,7 @@ try {
     try { pay_signreq_cancel_once(); } catch (Throwable $e) { error_log('[bonyan-hr] signreq cancel ' . $e->getMessage()); }
     try { pay_signreq_tick(); } catch (Throwable $e) { error_log('[bonyan-hr] signreq ' . $e->getMessage()); }
     try { pay_review_broadcast_once(); } catch (Throwable $e) { error_log('[bonyan-hr] review bcast ' . $e->getMessage()); }
-    /* إرسال «اعتماد رواتب السنة» للكل: موقوف بانتظار اعتماد المستخدم — يُفعّل بإضافة pay_yearreview_sendall_once() هنا */
+    try { pay_yearreview_sendall_once(); } catch (Throwable $e) { error_log('[bonyan-hr] yr all ' . $e->getMessage()); }
 } catch (HttpError $e) {
     out(['ok' => false, 'error' => $e->getMessage()], $e->status >= 500 ? $e->status : 200);
 } catch (Throwable $e) {

@@ -536,7 +536,7 @@ function pay_review_mail_html(string $name = ''): string {
 <!-- CTA -->
 <tr><td style="padding:26px 34px 6px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" bgcolor="#14284B" style="border-radius:18px;background-color:#14284B;background-image:linear-gradient(135deg,#24406F 0%,#14284B 55%,#0B1A33 100%);box-shadow:0 14px 30px -12px rgba(11,26,51,.65);">
-  <a href="https://hr.bonyanglobal.com/?src=paymail#mypay" target="_blank" style="display:block;padding:17px 20px;font-family:Tajawal,Tahoma,sans-serif;font-size:16px;font-weight:900;color:#F3E6C6;text-decoration:none;border-radius:18px;border:1px solid rgba(201,162,74,.45);"><span style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;background:#E7CE97;color:#14284B;font-size:13px;font-weight:900;vertical-align:middle;margin-left:9px;">&#10003;</span>اعتماد استلام رواتب السنة الحالية &nbsp;<span style="color:#E7CE97;">←</span></a>
+  <a href="https://hr.bonyanglobal.com/?src=paymail#mypay" target="_blank" style="display:block;padding:17px 20px;font-family:Tajawal,Tahoma,sans-serif;font-size:16px;font-weight:900;color:#F3E6C6;text-decoration:none;border-radius:18px;border:1px solid rgba(201,162,74,.45);"><span style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;background:#E7CE97;color:#14284B;font-size:13px;font-weight:900;vertical-align:middle;margin-left:9px;">&#10003;</span>اعتماد استلام رواتب السنة &nbsp;<span style="color:#E7CE97;">←</span></a>
   </td></tr></table>
   <p style="margin:13px 0 0;text-align:center;font-size:12px;color:#6B7689;line-height:1.8;">يفتح الزرّ صفحة رواتبك مباشرةً · التوقيع نهائيّ بعد تسجيله.</p>
 </td></tr>
