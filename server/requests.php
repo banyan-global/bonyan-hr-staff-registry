@@ -328,7 +328,7 @@ function req_next_no(string $type): string {
     $floor = json_decode((string)(setting('req_seq_floor') ?: ''), true); $floor = is_array($floor) ? (int)($floor[$p] ?? 0) : 0;
     return $p . str_pad((string)(max((int)($r ? substr($r['no'], -4) : 0), $floor) + 1), 4, '0', STR_PAD_LEFT);
 }
-function req_staff_email(?array $s): string { if (!$s) return ''; $e = trim((string)(($s['data']['officialEmail'] ?? '') ?: ($s['data']['personalEmail'] ?? ''))); return filter_var($e, FILTER_VALIDATE_EMAIL) ? $e : ''; }
+function req_staff_email(?array $s): string { return $s ? staff_approved_email((array)($s['data'] ?? [])) : ''; }
 function req_row(array $r, bool $full = true): array {
     $s = staff_get($r['ref']); $d = $s ? $s['data'] : [];
     $chain = array_map(function ($c) { unset($c['email']); return $c; }, json_decode($r['chain'], true) ?: []);

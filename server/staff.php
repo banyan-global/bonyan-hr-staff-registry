@@ -44,6 +44,16 @@ function staff_put(array $r): void {
     else
         q('INSERT INTO staff (status, passport_norm, created_at, updated_at, data, quals, exp, langs, ref) VALUES (?,?,?,?,?,?,?,?,?)', $args);
 }
+/* البريد المعتمد لمنسوب: تفضيل صريح (mailPref) وإلا تلقائيًا حسب مقر العمل —
+   خارج السعودية: البريد الشخصي، وداخلها: الرسمي (مع رجوع للآخر إن كان المختار فارغًا) */
+function staff_approved_email(array $d): string {
+    $off = trim((string)($d['officialEmail'] ?? '')); $per = trim((string)($d['personalEmail'] ?? ''));
+    $pref = (string)($d['mailPref'] ?? '');
+    if ($pref === 'personal') $e = $per ?: $off;
+    elseif ($pref === 'official') $e = $off ?: $per;
+    else { $sa = strtoupper(trim((string)($d['workCountryCode'] ?? ''))) === 'SA'; $e = $sa ? ($off ?: $per) : ($per ?: $off); }
+    return filter_var($e, FILTER_VALIDATE_EMAIL) ? strtolower($e) : '';
+}
 /* ============================================================ السجل الخاص
    سجل منسوب لا يراه إلا مالك المنصة وصاحبه، وطلباته تمر على المالك وحده (لا على الموارد البشرية) */
 function private_refs(): array { $p = json_decode((string)(setting('private_refs') ?: ''), true); return is_array($p) ? array_values(array_filter($p, 'is_string')) : []; }
@@ -87,22 +97,20 @@ function staff_verify(array $b): array {
     audit_log($ref, $on ? 'توثيق السجل وتفعيل دخول المنسوب' : 'إلغاء توثيق السجل وإيقاف دخول المنسوب', staff_name($r), $u['_label']);
     return ['ok' => true, 'verified' => $on];
 }
-/* اختيار البريد المعتمد لمنسوب (الرسمي) من بين بريدَيه — لمالك المنصة (الدكتور عبدالله) وحده */
+/* اختيار البريد المعتمد لمنسوب من بين بريدَيه — للنظام والموارد البشرية والدكتور (صلاحية تعديل المنسوبين) */
 function staff_mail_approve(array $b): array {
-    $me = current_user(); if (!$me || !is_owner($me)) throw new HttpError('لمالك المنصة وحده', 403);
+    $u = require_perm('staff.edit');
     $ref = strtoupper(trim((string)($b['ref'] ?? ''))); if ($ref === '') throw new HttpError('ref');
     $email = strtolower(trim((string)($b['email'] ?? '')));
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new HttpError('بريد غير صحيح');
     $s = staff_get($ref); if (!$s) throw new HttpError('not_found', 404);
     $d = $s['data'];
     $off = strtolower(trim((string)($d['officialEmail'] ?? ''))); $per = strtolower(trim((string)($d['personalEmail'] ?? '')));
-    if ($email !== $off && $email !== $per) throw new HttpError('اختر أحد بريدَي المنسوب');
-    if ($email === $off) return ['ok' => true, 'ref' => $ref, 'approved' => $email, 'unchanged' => true];
-    /* تحويل المختار إلى المعتمد (الرسمي)، مع حفظ السابق احتياطيًا في الشخصي كيلا يُفقد */
-    $d['officialEmail'] = $email; $d['personalEmail'] = $off !== '' ? $off : $per;
-    $s['data'] = $d; $s['updated_at'] = now(); staff_put($s);
-    audit_log($ref, 'تغيير البريد المعتمد للمنسوب', 'صار المعتمد: ' . mask_email($email), $me['_label'] ?? hrp_label($me));
-    return ['ok' => true, 'ref' => $ref, 'approved' => $email];
+    $pref = $email === $off ? 'official' : ($email === $per ? 'personal' : '');
+    if ($pref === '') throw new HttpError('اختر أحد بريدَي المنسوب');
+    $d['mailPref'] = $pref; $s['data'] = $d; $s['updated_at'] = now(); staff_put($s);
+    audit_log($ref, 'تغيير البريد المعتمد للمنسوب', 'صار المعتمد: ' . mask_email($email) . ' (' . ($pref === 'official' ? 'رسمي' : 'شخصي') . ')', $u['_label']);
+    return ['ok' => true, 'ref' => $ref, 'approved' => $email, 'pref' => $pref];
 }
 function assert_ref_visible(?array $u, string $ref): void { if (in_array(strtoupper($ref), private_hidden_for($u), true)) throw new HttpError('not_found', 404); }
 function private_filter(?array $u, array $rows, string $key = 'ref'): array { $h = private_hidden_for($u); return $h ? array_values(array_filter($rows, fn($r) => !in_array((string)($r[$key] ?? ''), $h, true))) : $rows; }
@@ -305,6 +313,7 @@ function display_row(array $r, array $filesByKind, bool $finance): array {
         $o[$k] = $t === 'n' ? fmt_num($v) : (string)$v;
     }
     $o['ref'] = $r['ref']; $o['status'] = $r['status']; $o['createdAt'] = substr($r['created_at'], 0, 16); $o['updatedAt'] = substr($r['updated_at'], 0, 16); $o['folder'] = '';
+    $o['mailApproved'] = staff_approved_email($r['data']); $o['mailPref'] = (string)($r['data']['mailPref'] ?? '');
     if (!$finance) {
         foreach (['salary', 'swift', 'accountHolder', 'bankBranch', 'payOther'] as $k) if ($o[$k] !== '') $o[$k] = '••••';
         foreach (['iban', 'accountNo'] as $k) if ($o[$k] !== '') $o[$k] = '••••' . substr(preg_replace('/\s+/', '', $o[$k]), -4);
