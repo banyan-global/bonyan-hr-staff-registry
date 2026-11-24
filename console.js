@@ -1048,7 +1048,7 @@ function approvedMailH(s) {
     ? (s.mailed ? '<span class="pill warn"><i></i>أُرسلت رسالة التأكيد — بانتظار تفعيل الدخول</span>'
                 : '<span class="pill mute"><i></i>غير مؤكّد — لم يُفعّل الدخول بعد</span>')
     : '<span class="pill ok"><i></i>موثّق ومفعّل الدخول</span>';
-  var login = r.lastLogin ? '<small class="mu ok-t">✓ آخر دخول فعلي: ' + fdx(pdate(r.lastLogin), { day: 'numeric', month: 'short', year: 'numeric' }) + '</small>'
+  var login = r.lastLogin ? '<small class="mu ok-t">✓ آخر دخول للمنصة: ' + fdx(pdt(r.lastLogin), { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</small>'
     : (r.acct ? '<small class="mu">للحساب دخول مفعّل · لم يُسجّل الدخول بعد</small>' : '');
   return '<span class="ltr" style="font-size:13.5px">' + esc(em) + '</span><div class="emeta">' + badge + '<small class="mu">' + src + '</small></div>' +
     (login ? '<div class="emeta">' + login + '</div>' : '') + mailChangeBtn(s);
