@@ -1315,6 +1315,8 @@ function bindLive() {
   var $ = function (s) { return app.querySelector(s); }, all = function (s, f) { app.querySelectorAll(s).forEach(f); };
   all('[data-msggap]', function (el) { el.onclick = function (e) { e.stopPropagation(); msgTpl([el.dataset.msggap], 'gap'); }; });
   all('[data-mailapprove]', function (el) { el.onclick = function (e) { e.stopPropagation(); mailApproveAsk(el.dataset.mailapprove); }; });
+  all('[data-copyiban]', function (el) { el.onclick = function (e) { e.stopPropagation(); var s = byRef(el.dataset.copyiban), v = s && s.r && s.r.iban; if (!v) return; copyText(v).then(function () { toast('نُسخ رقم الحساب (IBAN)'); }, function () { toast(v); }); }; });
+  all('[data-copybank]', function (el) { el.onclick = function (e) { e.stopPropagation(); var s = byRef(el.dataset.copybank); if (!s) return; var r = s.r || {}, L = []; if (s.name) L.push(s.name); if (r.accountHolder) L.push('المستفيد: ' + r.accountHolder); if (r.bankName) L.push('البنك: ' + r.bankName); if (r.bankCountry) L.push('الدولة: ' + r.bankCountry); if (r.iban) L.push('IBAN: ' + r.iban); if (r.accountNo) L.push('رقم الحساب: ' + r.accountNo); var t = L.join('\n'); if (!t) return; copyText(t).then(function () { toast('نُسخت بيانات الحساب'); }, function () { toast('تعذّر النسخ'); }); }; });
   all('[data-msgdoc]', function (el) { el.onclick = function (e) { e.stopPropagation(); msgTpl([el.dataset.msgdoc], 'docs'); }; });
   all('[data-msgbank]', function (el) { el.onclick = function (e) { e.stopPropagation(); msgTpl([el.dataset.msgbank], 'gap'); }; });
   all('[data-unotify]', function (el) { el.onclick = function () { el.setAttribute('aria-checked', el.getAttribute('aria-checked') !== 'true'); saveUser(+el.dataset.unotify, { notify: el.getAttribute('aria-checked') === 'true' }); }; });
@@ -4880,37 +4882,39 @@ function payPersonDrawer(ref) {
     b.innerHTML = info + kp + list;
   }).catch(function (e) { var b = el.querySelector('#psBody'); if (b) b.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
 }
-/* تبويب «السجل المالي» في ملف المنسوب: رأس أنيق بالراتب + ملخّص التوقيعات + كشف الاستلام + لوحة بنكية */
+/* تبويب «السجل المالي» في ملف المنسوب: البيانات المالية أولًا (مدمجة) ثم التوقيعات */
 function payRecordH(s) {
   var r = s.r || {}, ref = s.ref, nowY = new Date().getFullYear(), yr = PFIN.yr || nowY;
+  var canCopy = can('pay') && !!(r.iban || r.bankName);
   var acc = s.iban ? '<b class="ltr">' + esc(s.iban) + '</b>' : '<b class="miss">غير مسجّل</b>';
-  var bankItems = [['طريقة الاستلام', esc(r.payMethod || '—')], ['العملة', esc(curN(s.cur))], ['البنك', esc(r.bankName || '—')], ['دولة البنك', esc(r.bankCountry || '—')]]
-    .map(function (x) { return '<div class="finbank-i"><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('');
-  var bank = '<div class="finbank"><div class="finbank-h">' + ic('wallet') + 'الصرف والحساب البنكي</div>' +
-    '<div class="finbank-g">' + bankItems + '<div class="finbank-i wide"><span>رقم الحساب (IBAN)</span>' + acc + '</div></div>' +
-    '<div class="finbank-note">' + ic('lock') + 'رقم الحساب يظهر مقنّعًا؛ بياناته كاملة في التعديل التفصيلي لمن يملك صلاحية المالية.</div></div>';
+  var ibanCopy = (can('pay') && r.iban) ? '<button type="button" class="ib cpib" data-copyiban="' + esc(ref) + '" title="نسخ الآيبان الكامل" aria-label="نسخ الآيبان الكامل">' + ic('copy') + '</button>' : '';
+  var bankPairs = [['طريقة الاستلام', esc(r.payMethod || '—')], ['البنك', esc(r.bankName || '—')], ['دولة البنك', esc(r.bankCountry || '—')], ['العملة', esc(curN(s.cur))]]
+    .map(function (x) { return '<span><i>' + x[0] + '</i><b>' + x[1] + '</b></span>'; }).join('');
+  var bank = '<div class="finbank"><div class="finbank-h">' + ic('wallet') + 'الصرف والحساب البنكي' +
+    (canCopy ? '<button type="button" class="btn sm finbank-cp" data-copybank="' + esc(ref) + '">' + ic('copy') + 'نسخ البيانات</button>' : '') + '</div>' +
+    '<div class="finbank-row">' + bankPairs + '<span class="wide"><i>رقم الحساب (IBAN) · مقنّع في العرض</i><span class="ibanv">' + acc + ibanCopy + '</span></span></div></div>';
   var c = need('psfin:' + ref + ':' + yr, function () { return api({ action: 'myFin', ref: ref, year: yr }); }, 60000);
-  var body;
-  if (!c.data && c.loading) body = '<div class="empty">جارٍ تحميل السجل المالي…</div>';
-  else if (!c.data) body = '<div class="empty">' + esc(c.err || 'تعذّر تحميل السجل المالي') + '</div>';
+  var p = (c.data && c.data.pay) || {}, cur = p.cur || s.cur || 'SAR', cl = curL(cur), sal = p.salary || s.base || 0;
+  var eq = (cur !== 'SAR' && FX[cur] && sal) ? '<span class="finhead-eq">≈ ' + fm(Math.round(sal * FX[cur])) + ' ر.س</span>' : '';
+  var ys = (p.years && p.years.length) ? p.years : [yr];
+  var yrbar = '<div class="finyr">' + ys.map(function (y) { return '<button type="button" class="finyr-b' + (y === yr ? ' on' : '') + '" data-pfy="' + y + '" aria-pressed="' + (y === yr) + '">' + y + '</button>'; }).join('') + '</div>';
+  var head = '<div class="finhead"><div class="finhead-main"><span class="finhead-lbl">الراتب الشهري</span>' +
+    '<span class="finhead-amt">' + (sal ? fm(sal) : '—') + ' <small>' + esc(cl) + '</small></span>' + eq + '</div>' + yrbar + '</div>';
+  var sig;
+  if (!c.data && c.loading) sig = '<div class="empty">جارٍ تحميل التوقيعات…</div>';
+  else if (!c.data) sig = '<div class="empty">' + esc(c.err || 'تعذّر تحميل السجل المالي') + '</div>';
   else {
-    var d = c.data, p = d.pay || {}, cur = p.cur || s.cur || 'SAR', cl = curL(cur), sal = p.salary || s.base || 0;
     var months = (p.months || []).filter(function (m) { return m.st !== 'none'; });
     var signed = months.filter(function (m) { return m.conf; }).length;
     var pend = months.filter(function (m) { return !m.conf && (m.st === 'wait' || m.st === 'due'); }).length;
     var recv = 0; months.forEach(function (m) { if (m.conf) recv += m.net; });
-    var eq = (cur !== 'SAR' && FX[cur]) ? '<span class="finhead-eq">≈ ' + fm(Math.round(sal * FX[cur])) + ' ر.س</span>' : '';
-    var ys = (p.years && p.years.length) ? p.years : [yr];
-    var yrbar = '<div class="finyr">' + ys.map(function (y) { return '<button type="button" class="finyr-b' + (y === yr ? ' on' : '') + '" data-pfy="' + y + '" aria-pressed="' + (y === yr) + '">' + y + '</button>'; }).join('') + '</div>';
-    var head = '<div class="finhead"><div class="finhead-main"><span class="finhead-lbl">الراتب الشهري</span>' +
-      '<span class="finhead-amt">' + (sal ? fm(sal) : '—') + ' <small>' + esc(cl) + '</small></span>' + eq + '</div>' + yrbar + '</div>';
     var stats = '<div class="finstats">' +
       '<div class="finstat ok"><span class="fs-ic">' + ic('check') + '</span><div><b>' + signed + '</b><span>' + (signed === 1 ? 'شهر موقّع' : 'أشهر موقّعة') + '</span></div></div>' +
       '<div class="finstat warn"><span class="fs-ic">' + ic('clock') + '</span><div><b>' + pend + '</b><span>بانتظار التوقيع</span></div></div>' +
       '<div class="finstat info"><span class="fs-ic">' + ic('coins') + '</span><div><b>' + fm(Math.round(recv)) + '</b><span>المستلَم في ' + yr + ' (' + esc(cl) + ')</span></div></div></div>';
-    body = head + stats + '<div class="finsec">كشف استلام الرواتب · ' + yr + '</div>' + finReceiptsH(p, finMonths(p), -1, [], false);
+    sig = stats + '<div class="finsec">كشف استلام الرواتب · ' + yr + '</div>' + finReceiptsH(p, finMonths(p), -1, [], false);
   }
-  return '<div class="finrec">' + body + bank + '</div>';
+  return '<div class="finrec">' + head + bank + sig + '</div>';
 }
 function pcRetroAsk() {
   var now = new Date(), thr = new Date(now.getFullYear(), now.getMonth() - 3, 1), through = thr.getFullYear() + '-' + ('0' + (thr.getMonth() + 1)).slice(-2);
