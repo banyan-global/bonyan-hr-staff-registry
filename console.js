@@ -113,6 +113,13 @@ var STC = { bad: 'var(--c-bad)', warn: 'var(--c-warn)', info: 'var(--c-info)', o
 function byRef(r) { return STAFF.filter(function (s) { return s.ref === r; })[0]; }
 function av(s, extra) { var ring = s.worst < 0 ? 'var(--c-bad)' : s.status === 'ناقص' ? 'var(--c-warn)' : 'transparent'; return '<span class="av r"' + (extra || '') + ' style="background:linear-gradient(140deg,' + s.ent.c + 'cc,' + s.ent.c + ');--st:' + ring + '">' + esc(s.ini) + '</span>'; }
 function elogo(e) { return ELOGO[e.v] ? '<span><img src="' + ELOGO[e.v] + '" alt="' + esc(e.n) + '"></span>' : ''; }
+/* بلاطة شعار الجهة الاحترافية: شعار الجهة من الموقع، أو مونوغرام ملوّن بلون الجهة عند غيابه */
+function entTile(e) {
+  if (!e) return '<span class="etile mono" style="--ec:#475569">؟</span>';
+  var lg = ELOGO[e.v] || (ENT_KEY[e.v] && ELOGO[ENT_KEY[e.v]]);
+  if (lg) return '<span class="etile"><img src="' + lg + '" alt="' + esc(e.n || '') + '" loading="lazy"></span>';
+  return '<span class="etile mono" style="--ec:' + (e.c || '#475569') + '">' + esc(String(e.n || '؟').trim().charAt(0)) + '</span>';
+}
 var CNT = {
   get tot() { return STAFF.length; }, get done() { return STAFF.filter(function (s) { return s.status === 'مكتمل'; }).length; },
   get gap() { return STAFF.filter(function (s) { return s.status === 'ناقص'; }).length; }, get exp() { return STAFF.filter(function (s) { return s.worst < 0; }).length; },
@@ -4842,7 +4849,7 @@ function paySignSection() {
         '<td class="rn">' + (ix + 1) + '</td>' +
         '<td class="cperson"><button type="button" class="person click" data-pstat="' + esc(r.ref) + '" title="عرض بياناته وإحصاءاته">' + (s ? av(s) : tile('slate', 'user')) + '<span class="pmeta"><b>' + esc(r.name) + '</b></span></button></td>' +
         '<td data-l="الصفة">' + (r.job ? '<span class="rchip ghost"><span class="rc-t">' + esc(r.job) + '</span></span>' : '<span class="rc-dash">—</span>') + '</td>' +
-        '<td data-l="الجهة"><span class="rchip ent"' + (s && s.ent && s.ent.c ? ' style="--ec:' + s.ent.c + '"' : '') + '><span class="elg">' + ((s && s.ent && elogo(s.ent)) || ic('building')) + '</span><span class="rc-t">' + esc((s && s.ent && s.ent.n) || r.entity || '—') + '</span></span></td>' +
+        '<td data-l="الجهة"><span class="entcell">' + entTile(s && s.ent) + '<span class="entcell-n">' + esc((s && s.ent && s.ent.n) || r.entity || '—') + '</span></span></td>' +
         '<td class="num" data-l="صافي الراتب"><div class="salbox"><b>' + fm(r.net) + '</b> <small>' + curL(r.cur) + '</small>' + eq + '</div></td>' +
         '<td class="sigcell" data-l="التوقيع">' + pcSig(r) + '</td>' +
         '<td class="acts2"><div class="pcacts">' + (r.conf ? (sys ? '<button class="ib" data-pcundo="' + esc(r.ref) + '" aria-label="إلغاء التوقيع" title="إلغاء التوقيع">' + ic('refresh') + '</button>' : '') : (future ? '' : (sys ? '<button class="btn sm goldb" data-pcone="' + esc(r.ref) + '">' + ic('check') + 'توقيع</button>' : '') + (can('pay') ? (r.mail ? '<button class="ib ibsend" data-pcsend="' + esc(r.ref) + '" aria-label="إرسال طلب توقيع" title="' + (r.req ? 'إعادة إرسال طلب التوقيع بالبريد' : 'إرسال طلب توقيع للمنسوب بالبريد') + '">' + ic('bell') + '</button>' : '<span class="ib off" title="لا بريد مسجّل للمنسوب">' + ic('bell') + '</span>') : ''))) +
