@@ -379,12 +379,8 @@ function pay_self_sign(array $b): array {
     $m = $f['months'][$i] ?? null; if (!$m || $m['st'] === 'none') throw new HttpError('لا يوجد راتب لهذا الشهر');
     $nm = staff_name(staff_get($ref));
     if (!empty($b['undo'])) {
-        $cf = q1('SELECT by_kind FROM pay_confirm WHERE ym=? AND ref=?', [$ym, $ref]);
-        if (!$cf) return ['ok' => true, 'year' => $year, 'pay' => fin_salary($ref, $year)];
-        if ((string)($cf['by_kind'] ?? '') !== 'self') throw new HttpError('لا يمكنك التراجع عن توقيعٍ سجّلته الإدارة');
-        q('DELETE FROM pay_confirm WHERE ym=? AND ref=?', [$ym, $ref]);
-        audit_log($ref, 'تراجع المنسوب عن توقيع استلام راتب', fin_mn($ym), $nm);
-        return ['ok' => true, 'year' => $year, 'pay' => fin_salary($ref, $year)];
+        /* التوقيع نهائي: لا يستطيع المنسوب التراجع بعد تسجيله؛ التعديل حصريًّا للموارد البشرية وحساب النظام */
+        throw new HttpError('التوقيع نهائي ولا يمكن التراجع عنه بعد تسجيله؛ لأي تصحيح يرجى التواصل مع الموارد البشرية');
     }
     if (!$m['conf']) {
         pay_sign_put($ym, $ref, $m['net'], $f['cur'], (string)$u['email'], $nm, 'self', null, 'وقّع المنسوب الاستلام بنفسه');
@@ -460,4 +456,97 @@ function cus_self_save(array $b): array {
     $id = (int)db()->lastInsertId();
     audit_log($ref, 'تسجيل المنسوب عهدة استلمها', $item . ' · ' . $cat . ' · ' . $on, hrp_label($u));
     return ['ok' => true, 'row' => cus_row(q1('SELECT * FROM custody WHERE id=?', [$id]))];
+}
+/* === بريد مراجعة الرواتب (تصميم معتمد) — مُولّد من المعاينة === */
+function pay_review_mail_html(): string {
+    return <<<'HTML'
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>تأكيد استلام الرواتب</title>
+</head><body style="margin:0;padding:0;background:#E8EAF0;-webkit-text-size-adjust:100%;font-family:Tajawal,'IBM Plex Sans Arabic',Tahoma,Arial,sans-serif;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">راجعوا صفحة الرواتب وأكّدوا استلامكم بتوقيع موثّق</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#E8EAF0"><tr><td align="center" style="padding:30px 12px 36px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="max-width:600px;background:#FFFFFF;border-radius:28px;overflow:hidden;box-shadow:0 22px 50px rgba(16,28,56,.16);border:1px solid #E3E6EE;">
+
+<!-- Header -->
+<tr><td style="background-color:#14284B;background-image:radial-gradient(130% 150% at 100% 0%,rgba(201,162,74,.26) 0%,rgba(201,162,74,0) 48%),linear-gradient(135deg,#24406F 0%,#14284B 54%,#0B1A33 100%);padding:24px 30px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+  <td valign="middle" style="text-align:right;"><div style="font-size:18px;font-weight:900;color:#fff;letter-spacing:-.2px;">مجموعة بنيان العالمية</div>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;"><tr><td style="background:rgba(201,162,74,.16);border:1px solid rgba(201,162,74,.5);border-radius:999px;padding:4px 13px;font-size:11.5px;font-weight:800;color:#E7CE97;letter-spacing:.3px;">الشؤون المالية · الرواتب</td></tr></table></td>
+  <td align="left" width="66" valign="middle"><img src="cid:logo" width="60" alt="بنيان" style="display:block;width:60px;height:auto;border:0;"></td>
+  </tr></table></td></tr>
+<tr><td style="height:3px;font-size:0;line-height:3px;background:linear-gradient(90deg,#9C7A33,#C9A24A,#E7CE97,#C9A24A,#9C7A33);">&nbsp;</td></tr>
+
+<!-- Hero -->
+<tr><td align="center" style="padding:36px 32px 8px;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td align="center" style="width:84px;height:84px;line-height:84px;border-radius:44px;background:#FBF7EE;border:2px solid #C9A24A;box-shadow:0 0 0 6px rgba(201,162,74,.12);font-size:34px;color:#14284B;font-family:'Segoe UI Symbol',Arial,sans-serif;">✍</td></tr></table>
+  <h1 style="margin:20px 0 0;font-size:25px;line-height:1.5;color:#14284B;font-weight:900;letter-spacing:-.3px;">تأكيد استلام الرواتب</h1>
+  <p style="margin:12px auto 0;max-width:468px;font-size:15px;line-height:2.05;color:#3B485D;">حِرصًا على دقّة سجلّكم المالي وشفافيته، ندعوكم للاطّلاع على صفحة رواتبكم في المنصّة، وتأكيد استلامكم لما صُرِف إليكم بتوقيعٍ إلكترونيّ موثّق بالتاريخ والوقت.</p>
+</td></tr>
+
+<!-- Steps -->
+<tr><td style="padding:26px 34px 2px;">
+  <div style="font-size:12.5px;font-weight:900;color:#9C7A33;margin:0 2px 14px;text-align:right;"><span style="display:inline-block;width:6px;height:6px;border-radius:3px;background:#9C7A33;vertical-align:middle;margin-left:7px;"></span>خطوات التأكيد</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td width="40" valign="top" style="padding:0 0 0 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">١</td></tr></table>
+    </td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">افتح «سجلّي المالي ← الرواتب».</div></td></tr>
+    <tr><td style="padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" width="40"><div style="width:2px;height:12px;background:#E7E3D6;margin:3px auto;"></div></td></tr></table></td><td></td></tr><tr><td width="40" valign="top" style="padding:0 0 0 0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">٢</td></tr></table>
+    </td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">راجع الأشهر والمبالغ الصافية.</div></td></tr>
+    <tr><td style="padding:0;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" width="40"><div style="width:2px;height:12px;background:#E7E3D6;margin:3px auto;"></div></td></tr></table></td><td></td></tr><tr><td width="40" valign="top"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="width:30px;height:30px;line-height:30px;border-radius:16px;background:#FBF7EE;border:1.5px solid #C9A24A;color:#14284B;font-family:Tajawal,Tahoma,sans-serif;font-size:13px;font-weight:900;">٣</td></tr></table></td><td valign="middle" style="padding:0 12px 0 6px;"><div style="font-family:Tajawal,Tahoma,sans-serif;font-size:14.5px;line-height:1.8;color:#243149;font-weight:700;">اضغط «أؤكّد استلام الراتب» أمام الأشهر التي استلمتها.</div></td></tr></table>
+</td></tr>
+
+<!-- CTA -->
+<tr><td style="padding:24px 34px 4px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" bgcolor="#C9A24A" style="border-radius:15px;background-color:#C9A24A;background-image:linear-gradient(135deg,#E7CE97 0%,#C9A24A 52%,#9C7A33 100%);box-shadow:0 10px 22px -10px rgba(156,122,51,.6);">
+  <a href="https://hr.bonyanglobal.com/#myhr" target="_blank" style="display:block;padding:15px 18px;font-family:Tajawal,Tahoma,sans-serif;font-size:15.5px;font-weight:900;color:#0B1A33;text-decoration:none;border-radius:15px;">فتح صفحة الرواتب والتوقيع ←</a>
+  </td></tr></table>
+  <p style="margin:12px 0 0;text-align:center;font-size:12px;color:#6B7689;line-height:1.8;">أو افتح المنصّة ثم: سجلّي المالي ← الرواتب</p>
+</td></tr>
+
+<tr><td style="height:22px;font-size:0;">&nbsp;</td></tr>
+<!-- Footer -->
+<tr><td style="background:#F7F6F2;border-top:1px solid #E7E3D6;padding:18px 30px 20px;text-align:center;">
+  <div style="font-size:13px;font-weight:900;color:#14284B;">م. أسامة جنيدي</div>
+  <div style="font-size:11.5px;color:#6B7689;margin-top:2px;">تطوير وتنفيذ · منصة بنيان للموارد البشرية</div>
+  <div style="height:1px;background:#E7E3D6;margin:12px auto;max-width:180px;"></div>
+  <div style="font-size:11px;color:#6B7689;line-height:1.8;">رسالة آليّة موجّهة إليكم؛ رجاءً عدم تمريرها.<br>© 2026 مجموعة بنيان العالمية</div>
+</td></tr>
+
+</table></td></tr></table></body></html>
+HTML;
+}
+
+
+/* إرسال بريد المراجعة لمنسوب واحد */
+function pay_review_mail(string $ref): bool {
+    $to = hrp_staff_mail($ref); if ($to === '') return false;
+    $html = pay_review_mail_html();
+    $text = "السلام عليكم،\nيرجى الاطلاع على صفحة رواتبكم في المنصة وتأكيد استلامكم لما صُرف إليكم:\n" . mx_url('myhr') . "\n\nم. أسامة جنيدي — منصة بنيان للموارد البشرية";
+    try { send_mail($to, 'تأكيد استلام الرواتب', $html, $text, 'Bonyan HR', logo_inline()); return true; }
+    catch (Throwable $e) { error_log('[bonyan-hr] review mail ' . $e->getMessage()); return false; }
+}
+/* إرسال بريد مراجعة الرواتب لكل المنسوبين مرّة واحدة (يعمل بعد إرسال الرد، فلا يُبطئ المستخدم) */
+function pay_review_broadcast_once(): void {
+    if (kv_get('pay_review_bcast_v1') !== null) return; kv_put('pay_review_bcast_v1', now(), 0);
+    $sent = 0;
+    foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $r) {
+        if (hrp_staff_mail($r['ref']) === '') continue;
+        try { if (pay_review_mail($r['ref'])) $sent++; } catch (Throwable $e) { error_log('[bonyan-hr] review bcast ' . $e->getMessage()); }
+    }
+    try { audit_log('', 'إرسال بريد مراجعة الرواتب للكل', $sent . ' منسوب', 'م. أسامة جنيدي'); } catch (Throwable $e) {}
+}
+/* زر الإدارة: إرسال بريد المراجعة (الكل/جهة/محدّدين) */
+function pay_review_send(array $b): array {
+    $u = require_perm('finance.view');
+    $scope = (string)($b['scope'] ?? 'all'); $refs = [];
+    foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $r) {
+        $rf = $r['ref']; if (hrp_staff_mail($rf) === '') continue;
+        if ($scope === 'entity') { $s = staff_get($rf); if (!$s || (string)($s['data']['entity'] ?? '') !== (string)($b['entity'] ?? '')) continue; }
+        elseif ($scope === 'refs') { if (!in_array($rf, array_map('strval', (array)($b['refs'] ?? [])), true)) continue; }
+        $refs[] = $rf;
+    }
+    $refsCopy = $refs; defer_after(function () use ($refsCopy) { foreach ($refsCopy as $rf) { try { pay_review_mail($rf); } catch (Throwable $e) {} } });
+    audit_log('', 'إرسال بريد مراجعة الرواتب', count($refs) . ' منسوب' . ($scope === 'all' ? ' · الكل' : ($scope === 'entity' ? ' · ' . ($b['entity'] ?? '') : '')), hrp_label($u));
+    return ['ok' => true, 'count' => count($refs)];
 }
