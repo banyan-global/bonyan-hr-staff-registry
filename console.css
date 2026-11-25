@@ -2959,3 +2959,28 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .rcpt.bad .rcpt-sm{color:var(--c-bad);background:color-mix(in srgb,var(--c-bad) 14%,var(--panel));border-color:color-mix(in srgb,var(--c-bad) 32%,transparent)}
 .btn.sm.nrbtn{color:var(--c-bad);border-color:color-mix(in srgb,var(--c-bad) 36%,transparent);background:transparent;font-weight:800}
 .btn.sm.nrbtn:hover{background:color-mix(in srgb,var(--c-bad) 9%,transparent);border-color:var(--c-bad)}
+
+/* النظرة السنوية: بطاقات ملخّص قابلة للضغط + قائمة منبثقة */
+.pcov-h{margin-bottom:14px}
+.pcover{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.pcovc{display:flex;align-items:center;gap:12px;text-align:right;font:inherit;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s}
+.pcovc:hover{border-color:var(--gold-d);box-shadow:0 6px 16px -8px rgba(16,28,56,.2)}
+.pcovc:active{transform:translateY(1px)}
+.pcovc-ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none}
+.pcovc-ic .i{width:21px;height:21px}
+.pcovc-n{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pcovc-n b{font-size:22px;font-weight:800;color:var(--ink);line-height:1}
+.pcovc-n small{font-size:12px;color:var(--mute)}
+.pcovc.ok .pcovc-ic{background:color-mix(in srgb,var(--c-ok) 14%,transparent);color:var(--c-ok)}
+.pcovc.warn .pcovc-ic{background:color-mix(in srgb,var(--c-warn) 16%,transparent);color:var(--c-warn)}
+.pcovc.mute .pcovc-ic{background:var(--well);color:var(--mute)}
+.pcovc.bad .pcovc-ic{background:color-mix(in srgb,var(--c-bad) 14%,transparent);color:var(--c-bad)}
+.pcovl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:58vh;overflow:auto}
+.pcovl li{display:flex;align-items:center;gap:11px;padding:10px 8px;border-radius:12px;cursor:pointer;border-bottom:1px solid var(--line-2)}
+.pcovl li:hover{background:var(--soft)}
+.pcovl-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.pcovl-m b{font-size:14px;color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcovl-m small{font-size:11.5px;color:var(--mute)}
+.pcovl-st{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none}
+.nrt{font-size:10.5px;color:var(--c-bad);font-weight:700}
+@media(max-width:720px){.pcover{grid-template-columns:repeat(2,1fr)}}

@@ -276,6 +276,30 @@ function pay_conf_list(array $b): array {
     $months = []; for ($k = 0; $k < 14; $k++) $months[] = date('Y-m', strtotime(date('Y-m-01') . " -$k month"));
     return ['ok' => true, 'month' => $ym, 'months' => $months, 'rows' => pay_conf_rows($u, $ym)];
 }
+/* نظرة سنوية لكل منسوب: وقّع الكل / بعضها (جزئي) / لا شيء، مع بلاغات عدم الاستلام — للملخّص والقوائم */
+function pay_year_overview(array $b): array {
+    $u = require_perm('finance.view'); $year = (int)($b['year'] ?? date('Y')); if ($year < 2000 || $year > 2100) $year = (int)date('Y');
+    $hide = private_hidden_for($u); $rows = []; $cnt = ['all' => 0, 'partial' => 0, 'none' => 0, 'unrecv' => 0];
+    foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $r) {
+        if (in_array($r['ref'], $hide, true)) continue;
+        $s = staff_get($r['ref']); if (!$s) continue;
+        if (fin_num($s['data']['salary'] ?? '') <= 0 && !q1('SELECT id FROM salary_hist WHERE ref=? LIMIT 1', [$r['ref']])) continue;
+        $f = fin_salary($r['ref'], $year); $due = 0; $signed = 0; $unrecv = 0; $pending = 0; $net = 0.0;
+        foreach ($f['months'] as $m) {
+            if ($m['st'] === 'none' || $m['st'] === 'proj') continue;
+            $due++;
+            if (!empty($m['conf'])) { $signed++; $net += (float)$m['net']; }
+            elseif (!empty($m['unrecv'])) $unrecv++;
+            else $pending++;
+        }
+        if ($due === 0) continue;
+        $status = $signed >= $due ? 'all' : ($signed > 0 ? 'partial' : 'none');
+        $cnt[$status]++; if ($unrecv > 0) $cnt['unrecv']++;
+        $rows[] = ['ref' => $r['ref'], 'name' => staff_name($s), 'entity' => (string)($s['data']['entity'] ?? ''), 'cur' => $f['cur'], 'due' => $due, 'signed' => $signed, 'unrecv' => $unrecv, 'pending' => $pending, 'net' => round($net, 2), 'status' => $status];
+    }
+    usort($rows, fn($a, $b) => strcmp($a['entity'], $b['entity']) ?: strcmp($a['name'], $b['name']));
+    return ['ok' => true, 'year' => $year, 'rows' => $rows, 'counts' => $cnt, 'staff' => count($rows)];
+}
 function pay_confirm(array $b): array {
     $u = require_perm('settings.manage'); $ym = fin_ym($b['month'] ?? ''); /* التوقيع نيابةً عن المنسوب لحساب النظام فقط */
     if ($ym > date('Y-m')) throw new HttpError('لا يمكن تأكيد صرف شهر لم يأتِ بعد');
