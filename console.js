@@ -4856,10 +4856,7 @@ function paySignSection() {
   all.forEach(function (r) { ents[r.entity] = (ents[r.entity] || 0) + 1; });
   var future = PCF.month > ymNow2(), selN = Object.keys(PCF.sel).filter(function (k) { return PCF.sel[k]; }).length;
   var scopePend = (PCF.ent ? all.filter(function (r) { return r.entity === PCF.ent; }) : all).filter(function (r) { return !r.conf; }).length;
-  var kp = '<div class="grid g4 fx-k">' + kpi('sapphire', 'users', all.length, 'منسوبًا', 'برواتب في ' + mName(PCF.month), nq(Object.keys(ents).length, 'جهة واحدة', 'جهتان', 'جهات', 'جهة')) +
-    kpi('emerald', 'check', ok.length, '', 'وُقّع استلامهم', ok.length ? pcSums(ok) : 'لم يُوقَّع لأحد بعد') +
-    kpi('gold', 'timer', pend.length, '', 'بانتظار التوقيع', reqd.length ? nq(reqd.length, 'أُرسل له طلب توقيع', 'أُرسل لهما طلب التوقيع', 'أُرسل لهم طلب التوقيع', 'أُرسل لهم طلب التوقيع') : (pend.length ? 'لم يُرسَل طلب توقيع بعد' : 'اكتمل توقيع الشهر')) +
-    kpi('teal', 'chart', all.length ? Math.round(ok.length / all.length * 100) + '%' : '—', '', 'نسبة التوقيع', mlab) + '</div>';
+  var totAll = pcSums(all), paySub = nq(all.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' · وُقّع ' + ok.length + ' · بانتظار ' + pend.length + (totAll ? ' · إجمالي الرواتب ' + totAll : '');
   var bar = '<section class="pn tbar"><div class="fbar">' + fsearch('pcq', PCF.q, 'ابحث بالاسم أو المسمى أو الجهة', 'بحث في الرواتب') +
     ssel('pcEnt', [{ v: '', n: 'كل الجهات', k: all.length, ic: 'building' }].concat(Object.keys(ents).sort().map(function (e) { return { v: e, n: e || 'بدون جهة', k: ents[e] }; })), PCF.ent, 'كل الجهات', function (v) { PCF.ent = v; PCF.sel = {}; render(); }, 'الجهة', 'الجهة') +
     ssel('pcSt', [{ v: '', n: 'الكل', k: all.length, ic: 'doc' }, { v: 'wait', n: 'بانتظار التوقيع', k: pend.length, ic: 'timer' }, { v: 'req', n: 'أُرسل لهم الطلب', k: reqd.length, ic: 'bell' }, { v: 'ok', n: 'مُوقَّع', k: ok.length, ic: 'check' }], PCF.st, 'الكل', function (v) { PCF.st = v; render(); }, 'الحالة', 'الحالة') + '</div></section>';
@@ -4879,7 +4876,7 @@ function paySignSection() {
         '<td class="acts2"><div class="pcacts">' + (r.conf ? (sys ? '<button class="ib" data-pcundo="' + esc(r.ref) + '" aria-label="إلغاء التوقيع" title="إلغاء التوقيع">' + ic('refresh') + '</button>' : '') : (future ? '' : (sys ? '<button class="btn sm goldb" data-pcone="' + esc(r.ref) + '">' + ic('check') + 'توقيع</button>' : '') + (can('pay') ? (r.mail ? '<button class="ib ibsend" data-pcsend="' + esc(r.ref) + '" aria-label="إرسال طلب توقيع" title="' + (r.req ? 'إعادة إرسال طلب التوقيع بالبريد' : 'إرسال طلب توقيع للمنسوب بالبريد') + '">' + ic('bell') + '</button>' : '<span class="ib off" title="لا بريد مسجّل للمنسوب">' + ic('bell') + '</span>') : ''))) +
         (sys && can('edit') ? '<button class="ib" data-salh="' + esc(r.ref) + '" aria-label="سجل الراتب" title="سجل الراتب">' + ic('history') + '</button>' : '') + '</div></td></tr>'; }).join('') + '</tbody></table></div>'
     : '<div class="emptyx">' + tile('emerald', 'wallet') + '<b>' + (all.length ? 'لا أحد في هذه التصفية' : 'لا رواتب مسجّلة لهذا الشهر') + '</b><p>تظهر هنا رواتب المنسوبين الذين سُجِّل راتبهم في ملفاتهم.</p></div>';
-  return head + paySignYear() + kp + bar + pn('emerald', 'check', 'كشف توقيع الاستلام · ' + mlab, nq(rows.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا'), acts, '<div class="pb">' + tb + '</div>');
+  return head + paySignYear() + bar + pn('emerald', 'check', 'كشف توقيع الاستلام · ' + mlab, paySub, acts, '<div class="pb">' + tb + '</div>');
 }
 function pcSig(r) {
   if (r.conf) { var who = r.conf.kind === 'self' ? 'وقّعه المنسوب' : r.conf.kind === 'system' ? 'سُجّل تلقائيًا' : 'أكّده ' + esc(r.conf.by); var paid = r.conf.paid && r.conf.paid !== PCF.month ? ' · صُرف في ' + mName(r.conf.paid) : '';
