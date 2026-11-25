@@ -4827,11 +4827,12 @@ function pcRows(d) { var q = PCF.q.trim(); return d.rows.filter(function (r) { r
 function pcSums(rows) { var o = {}; rows.forEach(function (r) { o[r.cur] = (o[r.cur] || 0) + r.net; }); return Object.keys(o).map(function (c) { return fm(Math.round(o[c])) + ' ' + curL(c); }).join(' · '); }
 /* النظرة السنوية: وقّع الكل/جزئيًا/لا شيء + بلاغات عدم الاستلام، ببطاقات ملخّص تفتح قوائم منبثقة */
 function pcYearData() { var y = PCF.month.slice(0, 4); return need('pcy:' + y, function () { return api({ action: 'payYearOverview', year: +y }); }, 60000); }
-function paySignYear() {
-  var c = pcYearData(), y = PCF.month.slice(0, 4); if (!c.data) return '';
-  var o = c.data, ct = o.counts, cards = [['all', 'ok', 'check', ct.all, 'وقّعوا كل رواتبهم'], ['partial', 'warn', 'timer', ct.partial, 'وقّعوا جزئيًا'], ['none', 'mute', 'clock', ct.none, 'لم يوقّعوا شيئًا'], ['unrecv', 'bad', 'x', ct.unrecv, 'أبلغوا بعدم الاستلام']];
-  return '<section class="pn"><div class="pb"><div class="sighead-t pcov-h">' + tile('sapphire', 'chart') + '<div><b>النظرة السنوية · توقيع الاستلام ' + y + '</b><small>' + nq(o.staff, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' — اضغط أي بطاقة لعرض أسمائهم</small></div></div>' +
-    '<div class="pcover">' + cards.map(function (k) { return '<button type="button" class="pcovc ' + k[1] + '" data-pcover="' + k[0] + '"><span class="pcovc-ic">' + ic(k[2]) + '</span><span class="pcovc-n"><b>' + k[3] + '</b><small>' + k[4] + '</small></span></button>'; }).join('') + '</div></div></section>';
+function pcYearCards(y) {
+  var c = pcYearData();
+  if (!c.data) return '<div class="sgp-cap">على مدى سنة ' + y + '</div><div class="pcover">' + [0, 1, 2, 3].map(function () { return '<div class="pcovc sk"><span class="pcovc-ic">' + ic('clock') + '</span><span class="pcovc-n"><b>—</b><small>' + (c.err ? 'تعذّر تحميل النظرة السنوية' : 'جارٍ حساب السنة…') + '</small></span></div>'; }).join('') + '</div>';
+  var ct = c.data.counts, cards = [['all', 'ok', 'check', ct.all, 'وقّعوا كل رواتبهم'], ['partial', 'warn', 'timer', ct.partial, 'وقّعوا جزئيًا'], ['none', 'mute', 'clock', ct.none, 'لم يوقّعوا شيئًا'], ['unrecv', 'bad', 'x', ct.unrecv, 'أبلغوا بعدم الاستلام']];
+  return '<div class="sgp-cap">على مدى سنة ' + y + ' — اضغط أي بطاقة لعرض الأسماء</div>' +
+    '<div class="pcover">' + cards.map(function (k) { return '<button type="button" class="pcovc ' + k[1] + (k[3] === 0 ? ' z' : '') + '" data-pcover="' + k[0] + '"><span class="pcovc-ic">' + ic(k[2]) + '</span><span class="pcovc-n"><b>' + k[3] + '</b><small>' + k[4] + '</small></span><span class="go">' + ic('back') + '</span></button>'; }).join('') + '</div>';
 }
 function pcOverPop(cat) {
   var c = pcYearData(); if (!c.data) return; var o = c.data;
@@ -4850,13 +4851,24 @@ function paySignSection() {
   var msel = ssel('pcM', ((d && d.months) || [PCF.month]).map(function (m) { return { v: m, n: mName(m) + ' ' + m.slice(0, 4), ic: 'calendar', d: m === ymNow2() ? 'الشهر الحالي' : '' }; }), PCF.month, mlab, function (v) { PCF.month = v; PCF.sel = {}; render(); }, 'الشهر', 'الشهر');
   var allReq = d ? d.rows.filter(function (r) { return !r.conf && r.req; }).length : 0;
   var hint = sys ? 'التوقيع نيابةً عن المنسوب لحساب النظام فقط. أرسل للمنسوب طلب توقيع يصله بالبريد ويُذكَّر بعد يوم، أو وقّع بأثر رجعي.' : 'أرسل للمنسوب طلب توقيع استلام راتبه؛ يصله بالبريد ويُذكَّر بعد يوم. التوقيع نيابةً عنه يتم من حساب النظام فقط.';
-  var head = '<div class="sighead" id="paysign"><div class="sighead-t">' + tile('emerald', 'check') + '<div><b>توقيع استلام الرواتب</b><small>' + hint + '</small></div></div><div class="sighead-a">' + msel + (allReq ? '<button class="btn danger" id="pcStop">' + ic('x') + 'إيقاف طلبات التوقيع (' + allReq + ')</button>' : '') + (sys ? '<button class="btn" id="pcRetro">' + ic('history') + 'توقيع بأثر رجعي</button>' : '') + '<button class="btn goldb" id="pcReviewAll">' + ic('mail') + 'إرسال بريد الاعتماد للكل</button>' + '</div></div>';
-  if (!d) return head + paySignYear() + '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ التحميل…') + '</div></div></section>';
+  var y = PCF.month.slice(0, 4);
+  var btns = msel + (allReq ? '<button class="btn danger" id="pcStop">' + ic('x') + 'إيقاف الطلبات (' + allReq + ')</button>' : '') + (sys ? '<button class="btn" id="pcRetro">' + ic('history') + 'توقيع بأثر رجعي</button>' : '') + '<button class="btn goldb" id="pcReviewAll">' + ic('mail') + 'بريد الاعتماد للكل</button>';
+  var ribbon = '';
+  if (d) {
+    var _a = d.rows, _ok = _a.filter(function (r) { return r.conf; }).length, _pn = _a.filter(function (r) { return !r.conf && !r.unrecv; }).length, _nr = _a.filter(function (r) { return r.unrecv && !r.conf; }).length, _tot = pcSums(_a);
+    ribbon = '<div class="sgp-month"><span class="mhd">' + ic('calendar') + 'ملخّص ' + mlab + '</span><span class="sgp-sep"></span>' +
+      '<span class="sgp-mchip">' + ic('users') + nq(_a.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + '</span>' +
+      '<span class="sgp-mchip ok">' + ic('check') + 'وُقّع <b>' + _ok + '</b></span>' +
+      '<span class="sgp-mchip wait">' + ic('timer') + 'بانتظار <b>' + _pn + '</b></span>' +
+      (_nr ? '<span class="sgp-mchip bad">' + ic('x') + 'عدم استلام <b>' + _nr + '</b></span>' : '') +
+      (_tot ? '<span class="sgp-mchip sum">' + ic('wallet') + 'إجمالي <b>' + _tot + '</b></span>' : '') + '</div>';
+  }
+  var panel = '<section class="pn sigpanel" id="paysign"><div class="sgp-top"><div class="sgp-id">' + tile('emerald', 'check') + '<div><b>توقيع استلام الرواتب <span class="yrbadge">' + y + '</span></b><small>' + hint + '</small></div></div><div class="sgp-act">' + btns + '</div></div>' + ribbon + pcYearCards(y) + '<div class="sgp-pad"></div></section>';
+  if (!d) return panel + '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ تحميل الكشف…') + '</div></div></section>';
   var all = d.rows, ok = all.filter(function (r) { return r.conf; }), pend = all.filter(function (r) { return !r.conf; }), reqd = pend.filter(function (r) { return r.req; }), rows = pcRows(d), ents = {};
   all.forEach(function (r) { ents[r.entity] = (ents[r.entity] || 0) + 1; });
   var future = PCF.month > ymNow2(), selN = Object.keys(PCF.sel).filter(function (k) { return PCF.sel[k]; }).length;
   var scopePend = (PCF.ent ? all.filter(function (r) { return r.entity === PCF.ent; }) : all).filter(function (r) { return !r.conf; }).length;
-  var totAll = pcSums(all), paySub = nq(all.length, 'منسوب واحد', 'منسوبان', 'منسوبين', 'منسوبًا') + ' · وُقّع ' + ok.length + ' · بانتظار ' + pend.length + (totAll ? ' · إجمالي الرواتب ' + totAll : '');
   var bar = '<section class="pn tbar"><div class="fbar">' + fsearch('pcq', PCF.q, 'ابحث بالاسم أو المسمى أو الجهة', 'بحث في الرواتب') +
     ssel('pcEnt', [{ v: '', n: 'كل الجهات', k: all.length, ic: 'building' }].concat(Object.keys(ents).sort().map(function (e) { return { v: e, n: e || 'بدون جهة', k: ents[e] }; })), PCF.ent, 'كل الجهات', function (v) { PCF.ent = v; PCF.sel = {}; render(); }, 'الجهة', 'الجهة') +
     ssel('pcSt', [{ v: '', n: 'الكل', k: all.length, ic: 'doc' }, { v: 'wait', n: 'بانتظار التوقيع', k: pend.length, ic: 'timer' }, { v: 'req', n: 'أُرسل لهم الطلب', k: reqd.length, ic: 'bell' }, { v: 'ok', n: 'مُوقَّع', k: ok.length, ic: 'check' }], PCF.st, 'الكل', function (v) { PCF.st = v; render(); }, 'الحالة', 'الحالة') + '</div></section>';
@@ -4876,7 +4888,7 @@ function paySignSection() {
         '<td class="acts2"><div class="pcacts">' + (r.conf ? (sys ? '<button class="ib" data-pcundo="' + esc(r.ref) + '" aria-label="إلغاء التوقيع" title="إلغاء التوقيع">' + ic('refresh') + '</button>' : '') : (future ? '' : (sys ? '<button class="btn sm goldb" data-pcone="' + esc(r.ref) + '">' + ic('check') + 'توقيع</button>' : '') + (can('pay') ? (r.mail ? '<button class="ib ibsend" data-pcsend="' + esc(r.ref) + '" aria-label="إرسال طلب توقيع" title="' + (r.req ? 'إعادة إرسال طلب التوقيع بالبريد' : 'إرسال طلب توقيع للمنسوب بالبريد') + '">' + ic('bell') + '</button>' : '<span class="ib off" title="لا بريد مسجّل للمنسوب">' + ic('bell') + '</span>') : ''))) +
         (sys && can('edit') ? '<button class="ib" data-salh="' + esc(r.ref) + '" aria-label="سجل الراتب" title="سجل الراتب">' + ic('history') + '</button>' : '') + '</div></td></tr>'; }).join('') + '</tbody></table></div>'
     : '<div class="emptyx">' + tile('emerald', 'wallet') + '<b>' + (all.length ? 'لا أحد في هذه التصفية' : 'لا رواتب مسجّلة لهذا الشهر') + '</b><p>تظهر هنا رواتب المنسوبين الذين سُجِّل راتبهم في ملفاتهم.</p></div>';
-  return head + paySignYear() + bar + pn('emerald', 'check', 'كشف توقيع الاستلام · ' + mlab, paySub, acts, '<div class="pb">' + tb + '</div>');
+  return panel + bar + pn('emerald', 'check', 'كشف ' + mlab, 'جدول المنسوبين وتواقيعهم لهذا الشهر', acts, '<div class="pb">' + tb + '</div>');
 }
 function pcSig(r) {
   if (r.conf) { var who = r.conf.kind === 'self' ? 'وقّعه المنسوب' : r.conf.kind === 'system' ? 'سُجّل تلقائيًا' : 'أكّده ' + esc(r.conf.by); var paid = r.conf.paid && r.conf.paid !== PCF.month ? ' · صُرف في ' + mName(r.conf.paid) : '';
