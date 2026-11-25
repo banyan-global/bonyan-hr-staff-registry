@@ -98,6 +98,7 @@ try {
     run_deferred();
     try { att_push_tick(); } catch (Throwable $e) { }
     try { req_watch_digest_tick(); } catch (Throwable $e) { error_log('[bonyan-hr] digest ' . $e->getMessage()); }
+    try { pay_receipt_migrate_once(); } catch (Throwable $e) { error_log('[bonyan-hr] receipt migrate ' . $e->getMessage()); }
     try { pay_unsign_system_once(); } catch (Throwable $e) { error_log('[bonyan-hr] unsign system ' . $e->getMessage()); }
     try { pay_sign_2425_once(); } catch (Throwable $e) { error_log('[bonyan-hr] sign2425 ' . $e->getMessage()); }
     try { pay_sign_pastyears_once(); } catch (Throwable $e) { error_log('[bonyan-hr] sign past ' . $e->getMessage()); }

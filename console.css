@@ -2947,3 +2947,15 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .etile img{width:100%;height:100%;object-fit:contain;padding:6px;box-sizing:border-box}
 .etile.none{color:#fff;background:var(--ec,#475569);border-color:transparent;box-shadow:0 3px 9px -2px color-mix(in srgb,var(--ec,#475569) 55%,transparent)}
 .etile.none .i{width:24px;height:24px}
+
+/* حالة «لم يُستلم» (بلاغ أحمر) — جدول الإدارة وصفحة الموظف وزر الإبلاغ */
+.sigtab tr.unrecv{background:color-mix(in srgb,var(--c-bad) 6%,transparent)}
+.sigtab tr.unrecv:hover{background:color-mix(in srgb,var(--c-bad) 10%,transparent)}
+.rchip.nr{color:var(--c-bad);font-weight:800;border-color:color-mix(in srgb,var(--c-bad) 42%,transparent);background:color-mix(in srgb,var(--c-bad) 12%,transparent)}
+.rchip.nr .i{color:var(--c-bad)}
+.sig.nr{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.sig.nr small{font-size:11px;color:var(--faint)}
+.rcpt.bad{border-inline-start:4px solid var(--c-bad)}
+.rcpt.bad .rcpt-sm{color:var(--c-bad);background:color-mix(in srgb,var(--c-bad) 14%,var(--panel));border-color:color-mix(in srgb,var(--c-bad) 32%,transparent)}
+.btn.sm.nrbtn{color:var(--c-bad);border-color:color-mix(in srgb,var(--c-bad) 36%,transparent);background:transparent;font-weight:800}
+.btn.sm.nrbtn:hover{background:color-mix(in srgb,var(--c-bad) 9%,transparent);border-color:var(--c-bad)}

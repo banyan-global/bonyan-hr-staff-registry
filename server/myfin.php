@@ -106,7 +106,8 @@ function fin_salary(string $ref, int $year): array {
     $months = [];
     for ($i = 1; $i <= 12; $i++) {
         $ym = sprintf('%04d-%02d', $year, $i);
-        $cf = $conf[$ym] ?? null; $st = $cf ? 'paid' : ($ym < $thisM ? 'wait' : ($ym === $thisM ? 'due' : 'proj'));
+        $cf = $conf[$ym] ?? null; $recv = $cf ? (int)($cf['received'] ?? 1) : 1;
+        $st = $cf ? ($recv ? 'paid' : 'unrecv') : ($ym < $thisM ? 'wait' : ($ym === $thisM ? 'due' : 'proj'));
             $endM = substr((string)($sd['serviceEnd'] ?? ''), 0, 7);
         if (($start !== '' && $ym < $start) || ($endM !== '' && $ym > $endM) || $now <= 0) { $months[] = ['m' => $ym, 'st' => 'none']; continue; }
         $base = fin_base_for($ym, $now, $raises, $hist); $h = $base / 30 / 8; $lines = [];
@@ -128,7 +129,8 @@ function fin_salary(string $ref, int $year): array {
         }
         $months[] = ['m' => $ym, 'st' => $st, 'base' => $base, 'add' => $otAmt, 'ded' => round($ded, 2), 'net' => round($base + $otAmt - $ded, 2), 'lines' => $lines,
             'raise' => array_values(array_filter($raises, fn($r) => substr($r['effective'], 0, 7) === $ym)),
-            'conf' => $cf ? ['at' => substr($cf['at'], 0, 16), 'by' => $cf['by_name'], 'amount' => (float)$cf['amount'], 'kind' => (string)($cf['by_kind'] ?? 'admin'), 'paid' => $cf['paid_on'] ? substr($cf['paid_on'], 0, 7) : $ym] : null];
+            'conf' => ($cf && $recv) ? ['at' => substr($cf['at'], 0, 16), 'by' => $cf['by_name'], 'amount' => (float)$cf['amount'], 'kind' => (string)($cf['by_kind'] ?? 'admin'), 'paid' => $cf['paid_on'] ? substr($cf['paid_on'], 0, 7) : $ym] : null,
+            'unrecv' => ($cf && !$recv) ? ['at' => substr($cf['at'], 0, 16), 'by' => $cf['by_name']] : null];
     }
     $yrs = []; $y0 = $start !== '' ? (int)substr($start, 0, 4) : (int)date('Y'); for ($y = max($y0, (int)date('Y') - 5); $y <= (int)date('Y'); $y++) $yrs[] = $y;
     return ['cur' => $cur, 'salary' => $now, 'start' => (string)($sd['startDate'] ?? ''), 'raises' => $raises, 'months' => $months, 'years' => array_reverse($yrs),
@@ -228,11 +230,25 @@ function exp_delete(array $b): array {
 
 /* ============================================================ تأكيد صرف الرواتب (الإدارة العليا والموارد البشرية ومدير النظام) */
 /* كتابة توقيع استلام راتب شهر، مع شهر الصرف الفعلي ومصدر التوقيع (admin/self/system)، وإغلاق أي طلب توقيع معلّق */
-function pay_sign_put(string $ym, string $ref, float $net, string $cur, string $byEmail, string $byName, string $kind, ?string $paidYm, string $note): void {
+/* هل عمود received موجود (حالة: ١ استلم/وقّع، ٠ أبلغ بعدم الاستلام)؟ */
+function pay_has_received(): bool { static $v = null; if ($v === null) { $v = false; try { if (q("SHOW COLUMNS FROM pay_confirm LIKE 'received'")->fetch()) $v = true; } catch (Throwable $e) { } } return $v; }
+/* إضافة عمود received مرة واحدة */
+function pay_receipt_migrate_once(): void {
+    if (kv_get('pay_received_col_v1') !== null) return; kv_put('pay_received_col_v1', now(), 0);
+    try { if (!q("SHOW COLUMNS FROM pay_confirm LIKE 'received'")->fetch()) q("ALTER TABLE pay_confirm ADD COLUMN received TINYINT NOT NULL DEFAULT 1"); }
+    catch (Throwable $e) { error_log('[bonyan-hr] receipt migrate ' . $e->getMessage()); }
+}
+function pay_sign_put(string $ym, string $ref, float $net, string $cur, string $byEmail, string $byName, string $kind, ?string $paidYm, string $note, int $received = 1): void {
     $paid = ($paidYm && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string)$paidYm)) ? $paidYm . '-01' : $ym . '-01';
-    q('INSERT INTO pay_confirm (ym, ref, amount, cur, by_email, by_name, at, note, paid_on, by_kind) VALUES (?,?,?,?,?,?,?,?,?,?)
-       ON DUPLICATE KEY UPDATE amount=VALUES(amount), cur=VALUES(cur), by_email=VALUES(by_email), by_name=VALUES(by_name), at=VALUES(at), note=VALUES(note), paid_on=VALUES(paid_on), by_kind=VALUES(by_kind)',
-        [$ym, $ref, $net, $cur, $byEmail, $byName, now(), $note, $paid, $kind]);
+    if (pay_has_received()) {
+        q('INSERT INTO pay_confirm (ym, ref, amount, cur, by_email, by_name, at, note, paid_on, by_kind, received) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+           ON DUPLICATE KEY UPDATE amount=VALUES(amount), cur=VALUES(cur), by_email=VALUES(by_email), by_name=VALUES(by_name), at=VALUES(at), note=VALUES(note), paid_on=VALUES(paid_on), by_kind=VALUES(by_kind), received=VALUES(received)',
+            [$ym, $ref, $net, $cur, $byEmail, $byName, now(), $note, $paid, $kind, $received]);
+    } else {
+        q('INSERT INTO pay_confirm (ym, ref, amount, cur, by_email, by_name, at, note, paid_on, by_kind) VALUES (?,?,?,?,?,?,?,?,?,?)
+           ON DUPLICATE KEY UPDATE amount=VALUES(amount), cur=VALUES(cur), by_email=VALUES(by_email), by_name=VALUES(by_name), at=VALUES(at), note=VALUES(note), paid_on=VALUES(paid_on), by_kind=VALUES(by_kind)',
+            [$ym, $ref, $net, $cur, $byEmail, $byName, now(), $note, $paid, $kind]);
+    }
     q("UPDATE pay_signreq SET status='done', done_at=? WHERE ym=? AND ref=? AND status='pending'", [now(), $ym, $ref]);
 }
 /* الأشهر التي طُلب من المنسوب توقيعها ولم يوقّع بعد (مفتاح ym => سطر الطلب) */
@@ -245,7 +261,7 @@ function pay_conf_rows(array $u, string $ym): array {
         $s = staff_get($r['ref']); if (!$s) continue;
         if (fin_num($s['data']['salary'] ?? '') <= 0 && !q1('SELECT id FROM salary_hist WHERE ref=? LIMIT 1', [$r['ref']])) continue;
         $f = fin_salary($r['ref'], $year); $m = $f['months'][$i] ?? null; if (!$m || $m['st'] === 'none') continue;
-        $rows[] = ['ref' => $r['ref'], 'name' => staff_name($s), 'job' => (string)($s['data']['job'] ?? ''), 'entity' => (string)($s['data']['entity'] ?? ''), 'start' => (string)($s['data']['startDate'] ?? ''), 'cur' => $f['cur'], 'base' => $m['base'], 'add' => $m['add'], 'ded' => $m['ded'], 'net' => $m['net'], 'conf' => $m['conf'], 'req' => $req[$r['ref']] ?? null, 'mail' => hrp_staff_mail($r['ref']) !== '', 'hist' => count(fin_hist($r['ref']))];
+        $rows[] = ['ref' => $r['ref'], 'name' => staff_name($s), 'job' => (string)($s['data']['job'] ?? ''), 'entity' => (string)($s['data']['entity'] ?? ''), 'start' => (string)($s['data']['startDate'] ?? ''), 'cur' => $f['cur'], 'base' => $m['base'], 'add' => $m['add'], 'ded' => $m['ded'], 'net' => $m['net'], 'conf' => $m['conf'], 'unrecv' => $m['unrecv'] ?? null, 'req' => $req[$r['ref']] ?? null, 'mail' => hrp_staff_mail($r['ref']) !== '', 'hist' => count(fin_hist($r['ref']))];
     }
     usort($rows, fn($a, $b) => strcmp($a['entity'], $b['entity']) ?: strcmp($a['name'], $b['name']));
     return $rows;
@@ -418,10 +434,16 @@ function pay_self_sign(array $b): array {
         /* التوقيع نهائي: لا يستطيع المنسوب التراجع بعد تسجيله؛ التعديل حصريًّا للموارد البشرية وحساب النظام */
         throw new HttpError('التوقيع نهائي ولا يمكن التراجع عنه بعد تسجيله؛ لأي تصحيح يرجى التواصل مع الموارد البشرية');
     }
-    if (!$m['conf']) {
-        $src = (string)($b['src'] ?? ''); $via = $src === 'paymail' ? 'عبر زر بريد اعتماد الرواتب' : 'من المنصة مباشرة';
-        pay_sign_put($ym, $ref, $m['net'], $f['cur'], (string)$u['email'], $nm, 'self', null, 'وقّع المنسوب الاستلام بنفسه · ' . $via);
+    /* توقيع تأكيد الاستلام نهائي؛ أما بلاغ «لم يتم الاستلام» فقابل للتغيير إلى تم الاستلام لاحقًا */
+    if ($m['conf']) throw new HttpError('سبق أن أكّدت استلام راتب هذا الشهر، والتوقيع نهائي؛ لأي تصحيح يرجى التواصل مع الموارد البشرية');
+    $received = array_key_exists('received', $b) ? (int)(!!$b['received']) : 1;
+    $src = (string)($b['src'] ?? ''); $via = $src === 'paymail' ? 'عبر زر بريد اعتماد الرواتب' : 'من المنصة مباشرة';
+    if ($received) {
+        pay_sign_put($ym, $ref, $m['net'], $f['cur'], (string)$u['email'], $nm, 'self', null, 'أكّد المنسوب استلام الراتب (توقيع) · ' . $via, 1);
         audit_log($ref, 'توقيع المنسوب استلام راتبه', fin_mn($ym) . ' · ' . fin_money($m['net'], $f['cur']) . ' · ' . $via, $nm);
+    } else {
+        pay_sign_put($ym, $ref, $m['net'], $f['cur'], (string)$u['email'], $nm, 'self', null, 'أبلغ المنسوب بعدم استلام الراتب · ' . $via, 0);
+        audit_log($ref, 'إبلاغ المنسوب بعدم استلام راتبه', fin_mn($ym) . ' · ' . fin_money($m['net'], $f['cur']) . ' · ' . $via, $nm);
     }
     return ['ok' => true, 'year' => $year, 'pay' => fin_salary($ref, $year)];
 }

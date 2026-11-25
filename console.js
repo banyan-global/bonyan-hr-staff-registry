@@ -4488,6 +4488,7 @@ function finTag(m, first) {
 /* قائمة استلام الرواتب: كل شهر وصافيه وحالته، مع زر «أؤكد الاستلام» للمنسوب */
 function finRcStatus(m, pend) {
   if (m.conf) { var w = m.conf.kind === 'self' ? 'وقّعته بنفسك' : m.conf.kind === 'system' ? 'سُجّل تلقائيًا' : 'أكّدته الإدارة'; var pd = m.conf.paid && m.conf.paid !== m.m ? ' · صُرف في ' + mName(m.conf.paid) : ''; return ['ok', ic('check'), 'تم الاستلام', w + ' · ' + fdx(pdt(m.conf.at), { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + pd]; }
+  if (m.st === 'unrecv') { var ua = m.unrecv ? ' · ' + fdx(pdt(m.unrecv.at), { day: 'numeric', month: 'short', year: 'numeric' }) : ''; return ['bad', ic('x'), 'أبلغت بعدم الاستلام', 'سجّلت أنك لم تستلم هذا الراتب' + ua + ' — إن استلمته فأكّد «تم الاستلام»']; }
   if (m.st === 'due') return ['warn', ic('timer'), 'مستحق هذا الشهر', pend ? 'وصلك طلب توقيع — أكّد استلامك' : 'يُصرف مع رواتب هذا الشهر'];
   if (m.st === 'wait') return ['warn', pend ? ic('bell') : ic('clock'), pend ? 'بانتظار توقيعك' : 'لم يُؤكَّد صرفه', pend ? 'وصلك طلب توقيع بالبريد' : 'أكّد استلامك إن استلمته'];
   return ['mute', ic('chart'), 'متوقع', 'تقدير يتغيّر بما يُعتمد لاحقًا'];
@@ -4497,9 +4498,9 @@ function finReceiptsH(p, M, sel, sreq, me) {
   var c = curL(p.cur), SARC = (p.cur && p.cur !== 'SAR' && FX[p.cur]) ? FX[p.cur] : 0, reqset = {}; (sreq || []).forEach(function (y) { reqset[y] = 1; });
   return '<ul class="rcpts">' + live.slice().reverse().map(function (m) {
     var st = finRcStatus(m, reqset[m.m]), seln = m.i === sel, eq = SARC ? '<em class="sareq">≈ ' + fm(Math.round(m.net * SARC)) + ' ر.س</em>' : '';
-    var canSign = me && !m.conf && (m.st === 'wait' || m.st === 'due'), undo = me && m.conf && m.conf.kind === 'self';
-    var act = canSign ? '<button class="btn sm ' + (reqset[m.m] ? 'goldb' : '') + '" data-selfsign="' + m.m + '">' + ic('check') + 'أؤكد الاستلام</button>'
-      : undo ? '<button class="ib" data-selfundo="' + m.m + '" title="تراجع عن التوقيع" aria-label="تراجع عن التوقيع">' + ic('refresh') + '</button>' : '';
+    var canAct = me && !m.conf && (m.st === 'wait' || m.st === 'due' || m.st === 'unrecv');
+    var act = canAct ? '<button class="btn sm ' + (reqset[m.m] ? 'goldb' : '') + '" data-selfsign="' + m.m + '" data-recv="1">' + ic('check') + 'تم الاستلام</button>' +
+      (m.st === 'unrecv' ? '' : '<button class="btn sm nrbtn" data-selfsign="' + m.m + '" data-recv="0">لم يتم الاستلام</button>') : '';
     return '<li class="rcpt ' + st[0] + (seln ? ' sel' : '') + '"><button type="button" class="rcpt-main" data-fm="' + m.i + '" aria-pressed="' + seln + '">' +
       '<span class="rcpt-mo"><b>' + mName(m.m) + '</b><small>' + m.m.slice(0, 4) + '</small></span>' +
       '<span class="rcpt-amt"><b>' + fm(m.net) + '</b> <small>' + c + '</small>' + eq + '</span>' +
@@ -4801,17 +4802,19 @@ document.addEventListener('click', function (e) {
   if (ch) ch.innerHTML = finReceiptsH(p, M, FIN.sel, d.signreq, d.me); if (sl) sl.innerHTML = finSlipH(p, M[FIN.sel]);
 });
 /* المنسوب يؤكد استلام راتب شهر، أو يتراجع عن توقيعه */
-function finSelfSign(ym, undo) {
-  api({ action: 'paySelfSign', month: ym, undo: undo ? 1 : 0, src: ENTRY_SRC }).then(function (j) {
+function finSelfSign(ym, received) {
+  api({ action: 'paySelfSign', month: ym, received: received ? 1 : 0, src: ENTRY_SRC }).then(function (j) {
     var cur = (CACHE['fin:' + FIN.year] || {}).data || {};
-    if (j.pay) seed('fin:' + FIN.year, Object.assign({}, cur, { pay: j.pay, signreq: undo ? (cur.signreq || []) : (cur.signreq || []).filter(function (y) { return y !== ym; }) }));
-    render(); toast(undo ? 'تراجعت عن توقيع الاستلام' : 'سُجّل توقيعك باستلام الراتب');
+    if (j.pay) seed('fin:' + FIN.year, Object.assign({}, cur, { pay: j.pay, signreq: (cur.signreq || []).filter(function (y) { return y !== ym; }) }));
+    render(); toast(received ? 'سُجّل توقيعك باستلام الراتب' : 'سجّلنا بلاغك بعدم استلام الراتب؛ يمكنك تغييره لاحقًا');
   }).catch(function (e) { toast(errText(e)); });
 }
 document.addEventListener('click', function (e) {
-  var b = e.target.closest && e.target.closest('[data-selfsign],[data-selfundo]'); if (!b || view !== 'myhr') return;
-  e.preventDefault(); e.stopPropagation(); b.disabled = true;
-  if (b.dataset.selfsign) finSelfSign(b.dataset.selfsign, false); else finSelfSign(b.dataset.selfundo, true);
+  var b = e.target.closest && e.target.closest('[data-selfsign]'); if (!b || view !== 'myhr') return;
+  e.preventDefault(); e.stopPropagation();
+  var recv = b.dataset.recv !== '0';
+  if (!recv && !confirm('هل تؤكّد أنك لم تستلم راتب هذا الشهر؟ سيُسجَّل بلاغ للمختص، ويمكنك تغييره إلى «تم الاستلام» لاحقًا عند استلامه.')) return;
+  b.disabled = true; finSelfSign(b.dataset.selfsign, recv);
 });
 
 /* ---------------- تأكيد صرف الرواتب (الإدارة العليا والموارد البشرية ومدير النظام) ---------------- */
@@ -4846,7 +4849,7 @@ function paySignSection() {
   var showCk = !future && (sys || can('pay'));
   var tb = rows.length ? '<div class="sigwrap"><table class="sigtab"><thead><tr>' + (showCk ? '<th class="ck"><input type="checkbox" id="pcAllCk" aria-label="تحديد الكل"></th>' : '') + '<th class="rn">#</th><th>المنسوب</th><th>الصفة</th><th>الجهة</th><th class="num">صافي الراتب</th><th>التوقيع</th><th class="acth"></th></tr></thead><tbody>' +
     rows.map(function (r, ix) { var s = byRef(r.ref), eq = (FX[r.cur] && r.cur !== 'SAR') ? '<small class="sareq">\u2248 ' + fm(Math.round(r.net * FX[r.cur])) + ' ر.س</small>' : '';
-      return '<tr' + (r.conf ? ' class="done"' : (r.req ? ' class="reqd"' : '')) + '>' + (showCk ? '<td class="ck">' + (!r.conf ? '<input type="checkbox" data-pck="' + esc(r.ref) + '"' + (PCF.sel[r.ref] ? ' checked' : '') + ' aria-label="تحديد ' + esc(r.name) + '">' : '') + '</td>' : '') +
+      return '<tr' + (r.conf ? ' class="done"' : (r.unrecv ? ' class="unrecv"' : (r.req ? ' class="reqd"' : ''))) + '>' + (showCk ? '<td class="ck">' + (!r.conf ? '<input type="checkbox" data-pck="' + esc(r.ref) + '"' + (PCF.sel[r.ref] ? ' checked' : '') + ' aria-label="تحديد ' + esc(r.name) + '">' : '') + '</td>' : '') +
         '<td class="rn">' + (ix + 1) + '</td>' +
         '<td class="cperson"><button type="button" class="person click" data-pstat="' + esc(r.ref) + '" title="عرض بياناته وإحصاءاته">' + (s ? av(s) : tile('slate', 'user')) + '<span class="pmeta"><b>' + esc(r.name) + '</b></span></button></td>' +
         '<td data-l="الصفة">' + (r.job ? '<span class="rchip ghost"><span class="rc-t">' + esc(r.job) + '</span></span>' : '<span class="rc-dash">—</span>') + '</td>' +
@@ -4861,6 +4864,7 @@ function paySignSection() {
 function pcSig(r) {
   if (r.conf) { var who = r.conf.kind === 'self' ? 'وقّعه المنسوب' : r.conf.kind === 'system' ? 'سُجّل تلقائيًا' : 'أكّده ' + esc(r.conf.by); var paid = r.conf.paid && r.conf.paid !== PCF.month ? ' · صُرف في ' + mName(r.conf.paid) : '';
     return '<div class="sig ok"><span class="rchip stamp ok">' + ic('check') + 'مُوقَّع إلكترونيًا</span><small>' + who + ' · ' + fdx(pdate(r.conf.at), { day: 'numeric', month: 'short', year: 'numeric' }) + paid + '</small></div>'; }
+  if (r.unrecv) return '<div class="sig nr"><span class="rchip nr">' + ic('x') + 'أبلغ بعدم الاستلام</span><small>سجّله المنسوب ' + fdx(pdate(r.unrecv.at), { day: 'numeric', month: 'short', year: 'numeric' }) + '</small></div>';
   if (r.req) return '<div class="sig req"><span class="rchip req">' + ic('bell') + 'بانتظار توقيع المنسوب</span><small>أُرسل الطلب ' + fdx(pdate(r.req.at), { day: 'numeric', month: 'short' }) + (r.req.reminded ? ' · ذُكِّر' : '') + '</small></div>';
   return '<span class="rchip wait">' + ic('clock') + 'بانتظار التوقيع</span>';
 }
