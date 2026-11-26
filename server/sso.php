@@ -14,15 +14,16 @@
  */
 declare(strict_types=1);
 
-/* مفتاح «مسار» العام (RSA 2048) — نفسه المستخدم في mailer.php لدى مسار. علنيّ. */
+/* مفتاح الدخول الموحّد العام (RSA 2048) — علنيّ، يجوز وضعه هنا.
+ * نصفه الخاص موجود في خصائص سكربت «مسار» (Script Property: SSO_PRIV) ويوقّع به الرمز. */
 const SSO_MASAR_PUB = "-----BEGIN PUBLIC KEY-----\n"
-    . "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxuemdBMcGPQ0GOf0Lmow\n"
-    . "c67vvAjfhp/f8drWe9UJM/D3Y0qYCd4iswqed/4jbh47VD3YTwsFRV9SI4p+TiAG\n"
-    . "3eMfxQaie4UDhXk6Ig5Fjiyrpk1C5n6Ul9rlTs4MElFwy+qvGDPjUBg2+uq7/XEI\n"
-    . "snSrTEuXNvEW1Big01Z6xt58V2NlQfWa+ISVADMFrjOCZeWmzMDbz7gzvK93q2OQ\n"
-    . "E8p08hMThEh5TjfRZp0cl1gTOzVOXqHZHfVp7jMAterSdVM7MDmRCFPiDRfP6+Vf\n"
-    . "fLsP/TD4viIRF36s+EEtiyzzWw2+3ysaCtYVWXKE11eQL3vdLlf6EyLTfj7ewx2J\n"
-    . "jQIDAQAB\n"
+    . "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkg54AL5uPImFDS6xSDZA\n"
+    . "ufzx9CZlKmhhzczGF0fIjjZ2Vn/uUQtR/lb5RTewz9NmO/7UZ1eweWaZH+ACbVaV\n"
+    . "Yjka/Q5hL0H0Lg62EyFxywPP4/dgEMtM1f9lX8IGtZKfAqBtN8TCdVHOY6vkpNeR\n"
+    . "uaZjB7QffDykjRCHf9dTh2RGu9sn/TQ8ogGMazHxyELByPpsffHp4kXBGUUlNnZA\n"
+    . "m7Zr5bjUbSN4Xbykm04LLW+37gouJw3KEHbDymkJ7rcpLp5y/vfYRH4JMMMJ37lv\n"
+    . "tPbLxSj4TOSw4Ey1bDm4f/w0VaA0g/knhGZdDCNesSnaW3Y/gcRtf+9Og6OyJA8z\n"
+    . "sQIDAQAB\n"
     . "-----END PUBLIC KEY-----";
 
 /* المفتاح العام الفعّال (يسمح بتجاوزه من الإعدادات عند تدوير مفاتيح مسار) */
