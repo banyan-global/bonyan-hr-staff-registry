@@ -19,6 +19,7 @@ require __DIR__ . '/../server/hrx.php';
 require __DIR__ . '/../server/hrplus.php';
 require __DIR__ . '/../server/myfin.php';
 require __DIR__ . '/../server/releases.php';
+require __DIR__ . '/../server/sso.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -48,6 +49,7 @@ try {
         elseif ($a === 'exportXlsx') export_xlsx();
         elseif ($a === 'zip') staff_zip();
         elseif ($a === 'cv') cv_serve();
+        elseif ($a === 'sso') sso_enter();
         else out(['ok' => true, 'service' => 'Bonyan HR · Global Staff Registry', 'v' => BHR_VERSION]);
         exit;
     }
