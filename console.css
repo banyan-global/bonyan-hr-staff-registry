@@ -2958,8 +2958,10 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* ألوان صفوف كشف التوقيع — واضحة وبيّنة: أخضر مُوقَّع · أحمر عدم استلام · ذهبي بانتظار · أزرق الشهر الجاري */
 .sigtab tbody tr.done{background:color-mix(in srgb,var(--c-ok) 12%,transparent)}
 .sigtab tbody tr.done:hover{background:color-mix(in srgb,var(--c-ok) 17%,transparent)}
-.sigtab tbody tr.reqd{background:color-mix(in srgb,var(--gold) 15%,transparent)}
-.sigtab tbody tr.reqd:hover{background:color-mix(in srgb,var(--gold) 20%,transparent)}
+.sigtab tbody tr.wait{background:color-mix(in srgb,var(--gold) 7%,transparent)}
+.sigtab tbody tr.wait:hover{background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.sigtab tbody tr.reqd{background:color-mix(in srgb,var(--gold) 16%,transparent)}
+.sigtab tbody tr.reqd:hover{background:color-mix(in srgb,var(--gold) 21%,transparent)}
 .sigtab tbody tr.unrecv{background:color-mix(in srgb,var(--c-bad) 12%,transparent)}
 .sigtab tbody tr.unrecv:hover{background:color-mix(in srgb,var(--c-bad) 17%,transparent)}
 .sigtab tbody tr.lock{background:color-mix(in srgb,var(--c-info) 7%,transparent)}
