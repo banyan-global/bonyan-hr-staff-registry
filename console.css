@@ -2955,6 +2955,20 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .rchip.nr .i{color:var(--c-bad)}
 .sig.nr{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
 .sig.nr small{font-size:11px;color:var(--faint)}
+/* ألوان صفوف كشف التوقيع — واضحة وبيّنة: أخضر مُوقَّع · أحمر عدم استلام · ذهبي بانتظار · أزرق الشهر الجاري */
+.sigtab tbody tr.done{background:color-mix(in srgb,var(--c-ok) 12%,transparent)}
+.sigtab tbody tr.done:hover{background:color-mix(in srgb,var(--c-ok) 17%,transparent)}
+.sigtab tbody tr.reqd{background:color-mix(in srgb,var(--gold) 15%,transparent)}
+.sigtab tbody tr.reqd:hover{background:color-mix(in srgb,var(--gold) 20%,transparent)}
+.sigtab tbody tr.unrecv{background:color-mix(in srgb,var(--c-bad) 12%,transparent)}
+.sigtab tbody tr.unrecv:hover{background:color-mix(in srgb,var(--c-bad) 17%,transparent)}
+.sigtab tbody tr.lock{background:color-mix(in srgb,var(--c-info) 7%,transparent)}
+.sigtab tbody tr.lock:hover{background:color-mix(in srgb,var(--c-info) 11%,transparent)}
+.rchip.lock{color:var(--c-info);font-weight:700;border-color:color-mix(in srgb,var(--c-info) 36%,transparent);background:color-mix(in srgb,var(--c-info) 10%,transparent)}
+.rchip.lock .i{color:var(--c-info)}
+.rcpt-lock{font-size:11px;color:var(--c-info);font-weight:700;white-space:nowrap}
+.pcnote{display:flex;align-items:center;gap:8px;margin:12px 20px 2px;padding:10px 14px;border-radius:13px;font-size:12.5px;font-weight:700;color:var(--c-info);background:color-mix(in srgb,var(--c-info) 8%,var(--soft));border:1px solid color-mix(in srgb,var(--c-info) 25%,transparent)}
+.pcnote .i{width:17px;height:17px;flex:none}
 .rcpt.bad{border-inline-start:4px solid var(--c-bad)}
 .rcpt.bad .rcpt-sm{color:var(--c-bad);background:color-mix(in srgb,var(--c-bad) 14%,var(--panel));border-color:color-mix(in srgb,var(--c-bad) 32%,transparent)}
 .btn.sm.nrbtn{color:var(--c-bad);border-color:color-mix(in srgb,var(--c-bad) 36%,transparent);background:transparent;font-weight:800}

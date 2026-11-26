@@ -4504,9 +4504,10 @@ function finReceiptsH(p, M, sel, sreq, me) {
   var c = curL(p.cur), SARC = (p.cur && p.cur !== 'SAR' && FX[p.cur]) ? FX[p.cur] : 0, reqset = {}; (sreq || []).forEach(function (y) { reqset[y] = 1; });
   return '<ul class="rcpts">' + live.slice().reverse().map(function (m) {
     var st = finRcStatus(m, reqset[m.m]), seln = m.i === sel, eq = SARC ? '<em class="sareq">≈ ' + fm(Math.round(m.net * SARC)) + ' ر.س</em>' : '';
-    var canAct = me && !m.conf && (m.st === 'wait' || m.st === 'due' || m.st === 'unrecv');
+    var mEnded = m.m < ymNow2();
+    var canAct = me && !m.conf && (m.st === 'wait' || m.st === 'due' || m.st === 'unrecv') && mEnded;
     var act = canAct ? '<button class="btn sm ' + (reqset[m.m] ? 'goldb' : '') + '" data-selfsign="' + m.m + '" data-recv="1">' + ic('check') + 'تم الاستلام</button>' +
-      (m.st === 'unrecv' ? '' : '<button class="btn sm nrbtn" data-selfsign="' + m.m + '" data-recv="0">لم يتم الاستلام</button>') : '';
+      (m.st === 'unrecv' ? '' : '<button class="btn sm nrbtn" data-selfsign="' + m.m + '" data-recv="0">لم يتم الاستلام</button>') : (me && !m.conf && !mEnded ? '<small class="rcpt-lock">' + ic('clock') + ' يبدأ التوقيع بعد انتهاء الشهر</small>' : '');
     return '<li class="rcpt ' + st[0] + (seln ? ' sel' : '') + '"><button type="button" class="rcpt-main" data-fm="' + m.i + '" aria-pressed="' + seln + '">' +
       '<span class="rcpt-mo"><b>' + mName(m.m) + '</b><small>' + m.m.slice(0, 4) + '</small></span>' +
       '<span class="rcpt-amt"><b>' + fm(m.net) + '</b> <small>' + c + '</small>' + eq + '</span>' +
@@ -4872,35 +4873,36 @@ function paySignSection() {
   if (!d) return panel + '<section class="pn"><div class="pb"><div class="empty">' + (c.err ? esc(c.err) : 'جارٍ تحميل الكشف…') + '</div></div></section>';
   var all = d.rows, ok = all.filter(function (r) { return r.conf; }), pend = all.filter(function (r) { return !r.conf; }), reqd = pend.filter(function (r) { return r.req; }), rows = pcRows(d), ents = {};
   all.forEach(function (r) { ents[r.entity] = (ents[r.entity] || 0) + 1; });
-  var future = PCF.month > ymNow2(), selN = Object.keys(PCF.sel).filter(function (k) { return PCF.sel[k]; }).length;
+  var future = PCF.month > ymNow2(), cur = PCF.month === ymNow2(), locked = future || cur, selN = Object.keys(PCF.sel).filter(function (k) { return PCF.sel[k]; }).length;
   var scopePend = (PCF.ent ? all.filter(function (r) { return r.entity === PCF.ent; }) : all).filter(function (r) { return !r.conf; }).length;
   var bar = '<section class="pn tbar"><div class="fbar">' + fsearch('pcq', PCF.q, 'ابحث بالاسم أو المسمى أو الجهة', 'بحث في الرواتب') +
     ssel('pcEnt', [{ v: '', n: 'كل الجهات', k: all.length, ic: 'building' }].concat(Object.keys(ents).sort().map(function (e) { return { v: e, n: e || 'بدون جهة', k: ents[e] }; })), PCF.ent, 'كل الجهات', function (v) { PCF.ent = v; PCF.sel = {}; render(); }, 'الجهة', 'الجهة') +
     ssel('pcSt', [{ v: '', n: 'الكل', k: all.length, ic: 'doc' }, { v: 'wait', n: 'بانتظار التوقيع', k: pend.length, ic: 'timer' }, { v: 'req', n: 'أُرسل لهم الطلب', k: reqd.length, ic: 'bell' }, { v: 'ok', n: 'مُوقَّع', k: ok.length, ic: 'check' }], PCF.st, 'الكل', function (v) { PCF.st = v; render(); }, 'الحالة', 'الحالة') + '</div></section>';
-  var acts = future ? '<span class="pill mute"><i></i>شهر لم يأتِ بعد</span>' :
+  var acts = future ? '<span class="pill mute"><i></i>شهر لم يأتِ بعد</span>' : cur ? '<span class="rchip lock">' + ic('clock') + 'الشهر لم ينتهِ — يبدأ التوقيع بعد انتهائه</span>' :
     (selN ? (sys ? '<button class="btn" id="pcSel">' + ic('check') + 'توقيع المحدد (' + selN + ')</button>' : '') + '<button class="btn" id="pcReqSel">' + ic('bell') + 'طلب التوقيع (' + selN + ')</button>' : '') +
     (scopePend ? (sys ? '<button class="btn goldb" id="pcAll">' + ic('check') + (PCF.ent ? 'توقيع ' + esc(PCF.ent || 'بدون جهة') + ' (' + scopePend + ')' : 'توقيع الجميع (' + scopePend + ')') + '</button>' : '') + '<button class="btn' + (sys ? '' : ' goldb') + '" id="pcReqAll">' + ic('bell') + (PCF.ent ? 'طلب توقيع ' + esc(PCF.ent || 'بدون جهة') + ' (' + scopePend + ')' : 'طلب التوقيع للكل (' + scopePend + ')') + '</button>' : '');
-  var showCk = !future && (sys || can('pay'));
+  var showCk = !locked && (sys || can('pay'));
   var tb = rows.length ? '<div class="sigwrap"><table class="sigtab"><thead><tr>' + (showCk ? '<th class="ck"><input type="checkbox" id="pcAllCk" aria-label="تحديد الكل"></th>' : '') + '<th class="rn">#</th><th>المنسوب</th><th>الصفة</th><th>الجهة</th><th class="num">صافي الراتب</th><th>التوقيع</th><th class="acth"></th></tr></thead><tbody>' +
     rows.map(function (r, ix) { var s = byRef(r.ref), eq = (FX[r.cur] && r.cur !== 'SAR') ? '<small class="sareq">\u2248 ' + fm(Math.round(r.net * FX[r.cur])) + ' ر.س</small>' : '';
-      return '<tr' + (r.conf ? ' class="done"' : (r.unrecv ? ' class="unrecv"' : (r.req ? ' class="reqd"' : ''))) + '>' + (showCk ? '<td class="ck">' + (!r.conf ? '<input type="checkbox" data-pck="' + esc(r.ref) + '"' + (PCF.sel[r.ref] ? ' checked' : '') + ' aria-label="تحديد ' + esc(r.name) + '">' : '') + '</td>' : '') +
+      return '<tr' + (r.conf ? ' class="done"' : (r.unrecv ? ' class="unrecv"' : (r.req ? ' class="reqd"' : (locked ? ' class="lock"' : '')))) + '>' + (showCk ? '<td class="ck">' + (!r.conf ? '<input type="checkbox" data-pck="' + esc(r.ref) + '"' + (PCF.sel[r.ref] ? ' checked' : '') + ' aria-label="تحديد ' + esc(r.name) + '">' : '') + '</td>' : '') +
         '<td class="rn">' + (ix + 1) + '</td>' +
         '<td class="cperson"><button type="button" class="person click" data-pstat="' + esc(r.ref) + '" title="عرض بياناته وإحصاءاته">' + (s ? av(s) : tile('slate', 'user')) + '<span class="pmeta"><b>' + esc(r.name) + '</b></span></button></td>' +
         '<td data-l="الصفة">' + (r.job ? '<span class="rchip ghost"><span class="rc-t">' + esc(r.job) + '</span></span>' : '<span class="rc-dash">—</span>') + '</td>' +
         '<td data-l="الجهة"><span class="entcell">' + entTile(s && s.ent) + '</span></td>' +
         '<td class="num" data-l="صافي الراتب"><div class="salbox"><b>' + fm(r.net) + '</b> <small>' + curL(r.cur) + '</small>' + eq + '</div></td>' +
-        '<td class="sigcell" data-l="التوقيع">' + pcSig(r) + '</td>' +
-        '<td class="acts2"><div class="pcacts">' + (r.conf ? (sys ? '<button class="ib" data-pcundo="' + esc(r.ref) + '" aria-label="إلغاء التوقيع" title="إلغاء التوقيع">' + ic('refresh') + '</button>' : '') : (future ? '' : (sys ? '<button class="btn sm goldb" data-pcone="' + esc(r.ref) + '">' + ic('check') + 'توقيع</button>' : '') + (can('pay') ? (r.mail ? '<button class="ib ibsend" data-pcsend="' + esc(r.ref) + '" aria-label="إرسال طلب توقيع" title="' + (r.req ? 'إعادة إرسال طلب التوقيع بالبريد' : 'إرسال طلب توقيع للمنسوب بالبريد') + '">' + ic('bell') + '</button>' : '<span class="ib off" title="لا بريد مسجّل للمنسوب">' + ic('bell') + '</span>') : ''))) +
+        '<td class="sigcell" data-l="التوقيع">' + pcSig(r, locked) + '</td>' +
+        '<td class="acts2"><div class="pcacts">' + (r.conf ? (sys ? '<button class="ib" data-pcundo="' + esc(r.ref) + '" aria-label="إلغاء التوقيع" title="إلغاء التوقيع">' + ic('refresh') + '</button>' : '') : (locked ? '' : (sys ? '<button class="btn sm goldb" data-pcone="' + esc(r.ref) + '">' + ic('check') + 'توقيع</button>' : '') + (can('pay') ? (r.mail ? '<button class="ib ibsend" data-pcsend="' + esc(r.ref) + '" aria-label="إرسال طلب توقيع" title="' + (r.req ? 'إعادة إرسال طلب التوقيع بالبريد' : 'إرسال طلب توقيع للمنسوب بالبريد') + '">' + ic('bell') + '</button>' : '<span class="ib off" title="لا بريد مسجّل للمنسوب">' + ic('bell') + '</span>') : ''))) +
         (sys && can('edit') ? '<button class="ib" data-salh="' + esc(r.ref) + '" aria-label="سجل الراتب" title="سجل الراتب">' + ic('history') + '</button>' : '') + '</div></td></tr>'; }).join('') + '</tbody></table></div>'
     : '<div class="emptyx">' + tile('emerald', 'wallet') + '<b>' + (all.length ? 'لا أحد في هذه التصفية' : 'لا رواتب مسجّلة لهذا الشهر') + '</b><p>تظهر هنا رواتب المنسوبين الذين سُجِّل راتبهم في ملفاتهم.</p></div>';
-  return panel + bar + pn('emerald', 'check', 'كشف ' + mlab, 'جدول المنسوبين وتواقيعهم لهذا الشهر', acts, '<div class="pb">' + tb + '</div>');
+  var note = cur ? '<div class="pcnote">' + ic('info') + 'توقيع استلام رواتب هذا الشهر يبدأ بعد انتهائه — حتى ذلك الحين لا يمكن لأحد التوقيع.</div>' : '';
+  return panel + note + bar + pn('emerald', 'check', 'كشف ' + mlab, 'جدول المنسوبين وتواقيعهم لهذا الشهر', acts, '<div class="pb">' + tb + '</div>');
 }
-function pcSig(r) {
+function pcSig(r, locked) {
   if (r.conf) { var who = r.conf.kind === 'self' ? 'وقّعه المنسوب' : r.conf.kind === 'system' ? 'سُجّل تلقائيًا' : 'أكّده ' + esc(r.conf.by); var paid = r.conf.paid && r.conf.paid !== PCF.month ? ' · صُرف في ' + mName(r.conf.paid) : '';
     return '<div class="sig ok"><span class="rchip stamp ok">' + ic('check') + 'مُوقَّع إلكترونيًا</span><small>' + who + ' · ' + fdx(pdate(r.conf.at), { day: 'numeric', month: 'short', year: 'numeric' }) + paid + '</small></div>'; }
   if (r.unrecv) return '<div class="sig nr"><span class="rchip nr">' + ic('x') + 'أبلغ بعدم الاستلام</span><small>سجّله المنسوب ' + fdx(pdate(r.unrecv.at), { day: 'numeric', month: 'short', year: 'numeric' }) + '</small></div>';
   if (r.req) return '<div class="sig req"><span class="rchip req">' + ic('bell') + 'بانتظار توقيع المنسوب</span><small>أُرسل الطلب ' + fdx(pdate(r.req.at), { day: 'numeric', month: 'short' }) + (r.req.reminded ? ' · ذُكِّر' : '') + '</small></div>';
-  return '<span class="rchip wait">' + ic('clock') + 'بانتظار التوقيع</span>';
+  return locked ? '<span class="rchip lock">' + ic('clock') + 'بانتظار انتهاء الشهر</span>' : '<span class="rchip wait">' + ic('clock') + 'بانتظار التوقيع</span>';
 }
 /* بيانات المنسوب وإحصاءاته المالية عند الضغط على اسمه */
 function payPersonDrawer(ref) {

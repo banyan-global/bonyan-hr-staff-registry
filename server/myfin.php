@@ -302,7 +302,7 @@ function pay_year_overview(array $b): array {
 }
 function pay_confirm(array $b): array {
     $u = require_perm('settings.manage'); $ym = fin_ym($b['month'] ?? ''); /* التوقيع نيابةً عن المنسوب لحساب النظام فقط */
-    if ($ym > date('Y-m')) throw new HttpError('لا يمكن تأكيد صرف شهر لم يأتِ بعد');
+    if ($ym >= date('Y-m')) throw new HttpError('لا يمكن توقيع استلام راتب شهر لم ينتهِ بعد');
     $scope = (string)($b['scope'] ?? ''); $undo = !empty($b['undo']);
     $rows = pay_conf_rows($u, $ym);
     if ($scope === 'entity') { $e = (string)($b['entity'] ?? ''); $rows = array_values(array_filter($rows, fn($r) => $r['entity'] === $e)); }
@@ -321,7 +321,7 @@ function pay_confirm(array $b): array {
 }
 /* جوهر توقيع الرواتب بأثر رجعي — من بداية دوام كل منسوب حتى شهر الحدّ. يستدعيه زر الإدارة والتسجيل التلقائي معًا */
 function pay_sign_core(string $through, string $byEmail, string $byName, string $kind, string $note, array $hide = [], string $scope = 'all', array $refs = [], string $ent = '', bool $notify = true): array {
-    if ($through > date('Y-m')) $through = date('Y-m');
+    if ($through >= date('Y-m')) $through = date('Y-m', strtotime(date('Y-m-01') . ' -1 month')); /* لا يُوقَّع الشهر الجاري قبل انتهائه */
     $n = 0; $people = 0; $MN = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
     foreach (q('SELECT ref FROM staff ORDER BY ref')->fetchAll() as $row) {
         $ref = $row['ref']; if (in_array($ref, $hide, true)) continue;
@@ -427,7 +427,7 @@ function pay_signreq_mail(string $ref, string $ym, bool $reminder): bool {
 /* الإدارة ترسل طلب توقيع لمنسوب أو جهة أو الكل */
 function pay_signreq_send(array $b): array {
     $u = require_perm('finance.view'); $ym = fin_ym($b['month'] ?? '');
-    if ($ym > date('Y-m')) throw new HttpError('لا يمكن طلب توقيع شهر لم يأتِ بعد');
+    if ($ym >= date('Y-m')) throw new HttpError('لا يمكن طلب توقيع شهر لم ينتهِ بعد');
     $scope = (string)($b['scope'] ?? ''); $rows = pay_conf_rows($u, $ym);
     if ($scope === 'entity') { $e = (string)($b['entity'] ?? ''); $rows = array_values(array_filter($rows, fn($r) => $r['entity'] === $e)); }
     elseif ($scope === 'refs') { $refs = array_map('strval', (array)($b['refs'] ?? [])); $rows = array_values(array_filter($rows, fn($r) => in_array($r['ref'], $refs, true))); }
@@ -450,7 +450,7 @@ function pay_signreq_send(array $b): array {
 function pay_self_sign(array $b): array {
     $u = hrp_me(); $ref = (string)my_staff_ref($u);
     if ($ref === '' || !site_on('staff', 'myhr')) throw new HttpError('غير متاح', 403);
-    $ym = fin_ym($b['month'] ?? ''); if ($ym > date('Y-m')) throw new HttpError('لا يمكن تأكيد استلام راتب شهر لم يأتِ بعد');
+    $ym = fin_ym($b['month'] ?? ''); if ($ym >= date('Y-m')) throw new HttpError('لا يمكن تأكيد استلام راتب شهر لم ينتهِ بعد');
     $year = (int)substr($ym, 0, 4); $f = fin_salary($ref, $year); $i = (int)substr($ym, 5, 2) - 1;
     $m = $f['months'][$i] ?? null; if (!$m || $m['st'] === 'none') throw new HttpError('لا يوجد راتب لهذا الشهر');
     $nm = staff_name(staff_get($ref));
