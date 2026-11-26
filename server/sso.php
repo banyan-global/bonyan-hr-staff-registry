@@ -87,3 +87,21 @@ function sso_enter(): void {
     open_session($u, 'عبر مسار');                                                 /* نفس آلية الجلسة المعتمدة + تسجيل في السجل */
     $go('#home');
 }
+
+/* ===== قصر الدخول المباشر (الرمز) على الحسابات الرئيسية فقط =====
+ * عند التفعيل: المنسوبون (role=staff) لا يصلهم رمز ويُوجَّهون للدخول عبر «مسار»،
+ * والحسابات الرئيسية (الأدوار غير staff) تواصل الدخول بالرمز كالمعتاد.
+ * مفتاح قابل للتبديل في kv؛ معطّل افتراضيًّا حتى يصبح دخول «مسار» جاهزًا. */
+function sso_login_only(): bool { return (string)kv_get('otp_restrict') === '1'; }
+function otp_account_allowed(array $u): bool { return is_owner($u) || (($u['role'] ?? '') !== 'staff'); }
+
+/* تبديل/قراءة الحالة — لمدير النظام فقط */
+function otp_lock_set(array $b): array {
+    require_perm('settings');
+    if (array_key_exists('on', $b)) {
+        $on = !empty($b['on']);
+        kv_put('otp_restrict', $on ? '1' : '0', 0);
+        audit_log('', $on ? 'تفعيل قصر الدخول على مسار' : 'إلغاء قصر الدخول على مسار', $on ? 'مُفعّل' : 'مُلغى');
+    }
+    return ['ok' => true, 'on' => sso_login_only()];
+}

@@ -141,6 +141,11 @@ function auth_start(array $b): array {
     $t0 = microtime(true); $even = function () use ($t0) { $d = 0.55 + random_int(0, 150) / 1000 - (microtime(true) - $t0); if ($d > 0) usleep((int)($d * 1e6)); };
     $u = q1('SELECT * FROM users WHERE email=?', [$email]);
     if (!$u) $u = ensure_staff_user($email);
+    /* قصر الدخول على مسار: المنسوبون (وأي بريد غير حساب رئيسي) يُوجَّهون لمسار ولا يصلهم رمز */
+    if (sso_login_only() && !($u && !empty($u['active']) && otp_account_allowed($u))) {
+        audit_log('', 'طلب رمز محجوب — الدخول عبر مسار', mask_email($email)); $even();
+        return ['ok' => true, 'sent' => false, 'via' => 'masar', 'to' => mask_email($email)];
+    }
     if (!$u || !$u['active']) { audit_log('', 'طلب رمز لبريد غير مسجّل', mask_email($email)); $even(); return $generic; }
     if ($u['locked_until'] && $u['locked_until'] > now()) { $even(); return $generic; }
     if (rate_hit('mail_code:' . $u['id'], 5, 3600)) { $even(); return $generic; } /* الرد نفسه دائمًا (لا يكشف وجود الحساب) */
@@ -161,6 +166,7 @@ function auth_verify(array $b): array {
     if (rate_hit('ip_verify:' . client_ip(), 40, 3600)) throw new HttpError('locked', 429);
     $u = q1('SELECT * FROM users WHERE email=?', [$email]);
     if (!$u || !$u['active']) { usleep(700000); throw new HttpError('bad_code', 401); }
+    if (sso_login_only() && !otp_account_allowed($u)) { usleep(500000); throw new HttpError('use_masar', 403); }
     if ($u['locked_until'] && $u['locked_until'] > now()) throw new HttpError('locked', 429);
     if (rate_count('vfail:' . $u['id'] . ':' . client_ip()) >= 8) throw new HttpError('locked', 429);
     $row = q1('SELECT * FROM login_codes WHERE user_id=? AND used_at IS NULL AND expires_at > ? ORDER BY id DESC LIMIT 1', [$u['id'], now()]);

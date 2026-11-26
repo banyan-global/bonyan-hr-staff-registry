@@ -468,7 +468,8 @@ var ERR = {
   bad_email: 'اكتب بريدًا إلكترونيًا صحيحًا.', bad_code: 'الرمز غير صحيح أو انتهت صلاحيته. تأكد منه، أو اطلب رمزًا جديدًا.', code_expired: 'انتهت صلاحية الرمز، اطلب رمزًا جديدًا.',
   locked: 'أُوقفت المحاولات مؤقتًا لكثرة الأخطاء، حاول بعد ١٥ دقيقة.', too_many_codes: 'طلبت رموزًا كثيرة، حاول بعد ساعة.', forbidden: 'لا تملك صلاحية هذا الإجراء.',
   email_exists: 'هذا البريد مسجّل لحساب آخر.', cannot_lock_self: 'لا يمكنك إيقاف حسابك أو سحب صلاحية إدارة الحسابات منه.', too_many: 'تجاوزت الحد اليومي للرسائل.',
-  bad_role: 'الدور غير صحيح.', server_error: 'حدث خطأ في الخادم وسُجّل لمدير النظام. حاول مرة أخرى.', auth_required: 'انتهت الجلسة، سجّل الدخول من جديد.', not_found: 'غير موجود.'
+  bad_role: 'الدور غير صحيح.', server_error: 'حدث خطأ في الخادم وسُجّل لمدير النظام. حاول مرة أخرى.', auth_required: 'انتهت الجلسة، سجّل الدخول من جديد.', not_found: 'غير موجود.',
+  use_masar: 'هذا الحساب يدخل عبر منصّة «مسار» لا بالرمز. افتح مسار ثم اضغط «الموارد البشرية».'
 };
 function errText(e) { var m = (e && e.message) || ''; return ERR[m] || (/Failed to fetch|NetworkError|Load failed|HTTP/.test(m) || !m ? 'تعذّر الاتصال بالخادم، تحقّق من الإنترنت وحاول مرة أخرى.' : m); }
 function api(body) {
@@ -671,6 +672,10 @@ function loginHTML() {
     '<div class="lf"><label for="lmail">البريد الإلكتروني</label><input id="lmail" class="ltr" style="text-align:left" type="email" autocomplete="username" inputmode="email" spellcheck="false" value="' + esc(LG.mail) + '" placeholder="name@example.com"></div>' +
     '<div class="lerr" id="lerr" role="alert">' + esc(LG.err) + '</div><button class="btn prim" id="lnext" type="submit"' + (LG.busy ? ' disabled' : '') + '>' + ic('send') + (LG.busy ? 'جارٍ الإرسال…' : 'أرسل رمز الدخول') + '</button>' + pkAltHTML() + (DEV ? '<button type="button" class="lnk" id="qback">' + ic('back') + 'العودة إلى الدخول السريع</button>' : '') +
     '<a class="lreg" href="register.html">' + tile('gold', 'plus') + '<span><b>لم تسجّل بياناتك بعد؟</b><small>عبّئ نموذج المنسوبين أولًا، ثم ادخل من هنا</small></span>' + ic('back') + '</a>';
+  else if (LG.step === 'masar') f = '<h2>الدخول عبر منصّة مسار</h2><p class="lp">هذا الحساب يدخل إلى الموارد البشرية عبر منصّة «مسار». افتح مسار وسجّل الدخول، ثم اضغط «الموارد البشرية» لتنتقل إلى ملفك مباشرةً دون رمز.</p>' +
+    '<a class="btn goldb" href="https://masarbonyan.online/" target="_blank" rel="noopener">فتح منصّة مسار</a>' +
+    '<div class="note lnote">' + ic('info') + '<span>الدخول المباشر برمز مخصّص للحسابات الرئيسية فقط. إن كنت أحدها فاستخدم بريدها الرئيسي.</span></div>' +
+    '<button type="button" class="lnk" id="lback">تغيير البريد</button>';
   else f = steps + '<h2>أدخل رمز الدخول</h2><p class="lp">إن كان بريدك مسجّلًا لدينا فقد أرسلنا رمزًا من ٦ أرقام إلى <span class="ltr">' + esc(LG.to || LG.mail) + '</span>، صالحًا ١٠ دقائق ولمرة واحدة.</p>' +
     '<div class="otp" id="otp">' + [0, 1, 2, 3, 4, 5].map(function (i) { return '<input inputmode="numeric" autocomplete="' + (i ? 'off' : 'one-time-code') + '" maxlength="6" aria-label="الرقم ' + (i + 1) + '">'; }).join('') + '</div>' +
     '<label class="lrem"><input type="checkbox" id="lrem"' + (LG.remember ? ' checked' : '') + '><span><b>تذكّر هذا الجهاز ٣٠ يومًا</b><small>تدخل بعدها بضغطة واحدة دون رمز. لا تفعّله على جهاز مشترك.</small></span></label>' +
@@ -702,7 +707,7 @@ function bindLogin() {
     var m = again ? LG.mail : $('lmail').value.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) { LG.err = ERR.bad_email; LG.mail = m; render(); return; }
     LG.mail = m; LG.busy = true; LG.err = ''; render();
-    api({ action: 'authStart', email: m }).then(function (j) { LG.busy = false; LG.step = 'code'; LG.to = j.to || m; render(); if (again) toast('أُرسل رمز جديد'); })
+    api({ action: 'authStart', email: m }).then(function (j) { LG.busy = false; if (j && j.via === 'masar') { LG.step = 'masar'; render(); return; } LG.step = 'code'; LG.to = j.to || m; render(); if (again) toast('أُرسل رمز جديد'); })
       .catch(function (e) { LG.busy = false; LG.err = errText(e); render(); });
   }
   $('lf').onsubmit = function (e) {
