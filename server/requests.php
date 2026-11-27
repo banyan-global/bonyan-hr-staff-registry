@@ -656,9 +656,10 @@ function req_staff_emails(string $ref): array {
 }
 /* كل عناوين بريد الحساب الحالي (الدخول + الرسمي + الشخصي) — لمطابقة المعتمِد مهما اختلف بريد دخوله عمّا سُجّل في مسار الاعتماد */
 function req_my_emails(array $u): array {
+    static $cache = []; $uid = (int)$u['id']; if (isset($cache[$uid])) return $cache[$uid];
     $o = [strtolower(trim((string)$u['email']))];
     $ref = my_staff_ref($u); if ($ref) $o = array_merge($o, req_staff_emails((string)$ref));
-    return array_values(array_unique(array_filter($o)));
+    return $cache[$uid] = array_values(array_unique(array_filter($o)));
 }
 function req_hours(int $m): string { $h = intdiv($m, 60); $mm = $m % 60; return ($h ? $h . ' س' : '') . ($h && $mm ? ' ' : '') . ($mm ? $mm . ' د' : ($h ? '' : '0 د')); }
 /* صفوف العرض الجاهزة (للورقة الرسمية وصفحة القرار والبريد) */
