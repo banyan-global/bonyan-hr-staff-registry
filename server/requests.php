@@ -547,8 +547,9 @@ function req_can_decide(array $u, array $r): bool {
     if (has_perm($u, 'requests.override')) return true;
     /* من اعتمد خطوة سابقة لا يعتمد خطوة أخرى في الطلب نفسه (إلا مدير النظام عند الطوارئ) */
     foreach ($chain as $i => $c) if ($i < (int)$r['stage'] && (int)($c['uid'] ?? 0) === $uid) return false;
-    if (!empty($step['email'])) return strtolower((string)$u['email']) === strtolower((string)$step['email']);
-    if (!empty($step['emails'])) return isset(array_change_key_case((array)$step['emails'])[strtolower((string)$u['email'])]);
+    $myEmails = req_my_emails($u);
+    if (!empty($step['email'])) return in_array(strtolower((string)$step['email']), $myEmails, true);
+    if (!empty($step['emails'])) { foreach (array_keys(array_change_key_case((array)$step['emails'])) as $e) if (in_array($e, $myEmails, true)) return true; return false; }
     if (!empty($step['user'])) return (int)$step['user'] === (int)$u['id'];
     return has_perm($u, 'requests.approve') && $u['role'] === ($step['role'] ?? '');
 }
@@ -652,6 +653,12 @@ function req_staff_emails(string $ref): array {
     if ($s) foreach (['officialEmail', 'personalEmail'] as $k) { $e = strtolower(trim((string)($s['data'][$k] ?? ''))); if ($e !== '') $o[] = $e; }
     foreach (q('SELECT email FROM users WHERE staff_ref=?', [$ref])->fetchAll() as $u) $o[] = strtolower((string)$u['email']);
     return array_values(array_unique($o));
+}
+/* كل عناوين بريد الحساب الحالي (الدخول + الرسمي + الشخصي) — لمطابقة المعتمِد مهما اختلف بريد دخوله عمّا سُجّل في مسار الاعتماد */
+function req_my_emails(array $u): array {
+    $o = [strtolower(trim((string)$u['email']))];
+    $ref = my_staff_ref($u); if ($ref) $o = array_merge($o, req_staff_emails((string)$ref));
+    return array_values(array_unique(array_filter($o)));
 }
 function req_hours(int $m): string { $h = intdiv($m, 60); $mm = $m % 60; return ($h ? $h . ' س' : '') . ($h && $mm ? ' ' : '') . ($mm ? $mm . ' د' : ($h ? '' : '0 د')); }
 /* صفوف العرض الجاهزة (للورقة الرسمية وصفحة القرار والبريد) */
@@ -993,11 +1000,19 @@ function req_list(array $b): array {
             if (!$appr && !$o['canDecide']) { foreach (['note', 'reason', 'tasks', 'dues', 'purpose', 'benefit'] as $k) unset($o['data'][$k]); $o['view'] = array_values(array_filter($o['view'] ?? [], fn($v) => empty($v[3]))); }
             return $o; }, $rows)];
     }
-    /* المنسوب: طلباته، وإن كان مسؤولًا مباشرًا أو معتمدًا بالبريد: الطلبات التي مرّت أو تمر عليه */
-    $ref = my_staff_ref($u); $mail = strtolower((string)$u['email']);
-    $fin = req_is_final($mail) ? " OR status='pending'" : '';
-    $rows = q('SELECT * FROM requests WHERE ref=? OR chain LIKE ?' . $fin . ' ORDER BY id DESC LIMIT 300', [(string)$ref, '%"email":"' . str_replace(['%', '_'], ['\%', '\_'], $mail) . '"%'])->fetchAll();
-    return ['ok' => true, 'rows' => array_map(function ($r) use ($u, $ref) { $o = req_out($u, $r); $o['mine'] = $r['ref'] === $ref; return $o; }, $rows)];
+    /* المنسوب: طلباته، وما يمرّ أو مرّ عليه كمعتمِد — بمطابقة أيٍّ من عناوين بريده أو معرّف حسابه في مسار الاعتماد (لا بريد الدخول وحده) */
+    $ref = (string)my_staff_ref($u); $myEmails = req_my_emails($u); $uid = (int)$u['id']; $isFinal = req_is_final(strtolower((string)$u['email']));
+    $rows = array_values(array_filter(q('SELECT * FROM requests ORDER BY id DESC LIMIT 500')->fetchAll(), function ($r) use ($ref, $myEmails, $uid, $isFinal) {
+        if ($ref !== '' && (string)$r['ref'] === $ref) return true;
+        if ($isFinal && $r['status'] === 'pending') return true;
+        foreach (json_decode((string)$r['chain'], true) ?: [] as $c) {
+            if ($uid && ((int)($c['uid'] ?? 0) === $uid || (int)($c['user'] ?? 0) === $uid)) return true;
+            $ce = strtolower(trim((string)($c['email'] ?? ''))); if ($ce !== '' && in_array($ce, $myEmails, true)) return true;
+            if (!empty($c['emails'])) foreach (array_keys(array_change_key_case((array)$c['emails'])) as $e) if (in_array($e, $myEmails, true)) return true;
+        }
+        return false;
+    }));
+    return ['ok' => true, 'rows' => array_map(function ($r) use ($u, $ref) { $o = req_out($u, $r); $o['mine'] = (string)$r['ref'] === $ref; return $o; }, $rows)];
 }
 
 /* تنفيذ القرار (من المنصة أو من رابط البريد): approve · reject · edit (تعديل ثم اعتماد، للمسؤول المباشر) */
