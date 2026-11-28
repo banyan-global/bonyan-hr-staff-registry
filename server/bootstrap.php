@@ -81,7 +81,7 @@ function q1(string $sql, array $args = []) { $r = q($sql, $args)->fetch(); retur
 function now(): string { return date('Y-m-d H:i:s'); }
 function now_min(): string { return date('Y-m-d H:i'); }
 
-const BHR_SCHEMA_VERSION = 18;
+const BHR_SCHEMA_VERSION = 19;
 function migrate(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (k VARCHAR(64) PRIMARY KEY, v TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     $v = $pdo->query("SELECT v FROM settings WHERE k='schema'")->fetchColumn();
@@ -233,6 +233,11 @@ function migrate(PDO $pdo): void {
     /* ١٨) مفتاح ثابت لتحديثات الكود في سجل الإصدارات (للمزامنة المباشرة) */
     $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='releases' AND COLUMN_NAME='rkey'")->fetchColumn();
     if (!(int)$has) { try { $pdo->exec("ALTER TABLE releases ADD COLUMN rkey VARCHAR(80) NOT NULL DEFAULT '', ADD KEY k_rkey (rkey)"); } catch (PDOException $e) { if (stripos($e->getMessage(), 'Duplicate') === false) throw $e; } }
+    /* ١٩) وجهة الاستفسار (صاحب الطلب/المسؤول المباشر/عام) على رسائل الطلب، وإحالات الإدارة العليا للمعنيّين بالطلب */
+    $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='req_msgs' AND COLUMN_NAME='to_kind'")->fetchColumn();
+    if (!(int)$has) { try { $pdo->exec("ALTER TABLE req_msgs ADD COLUMN to_kind VARCHAR(12) NOT NULL DEFAULT ''"); } catch (PDOException $e) { if (stripos($e->getMessage(), 'Duplicate') === false) throw $e; } }
+    $has = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='requests' AND COLUMN_NAME='refer'")->fetchColumn();
+    if (!(int)$has) { try { $pdo->exec("ALTER TABLE requests ADD COLUMN refer TEXT NULL"); } catch (PDOException $e) { if (stripos($e->getMessage(), 'Duplicate') === false) throw $e; } }
     $pdo->prepare("REPLACE INTO settings (k, v) VALUES ('schema', ?)")->execute([(string)BHR_SCHEMA_VERSION]);
 }
 function migrate_v1(PDO $pdo): void {

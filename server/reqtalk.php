@@ -90,7 +90,7 @@ function req_watch_mail(array $r, array $w, string $ev, string $line): void {
 
 /* ============ محادثة الطلب ============ */
 function req_msgs(string $no): array {
-    return array_map(fn($m) => ['id' => (int)$m['id'], 'k' => $m['kind'], 'by' => $m['by_name'], 'role' => $m['by_role'], 'body' => $m['body'], 'at' => substr((string)$m['created_at'], 0, 16)],
+    return array_map(fn($m) => ['id' => (int)$m['id'], 'k' => $m['kind'], 'by' => $m['by_name'], 'role' => $m['by_role'], 'body' => $m['body'], 'to' => (string)($m['to_kind'] ?? ''), 'at' => substr((string)$m['created_at'], 0, 16)],
         q('SELECT * FROM req_msgs WHERE req_no=? ORDER BY id', [$no])->fetchAll());
 }
 function req_thread_html(string $no): string {
@@ -120,11 +120,14 @@ function req_msg(array $b): array {
     elseif (!in_array($kind, ['ask', 'edit'], true)) $kind = 'ask';
     if ($kind === 'edit' && $r['status'] !== 'pending') throw new HttpError('طلب التعديل متاح والطلب قيد الإجراء فقط');
     $by = (string)($u['name'] ?: $u['email']);
-    q('INSERT INTO req_msgs (req_no, by_email, by_name, by_role, kind, body, created_at) VALUES (?,?,?,?,?,?,?)', [$r['no'], strtolower((string)$u['email']), $by, $role === 'staff' ? 'staff' : $role, $kind, $body, now()]);
+    /* وجهة الاستفسار: صاحب الطلب (الافتراضي) · المسؤول المباشر · عام لكل المعنيّين — لرسائل «استفسار» من غير الموظف فقط */
+    $toKind = ($role !== 'staff' && $kind === 'ask') ? (in_array((string)($b['to'] ?? ''), ['employee', 'manager', 'general'], true) ? (string)$b['to'] : 'employee') : '';
+    q('INSERT INTO req_msgs (req_no, by_email, by_name, by_role, kind, to_kind, body, created_at) VALUES (?,?,?,?,?,?,?,?)', [$r['no'], strtolower((string)$u['email']), $by, $role === 'staff' ? 'staff' : $role, $kind, $toKind, $body, now()]);
     if ($kind === 'edit') { q("UPDATE requests SET status='returned', updated_at=? WHERE id=?", [now(), $r['id']]); $r = q1('SELECT * FROM requests WHERE id=?', [$r['id']]); }
     audit_log($r['ref'], ['ask' => 'استفسار على طلب', 'edit' => 'طلب تعديل', 'reply' => 'رد على استفسار'][$kind], $r['no'] . ' · ' . mb_substr($body, 0, 200), $u['_label'] ?? $by);
     $s = staff_get($r['ref']); $name = $s ? staff_name($s) : $r['ref']; $tn = REQ_TYPES[$r['type']][1] ?? 'طلب';
     if ($role !== 'staff') {
+        if ($kind === 'edit' || $toKind === 'employee' || $toKind === 'general') {
         /* إلى الموظف: بريد وإشعار، وزر الرد أو التعديل يفتح الطلب في بوابته */
         foreach (req_staff_emails($r['ref']) as $e) note_add($e, $kind === 'edit' ? 'مطلوب تعديل طلبك' : 'استفسار على طلبك', $by . ': ' . mb_substr($body, 0, 160), $r['no'], $kind);
         $html = mx_page(['tone' => $kind === 'edit' ? 'gold' : 'blue', 'badge' => $tn, 'title' => $kind === 'edit' ? 'مطلوب تعديل على طلبك' : 'استفسار على طلبك',
@@ -132,6 +135,25 @@ function req_msg(array $b): array {
             'body' => mx_note($body, $kind === 'edit' ? 'gold' : 'blue', $by) . mx_rows([['رقم الطلب', $r['no'], 1], ['نوع الطلب', $tn], ['التفاصيل', req_summary($r)]], 'الطلب'),
             'buttons' => [[mx_url('rq=' . $r['no']), $kind === 'edit' ? '✎ تعديل الطلب وإعادة إرساله' : '💬 الرد على الاستفسار', 'primary']]]);
         $to = req_staff_email($s); if ($to !== '') try { send_mail($to, ($kind === 'edit' ? 'مطلوب تعديل طلبك ' : 'استفسار على طلبك ') . $r['no'], $html, $body . "\n" . mx_url('rq=' . $r['no']), 'Bonyan HR', logo_inline()); } catch (Throwable $e) { }
+        }
+        /* استفسار موجّه إلى المسؤول المباشر، أو عام لكل معتمِدي المسار: يصل المعنيّين بريدًا وإشعارًا، والرد يظهر للجميع في مسار الطلب */
+        if ($kind === 'ask' && in_array($toKind, ['manager', 'general'], true)) {
+            $chain = json_decode($r['chain'], true) ?: []; $recips = [];
+            foreach ($chain as $c) { $isMgr = !empty($c['mgr']) || ($c['kind'] ?? '') === 'manager'; if ($toKind === 'general' || $isMgr) foreach (req_step_emails($c) as $e => $n) $recips[$e] = $n; }
+            if ($toKind === 'manager' && !$recips && $r['status'] === 'pending') foreach (req_step_emails($chain[(int)$r['stage']] ?? []) as $e => $n) $recips[$e] = $n;
+            unset($recips[strtolower((string)$u['email'])]);
+            foreach (req_staff_emails($r['ref']) as $e) unset($recips[$e]); /* الموظف أُبلغ أعلاه في «عام»، ولا يُبلغ في «المسؤول المباشر» */
+            $toLabel = $toKind === 'manager' ? 'بصفتك المسؤول المباشر' : 'لجميع المعنيّين في مسار الطلب';
+            foreach ($recips as $e => $n) {
+                if (req_is_watcher($e)) continue; /* المتابع يصله من حلقة المتابعين أدناه */
+                note_add($e, 'استفسار بخصوص طلب ' . $name, $by . ': ' . mb_substr($body, 0, 150), $r['no'], 'ask');
+                $html2 = mx_page(['tone' => 'blue', 'badge' => $tn, 'title' => 'استفسار بخصوص طلب ' . $name,
+                    'lead' => 'وجّه ' . $by . ' استفسارًا ' . $toLabel . ' على الطلب ' . $r['no'] . '. ردّك من المنصة يصل للجميع في مسار الطلب.',
+                    'body' => mx_note($body, 'blue', $by) . mx_rows([['رقم الطلب', $r['no'], 1], ['مقدّم الطلب', $name], ['نوع الطلب', $tn]], 'الطلب') . req_thread_html($r['no']),
+                    'buttons' => [[mx_url('rq=' . $r['no']), 'فتح الطلب والرد', 'primary']]]);
+                try { send_mail($e, 'استفسار بخصوص طلب ' . $name . ' · ' . $r['no'], $html2, $body . "\n" . mx_url('rq=' . $r['no']), 'Bonyan HR', logo_inline()); } catch (Throwable $ex) { }
+            }
+        }
         /* المتابعون الآخرون يعلمون بالاستفسار في الجرس */
         foreach (req_watchers() as $w) if ($w['email'] !== strtolower((string)$u['email'])) note_add($w['email'], ($kind === 'edit' ? 'طلب تعديل من ' : 'استفسار من ') . $by, $name . ' · ' . $r['no'] . ': ' . mb_substr($body, 0, 140), $r['no'], $kind);
     } else {

@@ -2405,6 +2405,51 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .mh .mhacts .btn.danger.sure { width: auto; padding-inline: 12px; font-size: 13px; gap: 6px; }
 .mf.rqfoot[hidden] { display: none !important; }
 @media (max-width: 640px) { .mh .mhacts .btn.ico { width: 38px; height: 38px; } }
+/* وجهة الاستفسار: صاحب الطلب / المسؤول المباشر / عام */
+.tkto { margin-bottom: 10px; }
+.tkto[hidden] { display: none; }
+.tktol { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--mute); margin-bottom: 7px; }
+.tktol .i { width: 15px; height: 15px; color: var(--gold-d); }
+.tktb { display: flex; gap: 8px; flex-wrap: wrap; }
+.tkt { flex: 1 1 140px; display: inline-flex; align-items: center; gap: 7px; justify-content: center; border: 1.5px solid var(--line); background: var(--soft); color: var(--mute); border-radius: 12px; padding: 9px 10px; font: 700 13px var(--f); cursor: pointer; }
+.tkt .i { width: 16px; height: 16px; }
+.tkt:hover { color: var(--ink); border-color: var(--gold-d); }
+.tkt.on { border-color: var(--gold-d); background: var(--gold-wash); color: var(--gold-ink); box-shadow: inset 0 0 0 1px var(--gold-d); }
+.tkh em.tkto2 { background: var(--gold-wash); color: var(--gold-ink); }
+/* زر الإحالة والتوجيه */
+.btn.tkrefer { color: var(--gold-ink); border-color: color-mix(in srgb, var(--gold-d) 45%, transparent); background: var(--gold-wash); }
+/* قسم التوجيهات داخل الطلب */
+.rqrefer { margin-top: 16px; }
+.rqrefer .ssub { display: flex; align-items: center; gap: 6px; }
+.rqrefer .ssub .i { width: 16px; height: 16px; color: var(--gold-d); }
+.rflist { display: grid; gap: 10px; margin: 8px 0 4px; }
+.rfm { border: 1px solid var(--line-2); border-radius: 14px; padding: 12px 13px; background: var(--panel); border-inline-start: 3px solid var(--gold-d); }
+.rfm.mine { background: var(--gold-wash); }
+.rfm.done { border-inline-start-color: #16a34a; }
+.rfh { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+.rfav { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--well); color: var(--gold-d); flex: none; }
+.rfav .i { width: 16px; height: 16px; }
+.rfhb { min-width: 0; flex: 1; }
+.rfhb b { display: block; font-size: 13.5px; }
+.rfhb small { color: var(--mute); font-size: 11.5px; }
+.rfst { font-size: 11px; font-weight: 800; border-radius: 99px; padding: 3px 10px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.rfst .i { width: 13px; height: 13px; }
+.rfst.wait { background: color-mix(in srgb, var(--gold-d) 14%, var(--panel)); color: var(--gold-ink); }
+.rfst.done { background: color-mix(in srgb, #16a34a 14%, var(--panel)); color: #15803d; }
+.rftask { margin: 0 0 9px; font-size: 13.5px; line-height: 1.8; white-space: pre-wrap; }
+.rff { display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
+.rff small { color: var(--faint); font-size: 11.5px; }
+.rfdone { flex: none; }
+/* نموذج الإحالة */
+.rfform { margin-top: 12px; }
+.rfrows { display: grid; gap: 10px; }
+.rfrow { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.rfrow .rfsel, .rfrow .rftaski { height: 44px; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 0 12px; font: inherit; font-size: 14px; color: var(--ink); min-width: 0; }
+.rfrow .rfsel:focus, .rfrow .rftaski:focus { outline: none; border-color: var(--gold-d); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold-d) 18%, transparent); }
+.rfrow .rfdel { width: 44px; height: 44px; flex: none; }
+.rfrow .rfdel .i { width: 16px; height: 16px; }
+.btn.rfadd { margin-top: 10px; width: 100%; border-style: dashed; color: var(--gold-ink); justify-content: center; }
+@media (max-width: 620px) { .rfrow { grid-template-columns: 1fr auto; } .rfrow .rfsel { grid-column: 1 / -1; } }
 /* لوحة التنبيهات */
 .bellwrap #ntf { width: 380px; max-width: calc(100vw - 24px); padding: 0; overflow: hidden; border-radius: 20px; }
 .nfh { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line-2); }

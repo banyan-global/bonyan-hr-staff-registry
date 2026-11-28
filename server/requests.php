@@ -989,7 +989,120 @@ function req_create(array $b): array {
     try { req_watch_event($r, 'new', '', (string)$u['email']); } catch (Throwable $e) { error_log('[bonyan-hr] watch ' . $e->getMessage()); }
     return ['ok' => true, 'request' => req_out($u, $r)];
 }
-function req_out(array $u, array $r): array { $cd = req_can_decide($u, $r); $fe = req_is_final((string)$u['email']); $tr = function_exists('req_talk_role') ? req_talk_role($u, $r) : ''; return req_row($r) + ['talk' => $tr, 'msgs' => $tr !== '' ? req_msgs($r['no']) : [], 'canDecide' => $cd, 'canEdit' => $cd && req_step_can_edit($r), 'canFinal' => !($cd && $fe) && req_can_final($u, $r), 'approveFinal' => $cd && $fe]; }
+function req_out(array $u, array $r): array { $cd = req_can_decide($u, $r); $fe = req_is_final((string)$u['email']); $tr = function_exists('req_talk_role') ? req_talk_role($u, $r) : ''; return req_row($r) + ['talk' => $tr, 'msgs' => $tr !== '' ? req_msgs($r['no']) : [], 'canDecide' => $cd, 'canEdit' => $cd && req_step_can_edit($r), 'canFinal' => !($cd && $fe) && req_can_final($u, $r), 'approveFinal' => $cd && $fe] + req_refer_out($u, $r); }
+
+/* ============ الإحالة والتوجيه: الإدارة العليا توجّه المعنيّين بالطلب (مالية/مواصلات/سكن…) كلٌّ وما سيفعله لصاحب الطلب ============ */
+function req_referrals(array $r): array { $v = json_decode((string)($r['refer'] ?? ''), true); return is_array($v) ? $v : []; }
+function req_can_refer(array $u, array $r): bool {
+    if (!in_array($r['status'], ['pending', 'approved'], true)) return false;
+    if (my_staff_ref($u) === $r['ref']) return false; /* لا يوجّه أحد في طلبه هو */
+    if (staff_private((string)$r['ref']) && !is_owner($u)) return false;
+    return req_is_final(strtolower((string)$u['email'])) || is_owner($u) || has_perm($u, 'requests.override');
+}
+/* هل هذا التوجيه موجّه للحساب الحالي؟ بمطابقة سجلّه أو معرّفه أو أيٍّ من عناوين بريده */
+function req_refer_mine(array $u, array $x): bool {
+    static $c = []; $uid = (int)$u['id'];
+    if (!isset($c[$uid])) $c[$uid] = [my_staff_ref($u), req_my_emails($u)];
+    [$ref, $em] = $c[$uid];
+    if (($x['ref'] ?? '') !== '' && $x['ref'] === $ref) return true;
+    if ($uid && (int)($x['uid'] ?? 0) === $uid) return true;
+    $xe = strtolower(trim((string)($x['email'] ?? ''))); return $xe !== '' && in_array($xe, $em, true);
+}
+function req_refer_out(array $u, array $r): array {
+    $cr = req_can_refer($u, $r); $list = req_referrals($r);
+    $out = array_map(fn($x) => ['id' => (string)($x['id'] ?? ''), 'name' => (string)($x['name'] ?? ''), 'dept' => (string)($x['dept'] ?? ''), 'task' => (string)($x['task'] ?? ''),
+        'by' => (string)($x['byName'] ?? $x['by'] ?? ''), 'at' => (string)($x['at'] ?? ''), 'done' => !empty($x['done']), 'doneAt' => (string)($x['doneAt'] ?? ''), 'doneBy' => (string)($x['doneBy'] ?? ''), 'mine' => req_refer_mine($u, $x)], $list);
+    return ['refer' => $out, 'canRefer' => $cr];
+}
+/* قائمة من يمكن توجيههم: المنسوبون الذين لهم حساب (يرون التوجيه في المنصة) + حسابات الإدارة */
+function req_refer_cands(): array {
+    $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
+    if (!(req_is_final(strtolower((string)$u['email'])) || is_owner($u) || has_perm($u, 'requests.override'))) throw new HttpError('forbidden', 403);
+    $out = [];
+    foreach (q("SELECT DISTINCT staff_ref FROM users WHERE role='staff' AND active=1 AND staff_ref IS NOT NULL AND staff_ref<>''")->fetchAll() as $row) {
+        $ref = (string)$row['staff_ref']; $s = staff_get($ref); if (!$s) continue; $d = $s['data'];
+        $dept = trim((string)($d['entity'] ?? '') . (!empty($d['department']) ? ' · ' . $d['department'] : (!empty($d['jobTitle']) ? ' · ' . $d['jobTitle'] : '')));
+        $out[] = ['id' => 's:' . $ref, 'name' => staff_name($s), 'dept' => $dept];
+    }
+    foreach (q("SELECT id, name, email, title, role FROM users WHERE role<>'staff' AND active=1")->fetchAll() as $row)
+        $out[] = ['id' => 'u:' . (int)$row['id'], 'name' => (string)($row['name'] ?: $row['email']), 'dept' => (string)($row['title'] ?: (ROLE_NAMES[$row['role']] ?? ''))];
+    usort($out, fn($a, $b) => strcmp((string)$a['name'], (string)$b['name']));
+    return ['ok' => true, 'cands' => $out];
+}
+function req_refer_target(string $id): ?array {
+    if (strpos($id, 's:') === 0) {
+        $ref = substr($id, 2); $s = staff_get($ref); if (!$s) return null; $d = $s['data'];
+        $dept = trim((string)($d['entity'] ?? '') . (!empty($d['department']) ? ' · ' . $d['department'] : (!empty($d['jobTitle']) ? ' · ' . $d['jobTitle'] : '')));
+        $em = req_staff_emails($ref); return ['ref' => $ref, 'uid' => 0, 'email' => $em[0] ?? '', 'name' => staff_name($s), 'dept' => $dept];
+    }
+    if (strpos($id, 'u:') === 0) {
+        $row = q1('SELECT * FROM users WHERE id=? AND active=1', [(int)substr($id, 2)]); if (!$row) return null;
+        return ['ref' => (string)($row['staff_ref'] ?? ''), 'uid' => (int)$row['id'], 'email' => strtolower((string)$row['email']), 'name' => (string)($row['name'] ?: $row['email']), 'dept' => (string)($row['title'] ?: (ROLE_NAMES[$row['role']] ?? ''))];
+    }
+    return null;
+}
+function req_refer_notify(array $r, array $e, string $empName, string $tn): void {
+    $emails = []; if (!empty($e['email'])) $emails[] = strtolower((string)$e['email']);
+    if (!empty($e['ref'])) foreach (req_staff_emails((string)$e['ref']) as $x) $emails[] = $x;
+    $emails = array_values(array_unique(array_filter($emails))); if (!$emails) return;
+    foreach ($emails as $em) note_add($em, 'توجيه بخصوص طلب ' . $empName, (string)$e['task'], $r['no'], 'refer');
+    $html = mx_page(['tone' => 'gold', 'badge' => 'توجيه', 'title' => 'توجيه بخصوص طلب ' . $empName,
+        'lead' => 'أحالت الإدارة العليا إليك ما يخصّك في طلب ' . $empName . ' (' . $tn . ' · ' . $r['no'] . '). بعد التنفيذ سجّل «تم التنفيذ» من المنصة.',
+        'body' => mx_note((string)$e['task'], 'gold', 'المطلوب منك') . mx_rows([['رقم الطلب', $r['no'], 1], ['مقدّم الطلب', $empName], ['نوع الطلب', $tn], ['من', (string)($e['byName'] ?? '')]], 'الطلب'),
+        'buttons' => [[mx_url('rq=' . $r['no']), 'فتح الطلب وتسجيل التنفيذ', 'primary']]]);
+    try { send_mail($emails[0], 'توجيه بخصوص طلب ' . $empName . ' · ' . $r['no'], $html, (string)$e['task'] . "\n" . mx_url('rq=' . $r['no']), 'Bonyan HR', logo_inline()); } catch (Throwable $ex) { }
+}
+function req_refer(array $b): array {
+    $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
+    $r = q1('SELECT * FROM requests WHERE no=?', [(string)($b['no'] ?? '')]); if (!$r) throw new HttpError('not_found', 404);
+    if (!req_can_refer($u, $r)) throw new HttpError('الإحالة والتوجيه من صلاحية الإدارة العليا', 403);
+    if (rate_hit('rrefer:' . $u['id'], 40, 3600)) throw new HttpError('محاولات كثيرة؛ حاول بعد قليل', 429);
+    $items = is_array($b['items'] ?? null) ? array_slice($b['items'], 0, 20) : [];
+    $s = staff_get($r['ref']); $empName = $s ? staff_name($s) : $r['ref']; $tn = REQ_TYPES[$r['type']][1] ?? 'طلب';
+    $byName = (string)($u['name'] ?: $u['email']);
+    named_lock('req_dec');
+    try {
+        $r = q1('SELECT * FROM requests WHERE id=?', [$r['id']]); $list = req_referrals($r); $added = [];
+        foreach ($items as $it) {
+            $id = (string)($it['id'] ?? ''); $task = req_str($it['task'] ?? '', 600);
+            if ($id === '' || mb_strlen(trim($task)) < 2) continue;
+            $t = req_refer_target($id); if (!$t) continue;
+            $entry = ['id' => bin2hex(random_bytes(4)), 'ref' => $t['ref'], 'uid' => $t['uid'], 'email' => $t['email'], 'name' => $t['name'], 'dept' => $t['dept'], 'task' => $task,
+                'by' => $u['_label'] ?? $byName, 'byName' => $byName, 'byEmail' => strtolower((string)$u['email']), 'at' => now_min(), 'done' => 0, 'doneAt' => '', 'doneBy' => ''];
+            $list[] = $entry; $added[] = $entry;
+        }
+        if (!$added) throw new HttpError('أضف معنيًّا واحدًا على الأقل بمهمته');
+        q('UPDATE requests SET refer=?, updated_at=? WHERE id=?', [json_encode($list, JSON_UNESCAPED_UNICODE), now(), $r['id']]);
+    } finally { named_unlock('req_dec'); }
+    $r = q1('SELECT * FROM requests WHERE id=?', [$r['id']]);
+    foreach ($added as $e2) req_refer_notify($r, $e2, $empName, $tn);
+    foreach (req_staff_emails($r['ref']) as $e) note_add($e, 'توجيهات بخصوص طلبك', 'أصدرت الإدارة العليا ' . count($added) . ' توجيهًا للمعنيّين بخصوص طلبك ' . $r['no'], $r['no'], 'refer');
+    audit_log($r['ref'], 'إحالة وتوجيه ' . $tn, $r['no'] . ' · ' . implode('، ', array_map(fn($x) => $x['name'] . ': ' . mb_substr((string)$x['task'], 0, 60), $added)), $u['_label'] ?? $byName);
+    return ['ok' => true, 'request' => req_out($u, $r)];
+}
+function req_refer_done(array $b): array {
+    $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
+    $r = q1('SELECT * FROM requests WHERE no=?', [(string)($b['no'] ?? '')]); if (!$r) throw new HttpError('not_found', 404);
+    $id = (string)($b['id'] ?? ''); $byName = (string)($u['name'] ?: $u['email']);
+    named_lock('req_dec');
+    try {
+        $r = q1('SELECT * FROM requests WHERE id=?', [$r['id']]); $list = req_referrals($r); $hit = null;
+        foreach ($list as $i => $x) if (($x['id'] ?? '') === $id) {
+            if (!req_refer_mine($u, $x) && !is_owner($u) && !has_perm($u, 'requests.override')) throw new HttpError('هذا التوجيه ليس موجّهًا إليك', 403);
+            if (empty($x['done'])) { $list[$i]['done'] = 1; $list[$i]['doneAt'] = now_min(); $list[$i]['doneBy'] = $byName; }
+            $hit = $list[$i]; break;
+        }
+        if (!$hit) throw new HttpError('التوجيه غير موجود', 404);
+        q('UPDATE requests SET refer=?, updated_at=? WHERE id=?', [json_encode($list, JSON_UNESCAPED_UNICODE), now(), $r['id']]);
+    } finally { named_unlock('req_dec'); }
+    $r = q1('SELECT * FROM requests WHERE id=?', [$r['id']]);
+    $s = staff_get($r['ref']); $empName = $s ? staff_name($s) : $r['ref'];
+    $line = ($hit['name'] ?? '') . ' نفّذ: ' . mb_substr((string)($hit['task'] ?? ''), 0, 120);
+    if (!empty($hit['byEmail'])) note_add((string)$hit['byEmail'], 'نُفّذ توجيه · ' . $empName, $line, $r['no'], 'refer');
+    foreach (req_staff_emails($r['ref']) as $e) note_add($e, 'نُفّذ توجيه بخصوص طلبك', $line, $r['no'], 'refer');
+    audit_log($r['ref'], 'تنفيذ توجيه', $r['no'] . ' · ' . $line, $u['_label'] ?? $byName);
+    return ['ok' => true, 'request' => req_out($u, $r)];
+}
 function req_list(array $b): array {
     $u = current_user(); if (!$u) throw new HttpError('auth_required', 401);
     if (has_perm($u, 'staff.view') && empty($b['asStaff'])) {
@@ -1011,6 +1124,8 @@ function req_list(array $b): array {
             $ce = strtolower(trim((string)($c['email'] ?? ''))); if ($ce !== '' && in_array($ce, $myEmails, true)) return true;
             if (!empty($c['emails'])) foreach (array_keys(array_change_key_case((array)$c['emails'])) as $e) if (in_array($e, $myEmails, true)) return true;
         }
+        /* الطلبات التي وُجّه لي فيها توجيه من الإدارة العليا تظهر في قائمتي أيضًا */
+        foreach (req_referrals($r) as $x) { if (($x['ref'] ?? '') !== '' && $x['ref'] === $ref) return true; if ($uid && (int)($x['uid'] ?? 0) === $uid) return true; $xe = strtolower(trim((string)($x['email'] ?? ''))); if ($xe !== '' && in_array($xe, $myEmails, true)) return true; }
         return false;
     }));
     return ['ok' => true, 'rows' => array_map(function ($r) use ($u, $ref) { $o = req_out($u, $r); $o['mine'] = (string)$r['ref'] === $ref; return $o; }, $rows)];

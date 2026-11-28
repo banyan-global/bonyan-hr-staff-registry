@@ -2234,16 +2234,20 @@ function talkMount(r) {
   var L = document.getElementById('reqLayer'), body = L && L.querySelector('.rqbody'), foot = L && L.querySelector('.mf'); if (!body || !foot) return;
   var own = !!(ME && ME.ref === r.ref), M = r.msgs || [], T = r.talk || '', boss = T && T !== 'staff', last = M[M.length - 1];
   var kindTag = { ask: 'استفسار', edit: 'طلب تعديل', reply: 'رد', resubmit: 'أُعيد الإرسال' };
+  var toTag = { employee: 'إلى صاحب الطلب', manager: 'إلى المسؤول المباشر', general: 'عام للجميع' };
   /* ---- المحادثة داخل الطلب ---- */
   var ban = r.status === 'returned' ? '<div class="note warn rqret">' + ic('edit') + '<span>' + (own ? '<b>طُلب منك تعديل هذا الطلب.</b> عدّل ما طُلب ثم أعد إرساله، فيكمل مساره من المرحلة نفسها.' : 'أُعيد الطلب إلى الموظف للتعديل، ويكمل مساره بعد إعادة إرساله.') + '</span></div>' : '';
   if (T || M.length || ban) {
     var sec = document.createElement('div'); sec.className = 'rqtalk'; sec.id = 'rqTalk';
     sec.innerHTML = ban + (M.length || T ? '<div class="ssub">' + ic('chat') + 'المحادثة حول الطلب' + (M.length ? ' <span class="tkn">' + M.length + '</span>' : '') + '</div>' : '') +
-      (M.length ? '<div class="tklist">' + M.map(function (m) { return '<div class="tkm ' + (m.role === 'staff' ? 'staff' : 'boss') + '"><div class="tkh"><b>' + esc(m.by) + '</b><em class="' + m.k + '">' + (kindTag[m.k] || '') + '</em><small>' + esc(agoTxt(m.at)) + '</small></div><p>' + esc(m.body) + '</p></div>'; }).join('') + '</div>'
+      (M.length ? '<div class="tklist">' + M.map(function (m) { return '<div class="tkm ' + (m.role === 'staff' ? 'staff' : 'boss') + '"><div class="tkh"><b>' + esc(m.by) + '</b><em class="' + m.k + '">' + (kindTag[m.k] || '') + '</em>' + (m.to && m.k === 'ask' ? '<em class="tkto2">' + (toTag[m.to] || '') + '</em>' : '') + '<small>' + esc(agoTxt(m.at)) + '</small></div><p>' + esc(m.body) + '</p></div>'; }).join('') + '</div>'
         : T ? '<p class="tkempty">' + (T === 'staff' ? 'لا رسائل على طلبك.' : 'لا رسائل بعد. اضغط «استفسار» أسفل النافذة، ويصل الموظف بريد وإشعار.') + '</p>' : '') +
-      (T ? '<div class="tkbox" id="tkBox" hidden><div class="tkmode" id="tkMode"></div><textarea id="tkTxt" rows="3" maxlength="1500"></textarea><div class="lerr" id="tkErr" role="alert"></div><div class="tkbtns"><button class="btn sm goldb" type="button" id="tkSend"></button><button class="btn sm" type="button" id="tkCancel">إلغاء</button></div></div>' : '');
+      (T ? '<div class="tkbox" id="tkBox" hidden><div class="tkmode" id="tkMode"></div><div class="tkto" id="tkTo" hidden></div><textarea id="tkTxt" rows="3" maxlength="1500"></textarea><div class="lerr" id="tkErr" role="alert"></div><div class="tkbtns"><button class="btn sm goldb" type="button" id="tkSend"></button><button class="btn sm" type="button" id="tkCancel">إلغاء</button></div></div>' : '');
     body.appendChild(sec);
   }
+  /* ---- التوجيهات والمعنيّون بالطلب (إحالة الإدارة العليا) ---- */
+  var rfHTML = referSectionHTML(r);
+  if (rfHTML) { var rsec = document.createElement('div'); rsec.innerHTML = rfHTML; if (rsec.firstChild) body.appendChild(rsec.firstChild); }
   /* ---- ترتيب أزرار النافذة: القرار والتواصل يمينًا، والطباعة والحذف يسارًا ---- */
   var g = function (sel) { return foot.querySelector(sel); };
   var note = g('.rqdec'), ap = g('[data-rqdec="approve"]'), fin = g('[data-rqdec="final"]'), rej = g('[data-rqdec="reject"]'), ed = g('#rqEdit'), cn = g('#rqCancel'), del = g('#rqDel'), pr = g('#rqPrint');
@@ -2251,6 +2255,7 @@ function talkMount(r) {
   var mk = function (id, cls, icon, txt, title) { var x = document.createElement('button'); x.type = 'button'; x.className = 'btn ' + cls; x.id = id; x.innerHTML = ic(icon) + txt; if (title) x.title = title; return x; };
   var ask = boss ? mk('tkAsk', 'tkask', 'chat', 'استفسار', 'اسأل الموظف عن الطلب') : null;
   var req = boss && r.status === 'pending' ? mk('tkEditReq', 'tkedit', 'edit', 'طلب تعديل', 'يُعاد الطلب إلى الموظف ليعدّله ثم يكمل مساره') : null;
+  var ref2 = r.canRefer ? mk('tkRefer', 'tkrefer', 'users', 'إحالة وتوجيه', 'توجيه المعنيّين بالطلب: مالية ومواصلات وسكن… كلٌّ وما سيفعله') : null;
   var rep = T === 'staff' && (M.length || r.status === 'pending') ? mk('tkRep', 'tkask', 'chat', last && (last.k === 'ask' || last.k === 'edit') ? 'الرد على الاستفسار' : M.length ? 'مراسلة المعتمد' : 'استفسار عن الطلب') : null;
   var rs = r.status === 'returned' && (own || can('edit')) ? mk('rqResub', 'goldb', 'edit', 'تعديل وإعادة إرسال') : null;
   /* لا مربع ملاحظة دائم: سبب الرفض يُكتب في مربع يفتح عند ضغط «رفض» */
@@ -2258,7 +2263,7 @@ function talkMount(r) {
   if (pr) { pr.innerHTML = ic('dl'); pr.title = 'طباعة الطلب أو حفظه PDF'; pr.setAttribute('aria-label', pr.title); pr.classList.add('ico'); }
   if (del) { del.classList.add('ico', 'danger'); del.title = 'حذف الطلب نهائيًا (لمدير النظام)'; del.setAttribute('aria-label', del.title); }
   var pri = document.createElement('div'); pri.className = 'rqacts pri';
-  [rs, ap, fin, ed, ask, req, rep, rj, cn].forEach(function (x) { if (x) pri.appendChild(x); });
+  [rs, ap, fin, ed, ask, req, ref2, rep, rj, cn].forEach(function (x) { if (x) pri.appendChild(x); });
   var sc = document.createElement('div'); sc.className = 'rqacts sec';
   [del, pr].forEach(function (x) { if (x) sc.appendChild(x); }); /* الحذف أبعد عن زر الإغلاق */
   foot.innerHTML = ''; foot.classList.add('rqfoot');
@@ -2270,7 +2275,7 @@ function talkMount(r) {
   if (hd && xb) { sc.className = 'rqacts sec mhacts'; hd.insertBefore(sc, xb); } else foot.appendChild(sc);
   if (!pri.children.length) foot.hidden = true;
   /* ---- صندوق الكتابة يفتح عند الحاجة ---- */
-  var MODE = '';
+  var MODE = '', ASKTO = 'employee';
   if (rej && !document.getElementById('tkBox')) {
     /* من يملك الرفض بلا صلاحية محادثة: صندوق للسبب فقط */
     var sx = document.createElement('div'); sx.className = 'rqtalk'; sx.innerHTML = '<div class="tkbox" id="tkBox" hidden><div class="tkmode" id="tkMode"></div><textarea id="tkTxt" rows="3" maxlength="1500"></textarea><div class="lerr" id="tkErr" role="alert"></div><div class="tkbtns"><button class="btn sm goldb" type="button" id="tkSend"></button><button class="btn sm" type="button" id="tkCancel">إلغاء</button></div></div>'; body.appendChild(sx);
@@ -2281,6 +2286,16 @@ function talkMount(r) {
     document.getElementById('tkSend').className = 'btn sm ' + (mode === 'reject' ? 'danger' : 'goldb');
     document.getElementById('tkMode').innerHTML = lab[0]; document.getElementById('tkMode').className = 'tkmode ' + mode;
     var t = document.getElementById('tkTxt'); t.placeholder = lab[1]; document.getElementById('tkSend').innerHTML = ic(mode === 'edit' ? 'edit' : mode === 'reject' ? 'x' : 'send') + lab[2]; document.getElementById('tkErr').textContent = '';
+    var toBox = document.getElementById('tkTo');
+    if (toBox) {
+      if (mode === 'ask') {
+        ASKTO = 'employee';
+        var opts = [['employee', 'صاحب الطلب', 'user'], ['manager', 'المسؤول المباشر', 'users'], ['general', 'عام للجميع', 'eye']];
+        toBox.innerHTML = '<span class="tktol">' + ic('send') + 'وجّه الاستفسار إلى</span><div class="tktb">' + opts.map(function (o) { return '<button type="button" class="tkt' + (o[0] === 'employee' ? ' on' : '') + '" data-to="' + o[0] + '">' + ic(o[2]) + '<span>' + o[1] + '</span></button>'; }).join('') + '</div>';
+        toBox.hidden = false;
+        toBox.querySelectorAll('.tkt').forEach(function (bt) { bt.onclick = function () { ASKTO = bt.dataset.to; toBox.querySelectorAll('.tkt').forEach(function (x) { x.classList.remove('on'); }); bt.classList.add('on'); }; });
+      } else toBox.hidden = true;
+    }
     box.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(function () { t.focus(); }, 250);
   };
   var tt0 = document.getElementById('tkTxt'); if (tt0) tt0.oninput = function () { var e1 = document.getElementById('tkErr'), e2 = document.getElementById('rqErr'); if (e1) e1.textContent = ''; if (e2) e2.textContent = ''; };
@@ -2298,10 +2313,10 @@ function talkMount(r) {
       if (oe && oe.parentNode !== er.parentNode) { oe.className = 'lerr'; er.parentNode.insertBefore(oe, er); er.textContent = ''; }
       rej.click(); return;
     }
-    sd.disabled = true;
-    api({ action: 'reqMsg', no: r.no, kind: MODE, body: v }).then(function (j) {
+    sd.disabled = true; var to0 = ASKTO;
+    api({ action: 'reqMsg', no: r.no, kind: MODE, body: v, to: MODE === 'ask' ? to0 : undefined }).then(function (j) {
       seed('reqs', reqRows().map(function (x) { return x.no === r.no ? Object.assign(j.request, { mine: x.mine }) : x; }));
-      var m0 = MODE; reqOpen(r.no); softRender(); toast(m0 === 'edit' ? 'أُعيد الطلب إلى الموظف للتعديل وأُبلغ' : m0 === 'reply' ? 'وصل ردك' : 'وصل استفسارك إلى الموظف');
+      var m0 = MODE; reqOpen(r.no); softRender(); toast(m0 === 'edit' ? 'أُعيد الطلب إلى الموظف للتعديل وأُبلغ' : m0 === 'reply' ? 'وصل ردك' : (to0 === 'manager' ? 'وصل استفسارك إلى المسؤول المباشر' : to0 === 'general' ? 'نُشر استفسارك لجميع المعنيّين' : 'وصل استفسارك إلى صاحب الطلب'));
       var tl = document.getElementById('rqTalk'); if (tl) tl.scrollIntoView({ block: 'end' });
     }).catch(function (e) { sd.disabled = false; er.textContent = errText(e); });
   };
@@ -2311,8 +2326,43 @@ function talkMount(r) {
     if (role === 'staff') { TAB.myreq = 'new'; location.hash = 'myreq-new'; } else { TAB.reqs = 'new'; location.hash = 'reqs'; }
     render(); toast('عدّل الطلب ' + r.no + ' ثم أعد إرساله');
   };
+  if (ref2) ref2.onclick = function () { referForm(r); };
+  L.querySelectorAll('.rfdone').forEach(function (b) { b.onclick = function () { b.disabled = true;
+    api({ action: 'reqReferDone', no: r.no, id: b.dataset.rfid }).then(function (j) { seed('reqs', reqRows().map(function (x) { return x.no === r.no ? Object.assign(j.request, { mine: x.mine }) : x; })); reqOpen(r.no); softRender(); toast('سُجّل تنفيذ التوجيه، وأُبلغ المعنيّون'); }).catch(function (e) { b.disabled = false; toast(errText(e)); });
+  }; });
   /* الموظف المطلوب منه الرد يجد الصندوق مفتوحًا */
   if (T === 'staff' && last && (last.k === 'ask' || last.k === 'edit') && r.status !== 'returned') openBox('reply');
+}
+/* قسم التوجيهات داخل الطلب: لكل معنيّ اسمه ومهمته وحالتها، ولمن وُجّه له زر «تم التنفيذ» */
+function referSectionHTML(r) {
+  var R = r.refer || []; if (!R.length && !r.canRefer) return '';
+  var rows = R.map(function (x) {
+    return '<div class="rfm' + (x.done ? ' done' : '') + (x.mine ? ' mine' : '') + '"><div class="rfh"><span class="rfav">' + ic('user') + '</span><div class="rfhb"><b>' + esc(x.name) + '</b>' + (x.dept ? '<small>' + esc(x.dept) + '</small>' : '') + '</div>' + (x.done ? '<span class="rfst done">' + ic('check') + 'نُفّذ</span>' : '<span class="rfst wait">بانتظار التنفيذ</span>') + '</div><p class="rftask">' + esc(x.task) + '</p><div class="rff"><small>' + esc(x.by || '') + (x.at ? ' · ' + esc(agoTxt(x.at)) : '') + (x.done && x.doneAt ? ' · نُفّذ ' + esc(agoTxt(x.doneAt)) : '') + '</small>' + (x.mine && !x.done ? '<button class="btn sm goldb rfdone" data-rfid="' + esc(x.id) + '">' + ic('check') + 'تم التنفيذ</button>' : '') + '</div></div>';
+  }).join('');
+  return '<div class="rqrefer" id="rqRefer"><div class="ssub">' + ic('users') + 'التوجيهات والمعنيّون' + (R.length ? ' <span class="tkn">' + R.length + '</span>' : '') + '</div>' + (R.length ? '<div class="rflist">' + rows + '</div>' : '<p class="tkempty">لا توجيهات بعد.' + (r.canRefer ? ' اضغط «إحالة وتوجيه» أسفل النافذة لتوجيه المعنيّين بالطلب.' : '') + '</p>') + '</div>';
+}
+/* نموذج الإحالة: الإدارة العليا تضيف المعنيّين وما سيفعله كلٌّ لصاحب الطلب */
+function referForm(r) {
+  var L = document.getElementById('reqLayer'); if (!L) return;
+  var body = L.querySelector('.rqbody'), foot = L.querySelector('.mf');
+  body.innerHTML = '<div class="note">' + ic('users') + '<span>وجّه كل معنيّ بالطلب وما سيفعله لصاحبه (صرف مبلغ، حجز تذكرة، ترتيب سكن…). يصل كلًّا توجيهه بريدًا وإشعارًا، ويسجّل «تم التنفيذ» بعد إنجازه.</span></div><div class="rfform"><div class="rfrows" id="rfRows"></div><button class="btn sm rfadd" type="button" id="rfAdd">' + ic('plus') + 'إضافة معنيّ آخر</button><div class="lerr" id="rfErr" role="alert"></div></div>';
+  foot.innerHTML = '<span class="sp"></span><button class="btn" id="rfBack">رجوع</button><button class="btn goldb" id="rfSend">' + ic('send') + 'إرسال التوجيهات</button>';
+  var CANDS = [];
+  var optionsHTML = function (sel) { return '<option value="">اختر المعنيّ…</option>' + CANDS.map(function (c) { return '<option value="' + esc(c.id) + '"' + (sel === c.id ? ' selected' : '') + '>' + esc(c.name) + (c.dept ? ' — ' + esc(c.dept) : '') + '</option>'; }).join(''); };
+  var addRow = function () { var d = document.createElement('div'); d.className = 'rfrow'; d.innerHTML = '<select class="rfsel">' + optionsHTML('') + '</select><input class="rftaski" maxlength="600" placeholder="ما المطلوب منه لصاحب الطلب؟"><button type="button" class="ib rfdel" aria-label="حذف">' + ic('x') + '</button>'; document.getElementById('rfRows').appendChild(d); d.querySelector('.rfdel').onclick = function () { d.remove(); }; };
+  var fill = function () { document.querySelectorAll('#rfRows .rfsel').forEach(function (s) { var v = s.value; s.innerHTML = optionsHTML(v); }); };
+  document.getElementById('rfBack').onclick = function () { reqOpen(r.no); };
+  document.getElementById('rfAdd').onclick = addRow;
+  addRow(); addRow();
+  var er = document.getElementById('rfErr');
+  if (CACHE.referCands) { CANDS = CACHE.referCands; fill(); }
+  else api({ action: 'reqReferCands' }).then(function (j) { CANDS = j.cands || []; CACHE.referCands = CANDS; fill(); }).catch(function (e) { if (er) er.textContent = errText(e); });
+  document.getElementById('rfSend').onclick = function () {
+    var items = []; document.querySelectorAll('#rfRows .rfrow').forEach(function (d) { var id = d.querySelector('.rfsel').value, task = d.querySelector('.rftaski').value.trim(); if (id && task) items.push({ id: id, task: task }); });
+    if (!items.length) { er.textContent = 'أضف معنيًّا واحدًا على الأقل بمهمته.'; return; }
+    var b = this; b.disabled = true; er.textContent = '';
+    api({ action: 'reqRefer', no: r.no, items: items }).then(function (j) { seed('reqs', reqRows().map(function (x) { return x.no === r.no ? Object.assign(j.request, { mine: x.mine }) : x; })); reqOpen(r.no); softRender(); toast('أُرسلت التوجيهات إلى ' + items.length + ' من المعنيّين'); }).catch(function (e) { b.disabled = false; er.textContent = errText(e); });
+  };
 }
 
 /* متابعو الطلبات (من أصحاب الاعتماد النهائي): يصلهم كل طلب جديد وكل خطوة في الجرس، وبالبريد حسب الاختيار */

@@ -76,6 +76,7 @@ try {
         'backups' => fn() => backups_list(), 'backupNow' => fn() => backup_now(), 'health' => fn() => health(),
         /* طلبات المنسوبين */
         'reqCreate' => fn() => req_create($b), 'reqList' => fn() => req_list($b), 'reqDecide' => fn() => req_decide($b), 'reqCancel' => fn() => req_cancel($b), 'reqDelete' => fn() => req_delete($b), 'payMonth' => fn() => pay_month($b),
+        'reqReferCands' => fn() => req_refer_cands(), 'reqRefer' => fn() => req_refer($b), 'reqReferDone' => fn() => req_refer_done($b),
         'actList' => fn() => act_list($b), 'actSave' => fn() => act_save($b), 'actDecide' => fn() => act_decide($b), 'actAck' => fn() => act_ack($b), 'actVoid' => fn() => act_void($b),
         'pushSub' => fn() => push_sub($b), 'pushUnsub' => fn() => push_unsub($b), 'attToday' => fn() => att_today($b), 'attCheck' => fn() => att_check($b), 'attFix' => fn() => att_fix($b),
         'evList' => fn() => ev_gone(), 'evSave' => fn() => ev_gone(), 'evAck' => fn() => ev_gone(), 'evDelete' => fn() => ev_gone(),
