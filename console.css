@@ -2444,7 +2444,8 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .rfform { margin-top: 12px; }
 .rfrows { display: grid; gap: 10px; }
 .rfrow { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
-.rfrow .rfsel, .rfrow .rftaski { height: 44px; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 0 12px; font: inherit; font-size: 14px; color: var(--ink); min-width: 0; }
+.rfrow .rfsel, .rfrow .rftaski { width: 100%; max-width: 100%; box-sizing: border-box; height: 44px; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 0 12px; font: inherit; font-size: 14px; color: var(--ink); min-width: 0; }
+.rfrow .rfsel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rfrow .rfsel:focus, .rfrow .rftaski:focus { outline: none; border-color: var(--gold-d); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold-d) 18%, transparent); }
 .rfrow .rfdel { width: 44px; height: 44px; flex: none; }
 .rfrow .rfdel .i { width: 16px; height: 16px; }
